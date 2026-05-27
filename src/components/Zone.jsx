@@ -3,7 +3,7 @@ export default function Zone({ label, color, children }) {
     <div
       className="zone"
       style={{
-        background: `${color}0a`,
+        background: `${color}18`,
       }}
     >
       <div
