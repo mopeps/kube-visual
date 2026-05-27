@@ -136,24 +136,24 @@ export const ZONES = [
 // packet (or control-flow) crosses from the zone above into the one below.
 export const ARROW_ROWS = [
   {
-    between: [‘client’, ‘management’],
+    between: ['client', 'management'],
     steps: [
-      { n: 1, text: ‘DNS → A-record for Route hostname → cluster LB’ },
-      { n: 2, text: ‘TCP SYN → :443; TLS terminated at HAProxy Ingress Router pod’ },
+      { n: 1, text: 'DNS → A-record for Route hostname → cluster LB' },
+      { n: 2, text: 'TCP SYN → :443; TLS terminated at HAProxy Ingress Router pod' },
     ],
   },
   {
-    between: [‘management’, ‘host-net’],
+    between: ['management', 'host-net'],
     steps: [
-      { n: 3, text: ‘CNI plugin: provision veth pair, attach to OVS br-int’ },
-      { n: 4, text: ‘kube-proxy / OVN flow rules program DNAT + forwarding’ },
+      { n: 3, text: 'CNI plugin: provision veth pair, attach to OVS br-int' },
+      { n: 4, text: 'kube-proxy / OVN flow rules program DNAT + forwarding' },
     ],
   },
   {
-    between: [‘host-net’, ‘pod-kernel’],
+    between: ['host-net', 'pod-kernel'],
     steps: [
-      { n: 5, text: ‘veth peer drops the frame into the Pod\’s network namespace’ },
-      { n: 6, text: ‘Socket delivered to PID 1 inside cgroup-bounded process’ },
+      { n: 5, text: 'veth peer drops the frame into the Pod\'s network namespace' },
+      { n: 6, text: 'Socket delivered to PID 1 inside cgroup-bounded process' },
     ],
   },
 ]
