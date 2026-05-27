@@ -1,2 +1,82 @@
 # kube-visual
-This Repo will hold a project for visually learning of OpenShift Clusters.   
+
+# AI Coding Agent Instructions: Interactive OpenShift-to-Linux Blueprint Tool
+## Project Goal
+Build a frontend-only interactive web application that provides a nested, containment-based visual mapping of OpenShift cluster-level logical objects down to their underlying Linux kernel primitives. The core utility is tracing dynamic interaction and communication flows across these layers based on user-selected cluster events.
+## 1. UI Structural & Visual Hierarchy
+The application must render a containment-based grid layout using a strict visual hierarchy. Avoid linear flowcharts; use nested HTML container boxes to show strict ownership and boundaries.
+### Component Nesting Map
+```text
+[Cluster Boundary]
+  ├── [Management Layer (Red/Purple Boxes)]
+  │     └── API Server, Controllers, Kubelet, CRI-O
+  └── [Infrastructure Node Boundary (Green Boxes)]
+        ├── [Logical Kubernetes Namespace / Project Boundary (Dashed Blue Boxes)]
+        │     └── [Pod Boundary]
+        │           └── [Linux Isolation Layer (Kernel Primitives)]
+        │                 ├── Network Namespace (netns)
+        │                 ├── Control Groups (cgroups)
+        │                 └── [Container Process (PID 1)]
+        └── [Host Networking Subsystem]
+              └── OVS Bridge (br-int), veth pairs, Routing Tables
+
+```
+## 2. Core Features & Interactivity Requirements
+ * **State 1: Default Structural Map:** Display the nested topology cleanly. All components are visible but dimmed to an idle opacity (e.g., opacity-40).
+ * **State 2: Event-Driven Tracing:** Provide a sidebar dropdown or list of "Events" (e.g., *Pod Spawning*, *Ingress TLS Termination*, *Pod-to-Pod OVN Traffic*).
+ * **Dynamic Illumination:** When an event is selected:
+   1. Highlight only the participating boxes/primitives to opacity-100.
+   2. Draw ordered, numbered, directional connecting arrows between the components to show the data path or reconciliation loop.
+   3. Display a small, concise step-by-step text sidebar explaining the chronological interactions.
+## 3. Recommended Technical Stack
+To keep the project lightweight, maintainable, and open-source friendly, use the following stack:
+ * **Framework:** React or Vue.js (for state management of active layers/events).
+ * **Styling:** Tailwind CSS (for crisp, color-coded, flexible layout wrappers).
+ * **Connector Lines:** leader-line (JS library) or react-xarrows to dynamically render smooth, responsive connecting vectors between nested HTML elements.
+ * **Data Layer:** A clean, decoupled events.json data model.
+## 4. MVP Target: Initial Event Data Model
+Implement this specific data schema in a standalone JSON file to trace the **Pod Network Traffic Ingress via Route** event:
+```json
+{
+  "eventId": "route-ingress-traffic",
+  "eventName": "External Ingress Traffic Flow",
+  "description": "Tracing an HTTPS request from an external client to an app pod via OVN-Kubernetes.",
+  "steps": [
+    {
+      "step": 1,
+      "sourceComponentId": "external-client",
+      "targetComponentId": "ingress-router-haproxy",
+      "description": "Client initiates connection; HAProxy terminates TLS at the Route layer."
+    },
+    {
+      "step": 2,
+      "sourceComponentId": "ingress-router-haproxy",
+      "targetComponentId": "ovs-bridge-br-int",
+      "description": "Traffic is forwarded into the OVN-Kubernetes host integration bridge."
+    },
+    {
+      "step": 3,
+      "sourceComponentId": "ovs-bridge-br-int",
+      "targetComponentId": "host-veth-pair",
+      "description": "OVS routes the packet through the host-side virtual Ethernet interface."
+    },
+    {
+      "step": 4,
+      "sourceComponentId": "host-veth-pair",
+      "targetComponentId": "pod-netns",
+      "description": "Packet crosses the boundary into the Pod's isolated Linux Network Namespace."
+    },
+    {
+      "step": 5,
+      "sourceComponentId": "pod-netns",
+      "targetComponentId": "container-process",
+      "description": "The application process (PID 1) accepts the cleartext socket connection."
+    }
+  ]
+}
+
+```
+## Next Action Items for the Agent
+ 1. Scaffold the base web page with a sidebar on the left and a massive canvas workspace container on the right.
+ 2. Build the visual layout of nested components using hardcoded CSS grids or flexboxes based on Section 1.
+ 3. Wire the JSON event data model to trigger opacity updates and render connecting lines when an event is clicked.
