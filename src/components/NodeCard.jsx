@@ -32,10 +32,7 @@ export default function NodeCard({
           {stepNum}
         </span>
       )}
-      <div className="node-title">{title}</div>
-      <div className="node-subtitle" style={{ whiteSpace: 'pre-line' }}>
-        {subtitle}
-      </div>
+      <div className="node-title" style={{ color }}>{title}</div>
       {badges.length > 0 && (
         <div className="node-badges">
           {badges.map((b, i) => (

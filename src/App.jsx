@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import useEventState from './hooks/useEventState'
-import { ZONES } from './data/zones'
 import Tabs from './components/Tabs'
 import EventSelector from './components/EventSelector'
 import OverviewTab from './components/OverviewTab'
@@ -16,32 +15,12 @@ const TABS = [
   { id: 'objects',    label: 'K8s Object Map' },
 ]
 
-function Legend() {
-  return (
-    <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 mb-10">
-      {ZONES.map(z => (
-        <div key={z.id} className="legend-item">
-          <span className="legend-dot" style={{ background: z.color, color: z.color }} />
-          {z.label}
-        </div>
-      ))}
-      <div className="legend-item">
-        <span className="legend-dot" style={{ background: 'var(--packet)', color: 'var(--packet)' }} />
-        Active Packet Flow
-      </div>
-    </div>
-  )
-}
-
 function Header() {
   return (
     <header className="text-center mb-10">
       <h1 className="font-display title-gradient text-[clamp(1.9rem,4vw,3.2rem)] font-extrabold tracking-tight leading-tight">
-        kube-visual — OpenShift Network Flow
+        kube-weird
       </h1>
-      <p className="mt-3 text-[0.72rem] uppercase tracking-[0.18em] text-tx-muted">
-        External Client → Route → Pod → Linux Kernel · Every Hop, Every Primitive
-      </p>
     </header>
   )
 }
@@ -65,7 +44,6 @@ export default function App() {
         style={{ maxWidth: 1500 }}
       >
         <Header />
-        <Legend />
 
         <EventSelector
           activeEvent={activeEvent}
