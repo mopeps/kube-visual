@@ -21,28 +21,20 @@ export const ZONES = [
     ],
   },
   {
-    id: 'ingress',
-    label: 'Ingress',
-    color: 'var(--k-purple)',
-    colorVar: 'k-purple',
-    nodes: [
-      {
-        id: 'ingress-router-haproxy',
-        title: 'Ingress Router',
-        subtitle: 'HAProxy instance per replica\nTerminates / re-encrypts TLS\nResolves Route → Service',
-        badges: [
-          { label: 'HAProxy', color: 'var(--k-purple)' },
-          { label: 'Route CR', color: 'var(--k-purple)' },
-        ],
-      },
-    ],
-  },
-  {
     id: 'management',
     label: 'Mgmt Plane',
     color: 'var(--k-sky)',
     colorVar: 'k-sky',
     nodes: [
+      {
+        id: 'ingress-router-haproxy',
+        title: 'Ingress Router',
+        subtitle: 'HAProxy pod in openshift-ingress ns\nTerminates / re-encrypts TLS\nResolves Route → Service',
+        badges: [
+          { label: 'HAProxy', color: 'var(--k-sky)' },
+          { label: 'Route CR', color: 'var(--k-sky)' },
+        ],
+      },
       {
         id: 'api-server',
         title: 'kube-apiserver',
@@ -144,31 +136,24 @@ export const ZONES = [
 // packet (or control-flow) crosses from the zone above into the one below.
 export const ARROW_ROWS = [
   {
-    between: ['client', 'ingress'],
+    between: [‘client’, ‘management’],
     steps: [
-      { n: 1, text: 'DNS → A-record for Route hostname → cluster LB' },
-      { n: 2, text: 'TCP SYN → :443; TLS handshake terminated at HAProxy' },
+      { n: 1, text: ‘DNS → A-record for Route hostname → cluster LB’ },
+      { n: 2, text: ‘TCP SYN → :443; TLS terminated at HAProxy Ingress Router pod’ },
     ],
   },
   {
-    between: ['ingress', 'management'],
+    between: [‘management’, ‘host-net’],
     steps: [
-      { n: 3, text: 'HAProxy admits → Service ClusterIP → Endpoints' },
-      { n: 4, text: 'Control plane: kube-apiserver, scheduler, kubelet, CRI-O cooperate to place the Pod' },
+      { n: 3, text: ‘CNI plugin: provision veth pair, attach to OVS br-int’ },
+      { n: 4, text: ‘kube-proxy / OVN flow rules program DNAT + forwarding’ },
     ],
   },
   {
-    between: ['management', 'host-net'],
+    between: [‘host-net’, ‘pod-kernel’],
     steps: [
-      { n: 5, text: 'CNI plugin: provision veth pair, attach to OVS br-int' },
-      { n: 6, text: 'kube-proxy / OVN flow rules program DNAT + forwarding' },
-    ],
-  },
-  {
-    between: ['host-net', 'pod-kernel'],
-    steps: [
-      { n: 7, text: 'veth peer drops the frame into the Pod’s network namespace' },
-      { n: 8, text: 'Socket delivered to PID 1 inside cgroup-bounded process' },
+      { n: 5, text: ‘veth peer drops the frame into the Pod\’s network namespace’ },
+      { n: 6, text: ‘Socket delivered to PID 1 inside cgroup-bounded process’ },
     ],
   },
 ]
