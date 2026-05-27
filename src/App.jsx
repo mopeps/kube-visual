@@ -1,157 +1,109 @@
-import { useEffect, useState } from 'react'
-import Sidebar from './components/Sidebar'
-import Canvas from './components/Canvas'
+import { useState } from 'react'
 import useEventState from './hooks/useEventState'
-import events from './data/events.json'
+import { ZONES } from './data/zones'
+import Tabs from './components/Tabs'
+import EventSelector from './components/EventSelector'
+import OverviewTab from './components/OverviewTab'
+import PacketFlowTab from './components/PacketFlowTab'
+import LinuxInternalsTab from './components/LinuxInternalsTab'
+import ObjectMapTab from './components/ObjectMapTab'
+import DetailPanel from './components/DetailPanel'
 
-function TrafficLights() {
+const TABS = [
+  { id: 'overview',   label: 'Architecture Overview' },
+  { id: 'packetflow', label: 'Step-by-Step Packet Flow' },
+  { id: 'linux',      label: 'Linux Internals' },
+  { id: 'objects',    label: 'K8s Object Map' },
+]
+
+function Legend() {
   return (
-    <div className="flex items-center gap-2 pl-3">
-      <span className="traffic-light" style={{ background: '#f38ba8' }} />
-      <span className="traffic-light" style={{ background: '#f9e2af' }} />
-      <span className="traffic-light" style={{ background: '#a6e3a1' }} />
+    <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 mb-10">
+      {ZONES.map(z => (
+        <div key={z.id} className="legend-item">
+          <span className="legend-dot" style={{ background: z.color, color: z.color }} />
+          {z.label}
+        </div>
+      ))}
+      <div className="legend-item">
+        <span className="legend-dot" style={{ background: 'var(--packet)', color: 'var(--packet)' }} />
+        Active Packet Flow
+      </div>
     </div>
   )
 }
 
-function TitleBar() {
+function Header() {
   return (
-    <div className="term-titlebar flex items-center relative flex-shrink-0">
-      <TrafficLights />
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <span className="font-mono text-[11px] text-k-tx-mut tracking-wide">
-          <span className="text-k-tx">user@kube-visual</span>
-          <span className="text-k-tx-dim">:</span>
-          <span className="text-k-blue">~/cluster-01/openshift</span>
-          <span className="text-k-tx-dim"> ── </span>
-          <span className="text-k-mauve">tmux</span>
-          <span className="text-k-tx-dim">: 0:</span>
-          <span className="text-k-tx-wh">topology</span>
-          <span className="text-k-peach">*</span>
-        </span>
-      </div>
-      <div className="ml-auto pr-3 flex items-center gap-1.5">
-        <span className="font-mono text-[10px] text-k-tx-dim">[ readonly ]</span>
-      </div>
-    </div>
-  )
-}
-
-function useClock() {
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000 * 15)
-    return () => clearInterval(t)
-  }, [])
-  return now
-}
-
-function StatusBar({ activeEvent, expandedCount }) {
-  const now = useClock()
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mm = String(now.getMinutes()).padStart(2, '0')
-  const date = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit' })
-
-  return (
-    <div className="tmux-bar flex-shrink-0">
-      {/* left — session badge */}
-      <div className="seg seg-mauve">
-        <span className="tracking-widest text-[10px]">▎ KUBE-VIS</span>
-      </div>
-      <div className="pl-sep" style={{ '--pl-from': 'var(--c-mauve)', background: 'var(--c-s2)' }} />
-
-      {/* mode */}
-      <div className="seg seg-overlay">
-        <span className="text-k-yellow font-bold">●</span>
-        <span className="ml-1.5 text-k-tx-br">[0]</span>
-        <span className="ml-2 text-k-tx-mut">topology</span>
-        {activeEvent && <span className="ml-1 text-k-peach">*</span>}
-      </div>
-
-      {/* spacer */}
-      <div className="seg seg-crust flex-1 justify-center min-w-0">
-        {activeEvent ? (
-          <span className="truncate">
-            <span className="text-k-peach">tracing</span>
-            <span className="text-k-tx-dim"> :: </span>
-            <span className="text-k-tx-wh">{activeEvent.eventName}</span>
-            <span className="text-k-tx-dim"> ({activeEvent.steps.length} steps)</span>
-          </span>
-        ) : (
-          <span className="text-k-tx-dim">
-            -- NORMAL --   select an event from the buffer list
-          </span>
-        )}
-      </div>
-
-      {/* right */}
-      <div className="pl-sep" style={{ '--pl-from': 'var(--c-s2)', background: 'var(--c-s2)', transform: 'rotate(180deg)' }} />
-      <div className="seg seg-overlay">
-        <span className="text-k-tx-mut">pods:</span>
-        <span className="ml-1 text-k-green">{expandedCount}/2</span>
-      </div>
-      <div className="pl-sep" style={{ '--pl-from': 'var(--c-blue)', background: 'var(--c-s2)', transform: 'rotate(180deg)' }} />
-      <div className="seg seg-blue">
-        <span className="tracking-wider text-[10px]">{events.length} events</span>
-      </div>
-      <div className="pl-sep" style={{ '--pl-from': 'var(--c-green)', background: 'var(--c-blue)', transform: 'rotate(180deg)' }} />
-      <div className="seg" style={{ background: 'var(--c-green)', color: 'var(--c-crust)' }}>
-        <span className="tracking-wider text-[10px]">{date} · {hh}:{mm}</span>
-      </div>
-    </div>
+    <header className="text-center mb-10">
+      <h1 className="font-display title-gradient text-[clamp(1.9rem,4vw,3.2rem)] font-extrabold tracking-tight leading-tight">
+        kube-visual — OpenShift Network Flow
+      </h1>
+      <p className="mt-3 text-[0.72rem] uppercase tracking-[0.18em] text-tx-muted">
+        External Client → Route → Pod → Linux Kernel · Every Hop, Every Primitive
+      </p>
+    </header>
   )
 }
 
 export default function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [tab, setTab] = useState('overview')
   const {
     activeEvent,
     activeComponentId,
-    expandedPods,
     activeComponentIds,
     selectEvent,
     clearEvent,
     selectComponent,
     clearComponent,
-    togglePod,
   } = useEventState()
 
   return (
-    <div className="h-full w-full p-2 sm:p-3 md:p-4 flex">
-      <div className="term-window flex-1 flex flex-col min-w-0 flicker-soft">
-        <TitleBar />
+    <div className="relative">
+      <div
+        className="px-5 sm:px-8 py-10 mx-auto"
+        style={{ maxWidth: 1500 }}
+      >
+        <Header />
+        <Legend />
 
-        <div className="flex-1 flex overflow-hidden relative">
-          {sidebarOpen && (
-            <div
-              className="lg:hidden fixed inset-0 z-40"
-              style={{ background: 'rgba(17, 17, 27, 0.78)', backdropFilter: 'blur(2px)' }}
-              onClick={() => setSidebarOpen(false)}
+        <EventSelector
+          activeEvent={activeEvent}
+          onSelectEvent={selectEvent}
+          onClearEvent={clearEvent}
+        />
+
+        <Tabs tabs={TABS} active={tab} onSelect={setTab} />
+
+        <div className="pt-6 animate-fade-in" key={tab}>
+          {tab === 'overview' && (
+            <OverviewTab
+              activeEvent={activeEvent}
+              activeComponentIds={activeComponentIds}
+              onSelectComponent={selectComponent}
             />
           )}
-
-          <Sidebar
-            activeEvent={activeEvent}
-            onSelectEvent={selectEvent}
-            isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-          />
-
-          <Canvas
-            activeEvent={activeEvent}
-            activeComponentIds={activeComponentIds}
-            activeComponentId={activeComponentId}
-            expandedPods={expandedPods}
-            onSelectComponent={selectComponent}
-            onClearComponent={clearComponent}
-            onTogglePod={togglePod}
-            onClearEvent={clearEvent}
-            onOpenSidebar={() => setSidebarOpen(true)}
-          />
+          {tab === 'packetflow' && (
+            <PacketFlowTab activeEvent={activeEvent} />
+          )}
+          {tab === 'linux' && <LinuxInternalsTab />}
+          {tab === 'objects' && <ObjectMapTab />}
         </div>
 
-        <StatusBar activeEvent={activeEvent} expandedCount={expandedPods.size} />
+        <p
+          className="mt-8 text-[0.7rem]"
+          style={{ color: 'var(--tx-muted)' }}
+        >
+          💡 Click any node to inspect its YAML role, interactions, and copy-paste
+          shell commands. Pick a trace flow above to follow a packet from
+          client to PID 1.
+        </p>
       </div>
+
+      <DetailPanel
+        componentId={activeComponentId}
+        onClose={clearComponent}
+      />
     </div>
   )
 }
