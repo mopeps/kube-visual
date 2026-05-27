@@ -1,5 +1,7 @@
 # kube-visual
 
+https://mopeps.github.io/kube-visual/
+
 An interactive web application that visualizes OpenShift/Kubernetes cluster architecture as a nested containment diagram. Select cluster events to trace how traffic and control signals move through the stack — from external clients down to Linux kernel primitives like network namespaces and cgroups.
 
 ## Features
