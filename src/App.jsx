@@ -18,11 +18,10 @@ export default function App() {
   } = useEventState()
 
   return (
-    <div className="flex h-screen bg-gray-950 text-gray-100 overflow-hidden">
-      {/* Backdrop for mobile/tablet sidebar overlay */}
+    <div className="flex h-screen text-white overflow-hidden bg-transparent">
       {sidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/50"
+          className="lg:hidden fixed inset-0 z-40 bg-black/60"
           onClick={() => setSidebarOpen(false)}
         />
       )}

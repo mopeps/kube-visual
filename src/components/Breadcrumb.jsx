@@ -11,11 +11,13 @@ export default function Breadcrumb({ expandedPods }) {
   if (parts.length <= 2) return null
 
   return (
-    <nav className="px-4 py-1.5 bg-gray-800 border-b border-gray-700 flex items-center gap-1 text-xs text-gray-400 overflow-x-auto whitespace-nowrap">
+    <nav className="px-4 py-1.5 bg-k-bg2 border-b border-white/10 flex items-center gap-1 text-[0.65rem] text-white/45 overflow-x-auto whitespace-nowrap">
       {parts.map((part, i) => (
         <span key={i} className="flex items-center gap-1">
-          {i > 0 && <span className="text-gray-600">➔</span>}
-          <span className={i === parts.length - 1 ? 'text-blue-300 font-medium' : ''}>{part}</span>
+          {i > 0 && <span className="text-white/20">›</span>}
+          <span className={i === parts.length - 1 ? 'text-k-cyan font-display font-semibold' : ''}>
+            {part}
+          </span>
         </span>
       ))}
     </nav>

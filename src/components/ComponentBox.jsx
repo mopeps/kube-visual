@@ -4,7 +4,8 @@ export default function ComponentBox({
   activeComponentIds,
   activeComponentId,
   onSelect,
-  colorClass = 'border-gray-600 bg-gray-800',
+  colorClass = 'border-white/20 bg-white/5',
+  accentColor = '#fff',
   className = '',
   children,
 }) {
@@ -13,24 +14,21 @@ export default function ComponentBox({
   const hasActiveEvent = activeComponentIds && activeComponentIds.size > 0
 
   const opacityClass = hasActiveEvent
-    ? isHighlighted ? 'opacity-100' : 'opacity-30'
-    : 'opacity-60'
-
-  const ringClass = isSelected
-    ? 'ring-2 ring-blue-400 ring-offset-1 ring-offset-gray-900'
-    : ''
+    ? isHighlighted ? 'opacity-100' : 'opacity-25'
+    : 'opacity-70'
 
   return (
     <div
       id={id}
       onClick={(e) => { e.stopPropagation(); onSelect(id) }}
+      style={isSelected ? { boxShadow: `0 0 0 2px ${accentColor}, 0 0 16px ${accentColor}40` } : {}}
       className={`
-        rounded border p-2 cursor-pointer transition-all duration-300
-        hover:opacity-100 hover:ring-1 hover:ring-gray-400
-        ${colorClass} ${opacityClass} ${ringClass} ${className}
+        rounded border p-2 cursor-pointer transition-all duration-300 bg-black/30
+        hover:opacity-100
+        ${colorClass} ${opacityClass} ${className}
       `}
     >
-      <span className="text-xs font-medium text-gray-200 select-none">{label}</span>
+      <span className="text-xs font-display font-semibold text-white/85 select-none">{label}</span>
       {children}
     </div>
   )
