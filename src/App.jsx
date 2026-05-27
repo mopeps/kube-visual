@@ -18,12 +18,11 @@ export default function App() {
   } = useEventState()
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: '#070b14', color: '#cce0f4' }}>
-      {/* Mobile overlay */}
+    <div className="flex h-screen overflow-hidden text-k-tx-wh">
       {sidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40"
-          style={{ background: 'rgba(4,6,12,0.75)' }}
+          className="lg:hidden fixed inset-0 z-40 backdrop-blur-sm"
+          style={{ background: 'rgba(4,6,12,0.7)' }}
           onClick={() => setSidebarOpen(false)}
         />
       )}

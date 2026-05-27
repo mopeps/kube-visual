@@ -4,32 +4,104 @@ import ArrowOverlay from './ArrowOverlay'
 import Breadcrumb from './Breadcrumb'
 import InspectorPanel from './InspectorPanel'
 
-function LayerBoundary({ label, color, tag, dashed = false, children, className = '' }) {
+function LayerBoundary({ label, sub, color, dashed = false, children, className = '' }) {
   return (
     <div
-      className={`p-3 ${className}`}
+      className={`relative rounded-lg p-3.5 ${className}`}
       style={{
-        border: `1px ${dashed ? 'dashed' : 'solid'} ${color}35`,
-        background: `${color}04`,
+        border: `1px ${dashed ? 'dashed' : 'solid'} ${color}30`,
+        background: `linear-gradient(180deg, ${color}08 0%, ${color}02 100%)`,
       }}
     >
-      {/* Section header */}
-      <div className="flex items-center gap-2 mb-2.5">
+      <div className="flex items-baseline gap-2 mb-3">
         <span
-          className="font-mono text-[0.48rem] tracking-[0.18em] px-1 border flex-shrink-0"
-          style={{ color: `${color}80`, borderColor: `${color}30` }}
-        >
-          {tag}
-        </span>
-        <span
-          className="font-display text-base tracking-widest leading-none"
-          style={{ color: `${color}90` }}
+          className="font-display text-[12px] font-semibold tracking-wide uppercase"
+          style={{ color: `${color}` }}
         >
           {label}
         </span>
-        <div className="flex-1 h-px" style={{ background: `${color}15` }} />
+        {sub && (
+          <span className="font-mono text-[10px] text-k-tx-mut">{sub}</span>
+        )}
+        <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${color}25, transparent)` }} />
       </div>
       {children}
+    </div>
+  )
+}
+
+function Toolbar({ activeEvent, onClearEvent, onOpenSidebar }) {
+  return (
+    <div
+      className="flex items-center gap-3 px-4 py-2.5 flex-shrink-0 border-b border-k-bd"
+      style={{ background: 'rgba(7,11,20,0.6)', backdropFilter: 'blur(8px)' }}
+    >
+      <button
+        onClick={onOpenSidebar}
+        className="lg:hidden flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-md text-k-tx-mut hover:text-k-tx-wh hover:bg-white/5 transition-colors"
+        aria-label="Open sidebar"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      <div className="flex items-center gap-2.5">
+        <span
+          className="w-1.5 h-1.5 rounded-full bg-k-green flex-shrink-0"
+          style={{ boxShadow: '0 0 10px #34d399', animation: 'pulse-amber 2.4s ease-in-out infinite' }}
+        />
+        <span className="font-display text-[14px] font-semibold tracking-tight text-k-tx-wh">
+          Topology
+        </span>
+        <span className="hidden sm:inline font-mono text-[11px] text-k-tx-mut">
+          cluster-01 / openshift
+        </span>
+      </div>
+
+      <div className="flex-1" />
+
+      {activeEvent ? (
+        <div className="flex items-center gap-2.5">
+          <div
+            className="flex items-center gap-2 rounded-md px-2.5 py-1"
+            style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)' }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-k-amber" style={{ boxShadow: '0 0 8px #fbbf24' }} />
+            <span className="font-mono text-[11px] font-medium text-k-amber">
+              tracing
+            </span>
+            <span className="font-display text-[12px] font-medium text-k-tx-wh">
+              {activeEvent.eventName}
+            </span>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); onClearEvent() }}
+            className="font-mono text-[11px] px-2 py-1 rounded-md text-k-tx-mut hover:text-k-tx-wh hover:bg-white/5 transition-colors"
+          >
+            clear
+          </button>
+        </div>
+      ) : (
+        <span className="font-mono text-[11px] text-k-tx-dim">
+          select an event to trace
+        </span>
+      )}
+    </div>
+  )
+}
+
+function EmptyHint() {
+  return (
+    <div className="absolute top-4 right-4 z-10 hidden md:flex items-center gap-2 rounded-md px-3 py-1.5 animate-fade-in"
+      style={{ background: 'rgba(34, 211, 238, 0.08)', border: '1px solid rgba(34, 211, 238, 0.25)' }}
+    >
+      <svg className="w-3.5 h-3.5 text-k-cyan" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span className="font-mono text-[11px] text-k-tx-br">
+        Pick an event from the left to trace the flow.
+      </span>
     </div>
   )
 }
@@ -47,95 +119,39 @@ export default function Canvas({
 }) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden relative">
-
-      {/* Top toolbar */}
-      <div
-        className="flex items-center gap-3 px-3 py-2 flex-shrink-0 border-b"
-        style={{ borderColor: '#192540', background: 'rgba(7,11,20,0.8)' }}
-      >
-        {/* Mobile: hamburger */}
-        <button
-          onClick={onOpenSidebar}
-          className="lg:hidden flex-shrink-0 w-7 h-7 flex items-center justify-center border transition-colors"
-          style={{ borderColor: '#1f3054', color: '#456688' }}
-          aria-label="Open sidebar"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-
-        {/* Cluster label */}
-        <div className="flex items-center gap-2">
-          <span
-            className="w-1.5 h-1.5 flex-shrink-0"
-            style={{ background: '#34d399', animation: 'pulse-amber 2.4s ease-in-out infinite' }}
-          />
-          <span className="font-display text-base tracking-widest" style={{ color: '#cce0f4' }}>
-            KUBE-VISUAL
-          </span>
-          <span className="font-mono text-[0.5rem]" style={{ color: '#2e4a70' }}>
-            · CLUSTER-01
-          </span>
-        </div>
-
-        <div className="flex-1" />
-
-        {/* Active event indicator */}
-        {activeEvent ? (
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[0.55rem] tracking-widest" style={{ color: '#fb923c' }}>
-              {activeEvent.eventName.toUpperCase()}
-            </span>
-            <button
-              onClick={(e) => { e.stopPropagation(); onClearEvent() }}
-              className="font-mono text-[0.5rem] tracking-[0.1em] px-2 py-1 border transition-all duration-150"
-              style={{ borderColor: '#fb923c50', color: '#fb923c80' }}
-            >
-              CLEAR ✕
-            </button>
-          </div>
-        ) : (
-          <span className="font-mono text-[0.5rem] tracking-widest" style={{ color: '#1f3054' }}>
-            NO EVENT ACTIVE
-          </span>
-        )}
-      </div>
-
-      {/* Breadcrumb */}
+      <Toolbar activeEvent={activeEvent} onClearEvent={onClearEvent} onOpenSidebar={onOpenSidebar} />
       <Breadcrumb expandedPods={expandedPods} />
 
-      {/* Canvas scrollable area */}
       <div
         id="canvas-root"
-        className="flex-1 overflow-auto touch-auto p-5 relative"
+        className="flex-1 overflow-auto touch-auto p-6 relative"
         onClick={() => { onClearComponent() }}
       >
+        {!activeEvent && <EmptyHint />}
+
         {/* Cluster boundary */}
         <div
-          className="border p-4 min-w-[980px]"
-          style={{ borderColor: '#1f3054', background: 'rgba(11,18,32,0.4)' }}
+          className="rounded-xl p-5 min-w-[980px] relative"
+          style={{
+            border: '1px solid var(--c-bd-hi)',
+            background:
+              'linear-gradient(180deg, rgba(17, 27, 48, 0.5) 0%, rgba(12, 20, 36, 0.3) 100%)',
+            boxShadow: '0 0 0 1px rgba(255,255,255,0.02) inset, 0 24px 60px -24px rgba(0,0,0,0.6)',
+          }}
         >
           {/* Cluster header */}
-          <div className="flex items-center gap-2 mb-4">
-            <span className="font-display text-2xl tracking-widest leading-none" style={{ color: '#cce0f4' }}>
-              CLUSTER BOUNDARY
+          <div className="flex items-center gap-3 mb-5">
+            <span className="font-display text-[18px] font-semibold tracking-tight text-k-tx-wh">
+              Cluster Boundary
             </span>
-            <div className="flex-1 h-px" style={{ background: '#1f3054' }} />
-            <span className="font-mono text-[0.5rem] tracking-widest" style={{ color: '#2e4a70' }}>
-              OPENSHIFT / KUBERNETES
-            </span>
+            <span className="font-mono text-[11px] text-k-tx-mut">OpenShift · Kubernetes</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
           </div>
 
-          {/* Main grid: management + infrastructure */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
-
+          {/* Main grid */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
             {/* Management Layer */}
-            <LayerBoundary
-              label="MANAGEMENT LAYER"
-              tag="CTL"
-              color="#38bdf8"
-            >
+            <LayerBoundary label="Management Layer" sub="control plane" color="#38bdf8">
               <div className="space-y-1.5">
                 <ComponentBox
                   id="api-server"
@@ -143,7 +159,6 @@ export default function Canvas({
                   activeComponentIds={activeComponentIds}
                   activeComponentId={activeComponentId}
                   onSelect={onSelectComponent}
-                  colorClass="border-k-bd"
                   accentColor="#38bdf8"
                 />
                 <ComponentBox
@@ -152,7 +167,6 @@ export default function Canvas({
                   activeComponentIds={activeComponentIds}
                   activeComponentId={activeComponentId}
                   onSelect={onSelectComponent}
-                  colorClass="border-k-bd"
                   accentColor="#38bdf8"
                 />
                 <ComponentBox
@@ -161,7 +175,6 @@ export default function Canvas({
                   activeComponentIds={activeComponentIds}
                   activeComponentId={activeComponentId}
                   onSelect={onSelectComponent}
-                  colorClass="border-k-bd"
                   accentColor="#38bdf8"
                 />
                 <ComponentBox
@@ -170,16 +183,14 @@ export default function Canvas({
                   activeComponentIds={activeComponentIds}
                   activeComponentId={activeComponentId}
                   onSelect={onSelectComponent}
-                  colorClass="border-k-bd"
                   accentColor="#38bdf8"
                 />
                 <ComponentBox
                   id="ingress-router-haproxy"
-                  label="Ingress Router (HAProxy)"
+                  label="Ingress Router · HAProxy"
                   activeComponentIds={activeComponentIds}
                   activeComponentId={activeComponentId}
                   onSelect={onSelectComponent}
-                  colorClass="border-k-bd"
                   accentColor="#a78bfa"
                 />
               </div>
@@ -187,33 +198,25 @@ export default function Canvas({
 
             {/* Infrastructure Node */}
             <div
-              className="xl:col-span-2 p-3"
-              style={{ border: '2px solid rgba(251,146,60,0.2)', background: 'rgba(251,146,60,0.02)' }}
+              className="xl:col-span-2 relative rounded-lg p-3.5"
+              style={{
+                border: '1px solid rgba(251, 146, 60, 0.28)',
+                background: 'linear-gradient(180deg, rgba(251, 146, 60, 0.05) 0%, rgba(251, 146, 60, 0.01) 100%)',
+              }}
             >
-              <div className="flex items-center gap-2 mb-3">
-                <span
-                  className="font-mono text-[0.48rem] tracking-[0.18em] px-1 border flex-shrink-0"
-                  style={{ color: 'rgba(251,146,60,0.6)', borderColor: 'rgba(251,146,60,0.25)' }}
-                >
-                  NODE
+              <div className="flex items-baseline gap-2 mb-3">
+                <span className="font-display text-[12px] font-semibold tracking-wide uppercase text-k-orange">
+                  Infrastructure Node
                 </span>
-                <span className="font-display text-base tracking-widest" style={{ color: 'rgba(251,146,60,0.7)' }}>
-                  INFRASTRUCTURE NODE BOUNDARY
-                </span>
-                <div className="flex-1 h-px" style={{ background: 'rgba(251,146,60,0.12)' }} />
+                <span className="font-mono text-[10px] text-k-tx-mut">node-01 · worker</span>
+                <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(251, 146, 60, 0.25), transparent)' }} />
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
-                {/* Namespace: app */}
-                <LayerBoundary
-                  label="NAMESPACE: APP"
-                  tag="NS"
-                  color="#a78bfa"
-                  dashed
-                >
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <LayerBoundary label="Namespace · app" sub="project" color="#a78bfa" dashed>
                   <PodLayer
                     podId="app-pod"
-                    label="Pod: web-app"
+                    label="Pod · web-app"
                     activeComponentIds={activeComponentIds}
                     activeComponentId={activeComponentId}
                     onSelectComponent={onSelectComponent}
@@ -222,16 +225,10 @@ export default function Canvas({
                   />
                 </LayerBoundary>
 
-                {/* Namespace: router */}
-                <LayerBoundary
-                  label="NAMESPACE: ROUTER"
-                  tag="NS"
-                  color="#a78bfa"
-                  dashed
-                >
+                <LayerBoundary label="Namespace · router" sub="project" color="#a78bfa" dashed>
                   <PodLayer
                     podId="router-pod"
-                    label="Pod: router"
+                    label="Pod · router"
                     activeComponentIds={activeComponentIds}
                     activeComponentId={activeComponentId}
                     onSelectComponent={onSelectComponent}
@@ -240,21 +237,19 @@ export default function Canvas({
                   />
                 </LayerBoundary>
 
-                {/* Host networking */}
                 <LayerBoundary
-                  label="HOST NETWORKING SUBSYSTEM"
-                  tag="NET"
+                  label="Host Networking"
+                  sub="kernel subsystem"
                   color="#34d399"
                   className="lg:col-span-2"
                 >
-                  <div className="grid grid-cols-2 gap-1.5">
+                  <div className="grid grid-cols-2 gap-2">
                     <ComponentBox
                       id="ovs-bridge-br-int"
-                      label="OVS Bridge (br-int)"
+                      label="OVS Bridge · br-int"
                       activeComponentIds={activeComponentIds}
                       activeComponentId={activeComponentId}
                       onSelect={onSelectComponent}
-                      colorClass="border-k-bd"
                       accentColor="#34d399"
                     />
                     <ComponentBox
@@ -263,7 +258,6 @@ export default function Canvas({
                       activeComponentIds={activeComponentIds}
                       activeComponentId={activeComponentId}
                       onSelect={onSelectComponent}
-                      colorClass="border-k-bd"
                       accentColor="#34d399"
                     />
                   </div>
@@ -273,21 +267,18 @@ export default function Canvas({
           </div>
 
           {/* External client */}
-          <div
-            className="mt-3 pt-3 flex items-center gap-4"
-            style={{ borderTop: '1px solid #192540' }}
-          >
-            <span className="font-display text-sm tracking-widest" style={{ color: '#2e4a70' }}>EXTERNAL</span>
-            <div style={{ width: '1px', height: '1rem', background: '#1f3054' }} />
+          <div className="mt-5 pt-4 flex items-center gap-4" style={{ borderTop: '1px solid var(--c-bd)' }}>
+            <span className="font-display text-[12px] font-semibold tracking-wide uppercase text-k-tx-mut">
+              External
+            </span>
             <ComponentBox
               id="external-client"
               label="External Client"
               activeComponentIds={activeComponentIds}
               activeComponentId={activeComponentId}
               onSelect={onSelectComponent}
-              colorClass="border-k-bd"
               accentColor="#22d3ee"
-              className="w-44"
+              className="w-48"
             />
           </div>
         </div>

@@ -1,20 +1,20 @@
 import { useState } from 'react'
 import componentsData from '../data/components.json'
 
-const layerConfig = {
-  'External':                  { color: '#22d3ee', tag: 'EXT' },
-  'Management Layer':          { color: '#38bdf8', tag: 'MGMT' },
-  'Host Networking Subsystem': { color: '#34d399', tag: 'HOST' },
-  'Linux Kernel Primitives':   { color: '#34d399', tag: 'KERN' },
+const LAYER_CONFIG = {
+  'External':                  { color: '#22d3ee', label: 'External' },
+  'Management Layer':          { color: '#38bdf8', label: 'Management' },
+  'Host Networking Subsystem': { color: '#34d399', label: 'Host Networking' },
+  'Linux Kernel Primitives':   { color: '#34d399', label: 'Kernel' },
 }
 
 function SectionHeader({ label, color }) {
   return (
-    <div className="flex items-center gap-2 mb-2">
-      <span className="font-display text-sm tracking-widest" style={{ color }}>
+    <div className="flex items-center gap-2 mb-2.5">
+      <span className="font-display text-[11px] font-semibold tracking-wider uppercase text-k-tx-br">
         {label}
       </span>
-      <div className="flex-1 h-px" style={{ background: `${color}25` }} />
+      <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${color}30, transparent)` }} />
     </div>
   )
 }
@@ -25,7 +25,7 @@ export default function InspectorPanel({ componentId, onClose }) {
 
   if (!component) return null
 
-  const lc = layerConfig[component.layer] ?? { color: '#9abcd8', tag: 'SYS' }
+  const lc = LAYER_CONFIG[component.layer] ?? { color: '#94a3b8', label: 'System' }
 
   const copyCommand = (text, index) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -36,99 +36,115 @@ export default function InspectorPanel({ componentId, onClose }) {
 
   return (
     <div
-      className="fixed lg:absolute top-0 right-0 h-full w-full sm:w-80 flex flex-col animate-slide-in z-50 overflow-hidden"
-      style={{ background: '#070b14', borderLeft: '1px solid #192540' }}
+      className="fixed lg:absolute top-0 right-0 h-full w-full sm:w-[360px] flex flex-col animate-slide-in z-50 overflow-hidden"
+      style={{
+        background: 'linear-gradient(180deg, rgba(17, 27, 48, 0.7) 0%, rgba(7, 11, 20, 0.98) 100%)',
+        borderLeft: '1px solid var(--c-bd)',
+        backdropFilter: 'blur(16px)',
+        boxShadow: '-24px 0 60px -24px rgba(0, 0, 0, 0.5)',
+      }}
     >
       {/* Banner */}
-      <div
-        className="px-4 pt-4 pb-3 flex items-start justify-between gap-2 border-b flex-shrink-0"
-        style={{ borderColor: '#192540', borderBottom: `1px solid ${lc.color}30` }}
-      >
-        <div className="min-w-0">
-          {/* Layer tag */}
-          <div className="flex items-center gap-2 mb-1.5">
-            <span
-              className="font-mono text-[0.5rem] tracking-[0.18em] px-1.5 py-0.5 border"
-              style={{
-                color: lc.color,
-                borderColor: `${lc.color}50`,
-                background: `${lc.color}0f`,
-              }}
+      <div className="relative px-5 pt-5 pb-4 flex-shrink-0 border-b border-k-bd">
+        <div
+          className="absolute top-0 left-0 right-0 h-px"
+          style={{ background: `linear-gradient(90deg, transparent, ${lc.color}, transparent)` }}
+        />
+
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span
+                className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[10px] font-mono font-medium"
+                style={{
+                  color: lc.color,
+                  background: `${lc.color}15`,
+                  border: `1px solid ${lc.color}40`,
+                }}
+              >
+                <span
+                  className="w-1 h-1 rounded-full"
+                  style={{ background: lc.color, boxShadow: `0 0 6px ${lc.color}` }}
+                />
+                {lc.label}
+              </span>
+            </div>
+            <h2
+              className="font-display text-[18px] font-semibold tracking-tight leading-tight text-k-tx-wh"
             >
-              {lc.tag}
-            </span>
-            <span className="font-mono text-[0.5rem] tracking-[0.12em]" style={{ color: '#2e4a70' }}>
-              {component.layer.toUpperCase()}
-            </span>
+              {component.displayName}
+            </h2>
+            <p className="font-mono text-[10.5px] mt-1.5 text-k-tx-mut">
+              {component.componentId}
+            </p>
           </div>
-          <h2 className="font-display text-xl tracking-wider leading-tight" style={{ color: lc.color }}>
-            {component.displayName.toUpperCase()}
-          </h2>
-          <p className="font-mono text-[0.55rem] mt-0.5" style={{ color: '#2e4a70' }}>
-            ID: {component.componentId}
-          </p>
+
+          <button
+            onClick={onClose}
+            className="mt-0.5 w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-md text-k-tx-mut hover:text-k-tx-wh hover:bg-white/5 transition-colors"
+            aria-label="Close inspector"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-        <button
-          onClick={onClose}
-          className="mt-0.5 w-6 h-6 flex-shrink-0 flex items-center justify-center border font-mono text-xs transition-colors"
-          style={{ borderColor: '#1f3054', color: '#456688' }}
-          aria-label="Close inspector"
-        >
-          ✕
-        </button>
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-        {/* Problem solved */}
+      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
         <section>
-          <SectionHeader label="PROBLEM_SOLVED" color={lc.color} />
-          <p className="text-[0.68rem] font-mono leading-relaxed" style={{ color: '#6c92b4' }}>
+          <SectionHeader label="What it solves" color={lc.color} />
+          <p className="text-[13px] leading-relaxed text-k-tx-br">
             {component.problemSolved}
           </p>
         </section>
 
-        {/* Interactions */}
         <section>
-          <SectionHeader label="INTERACTIONS" color={lc.color} />
-          <ul className="space-y-1.5">
+          <SectionHeader label="Interactions" color={lc.color} />
+          <ul className="space-y-2">
             {component.interactions.map((item, i) => (
-              <li key={i} className="flex gap-2 text-[0.68rem] font-mono leading-relaxed" style={{ color: '#6c92b4' }}>
-                <span className="flex-shrink-0 mt-0.5 font-bold" style={{ color: lc.color }}>›</span>
+              <li key={i} className="flex gap-2.5 text-[12.5px] leading-relaxed text-k-tx">
+                <span
+                  className="flex-shrink-0 mt-1.5 w-1 h-1 rounded-full"
+                  style={{ background: lc.color }}
+                />
                 <span>{item}</span>
               </li>
             ))}
           </ul>
         </section>
 
-        {/* Terminal exploration */}
         <section>
-          <SectionHeader label="EXPLORATION" color={lc.color} />
+          <SectionHeader label="Explore in cluster" color={lc.color} />
           <div className="space-y-2.5">
             {component.explorationCommands.map((cmd, i) => (
               <div
                 key={i}
-                className="relative border overflow-hidden"
-                style={{ borderColor: '#192540', background: '#050810' }}
+                className="relative rounded-md overflow-hidden group"
+                style={{
+                  background: '#050810',
+                  border: '1px solid var(--c-bd)',
+                }}
               >
-                {/* Code line numbers + content */}
+                <div className="flex items-center justify-between px-3 py-1.5 border-b border-k-bd">
+                  <span className="font-mono text-[10px] text-k-tx-mut">$ shell</span>
+                  <button
+                    onClick={() => copyCommand(cmd, i)}
+                    className="text-[10px] font-mono px-2 py-0.5 rounded transition-all"
+                    style={{
+                      color: copiedIndex === i ? lc.color : '#64748b',
+                      background: copiedIndex === i ? `${lc.color}15` : 'transparent',
+                    }}
+                  >
+                    {copiedIndex === i ? 'copied' : 'copy'}
+                  </button>
+                </div>
                 <pre
-                  className="text-[0.62rem] font-code p-3 pr-14 overflow-x-auto whitespace-pre-wrap leading-relaxed"
-                  style={{ color: '#34d399' }}
+                  className="text-[11.5px] font-code p-3 overflow-x-auto whitespace-pre-wrap leading-relaxed text-k-green"
                 >
                   {cmd}
                 </pre>
-                <button
-                  onClick={() => copyCommand(cmd, i)}
-                  className="absolute top-2 right-2 text-[0.5rem] font-mono px-1.5 py-0.5 border transition-all duration-150"
-                  style={{
-                    borderColor: copiedIndex === i ? lc.color : '#192540',
-                    color: copiedIndex === i ? lc.color : '#2e4a70',
-                    background: copiedIndex === i ? `${lc.color}10` : 'transparent',
-                  }}
-                >
-                  {copiedIndex === i ? 'COPIED' : 'COPY'}
-                </button>
               </div>
             ))}
           </div>
@@ -136,12 +152,9 @@ export default function InspectorPanel({ componentId, onClose }) {
       </div>
 
       {/* Footer */}
-      <div
-        className="px-4 py-2 border-t flex-shrink-0"
-        style={{ borderColor: '#192540' }}
-      >
-        <p className="font-mono text-[0.5rem] tracking-widest uppercase" style={{ color: '#1f3054' }}>
-          CLICK CANVAS TO DISMISS
+      <div className="px-5 py-3 border-t border-k-bd flex-shrink-0 flex items-center justify-between">
+        <p className="font-mono text-[10px] text-k-tx-mut">
+          esc · click canvas to close
         </p>
       </div>
     </div>
