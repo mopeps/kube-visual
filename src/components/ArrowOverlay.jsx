@@ -22,26 +22,30 @@ function ArrowPath({ start, end, stepNum }) {
     <g>
       <defs>
         <marker id={markerId} markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" fill="#60a5fa" />
+          <polygon points="0 0, 8 3, 0 6" fill="#ff4d6d" />
         </marker>
       </defs>
       <path
         d={`M ${start.x} ${start.y} Q ${cpx} ${cpy} ${end.x} ${end.y}`}
         fill="none"
-        stroke="#60a5fa"
-        strokeWidth={2}
+        stroke="#ff4d6d"
+        strokeWidth={1.5}
+        strokeDasharray="4 2"
         markerEnd={`url(#${markerId})`}
+        opacity={0.8}
       />
-      <foreignObject x={cpx - 10} y={cpy - 10} width={20} height={20}>
+      <foreignObject x={cpx - 11} y={cpy - 11} width={22} height={22}>
         <div
           style={{
-            width: '20px',
-            height: '20px',
+            width: '22px',
+            height: '22px',
             borderRadius: '50%',
-            background: '#1d4ed8',
-            color: 'white',
-            fontSize: '11px',
-            fontWeight: 'bold',
+            background: 'rgba(255,77,109,0.15)',
+            border: '1px solid #ff4d6d',
+            color: '#ff4d6d',
+            fontSize: '10px',
+            fontWeight: '700',
+            fontFamily: 'Syne, sans-serif',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

@@ -6,24 +6,26 @@ export default function Sidebar({ activeEvent, onSelectEvent, isOpen, onClose })
       className={`
         fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto
         w-72 min-w-[18rem]
-        bg-gray-900 border-r border-gray-700
+        bg-k-bg2 border-r border-white/10
         flex flex-col overflow-hidden
         transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}
     >
-      <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
-        <h2 className="text-xs font-semibold tracking-widest text-gray-400 uppercase">Cluster Events</h2>
+      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+        <h2 className="text-[0.6rem] font-display font-semibold tracking-[0.18em] text-white/55 uppercase">
+          Cluster Events
+        </h2>
         <button
           onClick={onClose}
-          className="lg:hidden text-gray-400 hover:text-gray-200 text-xl leading-none p-1"
+          className="lg:hidden w-7 h-7 flex items-center justify-center rounded border border-white/20 text-white/55 hover:text-white text-lg leading-none"
           aria-label="Close sidebar"
         >
-          ×
+          ✕
         </button>
       </div>
 
-      <ul className="flex-1 overflow-y-auto divide-y divide-gray-800">
+      <ul className="flex-1 overflow-y-auto divide-y divide-white/5">
         {events.map(event => {
           const isActive = activeEvent?.eventId === event.eventId
           return (
@@ -32,12 +34,16 @@ export default function Sidebar({ activeEvent, onSelectEvent, isOpen, onClose })
                 onClick={() => { onSelectEvent(event); onClose(); }}
                 className={`w-full text-left px-4 py-3 transition-colors ${
                   isActive
-                    ? 'bg-blue-900 text-blue-100'
-                    : 'text-gray-300 hover:bg-gray-800'
+                    ? 'bg-k-cyan/10 border-l-2 border-k-cyan'
+                    : 'border-l-2 border-transparent hover:bg-white/5'
                 }`}
               >
-                <p className="font-medium text-sm">{event.eventName}</p>
-                <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{event.description}</p>
+                <p className={`font-display font-semibold text-sm ${isActive ? 'text-k-cyan' : 'text-white/80'}`}>
+                  {event.eventName}
+                </p>
+                <p className="text-[0.68rem] text-white/45 mt-0.5 line-clamp-2 leading-relaxed">
+                  {event.description}
+                </p>
               </button>
             </li>
           )
@@ -45,17 +51,17 @@ export default function Sidebar({ activeEvent, onSelectEvent, isOpen, onClose })
       </ul>
 
       {activeEvent && (
-        <div className="border-t border-gray-700 px-4 py-3 overflow-y-auto max-h-72 bg-gray-950">
-          <h3 className="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-2">
+        <div className="border-t border-white/10 px-4 py-3 overflow-y-auto max-h-72 bg-black/30">
+          <h3 className="text-[0.6rem] font-display font-semibold tracking-[0.18em] text-white/45 uppercase mb-3">
             Steps
           </h3>
-          <ol className="space-y-2">
+          <ol className="space-y-2.5">
             {activeEvent.steps.map(step => (
-              <li key={step.step} className="flex gap-2">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-700 text-white text-xs flex items-center justify-center font-bold">
+              <li key={step.step} className="flex gap-2.5">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-k-red/15 border border-k-red text-k-red text-[0.6rem] flex items-center justify-center font-bold font-display">
                   {step.step}
                 </span>
-                <p className="text-xs text-gray-300 leading-relaxed">{step.description}</p>
+                <p className="text-[0.68rem] text-white/65 leading-relaxed">{step.description}</p>
               </li>
             ))}
           </ol>

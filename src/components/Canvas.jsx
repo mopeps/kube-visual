@@ -17,11 +17,11 @@ export default function Canvas({
 }) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden relative">
-      {/* Top bar: hamburger (mobile/tablet only) + breadcrumb */}
+      {/* Top bar */}
       <div className="flex items-center">
         <button
           onClick={onOpenSidebar}
-          className="lg:hidden flex-shrink-0 p-2 mx-1 text-gray-400 hover:text-gray-200 rounded hover:bg-gray-800 transition-colors"
+          className="lg:hidden flex-shrink-0 p-2 mx-1 text-white/40 hover:text-white rounded hover:bg-white/5 transition-colors"
           aria-label="Open sidebar"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -35,17 +35,19 @@ export default function Canvas({
 
       <div
         id="canvas-root"
-        className="flex-1 overflow-auto touch-auto p-6 bg-gray-950 relative"
+        className="flex-1 overflow-auto touch-auto p-6 relative"
         onClick={() => { onClearComponent(); }}
       >
-        {/* Cluster Boundary — fixed min-width prevents squash; overflow-auto parent enables pan */}
-        <div className="rounded-lg border-2 border-gray-600 bg-gray-900 p-4 min-w-[1024px]">
+        {/* Cluster Boundary */}
+        <div className="rounded-lg border border-white/10 bg-black/20 p-4 min-w-[1024px]">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Cluster Boundary</span>
+            <span className="text-[0.6rem] font-display font-semibold text-white/40 uppercase tracking-[0.18em]">
+              Cluster Boundary
+            </span>
             {activeEvent && (
               <button
                 onClick={(e) => { e.stopPropagation(); onClearEvent(); }}
-                className="text-xs text-gray-500 hover:text-gray-200 px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 transition-colors"
+                className="text-xs text-white/35 hover:text-white px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
               >
                 Clear Event
               </button>
@@ -53,9 +55,11 @@ export default function Canvas({
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            {/* Management Layer */}
-            <div className="rounded border border-purple-700 bg-gray-850 p-3 bg-gray-900">
-              <p className="text-xs font-semibold text-purple-300 mb-2 tracking-wide">Management Layer</p>
+            {/* Management Layer — sky blue */}
+            <div className="rounded border border-[#0ea5e9]/30 bg-[#0ea5e9]/5 p-3">
+              <p className="text-[0.6rem] font-display font-semibold text-[#0ea5e9] mb-2 uppercase tracking-[0.15em]">
+                Management Layer
+              </p>
               <div className="space-y-2">
                 <ComponentBox
                   id="api-server"
@@ -63,7 +67,8 @@ export default function Canvas({
                   activeComponentIds={activeComponentIds}
                   activeComponentId={activeComponentId}
                   onSelect={onSelectComponent}
-                  colorClass="border-purple-600 bg-purple-950"
+                  colorClass="border-[#0ea5e9]/50 bg-[#0ea5e9]/5"
+                  accentColor="#0ea5e9"
                 />
                 <ComponentBox
                   id="scheduler"
@@ -71,7 +76,8 @@ export default function Canvas({
                   activeComponentIds={activeComponentIds}
                   activeComponentId={activeComponentId}
                   onSelect={onSelectComponent}
-                  colorClass="border-purple-600 bg-purple-950"
+                  colorClass="border-[#0ea5e9]/50 bg-[#0ea5e9]/5"
+                  accentColor="#0ea5e9"
                 />
                 <ComponentBox
                   id="kubelet"
@@ -79,7 +85,8 @@ export default function Canvas({
                   activeComponentIds={activeComponentIds}
                   activeComponentId={activeComponentId}
                   onSelect={onSelectComponent}
-                  colorClass="border-purple-600 bg-purple-950"
+                  colorClass="border-[#0ea5e9]/50 bg-[#0ea5e9]/5"
+                  accentColor="#0ea5e9"
                 />
                 <ComponentBox
                   id="crio"
@@ -87,7 +94,8 @@ export default function Canvas({
                   activeComponentIds={activeComponentIds}
                   activeComponentId={activeComponentId}
                   onSelect={onSelectComponent}
-                  colorClass="border-purple-600 bg-purple-950"
+                  colorClass="border-[#0ea5e9]/50 bg-[#0ea5e9]/5"
+                  accentColor="#0ea5e9"
                 />
                 <ComponentBox
                   id="ingress-router-haproxy"
@@ -95,19 +103,24 @@ export default function Canvas({
                   activeComponentIds={activeComponentIds}
                   activeComponentId={activeComponentId}
                   onSelect={onSelectComponent}
-                  colorClass="border-red-700 bg-red-950"
+                  colorClass="border-[#7c3aed]/50 bg-[#7c3aed]/5"
+                  accentColor="#7c3aed"
                 />
               </div>
             </div>
 
-            {/* Infrastructure Node Boundary */}
-            <div className="xl:col-span-2 rounded border-2 border-green-700 bg-gray-900 p-3">
-              <p className="text-xs font-semibold text-green-300 mb-2 tracking-wide">Infrastructure Node Boundary</p>
+            {/* Infrastructure Node Boundary — amber */}
+            <div className="xl:col-span-2 rounded border-2 border-[#f59e0b]/30 bg-[#f59e0b]/5 p-3">
+              <p className="text-[0.6rem] font-display font-semibold text-[#f59e0b] mb-2 uppercase tracking-[0.15em]">
+                Infrastructure Node Boundary
+              </p>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                {/* Namespace / Projects */}
-                <div className="rounded border border-dashed border-blue-600 bg-gray-950 p-3">
-                  <p className="text-xs font-semibold text-blue-300 mb-2 tracking-wide">Namespace: app</p>
+                {/* Namespace: app — purple */}
+                <div className="rounded border border-dashed border-[#7c3aed]/40 bg-[#7c3aed]/5 p-3">
+                  <p className="text-[0.6rem] font-display font-semibold text-[#7c3aed] mb-2 uppercase tracking-[0.15em]">
+                    Namespace: app
+                  </p>
                   <PodLayer
                     podId="app-pod"
                     label="Pod: web-app"
@@ -119,8 +132,11 @@ export default function Canvas({
                   />
                 </div>
 
-                <div className="rounded border border-dashed border-blue-600 bg-gray-950 p-3">
-                  <p className="text-xs font-semibold text-blue-300 mb-2 tracking-wide">Namespace: router</p>
+                {/* Namespace: router — purple */}
+                <div className="rounded border border-dashed border-[#7c3aed]/40 bg-[#7c3aed]/5 p-3">
+                  <p className="text-[0.6rem] font-display font-semibold text-[#7c3aed] mb-2 uppercase tracking-[0.15em]">
+                    Namespace: router
+                  </p>
                   <PodLayer
                     podId="router-pod"
                     label="Pod: router"
@@ -132,9 +148,11 @@ export default function Canvas({
                   />
                 </div>
 
-                {/* Host Networking Subsystem */}
-                <div className="lg:col-span-2 rounded border border-green-800 bg-green-950/20 p-3">
-                  <p className="text-xs font-semibold text-green-300 mb-2 tracking-wide">Host Networking Subsystem</p>
+                {/* Host Networking Subsystem — emerald */}
+                <div className="lg:col-span-2 rounded border border-[#10b981]/30 bg-[#10b981]/5 p-3">
+                  <p className="text-[0.6rem] font-display font-semibold text-[#10b981] mb-2 uppercase tracking-[0.15em]">
+                    Host Networking Subsystem
+                  </p>
                   <div className="grid grid-cols-2 gap-2">
                     <ComponentBox
                       id="ovs-bridge-br-int"
@@ -142,7 +160,8 @@ export default function Canvas({
                       activeComponentIds={activeComponentIds}
                       activeComponentId={activeComponentId}
                       onSelect={onSelectComponent}
-                      colorClass="border-green-700 bg-green-950"
+                      colorClass="border-[#10b981]/50 bg-[#10b981]/5"
+                      accentColor="#10b981"
                     />
                     <ComponentBox
                       id="host-veth-pair"
@@ -150,7 +169,8 @@ export default function Canvas({
                       activeComponentIds={activeComponentIds}
                       activeComponentId={activeComponentId}
                       onSelect={onSelectComponent}
-                      colorClass="border-green-700 bg-green-950"
+                      colorClass="border-[#10b981]/50 bg-[#10b981]/5"
+                      accentColor="#10b981"
                     />
                   </div>
                 </div>
@@ -158,16 +178,17 @@ export default function Canvas({
             </div>
           </div>
 
-          {/* External Client (outside cluster, at bottom) */}
-          <div className="mt-4 pt-4 border-t border-gray-700">
-            <p className="text-xs text-gray-500 mb-2">External</p>
+          {/* External Client */}
+          <div className="mt-4 pt-4 border-t border-white/8">
+            <p className="text-[0.6rem] text-white/35 uppercase tracking-[0.15em] mb-2">External</p>
             <ComponentBox
               id="external-client"
               label="External Client"
               activeComponentIds={activeComponentIds}
               activeComponentId={activeComponentId}
               onSelect={onSelectComponent}
-              colorClass="border-gray-500 bg-gray-800"
+              colorClass="border-[#00e5ff]/30 bg-[#00e5ff]/5"
+              accentColor="#00e5ff"
               className="max-w-[12rem]"
             />
           </div>

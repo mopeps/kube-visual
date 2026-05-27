@@ -1,6 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --kube-bg:   #070b14;
+  --kube-bg2:  #0d1424;
+  --kube-grid: rgba(0, 200, 255, 0.04);
+}
 
 * {
   box-sizing: border-box;
@@ -8,6 +16,31 @@
 
 body {
   margin: 0;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  background: var(--kube-bg);
+  color: #fff;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Subtle cyan grid overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--kube-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--kube-grid) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* Thin scrollbars */
+::-webkit-scrollbar          { width: 6px; height: 6px; }
+::-webkit-scrollbar-track    { background: rgba(255, 255, 255, 0.03); }
+::-webkit-scrollbar-thumb    { background: rgba(255, 255, 255, 0.15); border-radius: 3px; }
