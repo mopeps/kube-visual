@@ -1,0 +1,173 @@
+[
+  {
+    "componentId": "external-client",
+    "displayName": "External Client",
+    "layer": "External",
+    "problemSolved": "Represents an end-user or external service initiating an HTTPS request to an application hosted in the OpenShift cluster.",
+    "interactions": [
+      "Sends HTTPS requests to the cluster's public Route hostname.",
+      "Receives TLS certificate presented by the HAProxy ingress router."
+    ],
+    "explorationCommands": [
+      "# Simulate a request from outside the cluster\ncurl -v https://<route-hostname>/api/endpoint"
+    ]
+  },
+  {
+    "componentId": "api-server",
+    "displayName": "API Server",
+    "layer": "Management Layer",
+    "problemSolved": "The central control plane component that exposes the Kubernetes/OpenShift API. All cluster mutations (Pod creation, config changes) pass through it, providing authentication, authorization, and admission control.",
+    "interactions": [
+      "Receives all kubectl / oc commands and REST API calls.",
+      "Writes cluster state to etcd and notifies controllers via watch events.",
+      "Validates and persists resource objects before they are acted on by other components."
+    ],
+    "explorationCommands": [
+      "# Check API server health\noc get --raw /healthz",
+      "# List all available API groups\noc api-resources --verbs=list --namespaced -o name"
+    ]
+  },
+  {
+    "componentId": "scheduler",
+    "displayName": "Scheduler",
+    "layer": "Management Layer",
+    "problemSolved": "Watches for unscheduled Pods and assigns them to nodes based on resource availability, affinity rules, taints, and tolerations. Ensures workloads are distributed efficiently.",
+    "interactions": [
+      "Watches the API Server for Pods with no assigned node.",
+      "Evaluates node capacity (CPU, memory) before binding a Pod.",
+      "Writes the scheduling decision back to the API Server as a binding object."
+    ],
+    "explorationCommands": [
+      "# View scheduler logs\noc logs -n openshift-kube-scheduler -l app=openshift-kube-scheduler --tail=50",
+      "# Describe scheduling events for a pod\noc describe pod <pod-name> -n <namespace> | grep -A5 Events"
+    ]
+  },
+  {
+    "componentId": "kubelet",
+    "displayName": "Kubelet",
+    "layer": "Management Layer",
+    "problemSolved": "The node-level agent that runs on every worker node. It watches the API Server for Pods assigned to its node, then instructs the container runtime (CRI-O) to start, monitor, and stop containers accordingly.",
+    "interactions": [
+      "Polls the API Server for PodSpec updates for its node.",
+      "Calls the CRI (Container Runtime Interface) to manage container lifecycle.",
+      "Reports node and Pod status back to the API Server.",
+      "Mounts volumes and applies cgroup resource limits."
+    ],
+    "explorationCommands": [
+      "# Check kubelet status on a node\nsystemctl status kubelet",
+      "# View kubelet logs\njournalctl -u kubelet -f --no-pager | tail -50"
+    ]
+  },
+  {
+    "componentId": "crio",
+    "displayName": "CRI-O",
+    "layer": "Management Layer",
+    "problemSolved": "A lightweight container runtime implementing the Kubernetes CRI (Container Runtime Interface). It pulls images, creates containers using OCI-compliant runtimes (runc/crun), and manages the container lifecycle on behalf of kubelet.",
+    "interactions": [
+      "Receives gRPC calls from the Kubelet via the CRI protocol.",
+      "Delegates container process creation to runc or crun.",
+      "Calls CNI plugins to set up container networking (netns, veth, IP assignment).",
+      "Sets up cgroup v2 hierarchies for resource enforcement."
+    ],
+    "explorationCommands": [
+      "# List running containers managed by CRI-O\ncrictl ps",
+      "# Inspect a specific container\ncrictl inspect <container_id>",
+      "# View CRI-O logs\njournalctl -u crio -f --no-pager | tail -50"
+    ]
+  },
+  {
+    "componentId": "ingress-router-haproxy",
+    "displayName": "Ingress Router (HAProxy)",
+    "layer": "Management Layer",
+    "problemSolved": "The OpenShift ingress controller, running as an HAProxy instance. It watches Route objects and dynamically updates its configuration to proxy external HTTP/HTTPS traffic to the correct backend Services and Pods.",
+    "interactions": [
+      "Terminates TLS using certificates stored in Secrets or provided by cert-manager.",
+      "Re-encrypts or passes through traffic depending on the Route's TLS termination policy.",
+      "Forwards traffic to ClusterIP Services which load-balance across Pod endpoints."
+    ],
+    "explorationCommands": [
+      "# Check router pods\noc get pods -n openshift-ingress",
+      "# View HAProxy config inside the router pod\noc exec -n openshift-ingress <router-pod> -- cat /var/lib/haproxy/conf/haproxy.config | head -60",
+      "# View route object\noc get route <route-name> -n <namespace> -o yaml"
+    ]
+  },
+  {
+    "componentId": "ovs-bridge-br-int",
+    "displayName": "OVS Bridge (br-int)",
+    "layer": "Host Networking Subsystem",
+    "problemSolved": "The Open vSwitch integration bridge managed by OVN-Kubernetes. It is the central virtual switching fabric on each node. All pod veth interfaces and the host uplink connect to this bridge, and OVN flow rules govern how packets are forwarded between them.",
+    "interactions": [
+      "Connected to all pod veth pairs on the node.",
+      "Receives OpenFlow rules from the OVN controller specifying forwarding logic.",
+      "Handles local pod-to-pod traffic without leaving the node.",
+      "Encapsulates inter-node traffic using Geneve tunnels."
+    ],
+    "explorationCommands": [
+      "# List all interfaces on the OVS bridge\novs-vsctl show",
+      "# Dump OpenFlow rules for the integration bridge\novs-ofctl dump-flows br-int | head -30",
+      "# View OVN logical switch ports\novn-nbctl show"
+    ]
+  },
+  {
+    "componentId": "host-veth-pair",
+    "displayName": "Host veth Interface",
+    "layer": "Host Networking Subsystem",
+    "problemSolved": "One end of a virtual Ethernet pair (veth). Each pod gets a veth pair: one end lives inside the pod's network namespace (as 'eth0'), the other end lives in the host's root namespace and is plugged into the OVS bridge. This is how traffic crosses the namespace boundary.",
+    "interactions": [
+      "Peer interface resides inside the Pod's network namespace as eth0.",
+      "Host-side end is attached to the OVS br-int bridge as a port.",
+      "Created and managed by the OVN-Kubernetes CNI plugin during pod startup."
+    ],
+    "explorationCommands": [
+      "# List veth pairs on the host\nip link show type veth",
+      "# Find which veth belongs to a specific pod (match by peer index)\nip link | grep -A1 'veth'",
+      "# Show bridge ports\nbridge link show"
+    ]
+  },
+  {
+    "componentId": "pod-netns",
+    "displayName": "Linux Network Namespace (netns)",
+    "layer": "Linux Kernel Primitives",
+    "problemSolved": "Provides network virtualization and isolation. It gives each Pod a private routing table, IP address, and packet filtering space, preventing port conflicts on the host.",
+    "interactions": [
+      "Attaches to a host-side veth pair to bridge traffic out of the namespace.",
+      "Provisioned and configured by the OVN-Kubernetes CNI plugin during pod creation."
+    ],
+    "explorationCommands": [
+      "# Step 1: Find the target host PID of the container process\ncrictl inspect <container_id> | grep pid",
+      "# Step 2: Enter the isolated network namespace using the PID to view interfaces\nnsenter -t <PID> -n ip addr show"
+    ]
+  },
+  {
+    "componentId": "pod-cgroups",
+    "displayName": "Control Groups (cgroups)",
+    "layer": "Linux Kernel Primitives",
+    "problemSolved": "Enforces CPU, memory, and I/O resource limits and accounting for each container. Prevents a single runaway container from starving other workloads on the same node.",
+    "interactions": [
+      "Hierarchy is created by CRI-O/runc when the container starts.",
+      "Kubelet monitors cgroup usage to report resource consumption back to the API Server.",
+      "OOM killer is triggered by the kernel when a container exceeds its memory limit."
+    ],
+    "explorationCommands": [
+      "# Find cgroup path for a container\ncrictl inspect <container_id> | grep cgroupsPath",
+      "# View memory limits from the cgroup\ncat /sys/fs/cgroup/<cgroup_path>/memory.max",
+      "# View CPU quota\ncat /sys/fs/cgroup/<cgroup_path>/cpu.max"
+    ]
+  },
+  {
+    "componentId": "container-process",
+    "displayName": "Container Process (PID 1)",
+    "layer": "Linux Kernel Primitives",
+    "problemSolved": "The actual application process running as PID 1 inside the container's PID namespace. It is the leaf node of the entire Kubernetes ownership chain — the workload the entire infrastructure exists to run.",
+    "interactions": [
+      "Runs inside the intersection of a Network Namespace (netns), cgroup slice, and PID namespace.",
+      "Receives inbound socket connections on its private IP address.",
+      "Writes logs to stdout/stderr which are captured by the container runtime."
+    ],
+    "explorationCommands": [
+      "# Execute a shell inside the running container\noc exec -it <pod-name> -n <namespace> -- /bin/sh",
+      "# View the process tree inside the container\noc exec <pod-name> -n <namespace> -- ps aux",
+      "# Check what port PID 1 is listening on\noc exec <pod-name> -n <namespace> -- ss -tlnp"
+    ]
+  }
+]
