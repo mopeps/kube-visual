@@ -1,6 +1,6 @@
 # kube-visual
 
-# AI Coding Agent Instructions: Interactive OpenShift-to-Linux Blueprint Tool
+# AI Coding Agent Instructions 1: Interactive OpenShift-to-Linux Blueprint Tool
 ## Project Goal
 Build a frontend-only interactive web application that provides a nested, containment-based visual mapping of OpenShift cluster-level logical objects down to their underlying Linux kernel primitives. The core utility is tracing dynamic interaction and communication flows across these layers based on user-selected cluster events.
 ## 1. UI Structural & Visual Hierarchy
@@ -82,7 +82,7 @@ Implement this specific data schema in a standalone JSON file to trace the **Pod
  3. Wire the JSON event data model to trigger opacity updates and render connecting lines when an event is clicked.
 
 
-# AI Coding Agent Instructions: UI Layering & Progressive Disclosure
+# AI Coding Agent Instructions 2: UI Layering & Progressive Disclosure
 ## Objective
 Implement a multi-layered, zoomable visual interface that prevents cognitive overload by hiding deep Linux implementation details until explicitly requested by the user.
 ## 1. Visibility Matrix (The 3-Stage Reveal)
@@ -104,3 +104,36 @@ The coding agent must programmatically transition hidden layers (Layers 3 and 4)
  * **Depth Cueing:** Use progressive background shading. Inner nested boxes must use a darker, contrasting background than their parent containers to create a distinct visual illusion of depth.
  * **Breadcrumb Navigation:** When deep layers are exposed, render a dynamic structural breadcrumb at the top of the workspace canvas (e.g., Cluster ➔ Node-01 ➔ Project: App ➔ Pod: Web ➔ Linux NetNS).
  * **Idle State:** When an event is active, dim all non-participating structural elements to opacity-30 or opacity-40 to maintain focus on the active data path.
+
+# AI Coding Agent Instructions 3: Interactive Object Inspector Sidebar
+## Objective
+Implement an "Object Inspector" slide-out panel or floating card that activates whenever a user clicks on any visual block in the blueprint canvas. This panel provides deep architectural context, dependency tracking, and real-world terminal verification commands.
+## 1. Metadata Schema (components.json)
+Every clickable box on the canvas must map to a standalone structural data entry following this exact JSON schema format:
+```json
+{
+  "componentId": "pod-netns",
+  "displayName": "Linux Network Namespace (netns)",
+  "layer": "Linux Kernel Primitives",
+  "problemSolved": "Provides network virtualization and isolation. It gives each Pod a private routing table, IP address, and packet filtering space, preventing port conflicts on the host.",
+  "interactions": [
+    "Attaches to a host-side veth pair to bridge traffic out of the namespace.",
+    "Provisioned and configured by the OVN-Kubernetes CNI plugin during pod creation."
+  ],
+  "explorationCommands": [
+    "# Step 1: Find the target host PID of the container process\ncrictl inspect <container_id> | grep pid",
+    "# Step 2: Enter the isolated network namespace using the PID to view interfaces\nnsenter -t <PID> -n ip addr show"
+  ]
+}
+
+```
+## 2. UI & Interaction Requirements
+ * **Trigger State:** Clicking any structural container box captures its unique componentId and sets the active component state.
+ * **Component Feedback:** The clicked box on the canvas must immediately receive a distinct active border outline (e.g., a glowing ring or high-contrast border) to signal selection.
+ * **The Inspector Panel Layout:** Render a clean, non-obtrusive right-side slide-out panel containing:
+   1. **Header:** Displays displayName and the corresponding layer category banner.
+   2. **Problem Solved Section:** A text block rendering the problemSolved string to explain architectural intent.
+   3. **Interactions List:** A bulleted loop rendering the items in the interactions array.
+   4. **Terminal Exploration Block:** A dark, monospaced code snippet container block displaying the commands in explorationCommands with a 1-click "Copy Code" clipboard button helper.
+ * **Dismissal:** Provide an obvious close button (X) or allow clicking on the empty canvas background to clear the active selection and close the panel.
+
