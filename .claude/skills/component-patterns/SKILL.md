@@ -1,3 +1,8 @@
+---
+name: component-patterns
+description: Use this skill when adding, modifying, or understanding any React component in this codebase. Trigger words: component, ComponentBox, LayerBoundary, PodLayer, InspectorPanel, KernelPrimitives, Sidebar, Canvas, Breadcrumb, props, onClick, highlight, dim, expand, collapse, inspector, chip, box, panel, sidebar.
+---
+
 # Skill: Component Patterns
 
 Covers how the existing UI components in `src/components/` are structured, what props they accept, and conventions for extending them.

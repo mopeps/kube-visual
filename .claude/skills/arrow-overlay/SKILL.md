@@ -1,3 +1,8 @@
+---
+name: arrow-overlay
+description: Use this skill when working with the SVG arrow trace system — adding arrows, debugging missing arrows, changing colors, or modifying animation. Trigger words: arrow, ArrowOverlay, SVG, trace, bezier, connector, line, animation, stroke, draw, step badge, arrow missing, useLayoutEffect, quadratic, curve, marker, arrowhead.
+---
+
 # Skill: Arrow Overlay
 
 Covers how the event trace arrows are rendered in `src/components/ArrowOverlay.jsx`. This is a custom SVG implementation — not react-xarrows (which is an unused dependency).

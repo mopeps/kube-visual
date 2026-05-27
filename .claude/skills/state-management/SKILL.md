@@ -1,3 +1,8 @@
+---
+name: state-management
+description: Use this skill when working with interactive state, event selection, component selection, or pod expansion. Trigger words: state, useState, hook, useEventState, activeEvent, activeComponentId, activeComponentIds, expandedPods, selectEvent, clearEvent, togglePod, prop drilling, callback, selection, selected, clear, toggle, derived state.
+---
+
 # Skill: State Management
 
 Covers the `useEventState` hook — the single source of truth for all interactive state in this app. There is no external state library (no Redux, no Zustand, no Context).

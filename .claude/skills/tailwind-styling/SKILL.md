@@ -1,3 +1,8 @@
+---
+name: tailwind-styling
+description: Use this skill when creating or modifying UI components, applying Tailwind classes, setting colors, adjusting typography, or implementing responsive layouts. Trigger words: style, styling, color, Tailwind, CSS, layout, responsive, font, typography, glow, animation, design token, k-cyan, k-amber, k-green, k-purple, border, background, opacity, neon, accent, palette.
+---
+
 # Skill: Tailwind Styling
 
 Applies to all JSX files in `src/`. This skill covers how to write styles consistently in this codebase.

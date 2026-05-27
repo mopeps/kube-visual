@@ -1,3 +1,8 @@
+---
+name: data-model
+description: Use this skill when adding or modifying events, component metadata, or the JSON data files that drive the app. Trigger words: event, events.json, components.json, data model, step, sourceComponentId, targetComponentId, explorationCommands, new event, add event, schema, eventId, componentId, layer, problemSolved, interactions, JSON.
+---
+
 # Skill: Data Model
 
 Covers the two JSON data files that drive all dynamic content in the app. Both live in `src/data/`.
