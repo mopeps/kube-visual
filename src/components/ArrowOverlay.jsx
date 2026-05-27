@@ -9,7 +9,7 @@ function getCenterRelativeTo(el, container) {
   }
 }
 
-function ArrowPath({ start, end, stepNum, totalSteps }) {
+function ArrowPath({ start, end, stepNum }) {
   const mx  = (start.x + end.x) / 2
   const my  = (start.y + end.y) / 2
   const dx  = end.x - start.x
@@ -18,67 +18,71 @@ function ArrowPath({ start, end, stepNum, totalSteps }) {
   const cpy = my + dx * 0.22
   const markerId = `arrowhead-${stepNum}`
   const delay = `${(stepNum - 1) * 0.1}s`
-  const accent = '#ffcb33'
+  // Catppuccin peach — single warm accent across all trace strokes
+  const accent = '#fab387'
+  const badgeFill = '#11111b'
 
   return (
     <g style={{ animationDelay: delay }}>
       <defs>
-        <marker id={markerId} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-          <path d="M0,0 L8,4 L0,8 L2,4 Z" fill={accent} />
+        <marker id={markerId} markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+          <path d="M0,0 L9,4.5 L0,9 L2,4.5 Z" fill={accent} />
         </marker>
       </defs>
-      {/* Outer glow */}
+      {/* Soft outer halo */}
       <path
         d={`M ${start.x} ${start.y} Q ${cpx} ${cpy} ${end.x} ${end.y}`}
         fill="none"
         stroke={accent}
-        strokeWidth={10}
-        opacity={0.15}
+        strokeWidth={8}
+        opacity={0.10}
       />
-      {/* Inner glow */}
+      {/* Mid glow */}
       <path
         d={`M ${start.x} ${start.y} Q ${cpx} ${cpy} ${end.x} ${end.y}`}
         fill="none"
         stroke={accent}
-        strokeWidth={4}
-        opacity={0.32}
+        strokeWidth={3}
+        opacity={0.22}
       />
-      {/* Main path */}
+      {/* Main path — drawn-on */}
       <path
         className="arrow-path"
         d={`M ${start.x} ${start.y} Q ${cpx} ${cpy} ${end.x} ${end.y}`}
         fill="none"
         stroke={accent}
-        strokeWidth={1.5}
+        strokeWidth={1.4}
         strokeLinecap="round"
-        strokeDasharray="400"
+        strokeDasharray="6 3"
         strokeDashoffset="400"
         markerEnd={`url(#${markerId})`}
         opacity={0.95}
         style={{ animationDelay: delay }}
       />
-      {/* Step badge */}
-      <circle
-        cx={cpx}
-        cy={cpy}
-        r={11}
-        fill="#0c1424"
+      {/* Step badge — square, terminal-character feel */}
+      <rect
+        x={cpx - 10}
+        y={cpy - 10}
+        width={20}
+        height={20}
+        fill={badgeFill}
         stroke={accent}
-        strokeWidth={1.5}
+        strokeWidth={1.25}
         style={{ animation: `reveal-up 0.35s ease-out ${delay} both` }}
       />
       <text
         x={cpx}
-        y={cpy}
+        y={cpy + 0.5}
         textAnchor="middle"
         dominantBaseline="central"
         fill={accent}
-        fontSize={10}
+        fontSize={10.5}
         fontFamily="'JetBrains Mono', monospace"
-        fontWeight="600"
+        fontWeight="700"
+        letterSpacing="0.5"
         style={{ animation: `reveal-up 0.35s ease-out ${delay} both` }}
       >
-        {stepNum}
+        {String(stepNum).padStart(2, '0')}
       </text>
     </g>
   )
@@ -120,7 +124,7 @@ export default function ArrowOverlay({ activeEvent, expandedPods }) {
       }}
     >
       {arrows.map(a => (
-        <ArrowPath key={a.step} start={a.start} end={a.end} stepNum={a.step} totalSteps={arrows.length} />
+        <ArrowPath key={a.step} start={a.start} end={a.end} stepNum={a.step} />
       ))}
     </svg>
   )

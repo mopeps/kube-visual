@@ -1,96 +1,98 @@
 import events from '../data/events.json'
 
+// Each event gets a Catppuccin accent — color is data, not just decor.
 const EVENT_THEMES = {
-  'route-ingress-traffic': { hue: '#00f0ff', label: 'Ingress' },
-  'pod-spawning':          { hue: '#c084fc', label: 'Lifecycle' },
-  'pod-to-pod-ovn':        { hue: '#39ff88', label: 'Network' },
+  'route-ingress-traffic': { hue: '#89dceb', label: 'ingress',   tag: 'NET' },
+  'pod-spawning':          { hue: '#cba6f7', label: 'lifecycle', tag: 'LIFE' },
+  'pod-to-pod-ovn':        { hue: '#a6e3a1', label: 'overlay',   tag: 'OVN' },
 }
 
-function Logo() {
+function AsciiMark() {
+  // Tight ASCII logotype — three rows of block glyphs.
   return (
-    <div className="flex items-center gap-2.5">
-      <div
-        className="relative w-8 h-8 rounded-md flex items-center justify-center"
-        style={{
-          background: 'linear-gradient(135deg, #00f0ff 0%, #c084fc 100%)',
-          boxShadow: '0 0 22px rgba(0, 240, 255, 0.55), 0 0 40px rgba(192, 132, 252, 0.3)',
-        }}
-      >
-        <svg viewBox="0 0 24 24" className="w-4 h-4 text-k-base" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <rect x="4" y="4" width="16" height="16" rx="2" />
-          <rect x="9" y="9" width="6" height="6" rx="1" />
-        </svg>
-      </div>
-      <div className="flex flex-col leading-none">
-        <span className="font-display font-semibold text-[15px] tracking-tight text-k-tx-wh">
-          kube-visual
-        </span>
-        <span className="font-mono text-[10px] mt-1 text-k-tx-mut">
-          v1.0 · cluster-01
-        </span>
-      </div>
-    </div>
+    <pre
+      className="font-mono text-[8.5px] leading-[1.05] text-k-mauve select-none"
+      style={{ textShadow: '0 0 12px rgba(203, 166, 247, 0.45)' }}
+      aria-hidden="true"
+    >
+{`██╗  ██╗██╗   ██╗
+██║ ██╔╝██║   ██║
+█████╔╝ ██║   ██║
+██╔═██╗ ╚██╗ ██╔╝
+██║  ██╗ ╚████╔╝`}
+    </pre>
   )
 }
 
 function SidebarHeader({ onClose }) {
   return (
-    <div className="px-5 pt-5 pb-4 flex items-start justify-between border-b border-k-bd">
-      <Logo />
+    <div className="px-4 pt-4 pb-3 flex items-start gap-3 border-b border-k-bd relative">
+      <AsciiMark />
+      <div className="flex flex-col leading-tight pt-0.5 min-w-0 flex-1">
+        <span className="font-display text-[13px] text-k-tx-wh tracking-[0.15em]">
+          kube.vis
+        </span>
+        <span className="font-mono text-[10px] text-k-tx-mut mt-1">
+          v1.0 · openshift
+        </span>
+        <span className="font-mono text-[10px] text-k-green mt-0.5">
+          <span className="animate-blink">●</span> session attached
+        </span>
+      </div>
       <button
         onClick={onClose}
-        className="lg:hidden mt-1 w-7 h-7 flex items-center justify-center rounded-md text-k-tx-mut hover:text-k-tx-wh hover:bg-white/5 transition-colors"
+        className="lg:hidden absolute top-3 right-3 w-7 h-7 flex items-center justify-center text-k-tx-mut hover:text-k-tx-wh hover:bg-k-s2 transition-colors"
         aria-label="Close sidebar"
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
+        <span className="font-mono text-[14px] leading-none">×</span>
       </button>
     </div>
   )
 }
 
-function EventCard({ event, isActive, onClick }) {
-  const theme = EVENT_THEMES[event.eventId] ?? { hue: '#94a3b8', label: 'Event' }
+function BufferRow({ index, event, isActive, onClick }) {
+  const theme = EVENT_THEMES[event.eventId] ?? { hue: '#bac2de', label: 'event', tag: 'EV' }
 
   return (
     <button
       onClick={onClick}
-      className={`group relative w-full text-left rounded-lg px-3.5 py-3 transition-all duration-200 border ${
+      className={`group relative block w-full text-left font-mono text-[11.5px] leading-snug px-3 py-2 transition-colors duration-100 border-l-2 ${
         isActive
-          ? 'bg-white/[0.04]'
-          : 'border-transparent hover:bg-white/[0.025] hover:border-k-bd'
+          ? 'bg-k-s2/60 border-l-[2px]'
+          : 'border-l-transparent hover:bg-k-s1/80 hover:border-l-k-bd-hi'
       }`}
-      style={isActive ? {
-        borderColor: `${theme.hue}40`,
-        boxShadow: `0 0 0 1px ${theme.hue}20, 0 4px 20px -8px ${theme.hue}25`,
-      } : undefined}
+      style={isActive ? { borderLeftColor: theme.hue } : undefined}
     >
-      <div className="flex items-center gap-2 mb-1.5">
+      <div className="flex items-baseline gap-2">
         <span
-          className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-mono font-medium"
+          className="text-[11px] w-3 inline-block text-right"
+          style={{ color: isActive ? theme.hue : 'var(--c-tx-dim)' }}
+        >
+          {isActive ? '>' : ' '}
+        </span>
+        <span className="text-k-tx-dim w-5 text-right tabular-nums">
+          {String(index + 1).padStart(2, '0')}
+        </span>
+        <span
+          className="px-1.5 py-px text-[9.5px] font-semibold tracking-widest"
           style={{
             color: theme.hue,
-            background: `${theme.hue}14`,
+            background: `${theme.hue}1a`,
+            border: `1px solid ${theme.hue}55`,
           }}
         >
-          <span
-            className="w-1 h-1 rounded-full"
-            style={{ background: theme.hue, boxShadow: `0 0 6px ${theme.hue}` }}
-          />
-          {theme.label}
+          {theme.tag}
+        </span>
+        <span
+          className={`flex-1 truncate ${isActive ? 'text-k-tx-wh' : 'text-k-tx-br group-hover:text-k-tx-wh'}`}
+        >
+          {event.eventName}
         </span>
         {isActive && (
-          <span className="font-mono text-[10px] text-k-tx-mut">active</span>
+          <span className="text-k-peach text-[10px]">+</span>
         )}
       </div>
-
-      <p className={`font-display text-[13px] font-medium leading-tight mb-1 transition-colors ${
-        isActive ? 'text-k-tx-wh' : 'text-k-tx-br group-hover:text-k-tx-wh'
-      }`}>
-        {event.eventName}
-      </p>
-      <p className="text-[11px] leading-relaxed text-k-tx-mut line-clamp-2">
+      <p className="text-[10.5px] text-k-tx-mut pl-[58px] pr-1 mt-1 truncate">
         {event.description}
       </p>
     </button>
@@ -98,50 +100,54 @@ function EventCard({ event, isActive, onClick }) {
 }
 
 function FlowSteps({ event }) {
-  const theme = EVENT_THEMES[event.eventId] ?? { hue: '#ffcb33' }
-
+  const theme = EVENT_THEMES[event.eventId] ?? { hue: '#fab387' }
   return (
-    <div className="border-t border-k-bd overflow-y-auto" style={{ maxHeight: '320px' }}>
-      <div className="px-5 pt-4 pb-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ background: theme.hue, boxShadow: `0 0 8px ${theme.hue}` }}
-            />
-            <span className="font-display text-[11px] font-semibold tracking-wider uppercase text-k-tx-br">
-              Flow Trace
-            </span>
-          </div>
-          <span className="font-mono text-[10px] text-k-tx-mut">
-            {event.steps.length} steps
-          </span>
-        </div>
+    <div className="border-t border-k-bd overflow-y-auto" style={{ maxHeight: '38vh' }}>
+      <div className="px-4 pt-3 pb-2 flex items-center gap-2 sticky top-0 bg-k-s1 z-10 border-b border-k-bd-dim">
+        <span className="font-mono text-[10px] text-k-tx-mut">┌─</span>
+        <span
+          className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.2em]"
+          style={{ color: theme.hue }}
+        >
+          trace
+        </span>
+        <span className="hr-dashed" />
+        <span className="font-mono text-[10px] text-k-tx-dim">
+          {String(event.steps.length).padStart(2, '0')} steps
+        </span>
+        <span className="font-mono text-[10px] text-k-tx-mut">─┐</span>
+      </div>
 
-        <ol className="space-y-2.5 relative">
-          <div
-            className="absolute left-[11px] top-1 bottom-1 w-px"
-            style={{ background: `linear-gradient(180deg, ${theme.hue}40, transparent)` }}
-          />
-          {event.steps.map(step => (
-            <li key={step.step} className="flex gap-3 relative">
-              <span
-                className="relative z-10 flex-shrink-0 w-[22px] h-[22px] flex items-center justify-center rounded-full text-[10px] font-mono font-semibold"
-                style={{
-                  background: `${theme.hue}18`,
-                  border: `1px solid ${theme.hue}60`,
-                  color: theme.hue,
-                }}
-              >
-                {step.step}
-              </span>
-              <p className="text-[11.5px] leading-relaxed text-k-tx pt-0.5">
+      <ol className="px-4 pt-3 pb-4 font-mono text-[11px] leading-snug">
+        {event.steps.map((step, i) => {
+          const isLast = i === event.steps.length - 1
+          return (
+            <li key={step.step} className="flex gap-2.5">
+              <div className="flex flex-col items-center flex-shrink-0">
+                <span
+                  className="w-[18px] h-[18px] flex items-center justify-center text-[9.5px] font-semibold border tabular-nums"
+                  style={{
+                    color: theme.hue,
+                    borderColor: `${theme.hue}80`,
+                    background: `${theme.hue}10`,
+                  }}
+                >
+                  {String(step.step).padStart(2, '0')}
+                </span>
+                {!isLast && (
+                  <span
+                    className="w-px flex-1 my-1"
+                    style={{ background: `${theme.hue}40` }}
+                  />
+                )}
+              </div>
+              <p className="text-k-tx pb-3 pt-0.5">
                 {step.description}
               </p>
             </li>
-          ))}
-        </ol>
-      </div>
+          )
+        })}
+      </ol>
     </div>
   )
 }
@@ -151,53 +157,66 @@ export default function Sidebar({ activeEvent, onSelectEvent, isOpen, onClose })
     <aside
       className={`
         fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto
-        w-72 min-w-[18rem] flex-shrink-0
+        w-[18.5rem] min-w-[18.5rem] flex-shrink-0
         flex flex-col overflow-hidden
-        transition-transform duration-300 ease-in-out
+        transition-transform duration-200 ease-out
         ${isOpen ? 'translate-x-0 animate-slide-in-left' : '-translate-x-full lg:translate-x-0'}
       `}
       style={{
-        background: 'linear-gradient(180deg, rgba(17, 27, 48, 0.6) 0%, rgba(7, 11, 20, 0.95) 100%)',
+        background: 'var(--c-s1)',
         borderRight: '1px solid var(--c-bd)',
-        backdropFilter: 'blur(12px)',
       }}
     >
       <SidebarHeader onClose={onClose} />
 
-      {/* Section title */}
-      <div className="px-5 pt-4 pb-2 flex items-center justify-between">
-        <span className="font-display text-[11px] font-semibold tracking-wider uppercase text-k-tx-br">
-          Cluster Events
+      {/* Buffer list header */}
+      <div className="px-4 pt-3 pb-2 flex items-center gap-2 border-b border-k-bd-dim">
+        <span className="font-mono text-[10px] text-k-tx-mut">:</span>
+        <span className="font-mono text-[10.5px] uppercase tracking-[0.25em] text-k-tx-br">
+          ls events
         </span>
-        <span className="font-mono text-[10px] text-k-tx-mut">{events.length}</span>
+        <span className="hr-dashed" />
+        <span className="font-mono text-[10px] text-k-tx-dim tabular-nums">
+          {String(events.length).padStart(2, '0')}
+        </span>
       </div>
 
-      {/* Event list */}
-      <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-1.5">
-        {events.map(event => (
-          <EventCard
+      {/* Event buffer list */}
+      <div className="flex-1 overflow-y-auto py-1">
+        {events.map((event, i) => (
+          <BufferRow
             key={event.eventId}
+            index={i}
             event={event}
             isActive={activeEvent?.eventId === event.eventId}
             onClick={() => { onSelectEvent(event); onClose(); }}
           />
         ))}
+        {!activeEvent && (
+          <div className="px-4 py-6 font-mono text-[10.5px] text-k-tx-dim leading-relaxed">
+            <span className="text-k-mauve">~</span>
+            <br />
+            <span className="text-k-tx-mut">press</span>{' '}
+            <span className="text-k-peach">[1-{events.length}]</span>{' '}
+            <span className="text-k-tx-mut">or click</span>
+            <br />
+            <span className="text-k-tx-mut">a buffer to begin trace.</span>
+            <span className="caret text-k-peach" aria-hidden="true" />
+          </div>
+        )}
       </div>
 
       {activeEvent && <FlowSteps event={activeEvent} />}
 
-      {/* Footer / status */}
-      <div className="px-5 py-3 border-t border-k-bd flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span
-            className="w-1.5 h-1.5 rounded-full bg-k-green"
-            style={{ boxShadow: '0 0 10px #39ff88, 0 0 4px #39ff88', animation: 'pulse-amber 2.4s ease-in-out infinite' }}
-          />
-          <span className="font-mono text-[10px] text-k-tx-mut">connected</span>
-        </div>
-        <span className="font-mono text-[10px] text-k-tx-dim">
-          11 components
+      {/* Status / footer */}
+      <div className="px-4 py-2 border-t border-k-bd flex items-center gap-2 bg-k-crust">
+        <span className="font-mono text-[10px] text-k-green">
+          <span className="animate-blink">█</span>
         </span>
+        <span className="font-mono text-[10px] text-k-tx-mut">cluster-01</span>
+        <span className="text-k-tx-dim">│</span>
+        <span className="font-mono text-[10px] text-k-tx-mut flex-1">11 nodes</span>
+        <span className="font-mono text-[10px] text-k-tx-dim">utf-8</span>
       </div>
     </aside>
   )
