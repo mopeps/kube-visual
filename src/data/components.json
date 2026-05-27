@@ -77,9 +77,9 @@
   },
   {
     "componentId": "ingress-router-haproxy",
-    "displayName": "Ingress Router (HAProxy)",
+    "displayName": "Ingress Router Pod (HAProxy)",
     "layer": "Management Layer",
-    "problemSolved": "The OpenShift ingress controller, running as an HAProxy instance. It watches Route objects and dynamically updates its configuration to proxy external HTTP/HTTPS traffic to the correct backend Services and Pods.",
+    "problemSolved": "The OpenShift ingress controller, running as an HAProxy Pod in the openshift-ingress namespace. It watches Route objects and dynamically updates its configuration to proxy external HTTP/HTTPS traffic to the correct backend Services and Pods.",
     "interactions": [
       "Terminates TLS using certificates stored in Secrets or provided by cert-manager.",
       "Re-encrypts or passes through traffic depending on the Route's TLS termination policy.",
