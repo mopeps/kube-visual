@@ -80,3 +80,27 @@ Implement this specific data schema in a standalone JSON file to trace the **Pod
  1. Scaffold the base web page with a sidebar on the left and a massive canvas workspace container on the right.
  2. Build the visual layout of nested components using hardcoded CSS grids or flexboxes based on Section 1.
  3. Wire the JSON event data model to trigger opacity updates and render connecting lines when an event is clicked.
+
+
+# AI Coding Agent Instructions: UI Layering & Progressive Disclosure
+## Objective
+Implement a multi-layered, zoomable visual interface that prevents cognitive overload by hiding deep Linux implementation details until explicitly requested by the user.
+## 1. Visibility Matrix (The 3-Stage Reveal)
+Configure the components into three distinct visibility states based on user interaction:
+| Component / Layer | Default View State | Expanded View State | Visual Style |
+|---|---|---|---|
+| **Layer 1: Cluster & Nodes** | **Visible** | **Visible** | Solid outer boundaries (Gray/Dark background) |
+| **Layer 2: Projects & Pods** | **Visible** | **Visible** | Solid logical boxes (Blue/Purple accents) |
+| **Layer 3: CRI-O Containers** | **Hidden** | **Visible** | Nested inside Pods (Dashed borders) |
+| **Layer 4: Linux Kernel Primitives** (netns, veth, cgroups) | **Hidden** | **Visible** | Nested deep inside Pods/Nodes (Green accents) |
+## 2. Interaction Triggers for Expanding Deep Layers
+The coding agent must programmatically transition hidden layers (Layers 3 and 4) from display: none or collapsed states into fully visible states via two triggers:
+### Trigger A: Direct User Selection (Drill-Down)
+ * When a user **clicks** on a specific Pod box, smoothly expand the box or open a side panel to reveal its internal container runtime boundary and Linux kernel primitives (netns, veth mapping).
+### Trigger B: Event-Driven Automation
+ * When an event is selected from the sidebar, the application must **automatically expand only the specific parent containers** involved in that workflow.
+ * *Example:* If "Pod-to-Pod OVN Traffic" is selected, automatically expand the involved Pod boxes to reveal their inner Network Namespaces and host veth interfaces so connector arrows can map the path accurately. Unrelated layers (like Storage/PVs) remain collapsed.
+## 3. Visual Styling Rules
+ * **Depth Cueing:** Use progressive background shading. Inner nested boxes must use a darker, contrasting background than their parent containers to create a distinct visual illusion of depth.
+ * **Breadcrumb Navigation:** When deep layers are exposed, render a dynamic structural breadcrumb at the top of the workspace canvas (e.g., Cluster ➔ Node-01 ➔ Project: App ➔ Pod: Web ➔ Linux NetNS).
+ * **Idle State:** When an event is active, dim all non-participating structural elements to opacity-30 or opacity-40 to maintain focus on the active data path.
