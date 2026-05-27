@@ -17,60 +17,66 @@ function ArrowPath({ start, end, stepNum, totalSteps }) {
   const cpx = mx - dy * 0.22
   const cpy = my + dx * 0.22
   const markerId = `arrowhead-${stepNum}`
-  const delay = `${(stepNum - 1) * 0.08}s`
+  const delay = `${(stepNum - 1) * 0.1}s`
+  const accent = '#fbbf24'
 
   return (
     <g style={{ animationDelay: delay }}>
       <defs>
-        <marker id={markerId} markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto">
-          <polygon points="0 0, 7 3, 0 6" fill="#fb923c" />
+        <marker id={markerId} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 L2,4 Z" fill={accent} />
         </marker>
       </defs>
-      {/* Glow layer */}
+      {/* Outer glow */}
       <path
         d={`M ${start.x} ${start.y} Q ${cpx} ${cpy} ${end.x} ${end.y}`}
         fill="none"
-        stroke="#fb923c"
-        strokeWidth={4}
-        opacity={0.12}
+        stroke={accent}
+        strokeWidth={8}
+        opacity={0.08}
+      />
+      {/* Inner glow */}
+      <path
+        d={`M ${start.x} ${start.y} Q ${cpx} ${cpy} ${end.x} ${end.y}`}
+        fill="none"
+        stroke={accent}
+        strokeWidth={3}
+        opacity={0.18}
       />
       {/* Main path */}
       <path
         className="arrow-path"
         d={`M ${start.x} ${start.y} Q ${cpx} ${cpy} ${end.x} ${end.y}`}
         fill="none"
-        stroke="#fb923c"
+        stroke={accent}
         strokeWidth={1.5}
-        strokeDasharray="300"
-        strokeDashoffset="300"
+        strokeLinecap="round"
+        strokeDasharray="400"
+        strokeDashoffset="400"
         markerEnd={`url(#${markerId})`}
-        opacity={0.9}
+        opacity={0.95}
         style={{ animationDelay: delay }}
       />
       {/* Step badge */}
       <circle
         cx={cpx}
         cy={cpy}
-        r={10}
-        fill="rgba(251,146,60,0.12)"
-        stroke="#fb923c"
-        strokeWidth={1}
-        style={{
-          animation: `reveal-up 0.3s ease-out ${delay} both`,
-        }}
+        r={11}
+        fill="#0c1424"
+        stroke={accent}
+        strokeWidth={1.5}
+        style={{ animation: `reveal-up 0.35s ease-out ${delay} both` }}
       />
       <text
         x={cpx}
         y={cpy}
         textAnchor="middle"
         dominantBaseline="central"
-        fill="#fb923c"
-        fontSize={9}
-        fontFamily="'IBM Plex Mono', monospace"
+        fill={accent}
+        fontSize={10}
+        fontFamily="'JetBrains Mono', monospace"
         fontWeight="600"
-        style={{
-          animation: `reveal-up 0.3s ease-out ${delay} both`,
-        }}
+        style={{ animation: `reveal-up 0.35s ease-out ${delay} both` }}
       >
         {stepNum}
       </text>
