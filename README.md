@@ -1,139 +1,138 @@
 # kube-visual
 
-# AI Coding Agent Instructions 1: Interactive OpenShift-to-Linux Blueprint Tool
-## Project Goal
-Build a frontend-only interactive web application that provides a nested, containment-based visual mapping of OpenShift cluster-level logical objects down to their underlying Linux kernel primitives. The core utility is tracing dynamic interaction and communication flows across these layers based on user-selected cluster events.
-## 1. UI Structural & Visual Hierarchy
-The application must render a containment-based grid layout using a strict visual hierarchy. Avoid linear flowcharts; use nested HTML container boxes to show strict ownership and boundaries.
-### Component Nesting Map
-```text
-[Cluster Boundary]
-  ├── [Management Layer (Red/Purple Boxes)]
-  │     └── API Server, Controllers, Kubelet, CRI-O
-  └── [Infrastructure Node Boundary (Green Boxes)]
-        ├── [Logical Kubernetes Namespace / Project Boundary (Dashed Blue Boxes)]
-        │     └── [Pod Boundary]
-        │           └── [Linux Isolation Layer (Kernel Primitives)]
-        │                 ├── Network Namespace (netns)
-        │                 ├── Control Groups (cgroups)
-        │                 └── [Container Process (PID 1)]
-        └── [Host Networking Subsystem]
-              └── OVS Bridge (br-int), veth pairs, Routing Tables
+An interactive web application that visualizes OpenShift/Kubernetes cluster architecture as a nested containment diagram. Select cluster events to trace how traffic and control signals move through the stack — from external clients down to Linux kernel primitives like network namespaces and cgroups.
 
+## Features
+
+- **Nested containment layout** — Cluster → Node → Namespace → Pod → Linux Kernel Primitives, rendered as nested HTML containers rather than flowcharts
+- **Event-driven tracing** — Pick a cluster event from the sidebar to highlight the participating components and draw numbered directional arrows showing the data path
+- **Progressive disclosure** — Linux kernel layers (netns, cgroups, container process) are hidden by default; expand them by clicking a pod or selecting an event
+- **Object Inspector** — Click any component block to open a slide-out panel with an architectural description, interaction list, and copyable terminal commands for live cluster exploration
+- **Breadcrumb navigation** — A dynamic breadcrumb at the top of the canvas tracks your current drill-down depth
+
+## Quick Start
+
+**Requirements:** Node.js 18+
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/mopeps/kube-visual.git
+cd kube-visual
+
+# 2. Install dependencies
+npm install
+
+# 3. Start the development server
+npm run dev
 ```
-## 2. Core Features & Interactivity Requirements
- * **State 1: Default Structural Map:** Display the nested topology cleanly. All components are visible but dimmed to an idle opacity (e.g., opacity-40).
- * **State 2: Event-Driven Tracing:** Provide a sidebar dropdown or list of "Events" (e.g., *Pod Spawning*, *Ingress TLS Termination*, *Pod-to-Pod OVN Traffic*).
- * **Dynamic Illumination:** When an event is selected:
-   1. Highlight only the participating boxes/primitives to opacity-100.
-   2. Draw ordered, numbered, directional connecting arrows between the components to show the data path or reconciliation loop.
-   3. Display a small, concise step-by-step text sidebar explaining the chronological interactions.
-## 3. Recommended Technical Stack
-To keep the project lightweight, maintainable, and open-source friendly, use the following stack:
- * **Framework:** React or Vue.js (for state management of active layers/events).
- * **Styling:** Tailwind CSS (for crisp, color-coded, flexible layout wrappers).
- * **Connector Lines:** leader-line (JS library) or react-xarrows to dynamically render smooth, responsive connecting vectors between nested HTML elements.
- * **Data Layer:** A clean, decoupled events.json data model.
-## 4. MVP Target: Initial Event Data Model
-Implement this specific data schema in a standalone JSON file to trace the **Pod Network Traffic Ingress via Route** event:
+
+Open `http://localhost:5173` in your browser.
+
+## Usage
+
+**Exploring the topology**
+
+The canvas shows the full cluster structure on load, with all components dimmed. The left sidebar lists available cluster events.
+
+**Tracing an event**
+
+Click an event in the sidebar (e.g. "External Ingress Traffic Flow") to:
+1. Highlight the components involved in that event
+2. Draw numbered arrows showing the step-by-step data path
+3. See a step-by-step description in the sidebar below the event list
+
+Click the same event again, or the "Clear Event" button, to return to the idle state.
+
+**Drilling into a pod**
+
+Click the "Expand" button on any Pod box to reveal its internal Linux kernel primitives — Network Namespace, cgroups, and the Container Process. Click "Collapse" to hide them again.
+
+**Inspecting a component**
+
+Click any box on the canvas to open the Object Inspector panel on the right. It shows:
+- What problem the component solves
+- How it interacts with other components
+- Terminal commands you can run on a live cluster to explore it
+
+Click the **×** button or click the empty canvas background to close the panel.
+
+## Adding Events
+
+Events are defined in `src/data/events.json`. Each event follows this schema:
+
 ```json
 {
-  "eventId": "route-ingress-traffic",
-  "eventName": "External Ingress Traffic Flow",
-  "description": "Tracing an HTTPS request from an external client to an app pod via OVN-Kubernetes.",
+  "eventId": "my-event",
+  "eventName": "My Event Name",
+  "description": "A short description shown in the sidebar.",
   "steps": [
     {
       "step": 1,
-      "sourceComponentId": "external-client",
-      "targetComponentId": "ingress-router-haproxy",
-      "description": "Client initiates connection; HAProxy terminates TLS at the Route layer."
-    },
-    {
-      "step": 2,
-      "sourceComponentId": "ingress-router-haproxy",
-      "targetComponentId": "ovs-bridge-br-int",
-      "description": "Traffic is forwarded into the OVN-Kubernetes host integration bridge."
-    },
-    {
-      "step": 3,
-      "sourceComponentId": "ovs-bridge-br-int",
-      "targetComponentId": "host-veth-pair",
-      "description": "OVS routes the packet through the host-side virtual Ethernet interface."
-    },
-    {
-      "step": 4,
-      "sourceComponentId": "host-veth-pair",
-      "targetComponentId": "pod-netns",
-      "description": "Packet crosses the boundary into the Pod's isolated Linux Network Namespace."
-    },
-    {
-      "step": 5,
-      "sourceComponentId": "pod-netns",
-      "targetComponentId": "container-process",
-      "description": "The application process (PID 1) accepts the cleartext socket connection."
+      "sourceComponentId": "api-server",
+      "targetComponentId": "kubelet",
+      "description": "Step description shown in the step list."
     }
   ]
 }
-
 ```
-## Next Action Items for the Agent
- 1. Scaffold the base web page with a sidebar on the left and a massive canvas workspace container on the right.
- 2. Build the visual layout of nested components using hardcoded CSS grids or flexboxes based on Section 1.
- 3. Wire the JSON event data model to trigger opacity updates and render connecting lines when an event is clicked.
 
+`sourceComponentId` and `targetComponentId` must match the `id` attributes on the rendered component boxes (see `src/components/Canvas.jsx` for the full list of IDs).
 
-# AI Coding Agent Instructions 2: UI Layering & Progressive Disclosure
-## Objective
-Implement a multi-layered, zoomable visual interface that prevents cognitive overload by hiding deep Linux implementation details until explicitly requested by the user.
-## 1. Visibility Matrix (The 3-Stage Reveal)
-Configure the components into three distinct visibility states based on user interaction:
-| Component / Layer | Default View State | Expanded View State | Visual Style |
-|---|---|---|---|
-| **Layer 1: Cluster & Nodes** | **Visible** | **Visible** | Solid outer boundaries (Gray/Dark background) |
-| **Layer 2: Projects & Pods** | **Visible** | **Visible** | Solid logical boxes (Blue/Purple accents) |
-| **Layer 3: CRI-O Containers** | **Hidden** | **Visible** | Nested inside Pods (Dashed borders) |
-| **Layer 4: Linux Kernel Primitives** (netns, veth, cgroups) | **Hidden** | **Visible** | Nested deep inside Pods/Nodes (Green accents) |
-## 2. Interaction Triggers for Expanding Deep Layers
-The coding agent must programmatically transition hidden layers (Layers 3 and 4) from display: none or collapsed states into fully visible states via two triggers:
-### Trigger A: Direct User Selection (Drill-Down)
- * When a user **clicks** on a specific Pod box, smoothly expand the box or open a side panel to reveal its internal container runtime boundary and Linux kernel primitives (netns, veth mapping).
-### Trigger B: Event-Driven Automation
- * When an event is selected from the sidebar, the application must **automatically expand only the specific parent containers** involved in that workflow.
- * *Example:* If "Pod-to-Pod OVN Traffic" is selected, automatically expand the involved Pod boxes to reveal their inner Network Namespaces and host veth interfaces so connector arrows can map the path accurately. Unrelated layers (like Storage/PVs) remain collapsed.
-## 3. Visual Styling Rules
- * **Depth Cueing:** Use progressive background shading. Inner nested boxes must use a darker, contrasting background than their parent containers to create a distinct visual illusion of depth.
- * **Breadcrumb Navigation:** When deep layers are exposed, render a dynamic structural breadcrumb at the top of the workspace canvas (e.g., Cluster ➔ Node-01 ➔ Project: App ➔ Pod: Web ➔ Linux NetNS).
- * **Idle State:** When an event is active, dim all non-participating structural elements to opacity-30 or opacity-40 to maintain focus on the active data path.
+## Adding Component Metadata
 
-# AI Coding Agent Instructions 3: Interactive Object Inspector Sidebar
-## Objective
-Implement an "Object Inspector" slide-out panel or floating card that activates whenever a user clicks on any visual block in the blueprint canvas. This panel provides deep architectural context, dependency tracking, and real-world terminal verification commands.
-## 1. Metadata Schema (components.json)
-Every clickable box on the canvas must map to a standalone structural data entry following this exact JSON schema format:
+Component Inspector data lives in `src/data/components.json`. Add an entry for any component you want to make inspectable:
+
 ```json
 {
-  "componentId": "pod-netns",
-  "displayName": "Linux Network Namespace (netns)",
-  "layer": "Linux Kernel Primitives",
-  "problemSolved": "Provides network virtualization and isolation. It gives each Pod a private routing table, IP address, and packet filtering space, preventing port conflicts on the host.",
+  "componentId": "my-component",
+  "displayName": "My Component",
+  "layer": "Management Layer",
+  "problemSolved": "Explain what this component does and why it exists.",
   "interactions": [
-    "Attaches to a host-side veth pair to bridge traffic out of the namespace.",
-    "Provisioned and configured by the OVN-Kubernetes CNI plugin during pod creation."
+    "Describe one interaction with another component.",
+    "Describe another interaction."
   ],
   "explorationCommands": [
-    "# Step 1: Find the target host PID of the container process\ncrictl inspect <container_id> | grep pid",
-    "# Step 2: Enter the isolated network namespace using the PID to view interfaces\nnsenter -t <PID> -n ip addr show"
+    "# Comment explaining the command\nthe-actual-command --with flags"
   ]
 }
+```
+
+Valid `layer` values: `External`, `Management Layer`, `Host Networking Subsystem`, `Linux Kernel Primitives`.
+
+## Project Structure
 
 ```
-## 2. UI & Interaction Requirements
- * **Trigger State:** Clicking any structural container box captures its unique componentId and sets the active component state.
- * **Component Feedback:** The clicked box on the canvas must immediately receive a distinct active border outline (e.g., a glowing ring or high-contrast border) to signal selection.
- * **The Inspector Panel Layout:** Render a clean, non-obtrusive right-side slide-out panel containing:
-   1. **Header:** Displays displayName and the corresponding layer category banner.
-   2. **Problem Solved Section:** A text block rendering the problemSolved string to explain architectural intent.
-   3. **Interactions List:** A bulleted loop rendering the items in the interactions array.
-   4. **Terminal Exploration Block:** A dark, monospaced code snippet container block displaying the commands in explorationCommands with a 1-click "Copy Code" clipboard button helper.
- * **Dismissal:** Provide an obvious close button (X) or allow clicking on the empty canvas background to clear the active selection and close the panel.
+src/
+├── data/
+│   ├── events.json          # Cluster event definitions
+│   └── components.json      # Component metadata for the inspector panel
+├── components/
+│   ├── Canvas.jsx           # Main workspace with nested containment layout
+│   ├── Sidebar.jsx          # Event list and step-by-step description panel
+│   ├── ComponentBox.jsx     # Reusable clickable component block
+│   ├── PodLayer.jsx         # Pod boundary with expand/collapse
+│   ├── KernelPrimitives.jsx # netns, cgroups, container process (hidden by default)
+│   ├── ArrowOverlay.jsx     # Directional arrows rendered via react-xarrows
+│   ├── InspectorPanel.jsx   # Slide-out object inspector
+│   └── Breadcrumb.jsx       # Dynamic drill-down breadcrumb
+└── hooks/
+    └── useEventState.js     # Central state: active event, selected component, expanded pods
+```
 
+## Tech Stack
+
+| Tool | Purpose |
+|---|---|
+| [Vite](https://vitejs.dev) | Build tool and dev server |
+| [React](https://react.dev) | UI framework |
+| [Tailwind CSS v3](https://tailwindcss.com) | Utility-first styling |
+| [react-xarrows](https://github.com/Eliav2/react-xarrows) | SVG connector arrows between DOM elements |
+
+## Build for Production
+
+```bash
+npm run build
+```
+
+Output is written to `dist/`. Serve it with any static file host.
