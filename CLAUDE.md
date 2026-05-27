@@ -1,5 +1,25 @@
 # CLAUDE.md — kube-visual
 
+## Skill & Reference Files
+
+Detailed, task-specific knowledge lives in `.claude/` to keep this file scannable:
+
+```
+.claude/
+├── skills/
+│   ├── tailwind-styling/SKILL.md      # Color tokens, typography, glow patterns, responsive rules
+│   ├── component-patterns/SKILL.md    # ComponentBox, LayerBoundary, PodLayer, InspectorPanel API
+│   ├── state-management/SKILL.md      # useEventState hook — all state fields and callbacks
+│   ├── arrow-overlay/SKILL.md         # SVG arrow system — measurement, bezier, animation, debugging
+│   └── data-model/SKILL.md            # events.json + components.json schemas and constraints
+└── references/
+    └── component-ids.md               # All 13 component IDs, locations, and event step usage table
+```
+
+Load the relevant skill before working on a feature area.
+
+---
+
 ## Project Overview
 
 **kube-visual** is a frontend-only, static React web app that visualises an OpenShift cluster as a nested containment diagram and traces event-driven data flows across layers — from Kubernetes control plane objects down to Linux kernel primitives (namespaces, cgroups, veth pairs).
