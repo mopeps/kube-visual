@@ -24,7 +24,7 @@ export default function InspectorPanel({ componentId, onClose }) {
   }
 
   return (
-    <div className="absolute top-0 right-0 h-full w-80 bg-gray-900 border-l border-gray-700 flex flex-col shadow-2xl animate-slide-in z-50 overflow-hidden">
+    <div className="fixed lg:absolute top-0 right-0 h-full w-full sm:w-80 bg-gray-900 border-l border-gray-700 flex flex-col shadow-2xl animate-slide-in z-50 overflow-hidden">
       <div className={`px-4 py-3 ${bannerColor} flex items-start justify-between gap-2`}>
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-white/70">{component.layer}</p>

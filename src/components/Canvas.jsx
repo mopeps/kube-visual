@@ -13,18 +13,33 @@ export default function Canvas({
   onClearComponent,
   onTogglePod,
   onClearEvent,
+  onOpenSidebar,
 }) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden relative">
-      <Breadcrumb expandedPods={expandedPods} />
+      {/* Top bar: hamburger (mobile/tablet only) + breadcrumb */}
+      <div className="flex items-center">
+        <button
+          onClick={onOpenSidebar}
+          className="lg:hidden flex-shrink-0 p-2 mx-1 text-gray-400 hover:text-gray-200 rounded hover:bg-gray-800 transition-colors"
+          aria-label="Open sidebar"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <div className="flex-1">
+          <Breadcrumb expandedPods={expandedPods} />
+        </div>
+      </div>
 
       <div
         id="canvas-root"
-        className="flex-1 overflow-auto p-6 bg-gray-950 relative"
+        className="flex-1 overflow-auto touch-auto p-6 bg-gray-950 relative"
         onClick={() => { onClearComponent(); }}
       >
-        {/* Cluster Boundary */}
-        <div className="rounded-lg border-2 border-gray-600 bg-gray-900 p-4 min-w-[640px]">
+        {/* Cluster Boundary — fixed min-width prevents squash; overflow-auto parent enables pan */}
+        <div className="rounded-lg border-2 border-gray-600 bg-gray-900 p-4 min-w-[1024px]">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Cluster Boundary</span>
             {activeEvent && (

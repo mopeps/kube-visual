@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import Sidebar from './components/Sidebar'
 import Canvas from './components/Canvas'
 import useEventState from './hooks/useEventState'
 
 export default function App() {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const {
     activeEvent,
     activeComponentId,
@@ -17,7 +19,19 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-gray-950 text-gray-100 overflow-hidden">
-      <Sidebar activeEvent={activeEvent} onSelectEvent={selectEvent} />
+      {/* Backdrop for mobile/tablet sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-40 bg-black/50"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <Sidebar
+        activeEvent={activeEvent}
+        onSelectEvent={selectEvent}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       <Canvas
         activeEvent={activeEvent}
         activeComponentIds={activeComponentIds}
@@ -27,6 +41,7 @@ export default function App() {
         onClearComponent={clearComponent}
         onTogglePod={togglePod}
         onClearEvent={clearEvent}
+        onOpenSidebar={() => setSidebarOpen(true)}
       />
     </div>
   )
