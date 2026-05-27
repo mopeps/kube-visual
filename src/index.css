@@ -91,29 +91,23 @@ body::after {
 /* ── Zone row ──────────────────────────────────────────────────────── */
 .zone {
   display: flex;
-  align-items: stretch;
+  flex-direction: column;
   position: relative;
 }
 
 .zone-label {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  transform: rotate(180deg);
   font-size: 0.6rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  padding: 12px 8px;
-  min-width: 36px;
+  padding: 7px 16px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-right: 1px solid;
-  flex-shrink: 0;
+  justify-content: flex-start;
+  border-bottom: 1px solid;
   font-weight: 600;
 }
 
 .zone-content {
-  flex: 1;
   padding: 18px 22px;
   min-width: 0;
 }
@@ -123,6 +117,22 @@ body::after {
   flex-wrap: wrap;
   gap: 12px;
   align-items: stretch;
+}
+
+@media (max-width: 640px) {
+  .zone-content {
+    padding: 12px 14px;
+  }
+
+  .zone-content-inner {
+    gap: 8px;
+  }
+
+  .node {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+    max-width: none;
+  }
 }
 
 /* ── Node card ─────────────────────────────────────────────────────── */
