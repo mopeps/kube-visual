@@ -1,9 +1,9 @@
 import events from '../data/events.json'
 
 const EVENT_THEMES = {
-  'route-ingress-traffic': { hue: '#22d3ee', label: 'Ingress' },
-  'pod-spawning':          { hue: '#a78bfa', label: 'Lifecycle' },
-  'pod-to-pod-ovn':        { hue: '#34d399', label: 'Network' },
+  'route-ingress-traffic': { hue: '#00f0ff', label: 'Ingress' },
+  'pod-spawning':          { hue: '#c084fc', label: 'Lifecycle' },
+  'pod-to-pod-ovn':        { hue: '#39ff88', label: 'Network' },
 }
 
 function Logo() {
@@ -12,8 +12,8 @@ function Logo() {
       <div
         className="relative w-8 h-8 rounded-md flex items-center justify-center"
         style={{
-          background: 'linear-gradient(135deg, #22d3ee 0%, #a78bfa 100%)',
-          boxShadow: '0 0 18px rgba(34, 211, 238, 0.25)',
+          background: 'linear-gradient(135deg, #00f0ff 0%, #c084fc 100%)',
+          boxShadow: '0 0 22px rgba(0, 240, 255, 0.55), 0 0 40px rgba(192, 132, 252, 0.3)',
         }}
       >
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-k-base" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -98,7 +98,7 @@ function EventCard({ event, isActive, onClick }) {
 }
 
 function FlowSteps({ event }) {
-  const theme = EVENT_THEMES[event.eventId] ?? { hue: '#fbbf24' }
+  const theme = EVENT_THEMES[event.eventId] ?? { hue: '#ffcb33' }
 
   return (
     <div className="border-t border-k-bd overflow-y-auto" style={{ maxHeight: '320px' }}>
@@ -191,7 +191,7 @@ export default function Sidebar({ activeEvent, onSelectEvent, isOpen, onClose })
         <div className="flex items-center gap-2">
           <span
             className="w-1.5 h-1.5 rounded-full bg-k-green"
-            style={{ boxShadow: '0 0 8px #34d399', animation: 'pulse-amber 2.4s ease-in-out infinite' }}
+            style={{ boxShadow: '0 0 10px #39ff88, 0 0 4px #39ff88', animation: 'pulse-amber 2.4s ease-in-out infinite' }}
           />
           <span className="font-mono text-[10px] text-k-tx-mut">connected</span>
         </div>

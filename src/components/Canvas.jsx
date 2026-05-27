@@ -9,21 +9,22 @@ function LayerBoundary({ label, sub, color, dashed = false, children, className 
     <div
       className={`relative rounded-lg p-3.5 ${className}`}
       style={{
-        border: `1px ${dashed ? 'dashed' : 'solid'} ${color}30`,
-        background: `linear-gradient(180deg, ${color}08 0%, ${color}02 100%)`,
+        border: `1px ${dashed ? 'dashed' : 'solid'} ${color}66`,
+        background: `linear-gradient(180deg, ${color}14 0%, ${color}05 100%)`,
+        boxShadow: `0 0 0 1px ${color}10 inset, 0 0 24px -8px ${color}40`,
       }}
     >
       <div className="flex items-baseline gap-2 mb-3">
         <span
           className="font-display text-[12px] font-semibold tracking-wide uppercase"
-          style={{ color: `${color}` }}
+          style={{ color, textShadow: `0 0 10px ${color}80` }}
         >
           {label}
         </span>
         {sub && (
           <span className="font-mono text-[10px] text-k-tx-mut">{sub}</span>
         )}
-        <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${color}25, transparent)` }} />
+        <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${color}55, transparent)` }} />
       </div>
       {children}
     </div>
@@ -49,7 +50,7 @@ function Toolbar({ activeEvent, onClearEvent, onOpenSidebar }) {
       <div className="flex items-center gap-2.5">
         <span
           className="w-1.5 h-1.5 rounded-full bg-k-green flex-shrink-0"
-          style={{ boxShadow: '0 0 10px #34d399', animation: 'pulse-amber 2.4s ease-in-out infinite' }}
+          style={{ boxShadow: '0 0 12px #39ff88, 0 0 4px #39ff88', animation: 'pulse-amber 2.4s ease-in-out infinite' }}
         />
         <span className="font-display text-[14px] font-semibold tracking-tight text-k-tx-wh">
           Topology
@@ -65,9 +66,9 @@ function Toolbar({ activeEvent, onClearEvent, onOpenSidebar }) {
         <div className="flex items-center gap-2.5">
           <div
             className="flex items-center gap-2 rounded-md px-2.5 py-1"
-            style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)' }}
+            style={{ background: 'rgba(255, 203, 51, 0.14)', border: '1px solid rgba(255, 203, 51, 0.55)', boxShadow: '0 0 16px -4px rgba(255, 203, 51, 0.5)' }}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-k-amber" style={{ boxShadow: '0 0 8px #fbbf24' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-k-amber" style={{ boxShadow: '0 0 10px #ffcb33, 0 0 4px #ffcb33' }} />
             <span className="font-mono text-[11px] font-medium text-k-amber">
               tracing
             </span>
@@ -151,15 +152,15 @@ export default function Canvas({
           {/* Main grid */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
             {/* Management Layer */}
-            <LayerBoundary label="Management Layer" sub="control plane" color="#38bdf8">
-              <div className="space-y-1.5">
+            <LayerBoundary label="Management Layer" sub="control plane" color="#33c8ff">
+              <div className="flex flex-wrap gap-1.5">
                 <ComponentBox
                   id="api-server"
                   label="API Server"
                   activeComponentIds={activeComponentIds}
                   activeComponentId={activeComponentId}
                   onSelect={onSelectComponent}
-                  accentColor="#38bdf8"
+                  accentColor="#33c8ff"
                 />
                 <ComponentBox
                   id="scheduler"
@@ -167,7 +168,7 @@ export default function Canvas({
                   activeComponentIds={activeComponentIds}
                   activeComponentId={activeComponentId}
                   onSelect={onSelectComponent}
-                  accentColor="#38bdf8"
+                  accentColor="#33c8ff"
                 />
                 <ComponentBox
                   id="kubelet"
@@ -175,7 +176,7 @@ export default function Canvas({
                   activeComponentIds={activeComponentIds}
                   activeComponentId={activeComponentId}
                   onSelect={onSelectComponent}
-                  accentColor="#38bdf8"
+                  accentColor="#33c8ff"
                 />
                 <ComponentBox
                   id="crio"
@@ -183,7 +184,7 @@ export default function Canvas({
                   activeComponentIds={activeComponentIds}
                   activeComponentId={activeComponentId}
                   onSelect={onSelectComponent}
-                  accentColor="#38bdf8"
+                  accentColor="#33c8ff"
                 />
                 <ComponentBox
                   id="ingress-router-haproxy"
@@ -191,7 +192,7 @@ export default function Canvas({
                   activeComponentIds={activeComponentIds}
                   activeComponentId={activeComponentId}
                   onSelect={onSelectComponent}
-                  accentColor="#a78bfa"
+                  accentColor="#c084fc"
                 />
               </div>
             </LayerBoundary>
@@ -200,20 +201,24 @@ export default function Canvas({
             <div
               className="xl:col-span-2 relative rounded-lg p-3.5"
               style={{
-                border: '1px solid rgba(251, 146, 60, 0.28)',
-                background: 'linear-gradient(180deg, rgba(251, 146, 60, 0.05) 0%, rgba(251, 146, 60, 0.01) 100%)',
+                border: '1px solid rgba(255, 138, 42, 0.55)',
+                background: 'linear-gradient(180deg, rgba(255, 138, 42, 0.10) 0%, rgba(255, 138, 42, 0.02) 100%)',
+                boxShadow: '0 0 0 1px rgba(255, 138, 42, 0.08) inset, 0 0 28px -10px rgba(255, 138, 42, 0.45)',
               }}
             >
               <div className="flex items-baseline gap-2 mb-3">
-                <span className="font-display text-[12px] font-semibold tracking-wide uppercase text-k-orange">
+                <span
+                  className="font-display text-[12px] font-semibold tracking-wide uppercase text-k-orange"
+                  style={{ textShadow: '0 0 10px rgba(255, 138, 42, 0.6)' }}
+                >
                   Infrastructure Node
                 </span>
                 <span className="font-mono text-[10px] text-k-tx-mut">node-01 · worker</span>
-                <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(251, 146, 60, 0.25), transparent)' }} />
+                <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(255, 138, 42, 0.55), transparent)' }} />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <LayerBoundary label="Namespace · app" sub="project" color="#a78bfa" dashed>
+                <LayerBoundary label="Namespace · app" sub="project" color="#c084fc" dashed>
                   <PodLayer
                     podId="app-pod"
                     label="Pod · web-app"
@@ -225,7 +230,7 @@ export default function Canvas({
                   />
                 </LayerBoundary>
 
-                <LayerBoundary label="Namespace · router" sub="project" color="#a78bfa" dashed>
+                <LayerBoundary label="Namespace · router" sub="project" color="#c084fc" dashed>
                   <PodLayer
                     podId="router-pod"
                     label="Pod · router"
@@ -240,17 +245,17 @@ export default function Canvas({
                 <LayerBoundary
                   label="Host Networking"
                   sub="kernel subsystem"
-                  color="#34d399"
+                  color="#39ff88"
                   className="lg:col-span-2"
                 >
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <ComponentBox
                       id="ovs-bridge-br-int"
                       label="OVS Bridge · br-int"
                       activeComponentIds={activeComponentIds}
                       activeComponentId={activeComponentId}
                       onSelect={onSelectComponent}
-                      accentColor="#34d399"
+                      accentColor="#39ff88"
                     />
                     <ComponentBox
                       id="host-veth-pair"
@@ -258,7 +263,7 @@ export default function Canvas({
                       activeComponentIds={activeComponentIds}
                       activeComponentId={activeComponentId}
                       onSelect={onSelectComponent}
-                      accentColor="#34d399"
+                      accentColor="#39ff88"
                     />
                   </div>
                 </LayerBoundary>
@@ -277,8 +282,7 @@ export default function Canvas({
               activeComponentIds={activeComponentIds}
               activeComponentId={activeComponentId}
               onSelect={onSelectComponent}
-              accentColor="#22d3ee"
-              className="w-48"
+              accentColor="#00f0ff"
             />
           </div>
         </div>

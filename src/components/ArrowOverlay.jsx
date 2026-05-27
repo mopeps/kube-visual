@@ -18,7 +18,7 @@ function ArrowPath({ start, end, stepNum, totalSteps }) {
   const cpy = my + dx * 0.22
   const markerId = `arrowhead-${stepNum}`
   const delay = `${(stepNum - 1) * 0.1}s`
-  const accent = '#fbbf24'
+  const accent = '#ffcb33'
 
   return (
     <g style={{ animationDelay: delay }}>
@@ -32,16 +32,16 @@ function ArrowPath({ start, end, stepNum, totalSteps }) {
         d={`M ${start.x} ${start.y} Q ${cpx} ${cpy} ${end.x} ${end.y}`}
         fill="none"
         stroke={accent}
-        strokeWidth={8}
-        opacity={0.08}
+        strokeWidth={10}
+        opacity={0.15}
       />
       {/* Inner glow */}
       <path
         d={`M ${start.x} ${start.y} Q ${cpx} ${cpy} ${end.x} ${end.y}`}
         fill="none"
         stroke={accent}
-        strokeWidth={3}
-        opacity={0.18}
+        strokeWidth={4}
+        opacity={0.32}
       />
       {/* Main path */}
       <path
