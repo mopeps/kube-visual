@@ -4,27 +4,48 @@ import ArrowOverlay from './ArrowOverlay'
 import Breadcrumb from './Breadcrumb'
 import InspectorPanel from './InspectorPanel'
 
+// Catppuccin Mocha accents reused across layers
+const C = {
+  sky:      '#89dceb',
+  sapphire: '#74c7ec',
+  mauve:    '#cba6f7',
+  green:    '#a6e3a1',
+  teal:     '#94e2d5',
+  peach:    '#fab387',
+  yellow:   '#f9e2af',
+  pink:     '#f5c2e7',
+}
+
 function LayerBoundary({ label, sub, color, dashed = false, children, className = '' }) {
   return (
     <div
-      className={`relative rounded-lg p-3.5 ${className}`}
+      className={`relative p-3 ${className}`}
       style={{
         border: `1px ${dashed ? 'dashed' : 'solid'} ${color}66`,
-        background: `linear-gradient(180deg, ${color}14 0%, ${color}05 100%)`,
-        boxShadow: `0 0 0 1px ${color}10 inset, 0 0 24px -8px ${color}40`,
+        background: `linear-gradient(180deg, ${color}0c 0%, transparent 100%)`,
       }}
     >
-      <div className="flex items-baseline gap-2 mb-3">
+      {/* Corner ticks — terminal-style chrome */}
+      <span className="absolute -top-px -left-px w-2 h-2 border-t border-l" style={{ borderColor: color }} aria-hidden />
+      <span className="absolute -top-px -right-px w-2 h-2 border-t border-r" style={{ borderColor: color }} aria-hidden />
+      <span className="absolute -bottom-px -left-px w-2 h-2 border-b border-l" style={{ borderColor: color }} aria-hidden />
+      <span className="absolute -bottom-px -right-px w-2 h-2 border-b border-r" style={{ borderColor: color }} aria-hidden />
+
+      <div className="flex items-baseline gap-2 mb-3 -mt-1">
+        <span className="font-mono text-[10.5px] text-k-tx-mut">┤</span>
         <span
-          className="font-display text-[12px] font-semibold tracking-wide uppercase"
-          style={{ color, textShadow: `0 0 10px ${color}80` }}
+          className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.18em]"
+          style={{ color, textShadow: `0 0 12px ${color}55` }}
         >
           {label}
         </span>
         {sub && (
-          <span className="font-mono text-[10px] text-k-tx-mut">{sub}</span>
+          <span className="font-mono text-[10px] text-k-tx-mut">
+            :: {sub}
+          </span>
         )}
-        <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${color}55, transparent)` }} />
+        <span className="font-mono text-[10.5px] text-k-tx-mut">├</span>
+        <span className="hr-dashed" />
       </div>
       {children}
     </div>
@@ -34,58 +55,61 @@ function LayerBoundary({ label, sub, color, dashed = false, children, className 
 function Toolbar({ activeEvent, onClearEvent, onOpenSidebar }) {
   return (
     <div
-      className="flex items-center gap-3 px-4 py-2.5 flex-shrink-0 border-b border-k-bd"
-      style={{ background: 'rgba(7,11,20,0.6)', backdropFilter: 'blur(8px)' }}
+      className="flex items-center gap-3 px-3 py-1.5 flex-shrink-0 border-b border-k-bd font-mono text-[11px]"
+      style={{ background: 'var(--c-s1)' }}
     >
       <button
         onClick={onOpenSidebar}
-        className="lg:hidden flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-md text-k-tx-mut hover:text-k-tx-wh hover:bg-white/5 transition-colors"
+        className="lg:hidden flex-shrink-0 w-7 h-7 flex items-center justify-center text-k-tx-mut hover:text-k-tx-wh hover:bg-k-s2 transition-colors"
         aria-label="Open sidebar"
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
+        <span className="text-[14px] leading-none">≡</span>
       </button>
 
-      <div className="flex items-center gap-2.5">
+      {/* Vim-like mode badge */}
+      <div className="flex items-center gap-0">
+        <span className="px-2 py-0.5 bg-k-mauve text-k-crust font-bold tracking-widest text-[10px]">
+          NORMAL
+        </span>
         <span
-          className="w-1.5 h-1.5 rounded-full bg-k-green flex-shrink-0"
-          style={{ boxShadow: '0 0 12px #39ff88, 0 0 4px #39ff88', animation: 'pulse-amber 2.4s ease-in-out infinite' }}
+          className="w-0 h-0 border-y-[10px] border-l-[7px] border-y-transparent"
+          style={{ borderLeftColor: 'var(--c-mauve)' }}
         />
-        <span className="font-display text-[14px] font-semibold tracking-tight text-k-tx-wh">
-          Topology
-        </span>
-        <span className="hidden sm:inline font-mono text-[11px] text-k-tx-mut">
-          cluster-01 / openshift
-        </span>
       </div>
+
+      <span className="text-k-tx-dim hidden sm:inline">
+        <span className="text-k-blue">$</span> openshift
+        <span className="text-k-tx-dim"> ── </span>
+        <span className="text-k-tx-mut">topology.tsx</span>
+      </span>
 
       <div className="flex-1" />
 
       {activeEvent ? (
-        <div className="flex items-center gap-2.5">
-          <div
-            className="flex items-center gap-2 rounded-md px-2.5 py-1"
-            style={{ background: 'rgba(255, 203, 51, 0.14)', border: '1px solid rgba(255, 203, 51, 0.55)', boxShadow: '0 0 16px -4px rgba(255, 203, 51, 0.5)' }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-k-amber" style={{ boxShadow: '0 0 10px #ffcb33, 0 0 4px #ffcb33' }} />
-            <span className="font-mono text-[11px] font-medium text-k-amber">
-              tracing
-            </span>
-            <span className="font-display text-[12px] font-medium text-k-tx-wh">
+        <div className="flex items-center gap-0 animate-fade-in">
+          <span
+            className="w-0 h-0 border-y-[10px] border-r-[7px] border-y-transparent"
+            style={{ borderRightColor: 'var(--c-peach)' }}
+          />
+          <div className="flex items-center gap-2 px-2 py-0.5 bg-k-peach text-k-crust">
+            <span className="font-bold tracking-widest text-[10px]">TRACE</span>
+            <span className="text-[10.5px] truncate max-w-[180px]">
               {activeEvent.eventName}
             </span>
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); onClearEvent() }}
-            className="font-mono text-[11px] px-2 py-1 rounded-md text-k-tx-mut hover:text-k-tx-wh hover:bg-white/5 transition-colors"
+            className="ml-2 px-2 py-0.5 text-[10.5px] text-k-tx-mut hover:text-k-tx-wh hover:bg-k-s2 transition-colors"
+            title="Clear trace"
           >
-            clear
+            :q
           </button>
         </div>
       ) : (
-        <span className="font-mono text-[11px] text-k-tx-dim">
-          select an event to trace
+        <span className="text-k-tx-dim text-[10.5px] hidden md:flex items-center gap-1">
+          <span className="text-k-peach">:</span>
+          <span>select event</span>
+          <span className="caret text-k-peach" aria-hidden="true" />
         </span>
       )}
     </div>
@@ -94,14 +118,12 @@ function Toolbar({ activeEvent, onClearEvent, onOpenSidebar }) {
 
 function EmptyHint() {
   return (
-    <div className="absolute top-4 right-4 z-10 hidden md:flex items-center gap-2 rounded-md px-3 py-1.5 animate-fade-in"
-      style={{ background: 'rgba(34, 211, 238, 0.08)', border: '1px solid rgba(34, 211, 238, 0.25)' }}
+    <div className="absolute top-4 right-4 z-10 hidden md:flex items-center gap-2 px-2.5 py-1 animate-fade-in"
+      style={{ background: 'var(--c-s2)', border: '1px solid var(--c-sapphire)' }}
     >
-      <svg className="w-3.5 h-3.5 text-k-cyan" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      <span className="font-mono text-[11px] text-k-tx-br">
-        Pick an event from the left to trace the flow.
+      <span className="font-mono text-[10px] text-k-sapphire font-bold">?</span>
+      <span className="font-mono text-[10.5px] text-k-tx-br">
+        pick an event from the buffer list to trace flow
       </span>
     </div>
   )
@@ -119,109 +141,83 @@ export default function Canvas({
   onOpenSidebar,
 }) {
   return (
-    <div className="flex-1 flex flex-col overflow-hidden relative">
+    <div className="flex-1 flex flex-col overflow-hidden relative bg-k-base">
       <Toolbar activeEvent={activeEvent} onClearEvent={onClearEvent} onOpenSidebar={onOpenSidebar} />
       <Breadcrumb expandedPods={expandedPods} />
 
       <div
         id="canvas-root"
-        className="flex-1 overflow-auto touch-auto p-6 relative"
+        className="flex-1 overflow-auto touch-auto p-4 sm:p-6 relative"
         onClick={() => { onClearComponent() }}
       >
         {!activeEvent && <EmptyHint />}
 
-        {/* Cluster boundary */}
+        {/* Cluster boundary — outer "window" */}
         <div
-          className="rounded-xl p-5 min-w-[980px] relative"
+          className="p-4 min-w-[980px] relative"
           style={{
             border: '1px solid var(--c-bd-hi)',
-            background:
-              'linear-gradient(180deg, rgba(17, 27, 48, 0.5) 0%, rgba(12, 20, 36, 0.3) 100%)',
-            boxShadow: '0 0 0 1px rgba(255,255,255,0.02) inset, 0 24px 60px -24px rgba(0,0,0,0.6)',
+            background: 'var(--c-s1)',
+            boxShadow: '0 0 0 1px var(--c-crust) inset',
           }}
         >
-          {/* Cluster header */}
-          <div className="flex items-center gap-3 mb-5">
-            <span className="font-display text-[18px] font-semibold tracking-tight text-k-tx-wh">
-              Cluster Boundary
+          {/* Header strip */}
+          <div className="flex items-center gap-2 mb-4 -mt-1">
+            <span className="font-mono text-[11px] text-k-tx-mut">┌──</span>
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-k-tx-wh">
+              cluster
             </span>
-            <span className="font-mono text-[11px] text-k-tx-mut">OpenShift · Kubernetes</span>
-            <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
+            <span className="font-mono text-[11px] text-k-tx-mut">──</span>
+            <span className="font-mono text-[10px] text-k-tx-mut">openshift · kubernetes</span>
+            <span className="hr-dashed" />
+            <span className="font-mono text-[10px] text-k-green">● up</span>
+            <span className="font-mono text-[11px] text-k-tx-mut">──┐</span>
           </div>
 
           {/* Main grid */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
             {/* Management Layer */}
-            <LayerBoundary label="Management Layer" sub="control plane" color="#33c8ff">
+            <LayerBoundary label="management" sub="control plane" color={C.sapphire}>
               <div className="flex flex-wrap gap-1.5">
-                <ComponentBox
-                  id="api-server"
-                  label="API Server"
-                  activeComponentIds={activeComponentIds}
-                  activeComponentId={activeComponentId}
-                  onSelect={onSelectComponent}
-                  accentColor="#33c8ff"
-                />
-                <ComponentBox
-                  id="scheduler"
-                  label="Scheduler"
-                  activeComponentIds={activeComponentIds}
-                  activeComponentId={activeComponentId}
-                  onSelect={onSelectComponent}
-                  accentColor="#33c8ff"
-                />
-                <ComponentBox
-                  id="kubelet"
-                  label="Kubelet"
-                  activeComponentIds={activeComponentIds}
-                  activeComponentId={activeComponentId}
-                  onSelect={onSelectComponent}
-                  accentColor="#33c8ff"
-                />
-                <ComponentBox
-                  id="crio"
-                  label="CRI-O"
-                  activeComponentIds={activeComponentIds}
-                  activeComponentId={activeComponentId}
-                  onSelect={onSelectComponent}
-                  accentColor="#33c8ff"
-                />
-                <ComponentBox
-                  id="ingress-router-haproxy"
-                  label="Ingress Router · HAProxy"
-                  activeComponentIds={activeComponentIds}
-                  activeComponentId={activeComponentId}
-                  onSelect={onSelectComponent}
-                  accentColor="#c084fc"
-                />
+                <ComponentBox id="api-server"              label="api-server"          activeComponentIds={activeComponentIds} activeComponentId={activeComponentId} onSelect={onSelectComponent} accentColor={C.sapphire} />
+                <ComponentBox id="scheduler"               label="scheduler"           activeComponentIds={activeComponentIds} activeComponentId={activeComponentId} onSelect={onSelectComponent} accentColor={C.sapphire} />
+                <ComponentBox id="kubelet"                 label="kubelet"             activeComponentIds={activeComponentIds} activeComponentId={activeComponentId} onSelect={onSelectComponent} accentColor={C.sapphire} />
+                <ComponentBox id="crio"                    label="cri-o"               activeComponentIds={activeComponentIds} activeComponentId={activeComponentId} onSelect={onSelectComponent} accentColor={C.sapphire} />
+                <ComponentBox id="ingress-router-haproxy"  label="ingress.haproxy"     activeComponentIds={activeComponentIds} activeComponentId={activeComponentId} onSelect={onSelectComponent} accentColor={C.mauve} />
               </div>
             </LayerBoundary>
 
             {/* Infrastructure Node */}
             <div
-              className="xl:col-span-2 relative rounded-lg p-3.5"
+              className="xl:col-span-2 relative p-3"
               style={{
-                border: '1px solid rgba(255, 138, 42, 0.55)',
-                background: 'linear-gradient(180deg, rgba(255, 138, 42, 0.10) 0%, rgba(255, 138, 42, 0.02) 100%)',
-                boxShadow: '0 0 0 1px rgba(255, 138, 42, 0.08) inset, 0 0 28px -10px rgba(255, 138, 42, 0.45)',
+                border: `1px solid ${C.peach}88`,
+                background: `linear-gradient(180deg, ${C.peach}0e 0%, transparent 100%)`,
               }}
             >
-              <div className="flex items-baseline gap-2 mb-3">
+              <span className="absolute -top-px -left-px w-2 h-2 border-t border-l" style={{ borderColor: C.peach }} aria-hidden />
+              <span className="absolute -top-px -right-px w-2 h-2 border-t border-r" style={{ borderColor: C.peach }} aria-hidden />
+              <span className="absolute -bottom-px -left-px w-2 h-2 border-b border-l" style={{ borderColor: C.peach }} aria-hidden />
+              <span className="absolute -bottom-px -right-px w-2 h-2 border-b border-r" style={{ borderColor: C.peach }} aria-hidden />
+
+              <div className="flex items-baseline gap-2 mb-3 -mt-1">
+                <span className="font-mono text-[10.5px] text-k-tx-mut">┤</span>
                 <span
-                  className="font-display text-[12px] font-semibold tracking-wide uppercase text-k-orange"
-                  style={{ textShadow: '0 0 10px rgba(255, 138, 42, 0.6)' }}
+                  className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.18em]"
+                  style={{ color: C.peach, textShadow: `0 0 12px ${C.peach}55` }}
                 >
-                  Infrastructure Node
+                  node
                 </span>
-                <span className="font-mono text-[10px] text-k-tx-mut">node-01 · worker</span>
-                <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(255, 138, 42, 0.55), transparent)' }} />
+                <span className="font-mono text-[10px] text-k-tx-mut">:: node-01 / worker</span>
+                <span className="font-mono text-[10.5px] text-k-tx-mut">├</span>
+                <span className="hr-dashed" />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <LayerBoundary label="Namespace · app" sub="project" color="#c084fc" dashed>
+                <LayerBoundary label="ns: app" sub="namespace" color={C.mauve} dashed>
                   <PodLayer
                     podId="app-pod"
-                    label="Pod · web-app"
+                    label="pod/web-app"
                     activeComponentIds={activeComponentIds}
                     activeComponentId={activeComponentId}
                     onSelectComponent={onSelectComponent}
@@ -230,10 +226,10 @@ export default function Canvas({
                   />
                 </LayerBoundary>
 
-                <LayerBoundary label="Namespace · router" sub="project" color="#c084fc" dashed>
+                <LayerBoundary label="ns: router" sub="namespace" color={C.mauve} dashed>
                   <PodLayer
                     podId="router-pod"
-                    label="Pod · router"
+                    label="pod/router"
                     activeComponentIds={activeComponentIds}
                     activeComponentId={activeComponentId}
                     onSelectComponent={onSelectComponent}
@@ -243,27 +239,27 @@ export default function Canvas({
                 </LayerBoundary>
 
                 <LayerBoundary
-                  label="Host Networking"
+                  label="host.net"
                   sub="kernel subsystem"
-                  color="#39ff88"
+                  color={C.green}
                   className="lg:col-span-2"
                 >
                   <div className="flex flex-wrap gap-2">
                     <ComponentBox
                       id="ovs-bridge-br-int"
-                      label="OVS Bridge · br-int"
+                      label="ovs/br-int"
                       activeComponentIds={activeComponentIds}
                       activeComponentId={activeComponentId}
                       onSelect={onSelectComponent}
-                      accentColor="#39ff88"
+                      accentColor={C.green}
                     />
                     <ComponentBox
                       id="host-veth-pair"
-                      label="veth Pair"
+                      label="veth.pair"
                       activeComponentIds={activeComponentIds}
                       activeComponentId={activeComponentId}
                       onSelect={onSelectComponent}
-                      accentColor="#39ff88"
+                      accentColor={C.green}
                     />
                   </div>
                 </LayerBoundary>
@@ -272,18 +268,27 @@ export default function Canvas({
           </div>
 
           {/* External client */}
-          <div className="mt-5 pt-4 flex items-center gap-4" style={{ borderTop: '1px solid var(--c-bd)' }}>
-            <span className="font-display text-[12px] font-semibold tracking-wide uppercase text-k-tx-mut">
-              External
+          <div className="mt-4 pt-3 flex items-center gap-3 border-t border-dashed border-k-bd">
+            <span className="font-mono text-[10.5px] text-k-tx-mut">─┤</span>
+            <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.2em] text-k-sky">
+              external
             </span>
+            <span className="font-mono text-[10.5px] text-k-tx-mut">├─</span>
             <ComponentBox
               id="external-client"
-              label="External Client"
+              label="client"
               activeComponentIds={activeComponentIds}
               activeComponentId={activeComponentId}
               onSelect={onSelectComponent}
-              accentColor="#00f0ff"
+              accentColor={C.sky}
             />
+          </div>
+
+          {/* Footer rule */}
+          <div className="flex items-center gap-2 mt-3 -mb-1">
+            <span className="font-mono text-[11px] text-k-tx-mut">└──</span>
+            <span className="hr-dashed" />
+            <span className="font-mono text-[11px] text-k-tx-mut">──┘</span>
           </div>
         </div>
 

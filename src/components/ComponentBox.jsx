@@ -6,41 +6,41 @@ export default function ComponentBox({
   activeComponentIds,
   activeComponentId,
   onSelect,
-  accentColor = '#00f0ff',
+  accentColor = '#89dceb',
   className = '',
   children,
 }) {
   const [isHovered, setIsHovered] = useState(false)
-  const isHighlighted = activeComponentIds?.has(id)
-  const isSelected    = activeComponentId === id
+  const isHighlighted  = activeComponentIds?.has(id)
+  const isSelected     = activeComponentId === id
   const hasActiveEvent = activeComponentIds && activeComponentIds.size > 0
   const isDimmed       = hasActiveEvent && !isHighlighted
 
-  const baseShadow =
-    '0 1px 0 0 rgba(255,255,255,0.04) inset, 0 1px 2px 0 rgba(0,0,0,0.5)'
-
+  // Borders: dim when idle, solid accent when active.
   const borderColor = isSelected
     ? accentColor
     : isHighlighted
       ? accentColor
       : isHovered
         ? `${accentColor}cc`
-        : `${accentColor}40`
+        : `${accentColor}44`
 
-  const boxShadow = isSelected
-    ? `${baseShadow}, 0 0 0 1px ${accentColor}, 0 0 22px ${accentColor}80, 0 0 60px ${accentColor}30`
+  const glow = isSelected
+    ? `0 0 0 1px ${accentColor}, 0 0 18px ${accentColor}55`
     : isHighlighted
-      ? `${baseShadow}, 0 0 18px ${accentColor}70, 0 0 40px ${accentColor}25`
+      ? `0 0 14px ${accentColor}50`
       : isHovered
-        ? `${baseShadow}, 0 0 14px ${accentColor}55, 0 0 28px ${accentColor}20`
-        : baseShadow
+        ? `0 0 10px ${accentColor}35`
+        : 'none'
 
   const style = {
-    background: isHovered || isSelected
-      ? `linear-gradient(180deg, ${accentColor}1f 0%, ${accentColor}08 100%), rgba(16, 24, 44, 0.85)`
-      : `linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.005) 100%), rgba(16, 24, 44, 0.7)`,
+    background: isSelected
+      ? `linear-gradient(180deg, ${accentColor}22 0%, ${accentColor}08 100%), var(--c-s2)`
+      : isHovered || isHighlighted
+        ? `linear-gradient(180deg, ${accentColor}14 0%, transparent 100%), var(--c-s2)`
+        : 'var(--c-s1)',
     borderColor,
-    boxShadow,
+    boxShadow: glow,
     opacity: isDimmed ? 0.32 : 1,
   }
 
@@ -52,62 +52,73 @@ export default function ComponentBox({
       onMouseLeave={() => setIsHovered(false)}
       style={style}
       className={`
-        group relative cursor-pointer rounded-md border pl-3 pr-2.5 py-1.5
+        group relative cursor-pointer border pl-2.5 pr-2 py-1
         inline-flex w-fit max-w-full
-        transition-all duration-150
-        ${isSelected ? 'scale-[1.02]' : isHovered ? 'scale-[1.015] -translate-y-px' : ''}
-        ${isHighlighted ? 'active-shimmer' : ''}
+        transition-all duration-150 font-mono
+        ${isSelected ? '-translate-y-px' : isHovered ? '-translate-y-px' : ''}
+        ${isHighlighted && !isSelected ? 'active-shimmer' : ''}
         ${className}
       `}
     >
-      {/* Left accent bar */}
+      {/* Left rail */}
       <span
         aria-hidden="true"
-        className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-r transition-opacity"
+        className="absolute left-0 top-1 bottom-1 w-[2px] transition-opacity"
         style={{
           background: accentColor,
-          boxShadow: (isSelected || isHighlighted || isHovered) ? `0 0 6px ${accentColor}` : 'none',
-          opacity: isSelected ? 1 : isHighlighted ? 0.85 : isHovered ? 0.6 : 0.25,
+          opacity: isSelected ? 1 : isHighlighted ? 0.85 : isHovered ? 0.55 : 0.22,
         }}
       />
 
-      <div className="flex items-center justify-between gap-2 w-full">
+      <div className="flex items-center gap-2 w-full">
+        {/* Prompt glyph */}
         <span
-          className="text-[12px] font-medium tracking-tight leading-tight select-none transition-colors whitespace-nowrap"
+          className="text-[10px] flex-shrink-0"
           style={{
-            color: isSelected ? accentColor : isHighlighted || isHovered ? '#f8fafc' : '#cbd5e1',
-            textShadow: (isSelected || isHighlighted) ? `0 0 12px ${accentColor}80` : 'none',
+            color: isSelected || isHighlighted ? accentColor : 'var(--c-tx-dim)',
+            opacity: isSelected || isHighlighted || isHovered ? 1 : 0.7,
+          }}
+        >
+          {isSelected ? '▾' : '▸'}
+        </span>
+
+        {/* Label */}
+        <span
+          className="text-[11.5px] font-medium leading-tight select-none transition-colors whitespace-nowrap tracking-tight"
+          style={{
+            color: isSelected
+              ? accentColor
+              : isHighlighted || isHovered
+                ? 'var(--c-tx-wh)'
+                : 'var(--c-tx-br)',
+            textShadow: (isSelected || isHighlighted) ? `0 0 10px ${accentColor}66` : 'none',
           }}
         >
           {label}
         </span>
 
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        {/* Right indicator */}
+        <div className="flex items-center gap-1 flex-shrink-0 ml-auto pl-1">
           {isHighlighted && (
             <span
-              className="w-1.5 h-1.5 rounded-full"
+              className="text-[10px] font-bold"
               style={{
-                background: accentColor,
-                boxShadow: `0 0 10px ${accentColor}, 0 0 4px ${accentColor}`,
+                color: accentColor,
+                textShadow: `0 0 8px ${accentColor}`,
                 animation: 'pulse-amber 1.8s ease-in-out infinite',
               }}
-            />
+            >
+              ●
+            </span>
           )}
-          <svg
-            className="w-3 h-3 transition-all"
-            style={{
-              color: isHovered ? accentColor : '#94a3b8',
-              opacity: isHovered ? 0.9 : 0,
-              transform: isHovered ? 'translateX(1px)' : 'translateX(-2px)',
-            }}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
+          {isHovered && !isHighlighted && (
+            <span
+              className="text-[10px] animate-blink"
+              style={{ color: accentColor }}
+            >
+              ▌
+            </span>
+          )}
         </div>
       </div>
 

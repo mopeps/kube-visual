@@ -1,28 +1,38 @@
 export default function Breadcrumb({ expandedPods }) {
-  const parts = ['cluster-01', 'node-01']
+  // Always visible — shell prompt is the constant of a terminal.
+  const segs = [
+    { label: 'cluster-01', color: 'text-k-blue' },
+    { label: 'node-01',    color: 'text-k-sapphire' },
+  ]
   if (expandedPods.size > 0) {
-    parts.push('ns:app')
-    parts.push('pod:web')
+    segs.push({ label: 'ns:app', color: 'text-k-mauve' })
+    segs.push({ label: 'pod:web', color: 'text-k-mauve' })
     if (expandedPods.has('app-pod')) {
-      parts.push('kernel')
+      segs.push({ label: 'kernel', color: 'text-k-green' })
     }
   }
 
-  if (parts.length <= 2) return null
-
   return (
     <nav
-      className="px-4 py-1.5 flex items-center gap-1.5 text-[11px] font-mono overflow-x-auto whitespace-nowrap border-b border-k-bd"
-      style={{ background: 'rgba(7, 11, 20, 0.4)' }}
+      className="px-3 py-1 flex items-center gap-1.5 text-[11px] font-mono whitespace-nowrap overflow-x-auto border-b border-k-bd"
+      style={{ background: 'var(--c-crust)' }}
     >
-      {parts.map((part, i) => (
-        <span key={i} className="flex items-center gap-1.5">
-          {i > 0 && <span className="text-k-tx-dim">/</span>}
-          <span className={i === parts.length - 1 ? 'text-k-cyan' : 'text-k-tx-mut'}>
-            {part}
-          </span>
+      <span className="text-k-green font-bold">user</span>
+      <span className="text-k-tx-dim">@</span>
+      <span className="text-k-teal font-bold">cluster-01</span>
+      <span className="text-k-tx-dim">:</span>
+      <span className="text-k-blue">~</span>
+      {segs.map((s, i) => (
+        <span key={i} className="flex items-center gap-1">
+          <span className="text-k-tx-dim">/</span>
+          <span className={`${s.color}`}>{s.label}</span>
         </span>
       ))}
+      <span className="text-k-peach ml-1">$</span>
+      <span className="text-k-tx-mut ml-1 truncate">
+        kvis inspect --interactive
+      </span>
+      <span className="caret text-k-tx-wh" aria-hidden="true" />
     </nav>
   )
 }

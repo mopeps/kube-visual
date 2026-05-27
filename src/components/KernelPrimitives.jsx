@@ -1,5 +1,7 @@
 import ComponentBox from './ComponentBox'
 
+const accent = '#a6e3a1' // catppuccin green
+
 export default function KernelPrimitives({ activeComponentIds, activeComponentId, onSelectComponent, isVisible }) {
   return (
     <div
@@ -8,48 +10,62 @@ export default function KernelPrimitives({ activeComponentIds, activeComponentId
       }`}
     >
       <div
-        className="rounded-md p-2.5"
+        className="p-2 relative"
         style={{
-          border: '1px dashed rgba(57, 255, 136, 0.6)',
-          background: 'linear-gradient(180deg, rgba(57, 255, 136, 0.08) 0%, transparent 100%)',
-          boxShadow: '0 0 0 1px rgba(57, 255, 136, 0.05) inset, 0 0 18px -8px rgba(57, 255, 136, 0.5)',
+          border: `1px dashed ${accent}88`,
+          background: `linear-gradient(180deg, ${accent}0d 0%, transparent 100%)`,
         }}
       >
-        <div className="flex items-center gap-2 mb-2">
+        <span className="absolute -top-px -left-px w-1.5 h-1.5 border-t border-l border-dashed" style={{ borderColor: accent }} />
+        <span className="absolute -top-px -right-px w-1.5 h-1.5 border-t border-r border-dashed" style={{ borderColor: accent }} />
+
+        <div className="flex items-center gap-2 mb-2 -mt-0.5">
+          <span className="font-mono text-[9.5px] text-k-tx-mut">╞═</span>
           <span
-            className="font-mono text-[10px] font-medium tracking-wide uppercase text-k-green"
-            style={{ textShadow: '0 0 8px rgba(57, 255, 136, 0.6)' }}
+            className="font-mono text-[9.5px] font-semibold tracking-[0.2em] uppercase"
+            style={{ color: accent, textShadow: `0 0 8px ${accent}55` }}
           >
-            Kernel Primitives
+            kernel.syms
           </span>
-          <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(57, 255, 136, 0.5), transparent)' }} />
+          <span className="font-mono text-[9.5px] text-k-tx-mut">═╡</span>
+          <span className="hr-dashed" />
+          <span className="font-mono text-[9.5px] text-k-tx-dim">3</span>
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          <ComponentBox
-            id="pod-netns"
-            label="Network Namespace · netns"
-            activeComponentIds={activeComponentIds}
-            activeComponentId={activeComponentId}
-            onSelect={onSelectComponent}
-            accentColor="#39ff88"
-          />
-          <ComponentBox
-            id="pod-cgroups"
-            label="Control Groups · cgroups"
-            activeComponentIds={activeComponentIds}
-            activeComponentId={activeComponentId}
-            onSelect={onSelectComponent}
-            accentColor="#39ff88"
-          />
-          <ComponentBox
-            id="container-process"
-            label="Container Process · PID 1"
-            activeComponentIds={activeComponentIds}
-            activeComponentId={activeComponentId}
-            onSelect={onSelectComponent}
-            accentColor="#39ff88"
-          />
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[9.5px] text-k-tx-dim tabular-nums">0x00</span>
+            <ComponentBox
+              id="pod-netns"
+              label="netns"
+              activeComponentIds={activeComponentIds}
+              activeComponentId={activeComponentId}
+              onSelect={onSelectComponent}
+              accentColor={accent}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[9.5px] text-k-tx-dim tabular-nums">0x01</span>
+            <ComponentBox
+              id="pod-cgroups"
+              label="cgroups"
+              activeComponentIds={activeComponentIds}
+              activeComponentId={activeComponentId}
+              onSelect={onSelectComponent}
+              accentColor={accent}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[9.5px] text-k-tx-dim tabular-nums">0x02</span>
+            <ComponentBox
+              id="container-process"
+              label="pid 1"
+              activeComponentIds={activeComponentIds}
+              activeComponentId={activeComponentId}
+              onSelect={onSelectComponent}
+              accentColor={accent}
+            />
+          </div>
         </div>
       </div>
     </div>

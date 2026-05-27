@@ -4,37 +4,49 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans:    ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        display: ['"Space Grotesk"', 'Inter', 'ui-sans-serif', 'sans-serif'],
+        // Terminal-first: everything is mono.
+        sans:    ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        display: ['"Major Mono Display"', '"JetBrains Mono"', 'monospace'],
         mono:    ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
         code:    ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       colors: {
-        // Background layers
-        'k-base':   '#05070f',
-        'k-s1':     '#0a1020',
-        'k-s2':     '#10182c',
-        'k-s3':     '#16223e',
-        // Borders
-        'k-bd-dim': 'rgba(148,163,184,0.08)',
-        'k-bd':     'rgba(148,163,184,0.18)',
-        'k-bd-hi':  'rgba(148,163,184,0.34)',
-        // Text
-        'k-tx-dim': '#64748b',
-        'k-tx-mut': '#94a3b8',
-        'k-tx':     '#cbd5e1',
-        'k-tx-br':  '#e2e8f0',
-        'k-tx-wh':  '#f8fafc',
-        // Neon accents
-        'k-cyan':   '#00f0ff',
-        'k-teal':   '#2dffd5',
-        'k-amber':  '#ffcb33',
-        'k-orange': '#ff8a2a',
-        'k-green':  '#39ff88',
-        'k-purple': '#c084fc',
-        'k-pink':   '#ff5fbf',
-        'k-red':    '#ff5470',
-        'k-sky':    '#33c8ff',
+        // ── Catppuccin Mocha · background layers ────────────────────────
+        'k-crust':  '#11111b',   // outermost window chrome
+        'k-base':   '#1e1e2e',   // main canvas surface
+        'k-s1':     '#181825',   // mantle · sidebar
+        'k-s2':     '#313244',   // surface0 · raised cards
+        'k-s3':     '#45475a',   // surface1 · nested
+        'k-s4':     '#585b70',   // surface2 · selection hi
+        // ── Borders (overlay0 with alpha so they layer cleanly) ────────
+        'k-bd-dim': 'rgba(108, 112, 134, 0.18)',
+        'k-bd':     'rgba(108, 112, 134, 0.34)',
+        'k-bd-hi':  'rgba(108, 112, 134, 0.58)',
+        // ── Text hierarchy ─────────────────────────────────────────────
+        'k-tx-dim': '#585b70',   // surface2 · very faded
+        'k-tx-mut': '#6c7086',   // overlay0
+        'k-tx':     '#a6adc8',   // subtext0
+        'k-tx-br':  '#bac2de',   // subtext1
+        'k-tx-wh':  '#cdd6f4',   // text · the "white"
+        // ── Catppuccin accents (k-* names repointed) ───────────────────
+        'k-cyan':   '#89dceb',   // sky
+        'k-teal':   '#94e2d5',   // teal
+        'k-amber':  '#fab387',   // peach (warm accent)
+        'k-orange': '#eba0ac',   // maroon
+        'k-green':  '#a6e3a1',   // green
+        'k-purple': '#cba6f7',   // mauve
+        'k-pink':   '#f5c2e7',   // pink
+        'k-red':    '#f38ba8',   // red
+        'k-sky':    '#74c7ec',   // sapphire
+        // ── Additional Catppuccin accents (new) ────────────────────────
+        'k-yellow':    '#f9e2af',
+        'k-blue':      '#89b4fa',
+        'k-lavender':  '#b4befe',
+        'k-rosewater': '#f5e0dc',
+        'k-flamingo':  '#f2cdcd',
+        'k-maroon':    '#eba0ac',
+        'k-sapphire':  '#74c7ec',
+        'k-mauve':     '#cba6f7',
       },
       keyframes: {
         'slide-in': {
@@ -51,19 +63,33 @@ export default {
         },
         'pulse-amber': {
           '0%, 100%': { opacity: '1' },
-          '50%':      { opacity: '0.35' },
-        },
-        'pulse-glow': {
-          '0%, 100%': { boxShadow: '0 0 0 0 currentColor' },
-          '50%':      { boxShadow: '0 0 0 4px transparent' },
+          '50%':      { opacity: '0.4' },
         },
         'blink': {
-          '0%, 100%': { opacity: '1' },
-          '50%':      { opacity: '0' },
+          '0%, 49%':   { opacity: '1' },
+          '50%, 100%': { opacity: '0' },
+        },
+        'caret-blink': {
+          '0%, 60%':   { opacity: '1' },
+          '61%, 100%': { opacity: '0' },
         },
         'fade-in': {
           from: { opacity: '0' },
           to:   { opacity: '1' },
+        },
+        'type-in': {
+          from: { width: '0' },
+          to:   { width: '100%' },
+        },
+        'scanline-drift': {
+          '0%':   { backgroundPosition: '0 0' },
+          '100%': { backgroundPosition: '0 100vh' },
+        },
+        'flicker': {
+          '0%, 100%':   { opacity: '1' },
+          '7%, 9%':     { opacity: '0.85' },
+          '8%':         { opacity: '0.6' },
+          '50%, 52%':   { opacity: '0.92' },
         },
       },
       animation: {
@@ -72,7 +98,10 @@ export default {
         'reveal-up':     'reveal-up 0.35s ease-out',
         'pulse-amber':   'pulse-amber 1.8s ease-in-out infinite',
         'blink':         'blink 1s step-end infinite',
+        'caret':         'caret-blink 1.1s step-end infinite',
         'fade-in':       'fade-in 0.4s ease-out',
+        'type-in':       'type-in 0.9s steps(28, end) forwards',
+        'flicker':       'flicker 6s infinite',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
