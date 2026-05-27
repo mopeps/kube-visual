@@ -18,19 +18,23 @@ export default function App() {
   } = useEventState()
 
   return (
-    <div className="flex h-screen text-white overflow-hidden bg-transparent">
+    <div className="flex h-screen overflow-hidden" style={{ background: '#070b14', color: '#cce0f4' }}>
+      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/60"
+          className="lg:hidden fixed inset-0 z-40"
+          style={{ background: 'rgba(4,6,12,0.75)' }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
+
       <Sidebar
         activeEvent={activeEvent}
         onSelectEvent={selectEvent}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
+
       <Canvas
         activeEvent={activeEvent}
         activeComponentIds={activeComponentIds}

@@ -1,13 +1,32 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --kube-bg:   #070b14;
-  --kube-bg2:  #0d1424;
-  --kube-grid: rgba(0, 200, 255, 0.04);
+  --c-base:    #070b14;
+  --c-s1:      #0b1220;
+  --c-s2:      #0f192c;
+  --c-s3:      #132138;
+  --c-bd-dim:  #192540;
+  --c-bd:      #1f3054;
+  --c-bd-hi:   #274060;
+  --c-tx-dim:  #2e4a70;
+  --c-tx-mut:  #456688;
+  --c-tx:      #6c92b4;
+  --c-tx-br:   #9abcd8;
+  --c-tx-wh:   #cce0f4;
+
+  --c-cyan:    #22d3ee;
+  --c-amber:   #fb923c;
+  --c-green:   #34d399;
+  --c-purple:  #a78bfa;
+  --c-red:     #f87171;
+  --c-gold:    #fbbf24;
+
+  --grid-size: 28px;
+  --grid-color: rgba(31, 48, 84, 0.45);
 }
 
 * {
@@ -16,21 +35,31 @@
 
 body {
   margin: 0;
-  background: var(--kube-bg);
-  color: #fff;
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  background: var(--c-base);
+  color: var(--c-tx-wh);
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Subtle cyan grid overlay */
+/* Blueprint grid overlay */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   background-image:
-    linear-gradient(var(--kube-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--kube-grid) 1px, transparent 1px);
-  background-size: 40px 40px;
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: var(--grid-size) var(--grid-size);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Vignette - subtle dark edge on canvas */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(4, 6, 12, 0.5) 100%);
   pointer-events: none;
   z-index: 0;
 }
@@ -38,9 +67,82 @@ body::before {
 #root {
   position: relative;
   z-index: 1;
+  height: 100dvh;
+  overflow: hidden;
 }
 
-/* Thin scrollbars */
-::-webkit-scrollbar          { width: 6px; height: 6px; }
-::-webkit-scrollbar-track    { background: rgba(255, 255, 255, 0.03); }
-::-webkit-scrollbar-thumb    { background: rgba(255, 255, 255, 0.15); border-radius: 3px; }
+/* Thin sharp scrollbars */
+::-webkit-scrollbar          { width: 3px; height: 3px; }
+::-webkit-scrollbar-track    { background: var(--c-s1); }
+::-webkit-scrollbar-thumb    { background: var(--c-bd-hi); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: var(--c-tx-dim); }
+
+/* Component box corner brackets */
+.corner-tl::before,
+.corner-tr::before,
+.corner-bl::after,
+.corner-br::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  pointer-events: none;
+}
+
+/* Section divider line */
+.section-rule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-rule::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.15;
+}
+
+/* Stagger animation helpers */
+.stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger > *:nth-child(2) { animation-delay: 0.08s; }
+.stagger > *:nth-child(3) { animation-delay: 0.12s; }
+.stagger > *:nth-child(4) { animation-delay: 0.16s; }
+.stagger > *:nth-child(5) { animation-delay: 0.20s; }
+.stagger > *:nth-child(6) { animation-delay: 0.24s; }
+
+/* Highlight shimmer on active components */
+@keyframes shimmer-h {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.active-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(34, 211, 238, 0.07) 50%,
+    transparent 100%
+  );
+  background-size: 200% auto;
+  animation: shimmer-h 2.5s linear infinite;
+}
+
+/* Arrow path animation */
+@keyframes draw-path {
+  from { stroke-dashoffset: 300; opacity: 0; }
+  to   { stroke-dashoffset: 0;   opacity: 0.9; }
+}
+
+.arrow-path {
+  animation: draw-path 0.45s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Terminal cursor blink */
+.cursor::after {
+  content: '█';
+  animation: blink 1s step-end infinite;
+  color: var(--c-amber);
+  font-size: 0.75em;
+  margin-left: 1px;
+}
