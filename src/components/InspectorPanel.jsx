@@ -2,10 +2,10 @@ import { useState } from 'react'
 import componentsData from '../data/components.json'
 
 const LAYER_CONFIG = {
-  'External':                  { color: '#22d3ee', label: 'External' },
-  'Management Layer':          { color: '#38bdf8', label: 'Management' },
-  'Host Networking Subsystem': { color: '#34d399', label: 'Host Networking' },
-  'Linux Kernel Primitives':   { color: '#34d399', label: 'Kernel' },
+  'External':                  { color: '#00f0ff', label: 'External' },
+  'Management Layer':          { color: '#33c8ff', label: 'Management' },
+  'Host Networking Subsystem': { color: '#39ff88', label: 'Host Networking' },
+  'Linux Kernel Primitives':   { color: '#39ff88', label: 'Kernel' },
 }
 
 function SectionHeader({ label, color }) {
