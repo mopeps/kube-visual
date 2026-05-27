@@ -1,0 +1,113 @@
+[
+  {
+    "eventId": "route-ingress-traffic",
+    "eventName": "External Ingress Traffic Flow",
+    "description": "Tracing an HTTPS request from an external client to an app pod via OVN-Kubernetes.",
+    "steps": [
+      {
+        "step": 1,
+        "sourceComponentId": "external-client",
+        "targetComponentId": "ingress-router-haproxy",
+        "description": "Client initiates connection; HAProxy terminates TLS at the Route layer."
+      },
+      {
+        "step": 2,
+        "sourceComponentId": "ingress-router-haproxy",
+        "targetComponentId": "ovs-bridge-br-int",
+        "description": "Traffic is forwarded into the OVN-Kubernetes host integration bridge."
+      },
+      {
+        "step": 3,
+        "sourceComponentId": "ovs-bridge-br-int",
+        "targetComponentId": "host-veth-pair",
+        "description": "OVS routes the packet through the host-side virtual Ethernet interface."
+      },
+      {
+        "step": 4,
+        "sourceComponentId": "host-veth-pair",
+        "targetComponentId": "pod-netns",
+        "description": "Packet crosses the boundary into the Pod's isolated Linux Network Namespace."
+      },
+      {
+        "step": 5,
+        "sourceComponentId": "pod-netns",
+        "targetComponentId": "container-process",
+        "description": "The application process (PID 1) accepts the cleartext socket connection."
+      }
+    ]
+  },
+  {
+    "eventId": "pod-spawning",
+    "eventName": "Pod Spawning",
+    "description": "Tracing the lifecycle of a new Pod being scheduled and started by the Kubernetes control plane.",
+    "steps": [
+      {
+        "step": 1,
+        "sourceComponentId": "api-server",
+        "targetComponentId": "scheduler",
+        "description": "API Server receives a Pod creation request and notifies the Scheduler."
+      },
+      {
+        "step": 2,
+        "sourceComponentId": "scheduler",
+        "targetComponentId": "kubelet",
+        "description": "Scheduler selects a node and binds the Pod; Kubelet on the node is notified."
+      },
+      {
+        "step": 3,
+        "sourceComponentId": "kubelet",
+        "targetComponentId": "crio",
+        "description": "Kubelet instructs CRI-O to pull the container image and create the container."
+      },
+      {
+        "step": 4,
+        "sourceComponentId": "crio",
+        "targetComponentId": "pod-cgroups",
+        "description": "CRI-O sets up cgroup resource limits for the new container."
+      },
+      {
+        "step": 5,
+        "sourceComponentId": "crio",
+        "targetComponentId": "pod-netns",
+        "description": "CNI plugin provisions a new Network Namespace and assigns a Pod IP address."
+      }
+    ]
+  },
+  {
+    "eventId": "pod-to-pod-ovn",
+    "eventName": "Pod-to-Pod OVN Traffic",
+    "description": "Tracing a TCP connection between two pods on the same node via OVN-Kubernetes virtual switching.",
+    "steps": [
+      {
+        "step": 1,
+        "sourceComponentId": "container-process",
+        "targetComponentId": "pod-netns",
+        "description": "Source container sends a packet into its network namespace."
+      },
+      {
+        "step": 2,
+        "sourceComponentId": "pod-netns",
+        "targetComponentId": "host-veth-pair",
+        "description": "Packet exits the network namespace via the veth pair to the host."
+      },
+      {
+        "step": 3,
+        "sourceComponentId": "host-veth-pair",
+        "targetComponentId": "ovs-bridge-br-int",
+        "description": "OVS bridge receives the packet and evaluates OVN flow rules."
+      },
+      {
+        "step": 4,
+        "sourceComponentId": "ovs-bridge-br-int",
+        "targetComponentId": "host-veth-pair",
+        "description": "OVS forwards the packet through the destination pod's veth interface."
+      },
+      {
+        "step": 5,
+        "sourceComponentId": "host-veth-pair",
+        "targetComponentId": "pod-netns",
+        "description": "Packet arrives in the destination pod's network namespace and is delivered."
+      }
+    ]
+  }
+]
