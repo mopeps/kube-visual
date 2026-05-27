@@ -20,7 +20,7 @@ export default function Canvas({
 
       <div
         id="canvas-root"
-        className="flex-1 overflow-auto p-6 bg-gray-950"
+        className="flex-1 overflow-auto p-6 bg-gray-950 relative"
         onClick={() => { onClearComponent(); }}
       >
         {/* Cluster Boundary */}
