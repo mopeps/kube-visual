@@ -270,6 +270,143 @@ body::after {
   box-shadow: 0 0 0 3px var(--bg), 0 0 16px rgba(255, 77, 109, 0.5);
 }
 
+/* ── Etcd intent store (collapsed + expanded) ─────────────────────── */
+/* Collapsed: a normal node card with an expand hint. */
+.intent-store .intent-store-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.intent-store-chevron {
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+/* Expanded: takes its own full row inside the flex-wrap zone. */
+.intent-store-expanded {
+  flex: 1 1 100%;
+  width: 100%;
+  position: relative;
+  border: 1px solid var(--store-accent, var(--border-w));
+  border-radius: 10px;
+  padding: 14px 16px 12px;
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--store-accent) 12%, transparent) 0%,
+      rgba(0, 0, 0, 0.4) 100%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--store-accent) 30%, transparent),
+              0 0 26px color-mix(in srgb, var(--store-accent) 18%, transparent);
+  animation: intent-store-grow 0.18s ease;
+}
+.intent-store-expanded.is-active {
+  border-color: var(--packet);
+  box-shadow: 0 0 0 2px var(--packet), 0 0 24px rgba(255, 77, 109, 0.35);
+}
+@keyframes intent-store-grow {
+  from { opacity: 0.4; transform: scale(0.98); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.intent-store-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.intent-store-title {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-align: left;
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  transition: opacity 0.15s;
+}
+.intent-store-title:hover { text-decoration: underline; }
+.intent-store-info {
+  font-size: 0.74rem;
+  margin-left: 6px;
+  opacity: 0.7;
+}
+.intent-store-collapse {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-w);
+  border-radius: 6px;
+  color: var(--tx-muted);
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  line-height: 1;
+  font-size: 0.85rem;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.intent-store-collapse:hover {
+  color: var(--tx-bright);
+  border-color: var(--tx-bright);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.intent-store-caption {
+  margin: 6px 0 12px;
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: var(--tx-muted);
+  max-width: 60ch;
+}
+
+.intent-store-objects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.intent-object {
+  flex: 0 1 200px;
+  text-align: left;
+  cursor: pointer;
+  border: 1px dashed var(--node-accent, var(--border-w));
+  border-radius: 8px;
+  padding: 10px 11px 9px;
+  background: rgba(0, 0, 0, 0.35);
+  font-family: inherit;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.intent-object:hover {
+  transform: translateY(-2px);
+  border-style: solid;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--node-accent) 25%, transparent);
+}
+.intent-object .node-type-prefix { margin-bottom: 3px; }
+.intent-object .node-title {
+  display: block;
+  margin-bottom: 0;
+}
+.intent-object .node-badges { margin-top: 8px; }
+
+.intent-store-footer {
+  margin-top: 12px;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tx-dim);
+}
+
+@media (max-width: 640px) {
+  .intent-object { flex: 1 1 100%; }
+}
+
 /* ── Arrow row between zones ──────────────────────────────────────── */
 .arrow-zone {
   display: flex;

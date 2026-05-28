@@ -1,7 +1,8 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { ZONES } from '../data/zones'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
+import IntentStoreCard from './IntentStoreCard'
 import ArrowOverlay from './ArrowOverlay'
 
 // Map componentId → step number it first appears in the active event.
@@ -28,6 +29,7 @@ export default function OverviewTab({
   onSelectComponent,
 }) {
   const canvasRef = useRef(null)
+  const [expandedStoreId, setExpandedStoreId] = useState(null)
   const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
 
@@ -40,6 +42,23 @@ export default function OverviewTab({
 
   function renderNode(node, zone) {
     const isHighlighted = activeComponentIds?.has?.(node.id)
+    // Nodes carrying intent objects (the etcd "intent store") render as an
+    // expandable card instead of a plain box.
+    if (node.intentObjects) {
+      return (
+        <IntentStoreCard
+          key={node.id}
+          node={node}
+          color={zone.color}
+          stepNum={stepNums.get(node.id)}
+          isActive={isHighlighted}
+          isDimmed={hasActive && !isHighlighted}
+          isExpanded={expandedStoreId === node.id}
+          onToggle={() => setExpandedStoreId(prev => prev === node.id ? null : node.id)}
+          onSelectComponent={onSelectComponent}
+        />
+      )
+    }
     return (
       <NodeCard
         key={node.id}
