@@ -24,22 +24,21 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │     ├── [systemd Service] Open vSwitch (Host Native Data Path)
   │     ├── [Pod] OVN-Kubernetes Node Instance
   │     │
-  │     ├── [Management Control Plane · Static Pods Zone]
-  │     │     │   // The management (bare metal) cluster's OWN control plane,
-  │     │     │   // run by the master kubelet from /etc/kubernetes/manifests
-  │     │     ├── [Static Pod] Management Kube API Server Instance
-  │     │     ├── [Static Pod] Management Etcd Instance ──┐  // expandable "intent store"
-  │     │     │      // CRs are desired-state records persisted here, not processes
-  │     │     │      ├── [Custom Resource] HostedCluster
-  │     │     │      └── [Custom Resource] NodePool
-  │     │     ├── [Static Pod] Management Controller Manager Instance
-  │     │     └── [Static Pod] Management Kube-Scheduler Instance
+  │     │   // The management (bare metal) cluster's OWN control plane,
+  │     │   // run by the master kubelet from /etc/kubernetes/manifests —
+  │     │   // these sit directly on the master node alongside its host agents.
+  │     ├── [Static Pod] Management Kube API Server Instance
+  │     ├── [Static Pod] Management Etcd Instance ──┐  // expandable "intent store"
+  │     │      // CRs are desired-state records persisted here, not processes
+  │     │      ├── [Custom Resource] HostedCluster
+  │     │      └── [Custom Resource] NodePool
+  │     ├── [Static Pod] Management Controller Manager Instance
+  │     ├── [Static Pod] Management Kube-Scheduler Instance
   │     │
-  │     ├── [HyperShift · hypershift Namespace Zone]
-  │     │     │   // Cluster-wide management operator (ONE per mgmt cluster,
-  │     │     │   // not per guest). The HostedCluster/NodePool CRs it
-  │     │     │   // reconciles are intent records inside Management Etcd above.
-  │     │     └── [Pod] HyperShift Operator Instance
+  │     │   // Cluster-wide management operator (ONE per mgmt cluster,
+  │     │   // not per guest). The HostedCluster/NodePool CRs it
+  │     │   // reconciles are intent records inside Management Etcd above.
+  │     ├── [Pod] HyperShift Operator Instance
   │     │
   │     └── [Dedicated Guest Control Plane Namespace Zone]
   │           │   // Per-HCP operators & lifecycle controllers
