@@ -267,9 +267,18 @@ export const ZONES = [
             zones: [
               {
                 id: 'guest-vm-zone',
+                // The VM zone *is* a component: it doubles as the
+                // `guest-worker-node-vm` hop in events.json. Its label carries
+                // this id so ArrowOverlay can anchor connectors to it and
+                // DetailPanel can open when the label is clicked.
+                componentId: 'guest-worker-node-vm',
                 label: 'Guest Worker Node · VirtualMachineInstance',
                 color: 'var(--k-green)',
                 colorVar: 'k-green',
+                badges: [
+                  { label: 'RHCOS', color: 'var(--k-green)' },
+                  { label: 'virtio-net', color: 'var(--k-green)' },
+                ],
                 nodes: [
                   {
                     id: 'kubelet-guest',
@@ -353,6 +362,11 @@ export const ZONES = [
 // Recursively collect all nodes from the zone tree.
 function collectNodes(zones, result = []) {
   for (const zone of zones) {
+    // A zone that doubles as a component (e.g. the VM zone) registers its own
+    // id so the color/zone/badge lookups below resolve it like any node.
+    if (zone.componentId) {
+      result.push({ node: { id: zone.componentId, badges: zone.badges }, zone })
+    }
     if (zone.nodes) {
       for (const node of zone.nodes) result.push({ node, zone })
     }

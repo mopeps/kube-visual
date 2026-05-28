@@ -89,6 +89,16 @@ const PRIMITIVE = {
   'container-process':               'execve() under PID 1 in VM netns',
 }
 
+// First sentence of a description, with exactly one trailing period — avoids
+// the double "." that a naive split + append produces when the source text
+// already ends in (or lacks) a period.
+function firstSentence(text) {
+  if (!text) return '—'
+  const match = text.match(/^.*?\.(?:\s|$)/)
+  const first = (match ? match[0] : text).trim()
+  return first.endsWith('.') ? first : `${first}.`
+}
+
 export default function ObjectMapTab() {
   return (
     <div>
@@ -147,7 +157,7 @@ export default function ObjectMapTab() {
                     {PRIMITIVE[c.componentId] || '—'}
                   </td>
                   <td style={{ color: 'var(--tx-muted)' }}>
-                    {c.problemSolved.split('. ')[0]}.
+                    {firstSentence(c.problemSolved)}
                   </td>
                 </tr>
               )

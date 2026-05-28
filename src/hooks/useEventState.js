@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 
 export default function useEventState() {
   const [activeEvent, setActiveEvent] = useState(null)
@@ -16,9 +16,12 @@ export default function useEventState() {
 
   const clearComponent = useCallback(() => setActiveComponentId(null), [])
 
-  const activeComponentIds = activeEvent
-    ? new Set(activeEvent.steps.flatMap(s => [s.sourceComponentId, s.targetComponentId]))
-    : new Set()
+  const activeComponentIds = useMemo(
+    () => activeEvent
+      ? new Set(activeEvent.steps.flatMap(s => [s.sourceComponentId, s.targetComponentId]))
+      : new Set(),
+    [activeEvent],
+  )
 
   return {
     activeEvent,

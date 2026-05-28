@@ -13,13 +13,12 @@ function buildPath(srcEl, tgtEl, canvasEl) {
 
   // S-curve cubic bezier: depart horizontally from source, arrive horizontally at target
   const dx = tx - sx
-  const dy = ty - sy
   const cx1 = sx + dx * 0.5
   const cy1 = sy
   const cx2 = tx - dx * 0.5
   const cy2 = ty
 
-  const midX = (sx + tx) / 2 + (dy > 0 ? 0 : 0)
+  const midX = (sx + tx) / 2
   const midY = (sy + ty) / 2
 
   return { d: `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${tx} ${ty}`, midX, midY }
