@@ -1,11 +1,19 @@
 # kube-visual
 
-Frontend-only React app that visualises an OpenShift cluster as a vertical
-stack of **zones** (Client → Ingress → Mgmt Plane → Host.Net → Pod·Kernel) and
-traces event-driven packet flows down to Linux kernel primitives.
+Frontend-only React app that visualises an OpenShift **Hosted Control Plane (HCP)**
+cluster as a nested stack of **zones** (Client → Management Cluster Context → Master
+Node → Guest Control Plane Namespace + Worker Node → KubeVirt Launcher → Guest VMI)
+and traces event-driven flows down to Linux kernel primitives.
 Deployed to GitHub Pages on every push to `main`.
 
-See `DESIGN_GOAL.md` for the visual brief and intent.
+## Reference docs (read these first)
+
+- **`ARCHITECTURE.md`** — the source-of-truth spec for *what the app should be*:
+  target topology, component hierarchy, `[Pod]`/`[systemd]`/`[VirtualMachineInstance]`
+  nomenclature, interaction model, and the `components.json` / `events.json` schemas.
+  When the app and this spec disagree, the spec is the intent — bring the app back in
+  line with it (or change the spec deliberately).
+- **`DESIGN_GOAL.md`** — the visual brief and intent (palette, fonts, what to avoid).
 
 ## Tech Stack
 
@@ -33,32 +41,37 @@ src/
   App.jsx                    # shell: header, legend, event pills, tabs, detail panel
   index.css                  # design tokens, .zone, .node, .arrow-zone, .hop, .detail-panel
   data/
-    components.json          # one entry per componentId
+    components.json          # one entry per componentId (incl. typePrefix, logicalContext)
     events.json              # ordered step lists (source → target hops)
-    zones.js                 # ZONES, ARROW_ROWS, COMPONENT_COLOR, COMPONENT_ZONE
+    zones.js                 # recursive ZONES tree, COMPONENT_COLOR, COMPONENT_ZONE
   hooks/useEventState.js     # active event + selected component state
   components/
     Tabs.jsx                 # tab nav
     EventSelector.jsx        # horizontal trace pills
-    Zone.jsx                 # one labeled zone row, with flex-wrap children
-    NodeCard.jsx             # one box inside a zone
-    ArrowRow.jsx             # numbered hops between two zones
-    OverviewTab.jsx          # assembles ZONES + ARROW_ROWS
+    Zone.jsx                 # one labeled zone; renders nested child zones recursively
+    NodeCard.jsx             # one box inside a zone (shows [typePrefix] label)
+    ArrowOverlay.jsx         # SVG layer: bezier connectors between active step nodes
+    OverviewTab.jsx          # recursively renders ZONES tree + ArrowOverlay
     PacketFlowTab.jsx        # expandable hop list for active event
-    LinuxInternalsTab.jsx    # layer cards for host-net + kernel primitives
+    LinuxInternalsTab.jsx    # layer cards for KVM / host / kernel primitives
     ObjectMapTab.jsx         # flat table mapping component → kind → linux primitive
-    DetailPanel.jsx          # slide-in panel on the right when a node is clicked
+    DetailPanel.jsx          # slide-up bottom sheet when a node is clicked
 ```
 
 ## Critical Gotchas
 
 - **`base: './'` in vite.config.js** — required for GitHub Pages. Do not change to `/`.
 - **No test suite** — verify changes manually with `npm run dev`. The dev server build catches import / syntax errors but not visual regressions.
-- **`react-xarrows` is in package.json but unused.** Do not import it. The current design uses static arrow rows between zones, not floating SVG paths.
-- **Adding a new component** means three places: a new entry in
-  `components.json`, a reference in the correct zone in `data/zones.js`, and
-  ideally an icon mapping in `LinuxInternalsTab.jsx` / `ObjectMapTab.jsx` if
-  it should appear in those tabs.
+- **`react-xarrows` is in package.json but unused.** Do not import it. Connectors are
+  drawn by the hand-rolled `ArrowOverlay.jsx` (an absolutely-positioned SVG that
+  measures node bounding rects and draws bezier paths), not by a library.
+- **`ArrowOverlay` positions paths via `document.getElementById(componentId)`.** Every
+  NodeCard renders its `id` as the DOM `id`, so each `componentId` must be unique in the
+  DOM at render time or its connector step is silently dropped.
+- **Adding a new component** means: a new entry in `components.json` (with `typePrefix`,
+  and `logicalContext` for workload pods/VMIs), a node in the correct zone in
+  `data/zones.js`, and ideally KIND/PRIMITIVE/icon mappings in `LinuxInternalsTab.jsx` /
+  `ObjectMapTab.jsx`. Keep all of this consistent with `ARCHITECTURE.md`.
 - **`.claude/skills/*` predates this redesign** and still references the
   previous tmux/Catppuccin design (`ComponentBox`, `PodLayer`, `ArrowOverlay`).
   Treat those skills as historical context until they are refreshed.
