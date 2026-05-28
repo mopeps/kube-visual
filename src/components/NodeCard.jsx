@@ -33,7 +33,12 @@ export default function NodeCard({
         </span>
       )}
       {typePrefix && (
-        <span className="node-type-prefix">[{typePrefix}]</span>
+        <span
+          className="node-type-prefix"
+          style={{ color, textShadow: `0 0 8px ${color}80` }}
+        >
+          [{typePrefix}]
+        </span>
       )}
       <div className="node-title" style={{ color }}>{title}</div>
       {badges.length > 0 && (
