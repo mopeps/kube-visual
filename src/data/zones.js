@@ -97,39 +97,6 @@ export const ZONES = [
       },
     ],
   },
-  {
-    id: 'pod-kernel',
-    label: 'Pod · Kernel',
-    color: 'var(--k-green)',
-    colorVar: 'k-green',
-    nodes: [
-      {
-        id: 'pod-netns',
-        title: 'Network Namespace',
-        subtitle: 'Private routing table + IPs\nAttached to host veth peer\nProvisioned by the CNI plugin',
-        badges: [
-          { label: 'netns', color: 'var(--k-green)' },
-        ],
-      },
-      {
-        id: 'pod-cgroups',
-        title: 'cgroups v2',
-        subtitle: 'CPU / memory / I/O limits\nHierarchy created by CRI-O\nKernel triggers OOM on excess',
-        badges: [
-          { label: 'cgroup v2', color: 'var(--k-green)' },
-        ],
-      },
-      {
-        id: 'container-process',
-        title: 'Container Process · PID 1',
-        subtitle: 'Application binary\nRuns inside netns + cgroup\nAccepts sockets, writes stdout',
-        badges: [
-          { label: 'PID ns', color: 'var(--k-green)' },
-          { label: 'app', color: 'var(--k-green)' },
-        ],
-      },
-    ],
-  },
 ]
 
 // Arrow rows sit between zones. Each entry describes what happens as the
@@ -149,19 +116,17 @@ export const ARROW_ROWS = [
       { n: 4, text: 'kube-proxy / OVN flow rules program DNAT + forwarding' },
     ],
   },
-  {
-    between: ['host-net', 'pod-kernel'],
-    steps: [
-      { n: 5, text: 'veth peer drops the frame into the Pod\'s network namespace' },
-      { n: 6, text: 'Socket delivered to PID 1 inside cgroup-bounded process' },
-    ],
-  },
 ]
 
 // Map: componentId → zone color (for hop-list coloring etc.)
-export const COMPONENT_COLOR = ZONES.flatMap(z =>
-  z.nodes.map(n => [n.id, z.color])
-).reduce((acc, [k, v]) => { acc[k] = v; return acc }, {})
+export const COMPONENT_COLOR = {
+  ...ZONES.flatMap(z =>
+    z.nodes.map(n => [n.id, z.color])
+  ).reduce((acc, [k, v]) => { acc[k] = v; return acc }, {}),
+  'pod-netns': 'var(--k-green)',
+  'pod-cgroups': 'var(--k-green)',
+  'container-process': 'var(--k-green)',
+}
 
 export const COMPONENT_ZONE = ZONES.flatMap(z =>
   z.nodes.map(n => [n.id, z])

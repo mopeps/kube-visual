@@ -81,6 +81,7 @@ export default function App() {
       <DetailPanel
         componentId={activeComponentId}
         onClose={clearComponent}
+        onSelectComponent={selectComponent}
       />
     </div>
   )

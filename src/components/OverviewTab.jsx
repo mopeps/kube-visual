@@ -71,7 +71,7 @@ export default function OverviewTab({
               )
             })}
           </Zone>
-          {idx < ZONES.length - 1 && (
+          {idx < ZONES.length - 1 && activeEvent && (
             <ArrowRow
               steps={ARROW_ROWS[idx].steps}
               activeStepNums={arrowActive}

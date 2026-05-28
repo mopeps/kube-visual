@@ -15,16 +15,16 @@ export default function NodeCard({
       onClick={(e) => { e.stopPropagation(); onClick?.(id) }}
       className={`node ${isActive ? 'is-active' : ''} ${isDimmed ? 'is-dimmed' : ''}`}
       style={{
-        borderColor: isActive ? 'var(--packet)' : `${color}80`,
+        borderColor: isActive ? 'var(--packet)' : color,
         background: isActive
           ? `linear-gradient(180deg, ${color}14 0%, rgba(0,0,0,0.35) 100%)`
           : undefined,
       }}
       onMouseEnter={(e) => {
-        if (!isActive) e.currentTarget.style.borderColor = color
+        if (!isActive) e.currentTarget.style.borderColor = '#ffffff'
       }}
       onMouseLeave={(e) => {
-        if (!isActive) e.currentTarget.style.borderColor = `${color}80`
+        if (!isActive) e.currentTarget.style.borderColor = color
       }}
     >
       {stepNum != null && (
