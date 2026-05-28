@@ -38,6 +38,23 @@ export default function OverviewTab({
     collectZoneNodeIds(zone).some(id => activeComponentIds?.has?.(id))
   )
 
+  function renderNode(node, zone) {
+    const isHighlighted = activeComponentIds?.has?.(node.id)
+    return (
+      <NodeCard
+        key={node.id}
+        id={node.id}
+        title={node.title}
+        typePrefix={node.typePrefix}
+        color={zone.color}
+        stepNum={stepNums.get(node.id)}
+        isActive={isHighlighted}
+        isDimmed={hasActive && !isHighlighted}
+        onClick={onSelectComponent}
+      />
+    )
+  }
+
   function renderZone(zone, depth = 0) {
     return (
       <Zone
@@ -46,25 +63,15 @@ export default function OverviewTab({
         color={zone.color}
         dashed={zone.dashed}
         depth={depth}
+        // A zone may double as a component (e.g. the VM); wire up its identity
+        // so it can anchor arrows, highlight, and open the detail panel.
+        componentId={zone.componentId}
+        stepNum={zone.componentId ? stepNums.get(zone.componentId) : undefined}
+        isActive={zone.componentId ? activeComponentIds?.has?.(zone.componentId) : false}
+        onClick={onSelectComponent}
       >
         {/* Nodes in this zone */}
-        {zone.nodes?.map(node => {
-          const isHighlighted = activeComponentIds?.has?.(node.id)
-          return (
-            <NodeCard
-              key={node.id}
-              id={node.id}
-              title={node.title}
-              typePrefix={node.typePrefix}
-              badges={node.badges}
-              color={zone.color}
-              stepNum={stepNums.get(node.id)}
-              isActive={isHighlighted}
-              isDimmed={hasActive && !isHighlighted}
-              onClick={onSelectComponent}
-            />
-          )
-        })}
+        {zone.nodes?.map(node => renderNode(node, zone))}
         {/* Child zones */}
         {zone.zones?.map(child => renderZone(child, depth + 1))}
       </Zone>
@@ -79,7 +86,12 @@ export default function OverviewTab({
     >
       {visibleZones.flatMap(zone =>
         zone.hideWrapper
-          ? (zone.zones ?? []).map(child => renderZone(child))
+          ? [
+              // Wrapper hidden: surface its own nodes and child zones directly
+              // so neither is silently dropped.
+              ...(zone.nodes ?? []).map(node => renderNode(node, zone)),
+              ...(zone.zones ?? []).map(child => renderZone(child)),
+            ]
           : [renderZone(zone)]
       )}
       <ArrowOverlay activeEvent={activeEvent} canvasRef={canvasRef} />

@@ -4,13 +4,22 @@ import { COMPONENT_COLOR, COMPONENT_ZONE, COMPONENT_BADGES } from '../data/zones
 import { BADGE_GLOSSARY } from '../data/badge-glossary'
 import { PRIMITIVES_BY_TYPE, SELF_PRIMITIVE_IDS } from '../data/primitives'
 
+// Copy text to the clipboard, tolerating insecure contexts / denied permissions
+// where navigator.clipboard is unavailable or writeText rejects.
+function copyToClipboard(text) {
+  if (!navigator.clipboard?.writeText) return Promise.reject(new Error('clipboard unavailable'))
+  return navigator.clipboard.writeText(text)
+}
+
 function ExploreCommands({ commands, color }) {
   const [copiedIndex, setCopiedIndex] = useState(null)
   const copy = (text, i) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedIndex(i)
-      setTimeout(() => setCopiedIndex(null), 1800)
-    })
+    copyToClipboard(text)
+      .then(() => {
+        setCopiedIndex(i)
+        setTimeout(() => setCopiedIndex(null), 1800)
+      })
+      .catch(() => {})
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -92,7 +101,6 @@ function PrimitiveInline({ primitive, color }) {
 }
 
 export default function DetailPanel({ componentId, onClose, onSelectComponent }) {
-  const [copiedIndex, setCopiedIndex] = useState(null)
   const [expandedPrimitive, setExpandedPrimitive] = useState(null)
   const [expandedBadge, setExpandedBadge] = useState(null)
 
@@ -115,13 +123,6 @@ export default function DetailPanel({ componentId, onClose, onSelectComponent })
   const primitiveSet = SELF_PRIMITIVE_IDS.has(componentId) || component.layer === 'External'
     ? null
     : PRIMITIVES_BY_TYPE[component.typePrefix] || null
-
-  const copy = (text, i) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedIndex(i)
-      setTimeout(() => setCopiedIndex(null), 1800)
-    })
-  }
 
   return (
     <aside className="detail-panel is-open" role="dialog" aria-label={component.displayName}>
