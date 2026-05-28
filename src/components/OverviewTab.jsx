@@ -74,7 +74,7 @@ export default function OverviewTab({
   return (
     <div
       ref={canvasRef}
-      className="border border-border-w rounded-lg overflow-visible"
+      className="border border-border-w rounded-lg overflow-visible overview-canvas"
       style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
     >
       {visibleZones.flatMap(zone =>
