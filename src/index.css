@@ -21,12 +21,16 @@
   --border-w:  rgba(255, 255, 255, 0.10);
   --border-d:  rgba(255, 255, 255, 0.05);
 
-  --k-cyan:   #00e5ff;
-  --k-sky:    #0ea5e9;
+  /* Zone accents form a top-to-bottom gradient through the stack:
+     external client → bare metal → guest control plane → virtualization → guest VM */
+  --k-cyan:   #00e5ff;   /* External client (sits above the gradient) */
+  --k-blue:   #3b82f6;   /* Bare metal infrastructure — cluster / master / worker */
+  --k-sky:    #38bdf8;   /* Guest control plane namespace (lighter blue) */
+  --k-teal:   #14b8a6;   /* KubeVirt launcher container (blue → green) */
+  --k-green:  #22c55e;   /* Guest worker node · VirtualMachineInstance */
   --k-purple: #7c3aed;
   --k-amber:  #f59e0b;
   --k-orange: #f97316;
-  --k-green:  #10b981;
   --packet:   #ff4d6d;
 }
 
@@ -82,7 +86,7 @@ body::after {
 
 /* ── Gradient title ────────────────────────────────────────────────── */
 .title-gradient {
-  background: linear-gradient(135deg, var(--k-cyan) 0%, var(--k-green) 50%, var(--k-amber) 100%);
+  background: linear-gradient(135deg, var(--k-cyan) 0%, var(--k-teal) 50%, var(--k-green) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
