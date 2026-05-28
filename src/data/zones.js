@@ -21,69 +21,69 @@ export const ZONES = [
   },
   {
     id: 'management-context',
-    label: 'Management Cluster Context',
+    label: 'Bare Metal Cluster',
     color: 'var(--k-sky)',
     colorVar: 'k-sky',
     zones: [
       {
         id: 'master-node',
-        label: 'Management Master Node',
+        label: 'Bare Metal Master Node',
         color: 'var(--k-sky)',
         colorVar: 'k-sky',
         zones: [
           {
             id: 'guest-cp-namespace',
             label: 'Guest Control Plane Namespace',
-            color: 'var(--k-purple)',
-            colorVar: 'k-purple',
+            color: 'var(--k-orange)',
+            colorVar: 'k-orange',
             dashed: true,
             nodes: [
               {
                 id: 'hypershift-operator',
                 title: 'HyperShift Operator',
                 typePrefix: 'Pod',
-                badges: [{ label: 'HostedCluster CR', color: 'var(--k-purple)' }],
+                badges: [{ label: 'HostedCluster CR', color: 'var(--k-orange)' }],
               },
               {
                 id: 'cluster-version-operator',
                 title: 'Cluster Version Operator',
                 typePrefix: 'Pod',
-                badges: [{ label: 'ClusterVersion CR', color: 'var(--k-purple)' }],
+                badges: [{ label: 'ClusterVersion CR', color: 'var(--k-orange)' }],
               },
               {
                 id: 'guest-api-server',
                 title: 'Guest API Server',
                 typePrefix: 'Pod',
                 badges: [
-                  { label: ':6443', color: 'var(--k-purple)' },
-                  { label: 'gRPC', color: 'var(--k-purple)' },
+                  { label: ':6443', color: 'var(--k-orange)' },
+                  { label: 'gRPC', color: 'var(--k-orange)' },
                 ],
               },
               {
                 id: 'guest-oauth-server',
                 title: 'Guest OAuth Server',
                 typePrefix: 'Pod',
-                badges: [{ label: 'OAuth2', color: 'var(--k-purple)' }],
+                badges: [{ label: 'OAuth2', color: 'var(--k-orange)' }],
               },
               {
                 id: 'guest-controller-manager',
                 title: 'Guest Controller Manager',
                 typePrefix: 'Pod',
-                badges: [{ label: 'Controllers', color: 'var(--k-purple)' }],
+                badges: [{ label: 'Controllers', color: 'var(--k-orange)' }],
               },
               {
                 id: 'guest-kube-scheduler',
                 title: 'Guest Scheduler',
                 typePrefix: 'Pod',
-                badges: [{ label: 'Bindings', color: 'var(--k-purple)' }],
+                badges: [{ label: 'Bindings', color: 'var(--k-orange)' }],
               },
               {
                 id: 'etcd-static-pod',
                 title: 'Etcd',
                 typePrefix: 'Static Pod',
                 badges: [
-                  { label: 'State Store', color: 'var(--k-purple)' },
-                  { label: 'Raft', color: 'var(--k-purple)' },
+                  { label: 'State Store', color: 'var(--k-orange)' },
+                  { label: 'Raft', color: 'var(--k-orange)' },
                 ],
               },
               {
@@ -91,45 +91,45 @@ export const ZONES = [
                 title: 'Shared Ingress Proxy',
                 typePrefix: 'Pod',
                 badges: [
-                  { label: 'HAProxy', color: 'var(--k-purple)' },
-                  { label: 'Route CR', color: 'var(--k-purple)' },
+                  { label: 'HAProxy', color: 'var(--k-orange)' },
+                  { label: 'Route CR', color: 'var(--k-orange)' },
                 ],
               },
               {
                 id: 'ovn-master-control',
                 title: 'OVN-K8s Master',
                 typePrefix: 'Pod',
-                badges: [{ label: 'Northbound DB', color: 'var(--k-purple)' }],
+                badges: [{ label: 'Northbound DB', color: 'var(--k-orange)' }],
               },
               {
                 id: 'cloud-controller-manager',
                 title: 'Cloud Controller Manager',
                 typePrefix: 'Pod',
-                badges: [{ label: 'Cloud API', color: 'var(--k-purple)' }],
+                badges: [{ label: 'Cloud API', color: 'var(--k-orange)' }],
               },
               {
                 id: 'konnectivity-server',
                 title: 'Konnectivity Server',
                 typePrefix: 'Pod',
-                badges: [{ label: 'Tunnel :8091', color: 'var(--k-purple)' }],
+                badges: [{ label: 'Tunnel :8091', color: 'var(--k-orange)' }],
               },
               {
                 id: 'ignition-server',
                 title: 'Ignition Server',
                 typePrefix: 'Pod',
-                badges: [{ label: 'Bootstrap', color: 'var(--k-purple)' }],
+                badges: [{ label: 'Bootstrap', color: 'var(--k-orange)' }],
               },
               {
                 id: 'guest-coredns',
                 title: 'Guest CoreDNS',
                 typePrefix: 'Pod',
-                badges: [{ label: 'DNS :53', color: 'var(--k-purple)' }],
+                badges: [{ label: 'DNS :53', color: 'var(--k-orange)' }],
               },
               {
                 id: 'cluster-monitoring',
                 title: 'Cluster Monitoring',
                 typePrefix: 'Pod',
-                badges: [{ label: 'Prometheus', color: 'var(--k-purple)' }],
+                badges: [{ label: 'Prometheus', color: 'var(--k-orange)' }],
               },
             ],
           },
@@ -137,7 +137,7 @@ export const ZONES = [
       },
       {
         id: 'worker-node',
-        label: 'Management Worker Node',
+        label: 'Bare Metal Worker Node',
         color: 'var(--k-amber)',
         colorVar: 'k-amber',
         nodes: [
@@ -296,4 +296,9 @@ export const COMPONENT_COLOR = Object.fromEntries(
 // Map componentId → zone object (for DetailPanel zone label display)
 export const COMPONENT_ZONE = Object.fromEntries(
   allNodes.map(({ node, zone }) => [node.id, zone])
+)
+
+// Map componentId → badge array (for DetailPanel tag chips)
+export const COMPONENT_BADGES = Object.fromEntries(
+  allNodes.map(({ node }) => [node.id, node.badges || []])
 )

@@ -7,7 +7,7 @@
     "problemSolved": "Represents an end-user browser, mobile app, or external API consumer initiating an HTTPS request to a workload running inside the HCP Guest Cluster.",
     "interactions": [
       "Sends HTTPS requests to the cluster's public Route hostname resolved by external DNS.",
-      "TLS is terminated at the Shared Ingress Proxy running in the Management Cluster."
+      "TLS is terminated at the Shared Ingress Proxy running in the Bare Metal Cluster."
     ],
     "explorationCommands": [
       "# Simulate a request from outside the cluster\ncurl -v https://<route-hostname>/api/endpoint"
@@ -18,7 +18,7 @@
     "displayName": "HyperShift Operator",
     "typePrefix": "Pod",
     "layer": "Management Control Plane",
-    "problemSolved": "Orchestrates the full lifecycle of Hosted Control Planes. It reconciles HostedCluster and NodePool CRs, provisions the control-plane namespace, and manages all guest control-plane components as standard Pods in the management cluster.",
+    "problemSolved": "Orchestrates the full lifecycle of Hosted Control Planes. It reconciles HostedCluster and NodePool CRs, provisions the control-plane namespace, and manages all guest control-plane components as standard Pods in the bare metal cluster.",
     "interactions": [
       "Watches HostedCluster and NodePool custom resources.",
       "Creates and manages the Dedicated Guest Control Plane Namespace.",
@@ -52,7 +52,7 @@
     "displayName": "Guest API Server",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "problemSolved": "The Kubernetes API Server for the guest cluster, running as a Pod in the management cluster. All kubectl/oc commands targeting the guest cluster reach this process. It handles authn/authz, admission webhooks, and persists state to the co-located etcd.",
+    "problemSolved": "The Kubernetes API Server for the guest cluster, running as a Pod in the bare metal cluster. All kubectl/oc commands targeting the guest cluster reach this process. It handles authn/authz, admission webhooks, and persists state to the co-located etcd.",
     "interactions": [
       "Exposes the guest cluster's API on a dedicated Service port.",
       "Persists objects to the Etcd Static Pod instance in the same namespace.",
@@ -69,11 +69,11 @@
     "displayName": "Guest OAuth Server",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "problemSolved": "Handles OpenShift OAuth authentication flows for the guest cluster, issuing tokens to users. It runs as a Pod in the management cluster, isolated from the guest node infrastructure.",
+    "problemSolved": "Handles OpenShift OAuth authentication flows for the guest cluster, issuing tokens to users. It runs as a Pod in the bare metal cluster, isolated from the guest node infrastructure.",
     "interactions": [
       "Validates identity provider credentials and issues OAuth tokens.",
       "Integrates with the Guest API Server for RBAC enforcement.",
-      "Stores sessions and tokens in the management cluster etcd."
+      "Stores sessions and tokens in the bare metal cluster etcd."
     ],
     "explorationCommands": [
       "# View OAuth server logs\noc logs -n <hcp-namespace> deployment/oauth-server --tail=50",
@@ -85,7 +85,7 @@
     "displayName": "Guest Controller Manager",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "problemSolved": "Runs the core Kubernetes control loops for the guest cluster as a single Pod in the management cluster: NodeLifecycleController, EndpointController, DeploymentController, and others. Ensures desired state is reconciled continuously.",
+    "problemSolved": "Runs the core Kubernetes control loops for the guest cluster as a single Pod in the bare metal cluster: NodeLifecycleController, EndpointController, DeploymentController, and others. Ensures desired state is reconciled continuously.",
     "interactions": [
       "Watches the Guest API Server for resource events.",
       "Manages ReplicaSet scaling, Endpoint slice population, and node health.",
@@ -117,7 +117,7 @@
     "displayName": "Etcd",
     "typePrefix": "Static Pod",
     "layer": "Guest Control Plane",
-    "problemSolved": "The distributed key-value store that persists all guest cluster state. Running as a Static Pod in the management cluster, it stores every Kubernetes object (Pods, ConfigMaps, Secrets, CRDs) for the guest cluster.",
+    "problemSolved": "The distributed key-value store that persists all guest cluster state. Running as a Static Pod in the bare metal cluster, it stores every Kubernetes object (Pods, ConfigMaps, Secrets, CRDs) for the guest cluster.",
     "interactions": [
       "Receives reads and writes exclusively from the Guest API Server.",
       "Replicates data across an etcd cluster for high availability.",
@@ -134,11 +134,11 @@
     "displayName": "Shared Ingress Proxy",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "problemSolved": "An HAProxy-based ingress router running in the management cluster that handles external HTTPS traffic destined for guest workloads. It terminates TLS for guest Routes and forwards traffic through the management OVS fabric toward the target guest worker node.",
+    "problemSolved": "An HAProxy-based ingress router running in the bare metal cluster that handles external HTTPS traffic destined for guest workloads. It terminates TLS for guest Routes and forwards traffic through the bare metal OVS fabric toward the target guest worker node.",
     "interactions": [
       "Watches Route objects in the guest cluster via the Guest API Server.",
       "Terminates TLS and proxies connections to guest Pod endpoints.",
-      "Traffic is forwarded via the management cluster's OVS bridge to the KubeVirt Launcher."
+      "Traffic is forwarded via the bare metal cluster's OVS bridge to the KubeVirt Launcher."
     ],
     "explorationCommands": [
       "# Check ingress proxy pods\noc get pods -n openshift-ingress",
@@ -151,7 +151,7 @@
     "displayName": "OVN-K8s Master",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "problemSolved": "The OVN-Kubernetes control plane Pod running in the management cluster. It programs the OVN Northbound DB with logical network topology for the guest cluster, translating Kubernetes Network Policies and Services into OpenFlow rules.",
+    "problemSolved": "The OVN-Kubernetes control plane Pod running in the bare metal cluster. It programs the OVN Northbound DB with logical network topology for the guest cluster, translating Kubernetes Network Policies and Services into OpenFlow rules.",
     "interactions": [
       "Watches the Guest API Server for Pod, Service, and NetworkPolicy events.",
       "Writes to the OVN Northbound Database to update logical switch topology.",
@@ -184,9 +184,9 @@
     "displayName": "Konnectivity Server",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "problemSolved": "Provides a secure tunnel from the management cluster control plane to the guest worker nodes. Enables the Guest API Server to reach kubelet on guest nodes (for exec, logs, port-forward) without requiring direct network connectivity.",
+    "problemSolved": "Provides a secure tunnel from the bare metal cluster control plane to the guest worker nodes. Enables the Guest API Server to reach kubelet on guest nodes (for exec, logs, port-forward) without requiring direct network connectivity.",
     "interactions": [
-      "Maintains persistent tunnels from the management cluster to Konnectivity Agents on each guest worker node.",
+      "Maintains persistent tunnels from the bare metal cluster to Konnectivity Agents on each guest worker node.",
       "Proxies API Server → kubelet calls (exec, logs, port-forward) through the tunnel.",
       "Used by the Guest API Server for all node-targeted traffic."
     ],
@@ -216,7 +216,7 @@
     "displayName": "Guest CoreDNS",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "problemSolved": "Provides DNS resolution for the guest cluster's Service FQDN space (*.svc.cluster.local). Running in the management cluster, it resolves in-cluster Service names to ClusterIP addresses for guest workloads.",
+    "problemSolved": "Provides DNS resolution for the guest cluster's Service FQDN space (*.svc.cluster.local). Running in the bare metal cluster, it resolves in-cluster Service names to ClusterIP addresses for guest workloads.",
     "interactions": [
       "Serves DNS queries from guest Pods forwarded by the node-level CoreDNS instance.",
       "Watches Guest API Server for Service and Endpoint changes.",
@@ -247,25 +247,25 @@
     "componentId": "kubelet-host",
     "displayName": "Kubelet (Host)",
     "typePrefix": "systemd",
-    "layer": "Management Worker Node",
-    "problemSolved": "The node agent running on the management worker node. It manages the lifecycle of Pods scheduled to this node — including the KubeVirt Launcher Pod — by instructing CRI-O to create and monitor containers.",
+    "layer": "Bare Metal Worker Node",
+    "problemSolved": "The node agent running on the bare metal worker node. It manages the lifecycle of Pods scheduled to this node — including the KubeVirt Launcher Pod — by instructing CRI-O to create and monitor containers.",
     "interactions": [
-      "Polls the Management API Server for PodSpecs assigned to this node.",
+      "Polls the Bare Metal API Server for PodSpecs assigned to this node.",
       "Calls CRI-O via the CRI gRPC interface to manage container lifecycle.",
-      "Reports node and Pod resource usage back to the Management API Server."
+      "Reports node and Pod resource usage back to the Bare Metal API Server."
     ],
     "explorationCommands": [
       "# Check kubelet status\nsystemctl status kubelet",
       "# View kubelet logs\njournalctl -u kubelet -f --no-pager | tail -50",
-      "# Check node conditions\noc describe node <management-worker-node>"
+      "# Check node conditions\noc describe node <baremetal-worker-node>"
     ]
   },
   {
     "componentId": "crio-host",
     "displayName": "CRI-O (Host)",
     "typePrefix": "systemd",
-    "layer": "Management Worker Node",
-    "problemSolved": "The OCI-compliant container runtime on the management worker node. It creates and manages containers for host-side Pods, including the KubeVirt Launcher container that wraps the guest Virtual Machine.",
+    "layer": "Bare Metal Worker Node",
+    "problemSolved": "The OCI-compliant container runtime on the bare metal worker node. It creates and manages containers for host-side Pods, including the KubeVirt Launcher container that wraps the guest Virtual Machine.",
     "interactions": [
       "Receives gRPC CRI calls from the host Kubelet.",
       "Pulls container images from the registry and creates container namespaces.",
@@ -281,8 +281,8 @@
     "componentId": "ovs-host",
     "displayName": "Open vSwitch (Host)",
     "typePrefix": "systemd",
-    "layer": "Management Worker Node",
-    "problemSolved": "The host-side Open vSwitch service that drives the OVN integration bridge (br-int) on the management worker node. All Pod veth pairs, the VXLAN/Geneve uplink, and the KubeVirt tap interface connect through this bridge.",
+    "layer": "Bare Metal Worker Node",
+    "problemSolved": "The host-side Open vSwitch service that drives the OVN integration bridge (br-int) on the bare metal worker node. All Pod veth pairs, the VXLAN/Geneve uplink, and the KubeVirt tap interface connect through this bridge.",
     "interactions": [
       "Manages the br-int OVS bridge and its port configuration.",
       "Receives OpenFlow rules from the local OVN controller.",
@@ -299,8 +299,8 @@
     "componentId": "ovn-node-host",
     "displayName": "OVN-K8s Node",
     "typePrefix": "Pod",
-    "layer": "Management Worker Node",
-    "problemSolved": "The per-node OVN-Kubernetes DaemonSet Pod that runs on the management worker node. It syncs the OVN Southbound DB flows to the local OVS bridge and manages the host-side CNI plugin for Pod network provisioning.",
+    "layer": "Bare Metal Worker Node",
+    "problemSolved": "The per-node OVN-Kubernetes DaemonSet Pod that runs on the bare metal worker node. It syncs the OVN Southbound DB flows to the local OVS bridge and manages the host-side CNI plugin for Pod network provisioning.",
     "interactions": [
       "Runs the OVN controller that translates Southbound DB entries to OpenFlow rules.",
       "Invokes the CNI plugin to create veth pairs and assign IPs when Pods start.",
@@ -420,9 +420,9 @@
     "displayName": "Konnectivity Agent",
     "typePrefix": "Pod",
     "layer": "Guest Worker Node",
-    "problemSolved": "The node-side counterpart to the Konnectivity Server in the management cluster. It maintains a persistent outbound tunnel to the Konnectivity Server, enabling the Guest API Server to reach the guest kubelet for exec, logs, and port-forward operations.",
+    "problemSolved": "The node-side counterpart to the Konnectivity Server in the bare metal cluster. It maintains a persistent outbound tunnel to the Konnectivity Server, enabling the Guest API Server to reach the guest kubelet for exec, logs, and port-forward operations.",
     "interactions": [
-      "Opens a persistent TLS connection to the Konnectivity Server in the management cluster.",
+      "Opens a persistent TLS connection to the Konnectivity Server in the bare metal cluster.",
       "Proxies API Server → kubelet traffic through the established tunnel.",
       "Required for 'oc exec', 'oc logs', and 'oc port-forward' to work on guest Pods."
     ],
@@ -439,7 +439,7 @@
     "problemSolved": "A per-node CoreDNS DaemonSet Pod inside the Guest Worker Node VM. It caches DNS responses locally to reduce round-trip latency and serves as the DNS resolver for all Pods running on this node.",
     "interactions": [
       "Configured as the upstream DNS server for all containers via the kubelet's clusterDNS setting.",
-      "Forwards cluster-local queries (*.svc.cluster.local) to the Guest CoreDNS in the management cluster.",
+      "Forwards cluster-local queries (*.svc.cluster.local) to the Guest CoreDNS in the bare metal cluster.",
       "Caches resolved records to reduce lookup latency for busy workloads."
     ],
     "explorationCommands": [

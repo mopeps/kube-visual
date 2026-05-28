@@ -2,19 +2,19 @@
   {
     "eventId": "route-ingress-traffic",
     "eventName": "External Ingress Traffic Flow",
-    "description": "Tracing an inbound HTTPS request from an external web client through the management cluster's ingress proxy, across the OVS overlay fabric, into the KubeVirt VM, and down to the front-end workload Pod.",
+    "description": "Tracing an inbound HTTPS request from an external web client through the bare metal cluster's ingress proxy, across the OVS overlay fabric, into the KubeVirt VM, and down to the front-end workload Pod.",
     "steps": [
       {
         "step": 1,
         "sourceComponentId": "external-client",
         "targetComponentId": "shared-ingress-proxy",
-        "description": "Client sends HTTPS request to the Route hostname. The Shared Ingress Proxy (HAProxy) in the management cluster terminates TLS and identifies the guest cluster backend."
+        "description": "Client sends HTTPS request to the Route hostname. The Shared Ingress Proxy (HAProxy) in the bare metal cluster terminates TLS and identifies the guest cluster backend."
       },
       {
         "step": 2,
         "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "ovs-host",
-        "description": "HAProxy forwards the decrypted request into the management worker node's OVS br-int bridge, which applies OVN flow rules to route the packet toward the KubeVirt Launcher."
+        "description": "HAProxy forwards the decrypted request into the bare metal worker node's OVS br-int bridge, which applies OVN flow rules to route the packet toward the KubeVirt Launcher."
       },
       {
         "step": 3,
@@ -75,7 +75,7 @@
         "step": 4,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "konnectivity-server",
-        "description": "The Guest API Server needs to notify the guest kubelet inside the VM. The notification travels through the Konnectivity Server tunnel in the management cluster."
+        "description": "The Guest API Server needs to notify the guest kubelet inside the VM. The notification travels through the Konnectivity Server tunnel in the bare metal cluster."
       },
       {
         "step": 5,
@@ -112,7 +112,7 @@
         "step": 1,
         "sourceComponentId": "external-client",
         "targetComponentId": "guest-api-server",
-        "description": "Platform admin applies a HostedCluster manifest via 'oc apply'. The Management API Server persists it and notifies the HyperShift Operator."
+        "description": "Platform admin applies a HostedCluster manifest via 'oc apply'. The Bare Metal API Server persists it and notifies the HyperShift Operator."
       },
       {
         "step": 2,
@@ -148,7 +148,7 @@
         "step": 7,
         "sourceComponentId": "kubevirt-launcher",
         "targetComponentId": "konnectivity-agent",
-        "description": "Once RHCOS boots inside the VM, the Konnectivity Agent starts and opens an outbound persistent tunnel to the Konnectivity Server in the management cluster."
+        "description": "Once RHCOS boots inside the VM, the Konnectivity Agent starts and opens an outbound persistent tunnel to the Konnectivity Server in the bare metal cluster."
       },
       {
         "step": 8,

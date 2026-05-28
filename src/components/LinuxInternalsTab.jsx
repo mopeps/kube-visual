@@ -2,7 +2,7 @@ import componentsData from '../data/components.json'
 import { COMPONENT_COLOR } from '../data/zones'
 
 // Show kernel-adjacent layers: KVM/VMI, host OS services, and Linux kernel primitives.
-const LINUX_LAYERS = ['KubeVirt', 'Management Worker Node', 'Guest Worker Node', 'Linux Kernel Primitives']
+const LINUX_LAYERS = ['KubeVirt', 'Bare Metal Worker Node', 'Guest Worker Node', 'Linux Kernel Primitives']
 
 const ICONS = {
   'kubevirt-launcher':           '🖥️',
