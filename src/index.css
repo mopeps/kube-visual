@@ -149,7 +149,7 @@ body::after {
 
 /* ── Node card ─────────────────────────────────────────────────────── */
 .node {
-  border: 1px solid;
+  border: 1px solid var(--node-accent, var(--border-w));
   border-radius: 8px;
   padding: 12px 14px 10px;
   flex: 0 0 auto;
@@ -159,9 +159,10 @@ body::after {
   background: rgba(0, 0, 0, 0.35);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
-.node:hover { transform: translateY(-2px); }
+.node:hover { transform: translateY(-2px); border-color: var(--tx-bright); }
 
 .node.is-active {
+  border-color: var(--packet);
   box-shadow: 0 0 0 2px var(--packet), 0 0 24px rgba(255, 77, 109, 0.35);
 }
 .node.is-dimmed { opacity: 0.35; }
