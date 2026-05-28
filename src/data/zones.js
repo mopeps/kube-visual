@@ -21,13 +21,13 @@ export const ZONES = [
   },
   {
     id: 'management-context',
-    label: 'Management Cluster Context',
+    label: 'Bare Metal Cluster',
     color: 'var(--k-sky)',
     colorVar: 'k-sky',
     zones: [
       {
         id: 'master-node',
-        label: 'Management Master Node',
+        label: 'Bare Metal Master Node',
         color: 'var(--k-sky)',
         colorVar: 'k-sky',
         zones: [
@@ -137,7 +137,7 @@ export const ZONES = [
       },
       {
         id: 'worker-node',
-        label: 'Management Worker Node',
+        label: 'Bare Metal Worker Node',
         color: 'var(--k-amber)',
         colorVar: 'k-amber',
         nodes: [

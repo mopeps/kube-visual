@@ -32,7 +32,7 @@ export const BADGE_GLOSSARY = {
   'Cloud API':
     'The cloud provider\'s control-plane API (e.g. AWS EC2, Azure ARM, GCP Compute). The Cloud Controller Manager calls it to provision and reconcile load balancers, node objects, and persistent storage volumes.',
   'Tunnel :8091':
-    'Konnectivity Server listens on port 8091 for persistent gRPC connections from Konnectivity Agents running inside the guest nodes. This tunnel lets the management-cluster API server reach Pods behind the NAT boundary.',
+    'Konnectivity Server listens on port 8091 for persistent gRPC connections from Konnectivity Agents running inside the guest nodes. This tunnel lets the bare metal cluster API server reach Pods behind the NAT boundary.',
   'Bootstrap':
     'Ignition bootstrap payload delivered to a new worker node on its very first boot. Provides OS-level configuration: certificates, kubelet settings, pull secrets, and systemd unit files needed to join the cluster.',
   'DNS :53':
@@ -62,5 +62,5 @@ export const BADGE_GLOSSARY = {
   ':3000':
     'HTTP port exposed by the back-end workload container. Typically reachable only via cluster-internal Service DNS from the front-end Pod.',
   'Tunnel':
-    'Persistent gRPC tunnel maintained by the Konnectivity Agent. Allows the management-cluster API server to initiate connections to Pods and exec/port-forward endpoints inside the guest VM network.',
+    'Persistent gRPC tunnel maintained by the Konnectivity Agent. Allows the bare metal cluster API server to initiate connections to Pods and exec/port-forward endpoints inside the guest VM network.',
 }
