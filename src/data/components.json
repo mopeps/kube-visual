@@ -17,17 +17,50 @@
     "componentId": "hypershift-operator",
     "displayName": "HyperShift Operator",
     "typePrefix": "Pod",
-    "layer": "Management Control Plane",
-    "problemSolved": "Orchestrates the full lifecycle of Hosted Control Planes. It reconciles HostedCluster and NodePool CRs, provisions the control-plane namespace, and manages all guest control-plane components as standard Pods in the bare metal cluster.",
+    "layer": "HyperShift Management",
+    "problemSolved": "A cluster-wide singleton Deployment running in the 'hypershift' namespace of the management cluster — one instance manages every HostedCluster on the cluster, not one per guest. It reconciles HostedCluster and NodePool CRs, creates each guest's HCP namespace, and deploys the per-HCP control-plane-operator that in turn owns the individual control-plane components.",
     "interactions": [
-      "Watches HostedCluster and NodePool custom resources.",
-      "Creates and manages the Dedicated Guest Control Plane Namespace.",
-      "Delegates node provisioning to the appropriate infrastructure provider (AWS, Azure, bare-metal)."
+      "Watches HostedCluster and NodePool custom resources in the management API Server.",
+      "Creates the dedicated HCP namespace per hosted cluster and deploys the control-plane-operator into it.",
+      "Runs the NodePool controller, translating NodePools into Cluster API objects and delegating to the infrastructure provider (KubeVirt/CAPK, AWS, Azure, bare-metal Agent)."
     ],
     "explorationCommands": [
       "# Check HyperShift operator status\noc get pods -n hypershift",
       "# List all HostedClusters\noc get hostedcluster -A",
       "# View a HostedCluster spec\noc get hostedcluster <name> -n <namespace> -o yaml"
+    ]
+  },
+  {
+    "componentId": "hostedcluster-cr",
+    "displayName": "HostedCluster",
+    "typePrefix": "Custom Resource",
+    "layer": "HyperShift Management",
+    "problemSolved": "The top-level HCP API object. A HostedCluster CR (in the management cluster's 'clusters' namespace) declares the desired guest control plane: release image, networking, platform (KubeVirt here), and publishing strategy. The HyperShift Operator reconciles it into a running control plane.",
+    "interactions": [
+      "Authored by the platform admin and stored in the management API Server.",
+      "Reconciled by the HyperShift Operator, which derives the HCP namespace and a HostedControlPlane CR from it.",
+      "Surfaces overall control-plane availability and version in its status."
+    ],
+    "explorationCommands": [
+      "# List HostedClusters\noc get hostedcluster -A",
+      "# Inspect a HostedCluster's conditions\noc get hostedcluster <name> -n clusters -o jsonpath='{.status.conditions}'"
+    ]
+  },
+  {
+    "componentId": "nodepool-cr",
+    "displayName": "NodePool",
+    "typePrefix": "Custom Resource",
+    "layer": "HyperShift Management",
+    "problemSolved": "The HCP abstraction for a set of identical worker nodes — the hosted-cluster analogue of a MachineSet. A NodePool CR declares replica count, instance type/VM template, and the release/upgrade strategy for the guest workers. There is no standalone Machine API in the guest; worker scaling is driven entirely through NodePools.",
+    "interactions": [
+      "Authored by the platform admin alongside the HostedCluster, stored in the management API Server.",
+      "Reconciled by the HyperShift Operator's NodePool controller into Cluster API objects (Cluster, MachineDeployment).",
+      "Scaling or changing the NodePool replica count adds or removes guest worker VMIs."
+    ],
+    "explorationCommands": [
+      "# List NodePools for a hosted cluster\noc get nodepool -n clusters",
+      "# Scale a NodePool\noc scale nodepool <name> -n clusters --replicas=3",
+      "# Inspect NodePool status\noc get nodepool <name> -n clusters -o yaml"
     ]
   },
   {
@@ -45,6 +78,57 @@
       "# View cluster version and upgrade status\noc get clusterversion",
       "# Check cluster operator conditions\noc get clusteroperators",
       "# View CVO logs\noc logs -n <hcp-namespace> deployment/cluster-version-operator --tail=50"
+    ]
+  },
+  {
+    "componentId": "control-plane-operator",
+    "displayName": "Control Plane Operator",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "problemSolved": "The per-hosted-cluster operator (CPO) that the HyperShift Operator deploys into each HCP namespace. While the HyperShift Operator is a single cluster-wide controller, the CPO is the one that actually reconciles this guest's individual control-plane components — etcd, Guest API Server, OAuth, Konnectivity, Ignition, OVN control plane — into existence.",
+    "interactions": [
+      "Reconciles the HostedControlPlane CR created by the HyperShift Operator.",
+      "Creates and manages the Deployments/StatefulSets for every guest control-plane component in the HCP namespace.",
+      "Wires up certificates, kubeconfigs, and service endpoints between the components."
+    ],
+    "explorationCommands": [
+      "# Check the control-plane-operator pod\noc get pods -n <hcp-namespace> -l app=control-plane-operator",
+      "# View CPO logs\noc logs -n <hcp-namespace> deployment/control-plane-operator --tail=50",
+      "# Inspect the HostedControlPlane it reconciles\noc get hostedcontrolplane -n <hcp-namespace> -o yaml"
+    ]
+  },
+  {
+    "componentId": "capi-manager",
+    "displayName": "Cluster API Manager",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "problemSolved": "The upstream Cluster API (CAPI) controller manager running in the HCP namespace. It reconciles the Cluster, MachineDeployment, MachineSet, and Machine objects that the HyperShift NodePool controller generates, driving the generic machine lifecycle while delegating infrastructure to a platform provider.",
+    "interactions": [
+      "Reconciles Cluster API Machine/MachineSet/MachineDeployment objects in the HCP namespace.",
+      "Delegates infrastructure creation to the platform provider (cluster-api-provider-kubevirt here).",
+      "Reports Machine status (provisioning, running, deleting) back up to the NodePool controller."
+    ],
+    "explorationCommands": [
+      "# Check the CAPI manager pod\noc get pods -n <hcp-namespace> -l control-plane=capi-controller-manager",
+      "# List the Machines for this hosted cluster\noc get machines.cluster.x-k8s.io -n <hcp-namespace>",
+      "# View MachineDeployment status\noc get machinedeployment -n <hcp-namespace>"
+    ]
+  },
+  {
+    "componentId": "capk-provider",
+    "displayName": "CAPI Provider (KubeVirt)",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "problemSolved": "The cluster-api-provider-kubevirt (CAPK) controller. It is the KubeVirt-specific Cluster API infrastructure provider: for each Machine, it creates a KubeVirt VirtualMachine object in the HCP namespace, which KubeVirt then realises as a running VirtualMachineInstance acting as a guest worker node.",
+    "interactions": [
+      "Watches KubevirtMachine objects produced by the CAPI manager.",
+      "Creates and manages KubeVirt VirtualMachine / VirtualMachineInstance objects in the HCP namespace.",
+      "Reports VM readiness and node addresses back to Cluster API."
+    ],
+    "explorationCommands": [
+      "# Check the CAPK provider pod\noc get pods -n <hcp-namespace> -l control-plane=capi-kubevirt-controller-manager",
+      "# List the VirtualMachines backing the worker nodes\noc get vm -n <hcp-namespace>",
+      "# Inspect a KubevirtMachine\noc get kubevirtmachine -n <hcp-namespace> -o yaml"
     ]
   },
   {
@@ -113,20 +197,20 @@
     ]
   },
   {
-    "componentId": "etcd-static-pod",
-    "displayName": "Etcd",
-    "typePrefix": "Static Pod",
+    "componentId": "guest-etcd",
+    "displayName": "Guest Etcd",
+    "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "problemSolved": "The distributed key-value store that persists all guest cluster state. Running as a Static Pod in the bare metal cluster, it stores every Kubernetes object (Pods, ConfigMaps, Secrets, CRDs) for the guest cluster.",
+    "problemSolved": "The distributed key-value store that persists all guest cluster state. In HCP it runs as a StatefulSet Pod inside the guest's HCP namespace in the management cluster — not as a static pod (static pods only exist on kubelet-managed nodes via /etc/kubernetes/manifests). It stores every Kubernetes object (Pods, ConfigMaps, Secrets, CRDs) for the guest cluster.",
     "interactions": [
       "Receives reads and writes exclusively from the Guest API Server.",
-      "Replicates data across an etcd cluster for high availability.",
-      "The HyperShift Operator manages etcd member lifecycle and backups."
+      "Replicates data across the StatefulSet's etcd members via the Raft consensus protocol.",
+      "The control-plane-operator manages etcd member lifecycle and backups for this hosted cluster."
     ],
     "explorationCommands": [
       "# Check etcd health\noc exec -n <hcp-namespace> etcd-0 -- etcdctl endpoint health",
       "# List etcd members\noc exec -n <hcp-namespace> etcd-0 -- etcdctl member list",
-      "# Check etcd size\noc exec -n <hcp-namespace> etcd-0 -- etcdctl endpoint status --write-out=table"
+      "# Confirm etcd is a StatefulSet, not a static pod\noc get statefulset etcd -n <hcp-namespace>"
     ]
   },
   {
@@ -212,35 +296,19 @@
     ]
   },
   {
-    "componentId": "guest-coredns",
-    "displayName": "Guest CoreDNS",
-    "typePrefix": "Pod",
-    "layer": "Guest Control Plane",
-    "problemSolved": "Provides DNS resolution for the guest cluster's Service FQDN space (*.svc.cluster.local). Running in the bare metal cluster, it resolves in-cluster Service names to ClusterIP addresses for guest workloads.",
-    "interactions": [
-      "Serves DNS queries from guest Pods forwarded by the node-level CoreDNS instance.",
-      "Watches Guest API Server for Service and Endpoint changes.",
-      "Forwards external DNS queries to upstream resolvers."
-    ],
-    "explorationCommands": [
-      "# Check CoreDNS pods\noc get pods -n openshift-dns -l dns.operator.openshift.io/daemonset-dns=default",
-      "# Test DNS resolution from a guest pod\noc exec <pod> -n <ns> -- nslookup kubernetes.default.svc.cluster.local"
-    ]
-  },
-  {
     "componentId": "cluster-monitoring",
     "displayName": "Cluster Monitoring",
     "typePrefix": "Pod",
-    "layer": "Guest Control Plane",
-    "problemSolved": "Collects metrics from guest cluster components and user workloads. Provides Prometheus-compatible telemetry for platform SREs and guest cluster operators, enabling alerting and capacity planning.",
+    "layer": "Guest Worker Node",
+    "problemSolved": "The guest cluster's openshift-monitoring stack. Like in any OpenShift cluster, it runs as workloads on the guest worker nodes (inside the VMs) — not in the management control-plane namespace. It scrapes metrics from guest components and user workloads for alerting and capacity planning.",
     "interactions": [
-      "Scrapes metrics endpoints on guest cluster Pods and nodes.",
-      "Stores time-series data in a Thanos-backed Prometheus instance.",
-      "Exposes metrics via the OpenShift monitoring console."
+      "Scrapes metrics endpoints on guest cluster Pods and nodes from within the guest cluster.",
+      "Stores time-series data in a Thanos-backed Prometheus instance running on guest nodes.",
+      "Exposes metrics via the guest cluster's OpenShift monitoring console."
     ],
     "explorationCommands": [
-      "# Check monitoring stack\noc get pods -n openshift-monitoring",
-      "# Query Prometheus directly\noc exec -n openshift-monitoring prometheus-k8s-0 -- promtool query instant http://localhost:9090 'up'"
+      "# Check monitoring stack (from the guest cluster)\noc get pods -n openshift-monitoring --kubeconfig <guest-kubeconfig>",
+      "# Query Prometheus directly\noc exec -n openshift-monitoring prometheus-k8s-0 --kubeconfig <guest-kubeconfig> -- promtool query instant http://localhost:9090 'up'"
     ]
   },
   {
@@ -446,6 +514,23 @@
       "# View OVN node logs\noc logs -n openshift-ovn-kubernetes -l app=ovnkube-node --tail=50",
       "# List OVS flows on this node\novs-ofctl dump-flows br-int",
       "# Check OVN SB entries for this node\novn-sbctl show"
+    ]
+  },
+  {
+    "componentId": "virt-handler",
+    "displayName": "KubeVirt virt-handler",
+    "typePrefix": "Pod",
+    "layer": "Bare Metal Worker Node",
+    "problemSolved": "The KubeVirt node agent — a DaemonSet Pod on every bare metal node that can host VMs. It is the component that actually realises a VirtualMachineInstance: when the API holds a VMI scheduled to this node, virt-handler creates and supervises the virt-launcher Pod, then drives the VM's lifecycle (start, migrate, stop) to match desired state.",
+    "interactions": [
+      "Watches the management API Server for VirtualMachineInstances assigned to this node.",
+      "Creates and manages the virt-launcher Pod that wraps each qemu-kvm process.",
+      "Reports VMI phase and node-level virtualization health back to the API Server."
+    ],
+    "explorationCommands": [
+      "# Find virt-handler on the worker nodes\noc get pods -n openshift-cnv -l kubevirt.io=virt-handler -o wide",
+      "# View virt-handler logs for this node\noc logs -n openshift-cnv <virt-handler-pod> --tail=50",
+      "# List the VMIs it is managing\noc get vmi -A -o wide"
     ]
   },
   {

@@ -32,17 +32,26 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │     │     ├── [Static Pod] Management Controller Manager Instance
   │     │     └── [Static Pod] Management Kube-Scheduler Instance
   │     │
+  │     ├── [HyperShift · hypershift Namespace Zone]
+  │     │     │   // Cluster-wide management operator (ONE per mgmt cluster,
+  │     │     │   // not per guest) plus the top-level HCP API objects.
+  │     │     ├── [Pod] HyperShift Operator Instance
+  │     │     ├── [Custom Resource] HostedCluster
+  │     │     └── [Custom Resource] NodePool
+  │     │
   │     └── [Dedicated Guest Control Plane Namespace Zone]
-  │           │   // Core Management, Lifecycles & Operators
-  │           ├── [Pod] HyperShift Operator Instance
+  │           │   // Per-HCP operators & lifecycle controllers
+  │           ├── [Pod] Control Plane Operator (CPO) Instance
   │           ├── [Pod] Cluster Version Operator (CVO) Instance
+  │           ├── [Pod] Cluster API Manager Instance
+  │           ├── [Pod] Cluster API Provider · KubeVirt (CAPK) Instance
   │           │
   │           │   // Guest API, State & Authentication Engines
   │           ├── [Pod] Guest API Server Instance
   │           ├── [Pod] Guest OAuth Server Instance
   │           ├── [Pod] Guest Controller Manager Instance
   │           ├── [Pod] Guest Kube-Scheduler Instance
-  │           ├── [Static Pod] Etcd State Instance
+  │           ├── [Pod] Guest Etcd Instance (StatefulSet — NOT a static pod)
   │           │
   │           │   // Ingress Control, Networking & Proxy Systems
   │           ├── [Pod] Shared Ingress Proxy Instance
@@ -50,16 +59,15 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │           ├── [Pod] Cloud Controller Manager (CCM) Instance
   │           ├── [Pod] Konnectivity Server Instance
   │           │
-  │           │   // Infrastructure Tooling & Telemetry
-  │           ├── [Pod] Ignition Server Instance
-  │           ├── [Pod] Guest CoreDNS Instance
-  │           └── [Pod] Cluster User Workload Monitoring Instance
+  │           │   // Infrastructure Tooling
+  │           └── [Pod] Ignition Server Instance
   │
   └── [Management Worker Node Zone]
         ├── [systemd Service] Kubelet (Host Resident Node Manager)
         ├── [systemd Service] CRI-O (Host Resident Container Engine)
         ├── [systemd Service] Open vSwitch (Host Native Data Path)
         ├── [Pod] OVN-Kubernetes Node Instance
+        ├── [Pod] KubeVirt virt-handler Instance (VMI node agent)
         │
         └── [Pod] KubeVirt Launcher Container
               └── [VirtualMachineInstance] Guest Worker Node
@@ -70,12 +78,42 @@ The workspace viewport canvas must render this exact structural hierarchy:
                     ├── [Pod] Konnectivity Agent Instance
                     ├── [Pod] CoreDNS Node Instance
                     ├── [Pod] OpenShift Ingress Router Instance
+                    ├── [Pod] Cluster Monitoring Instance (openshift-monitoring)
                     │
                     │   // Workload Instances sitting directly inside the VM
                     ├── [Pod] Front-End Workload Instance
                     └── [Pod] Back-End Workload Instance
 
 ```
+
+### Modeling invariants (get these right)
+
+These are the easy-to-get-wrong facts the topology and flows must respect:
+
+1. **The HyperShift Operator is a cluster-wide singleton** in the `hypershift`
+   namespace — one instance manages *every* HostedCluster. It is **not** a
+   per-guest pod inside the guest control-plane namespace. The per-HCP owner is
+   the **Control Plane Operator (CPO)**, which lives in the guest namespace.
+2. **Guest etcd is a StatefulSet Pod**, not a static pod. Static pods only exist
+   on kubelet-managed nodes (`/etc/kubernetes/manifests`); only the *management*
+   cluster's own API server/etcd/scheduler/controller-manager are static pods.
+3. **Konnectivity is one-directional**: it only carries **API-Server-initiated**
+   traffic (exec, logs, port-forward, webhooks, metrics). The guest kubelet
+   learns about its pods by **watching the Guest API Server directly** over its
+   own outbound connection — the API Server never pushes PodSpecs through the
+   tunnel. Do not route pod-scheduling notifications through Konnectivity.
+4. **HostedCluster/NodePool CRs live in the management API Server.** `oc apply`
+   of these manifests hits the *Management* Kube API Server, not the guest one
+   (which may not exist yet).
+5. **Worker nodes come from NodePools → Cluster API → CAPK.** The HyperShift
+   Operator's NodePool controller renders a NodePool into Cluster API objects;
+   `cluster-api-provider-kubevirt` (CAPK) creates a KubeVirt `VirtualMachine`,
+   and `virt-handler` on a bare metal worker launches the `virt-launcher` Pod
+   that boots the RHCOS VMI. The Ignition Server only *serves boot config* — it
+   does not create nodes.
+6. **Guest cluster operators (DNS, ingress, monitoring) run on guest worker
+   nodes** (inside the VMs), not in the control-plane namespace.
+
 ## 2. Dynamic Interactivity & Progressive Disclosure
  * **Default State:** All topology components are visible but set to a dimmed idle opacity state. Do not render raw Linux kernel primitives (netns, cgroups, host PIDs) or Project/Namespace boundaries on the main view.
  * **Event Selection Integration:** Selecting an infrastructure workflow parses events.json, transitions participating objects to full opacity, and dynamically overlays ordered, numbered, directional connecting vectors (①, ②, ③) showing execution paths. Vector lines must auto-recalculate paths on window resize.
