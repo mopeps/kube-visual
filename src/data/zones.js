@@ -67,55 +67,44 @@ export const ZONES = [
             typePrefix: 'Pod',
             badges: [{ label: 'CNI', color: 'var(--k-blue)' }],
           },
-        ],
-        zones: [
           {
-            // The management (bare metal) cluster's OWN control plane, run by
-            // the master kubelet as Static Pods from /etc/kubernetes/manifests.
-            // Not to be confused with the per-guest control plane namespace.
-            id: 'management-control-plane',
-            label: 'Management Control Plane · Static Pods',
-            color: 'var(--k-blue)',
-            colorVar: 'k-blue',
-            nodes: [
-              {
-                id: 'mgmt-kube-apiserver',
-                title: 'Kube API Server',
-                typePrefix: 'Static Pod',
-                badges: [
-                  { label: 'Static Manifest', color: 'var(--k-blue)' },
-                  { label: ':6443', color: 'var(--k-blue)' },
-                ],
-              },
-              {
-                id: 'mgmt-etcd',
-                title: 'Etcd',
-                typePrefix: 'Static Pod',
-                badges: [
-                  { label: 'Static Manifest', color: 'var(--k-blue)' },
-                  { label: 'Raft', color: 'var(--k-blue)' },
-                ],
-              },
-              {
-                id: 'mgmt-controller-manager',
-                title: 'Controller Manager',
-                typePrefix: 'Static Pod',
-                badges: [
-                  { label: 'Static Manifest', color: 'var(--k-blue)' },
-                  { label: 'Controllers', color: 'var(--k-blue)' },
-                ],
-              },
-              {
-                id: 'mgmt-scheduler',
-                title: 'Scheduler',
-                typePrefix: 'Static Pod',
-                badges: [
-                  { label: 'Static Manifest', color: 'var(--k-blue)' },
-                  { label: 'Bindings', color: 'var(--k-blue)' },
-                ],
-              },
+            id: 'mgmt-kube-apiserver',
+            title: 'Kube API Server',
+            typePrefix: 'Static Pod',
+            badges: [
+              { label: 'Static Manifest', color: 'var(--k-blue)' },
+              { label: ':6443', color: 'var(--k-blue)' },
             ],
           },
+          {
+            id: 'mgmt-etcd',
+            title: 'Etcd',
+            typePrefix: 'Static Pod',
+            badges: [
+              { label: 'Static Manifest', color: 'var(--k-blue)' },
+              { label: 'Raft', color: 'var(--k-blue)' },
+            ],
+          },
+          {
+            id: 'mgmt-controller-manager',
+            title: 'Controller Manager',
+            typePrefix: 'Static Pod',
+            badges: [
+              { label: 'Static Manifest', color: 'var(--k-blue)' },
+              { label: 'Controllers', color: 'var(--k-blue)' },
+            ],
+          },
+          {
+            id: 'mgmt-scheduler',
+            title: 'Scheduler',
+            typePrefix: 'Static Pod',
+            badges: [
+              { label: 'Static Manifest', color: 'var(--k-blue)' },
+              { label: 'Bindings', color: 'var(--k-blue)' },
+            ],
+          },
+        ],
+        zones: [
           {
             id: 'guest-cp-namespace',
             label: 'Guest Control Plane Namespace',

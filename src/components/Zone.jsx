@@ -1,10 +1,10 @@
 export default function Zone({ label, color, dashed = false, depth = 0, children }) {
   const isTop = depth === 0
 
-  // color-mix derives a translucent fill/border from the var(--k-*) accent.
-  // (Appending hex alpha to a var() — `${color}18` — is invalid CSS, renders nothing.)
-  const fill = `color-mix(in srgb, ${color} ${isTop ? 15 : 11}%, transparent)`
-  const line = `color-mix(in srgb, ${color} ${dashed ? 60 : 55}%, transparent)`
+  // color-mix blends the zone accent into the page background (#0a0f1e) for
+  // a solid, opaque fill — no transparency.
+  const fill = `color-mix(in srgb, ${color} ${isTop ? 18 : 13}%, #0a0f1e)`
+  const line = `color-mix(in srgb, ${color} ${dashed ? 70 : 65}%, #0a0f1e)`
 
   return (
     <div
