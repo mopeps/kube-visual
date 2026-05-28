@@ -77,7 +77,11 @@ export default function OverviewTab({
       className="border border-border-w rounded-lg overflow-visible"
       style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
     >
-      {visibleZones.map(zone => renderZone(zone))}
+      {visibleZones.flatMap(zone =>
+        zone.hideWrapper
+          ? (zone.zones ?? []).map(child => renderZone(child))
+          : [renderZone(zone)]
+      )}
       <ArrowOverlay activeEvent={activeEvent} canvasRef={canvasRef} />
     </div>
   )
