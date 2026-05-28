@@ -125,7 +125,20 @@ body::after {
   align-items: stretch;
 }
 
+/* ── Overview canvas ───────────────────────────────────────────────── */
+.overview-canvas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+
 @media (max-width: 640px) {
+  .overview-canvas {
+    gap: 4px;
+    padding: 4px;
+  }
+
   .zone-content {
     padding: 12px 14px;
   }

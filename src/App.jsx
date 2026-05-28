@@ -40,7 +40,7 @@ export default function App() {
   return (
     <div className="relative">
       <div
-        className="px-5 sm:px-8 py-10 mx-auto"
+        className="px-3 sm:px-8 py-10 mx-auto"
         style={{ maxWidth: 1500 }}
       >
         <Header />
