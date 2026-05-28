@@ -1,18 +1,24 @@
 export default function Zone({ label, color, dashed = false, depth = 0, children }) {
   const isTop = depth === 0
 
+  // color-mix derives a translucent fill/border from the var(--k-*) accent.
+  // (Appending hex alpha to a var() — `${color}18` — is invalid CSS, renders nothing.)
+  const fill = `color-mix(in srgb, ${color} ${isTop ? 15 : 11}%, transparent)`
+  const line = `color-mix(in srgb, ${color} ${dashed ? 60 : 55}%, transparent)`
+
   return (
     <div
       className={`zone ${dashed ? 'zone--dashed' : ''} ${depth > 0 ? 'zone--nested' : ''}`}
       style={{
-        background: `${color}${isTop ? '18' : '12'}`,
+        background: fill,
         '--zone-depth': depth,
-        '--zone-border': `${color}${dashed ? '60' : '45'}`,
-        // top-level zones get a visible colored border + left accent stripe
+        // nested zones pick this up via .zone--nested / .zone--dashed in index.css
+        '--zone-border': line,
+        // top-level zones get a clear border all around + a bolder left stripe
         ...(isTop && {
-          border: `1px solid ${color}40`,
+          border: `1px solid ${line}`,
           borderRadius: 12,
-          borderLeft: `3px solid ${color}`,
+          borderLeft: `4px solid ${color}`,
         }),
       }}
     >
