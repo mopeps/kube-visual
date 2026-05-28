@@ -1,7 +1,7 @@
 export default function NodeCard({
   id,
   title,
-  subtitle,
+  typePrefix,
   badges = [],
   color,
   stepNum,
@@ -31,6 +31,9 @@ export default function NodeCard({
         <span className="node-step-badge" title={`Step ${stepNum}`}>
           {stepNum}
         </span>
+      )}
+      {typePrefix && (
+        <span className="node-type-prefix">[{typePrefix}]</span>
       )}
       <div className="node-title" style={{ color }}>{title}</div>
       {badges.length > 0 && (

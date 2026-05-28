@@ -135,11 +135,36 @@ export default function DetailPanel({ componentId, onClose, onSelectComponent })
       </button>
 
       <div className="detail-title" style={{ color }}>
+        {component.typePrefix && (
+          <span className="detail-type-prefix">[{component.typePrefix}]&nbsp;</span>
+        )}
         {component.displayName}
       </div>
       <div className="detail-type" style={{ color }}>
         {zone?.label || component.layer}
       </div>
+
+      {component.logicalContext && (
+        <div className="detail-section">
+          <h4>OpenShift Context</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--tx-muted)' }}>
+              Project:&nbsp;
+              <span style={{ color, fontFamily: 'monospace' }}>
+                {component.logicalContext.openShiftProject}
+              </span>
+            </div>
+            {component.logicalContext.associatedObject && (
+              <div style={{ fontSize: '0.72rem', color: 'var(--tx-muted)' }}>
+                Object:&nbsp;
+                <span style={{ color, fontFamily: 'monospace' }}>
+                  {component.logicalContext.associatedObject}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {showKernelPrimitives && (
         <div className="detail-section">
