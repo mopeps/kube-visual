@@ -68,95 +68,77 @@ export const ZONES = [
             typePrefix: 'Pod',
             badges: [{ label: 'CNI', color: 'var(--k-blue)' }],
           },
+          // The management (bare metal) cluster's OWN control plane, run by the
+          // master kubelet from /etc/kubernetes/manifests — these sit directly
+          // on the master node alongside its host agents.
+          {
+            id: 'mgmt-kube-apiserver',
+            title: 'Kube API Server',
+            typePrefix: 'Static Pod',
+            badges: [
+              { label: 'Static Manifest', color: 'var(--k-blue)' },
+              { label: ':6443', color: 'var(--k-blue)' },
+            ],
+          },
+          {
+            id: 'mgmt-etcd',
+            title: 'Etcd',
+            typePrefix: 'Static Pod',
+            badges: [
+              { label: 'Static Manifest', color: 'var(--k-blue)' },
+              { label: 'Raft', color: 'var(--k-blue)' },
+            ],
+            // Etcd is the single home for cluster *intent*: the Custom
+            // Resources that declare desired infrastructure. These are
+            // persisted records in the key-value store, not Linux
+            // processes — so they live *inside* etcd rather than beside
+            // real Pods. The overview renders this node as an expandable
+            // "intent store" that reveals these objects on click.
+            intentObjects: [
+              {
+                id: 'hostedcluster-cr',
+                title: 'HostedCluster',
+                typePrefix: 'Custom Resource',
+                badges: [{ label: 'HostedCluster CR', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'nodepool-cr',
+                title: 'NodePool',
+                typePrefix: 'Custom Resource',
+                badges: [{ label: 'NodePool CR', color: 'var(--k-blue)' }],
+              },
+            ],
+          },
+          {
+            id: 'mgmt-controller-manager',
+            title: 'Controller Manager',
+            typePrefix: 'Static Pod',
+            badges: [
+              { label: 'Static Manifest', color: 'var(--k-blue)' },
+              { label: 'Controllers', color: 'var(--k-blue)' },
+            ],
+          },
+          {
+            id: 'mgmt-scheduler',
+            title: 'Scheduler',
+            typePrefix: 'Static Pod',
+            badges: [
+              { label: 'Static Manifest', color: 'var(--k-blue)' },
+              { label: 'Bindings', color: 'var(--k-blue)' },
+            ],
+          },
+          // Cluster-wide management operator. One HyperShift Operator serves
+          // every HostedCluster on the mgmt cluster. The HostedCluster and
+          // NodePool CRs it reconciles are intent records — they live inside
+          // the Management Etcd "intent store", not beside the operator Pod.
+          {
+            id: 'hypershift-operator',
+            title: 'HyperShift Operator',
+            typePrefix: 'Pod',
+            badges: [{ label: 'cluster-wide', color: 'var(--k-blue)' }],
+          },
         ],
         zones: [
-          {
-            id: 'mgmt-static-pods',
-            label: 'Management Control Plane · Static Pods',
-            color: 'var(--k-blue)',
-            colorVar: 'k-blue',
-            dashed: true,
-            // The management (bare metal) cluster's OWN control plane, run by the
-            // master kubelet from /etc/kubernetes/manifests — distinct from the
-            // per-guest control plane in the namespace zone below.
-            nodes: [
-              {
-                id: 'mgmt-kube-apiserver',
-                title: 'Kube API Server',
-                typePrefix: 'Static Pod',
-                badges: [
-                  { label: 'Static Manifest', color: 'var(--k-blue)' },
-                  { label: ':6443', color: 'var(--k-blue)' },
-                ],
-              },
-              {
-                id: 'mgmt-etcd',
-                title: 'Etcd',
-                typePrefix: 'Static Pod',
-                badges: [
-                  { label: 'Static Manifest', color: 'var(--k-blue)' },
-                  { label: 'Raft', color: 'var(--k-blue)' },
-                ],
-                // Etcd is the single home for cluster *intent*: the Custom
-                // Resources that declare desired infrastructure. These are
-                // persisted records in the key-value store, not Linux
-                // processes — so they live *inside* etcd rather than beside
-                // real Pods. The overview renders this node as an expandable
-                // "intent store" that reveals these objects on click.
-                intentObjects: [
-                  {
-                    id: 'hostedcluster-cr',
-                    title: 'HostedCluster',
-                    typePrefix: 'Custom Resource',
-                    badges: [{ label: 'HostedCluster CR', color: 'var(--k-blue)' }],
-                  },
-                  {
-                    id: 'nodepool-cr',
-                    title: 'NodePool',
-                    typePrefix: 'Custom Resource',
-                    badges: [{ label: 'NodePool CR', color: 'var(--k-blue)' }],
-                  },
-                ],
-              },
-              {
-                id: 'mgmt-controller-manager',
-                title: 'Controller Manager',
-                typePrefix: 'Static Pod',
-                badges: [
-                  { label: 'Static Manifest', color: 'var(--k-blue)' },
-                  { label: 'Controllers', color: 'var(--k-blue)' },
-                ],
-              },
-              {
-                id: 'mgmt-scheduler',
-                title: 'Scheduler',
-                typePrefix: 'Static Pod',
-                badges: [
-                  { label: 'Static Manifest', color: 'var(--k-blue)' },
-                  { label: 'Bindings', color: 'var(--k-blue)' },
-                ],
-              },
-            ],
-          },
-          {
-            id: 'hypershift-namespace',
-            label: 'HyperShift · hypershift namespace',
-            color: 'var(--k-blue)',
-            colorVar: 'k-blue',
-            dashed: true,
-            // Cluster-wide management operator. One HyperShift Operator serves
-            // every HostedCluster on the mgmt cluster. The HostedCluster and
-            // NodePool CRs it reconciles are intent records — they live inside
-            // the Management Etcd "intent store", not beside the operator Pod.
-            nodes: [
-              {
-                id: 'hypershift-operator',
-                title: 'HyperShift Operator',
-                typePrefix: 'Pod',
-                badges: [{ label: 'cluster-wide', color: 'var(--k-blue)' }],
-              },
-            ],
-          },
           {
             id: 'guest-cp-namespace',
             label: 'Guest Control Plane Namespace',
