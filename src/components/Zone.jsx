@@ -20,8 +20,8 @@ export default function Zone({ label, color, dashed = false, depth = 0, children
         className="zone-label"
         style={{
           color,
-          borderColor: `${color}50`,
-          background: `${color}14`,
+          borderColor: `${color}55`,
+          background: `${color}10`,
           borderStyle: dashed ? 'dashed' : 'solid',
         }}
       >
