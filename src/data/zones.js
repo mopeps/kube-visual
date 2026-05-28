@@ -289,19 +289,18 @@ export const ZONES = [
         zones: [
           {
             id: 'kubevirt-launcher-zone',
-            label: 'KubeVirt Launcher Container',
+            // The launcher zone *is* the [Pod] — it doubles as the
+            // `kubevirt-launcher` hop in events.json. The boundary itself is
+            // the component (mirroring the VM zone below), so there is no
+            // redundant inner Pod card: the box you see is the launcher Pod,
+            // and the VMI nests directly inside it.
+            componentId: 'kubevirt-launcher',
+            label: 'KubeVirt Launcher · Pod',
             color: 'var(--k-teal)',
             colorVar: 'k-teal',
-            nodes: [
-              {
-                id: 'kubevirt-launcher',
-                title: 'KubeVirt Launcher',
-                typePrefix: 'Pod',
-                badges: [
-                  { label: 'QEMU/KVM', color: 'var(--k-teal)' },
-                  { label: 'tap0', color: 'var(--k-teal)' },
-                ],
-              },
+            badges: [
+              { label: 'QEMU/KVM', color: 'var(--k-teal)' },
+              { label: 'tap0', color: 'var(--k-teal)' },
             ],
             zones: [
               {
