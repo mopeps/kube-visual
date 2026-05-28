@@ -151,9 +151,9 @@ body::after {
 .node {
   border: 1px solid var(--node-accent, var(--border-w));
   border-radius: 8px;
-  padding: 12px 14px 10px;
+  padding: 10px 11px 9px;
   flex: 0 0 auto;
-  width: 160px;
+  width: 128px;
   cursor: pointer;
   position: relative;
   background: rgba(0, 0, 0, 0.35);
