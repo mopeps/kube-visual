@@ -21,11 +21,16 @@
   --border-w:  rgba(255, 255, 255, 0.10);
   --border-d:  rgba(255, 255, 255, 0.05);
 
-  --k-cyan:   #00e5ff;
+  /* Zone accents — a cool→warm "distance from bare metal" ladder:
+     slate (external) → blue → sky (physical) → teal → amber (bridges) → orange (virtual). */
+  --k-slate:  #64748b;
+  --k-blue:   #3b82f6;
   --k-sky:    #0ea5e9;
-  --k-purple: #7c3aed;
+  --k-teal:   #14b8a6;
   --k-amber:  #f59e0b;
   --k-orange: #f97316;
+  --k-cyan:   #00e5ff;
+  --k-purple: #7c3aed;
   --k-green:  #10b981;
   --packet:   #ff4d6d;
 }

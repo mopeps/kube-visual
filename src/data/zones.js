@@ -5,8 +5,8 @@ export const ZONES = [
   {
     id: 'client',
     label: 'Client',
-    color: 'var(--k-cyan)',
-    colorVar: 'k-cyan',
+    color: 'var(--k-slate)',
+    colorVar: 'k-slate',
     // External to the cluster — hidden from the default overview, shown only
     // when an active trace flow involves a node inside this zone.
     traceOnly: true,
@@ -16,8 +16,8 @@ export const ZONES = [
         title: 'External Client',
         typePrefix: 'Client',
         badges: [
-          { label: 'HTTPS :443', color: 'var(--k-cyan)' },
-          { label: 'TLS 1.3', color: 'var(--k-cyan)' },
+          { label: 'HTTPS :443', color: 'var(--k-slate)' },
+          { label: 'TLS 1.3', color: 'var(--k-slate)' },
         ],
       },
     ],
@@ -25,8 +25,8 @@ export const ZONES = [
   {
     id: 'management-context',
     label: 'Bare Metal Cluster',
-    color: 'var(--k-sky)',
-    colorVar: 'k-sky',
+    color: 'var(--k-blue)',
+    colorVar: 'k-blue',
     zones: [
       {
         id: 'master-node',
@@ -37,56 +37,56 @@ export const ZONES = [
           {
             id: 'guest-cp-namespace',
             label: 'Guest Control Plane Namespace',
-            color: 'var(--k-orange)',
-            colorVar: 'k-orange',
+            color: 'var(--k-teal)',
+            colorVar: 'k-teal',
             dashed: true,
             nodes: [
               {
                 id: 'hypershift-operator',
                 title: 'HyperShift Operator',
                 typePrefix: 'Pod',
-                badges: [{ label: 'HostedCluster CR', color: 'var(--k-orange)' }],
+                badges: [{ label: 'HostedCluster CR', color: 'var(--k-teal)' }],
               },
               {
                 id: 'cluster-version-operator',
                 title: 'Cluster Version Operator',
                 typePrefix: 'Pod',
-                badges: [{ label: 'ClusterVersion CR', color: 'var(--k-orange)' }],
+                badges: [{ label: 'ClusterVersion CR', color: 'var(--k-teal)' }],
               },
               {
                 id: 'guest-api-server',
                 title: 'Guest API Server',
                 typePrefix: 'Pod',
                 badges: [
-                  { label: ':6443', color: 'var(--k-orange)' },
-                  { label: 'gRPC', color: 'var(--k-orange)' },
+                  { label: ':6443', color: 'var(--k-teal)' },
+                  { label: 'gRPC', color: 'var(--k-teal)' },
                 ],
               },
               {
                 id: 'guest-oauth-server',
                 title: 'Guest OAuth Server',
                 typePrefix: 'Pod',
-                badges: [{ label: 'OAuth2', color: 'var(--k-orange)' }],
+                badges: [{ label: 'OAuth2', color: 'var(--k-teal)' }],
               },
               {
                 id: 'guest-controller-manager',
                 title: 'Guest Controller Manager',
                 typePrefix: 'Pod',
-                badges: [{ label: 'Controllers', color: 'var(--k-orange)' }],
+                badges: [{ label: 'Controllers', color: 'var(--k-teal)' }],
               },
               {
                 id: 'guest-kube-scheduler',
                 title: 'Guest Scheduler',
                 typePrefix: 'Pod',
-                badges: [{ label: 'Bindings', color: 'var(--k-orange)' }],
+                badges: [{ label: 'Bindings', color: 'var(--k-teal)' }],
               },
               {
                 id: 'etcd-static-pod',
                 title: 'Etcd',
                 typePrefix: 'Static Pod',
                 badges: [
-                  { label: 'State Store', color: 'var(--k-orange)' },
-                  { label: 'Raft', color: 'var(--k-orange)' },
+                  { label: 'State Store', color: 'var(--k-teal)' },
+                  { label: 'Raft', color: 'var(--k-teal)' },
                 ],
               },
               {
@@ -94,45 +94,45 @@ export const ZONES = [
                 title: 'Shared Ingress Proxy',
                 typePrefix: 'Pod',
                 badges: [
-                  { label: 'HAProxy', color: 'var(--k-orange)' },
-                  { label: 'Route CR', color: 'var(--k-orange)' },
+                  { label: 'HAProxy', color: 'var(--k-teal)' },
+                  { label: 'Route CR', color: 'var(--k-teal)' },
                 ],
               },
               {
                 id: 'ovn-master-control',
                 title: 'OVN-K8s Master',
                 typePrefix: 'Pod',
-                badges: [{ label: 'Northbound DB', color: 'var(--k-orange)' }],
+                badges: [{ label: 'Northbound DB', color: 'var(--k-teal)' }],
               },
               {
                 id: 'cloud-controller-manager',
                 title: 'Cloud Controller Manager',
                 typePrefix: 'Pod',
-                badges: [{ label: 'Cloud API', color: 'var(--k-orange)' }],
+                badges: [{ label: 'Cloud API', color: 'var(--k-teal)' }],
               },
               {
                 id: 'konnectivity-server',
                 title: 'Konnectivity Server',
                 typePrefix: 'Pod',
-                badges: [{ label: 'Tunnel :8091', color: 'var(--k-orange)' }],
+                badges: [{ label: 'Tunnel :8091', color: 'var(--k-teal)' }],
               },
               {
                 id: 'ignition-server',
                 title: 'Ignition Server',
                 typePrefix: 'Pod',
-                badges: [{ label: 'Bootstrap', color: 'var(--k-orange)' }],
+                badges: [{ label: 'Bootstrap', color: 'var(--k-teal)' }],
               },
               {
                 id: 'guest-coredns',
                 title: 'Guest CoreDNS',
                 typePrefix: 'Pod',
-                badges: [{ label: 'DNS :53', color: 'var(--k-orange)' }],
+                badges: [{ label: 'DNS :53', color: 'var(--k-teal)' }],
               },
               {
                 id: 'cluster-monitoring',
                 title: 'Cluster Monitoring',
                 typePrefix: 'Pod',
-                badges: [{ label: 'Prometheus', color: 'var(--k-orange)' }],
+                badges: [{ label: 'Prometheus', color: 'var(--k-teal)' }],
               },
             ],
           },
@@ -141,22 +141,22 @@ export const ZONES = [
       {
         id: 'worker-node',
         label: 'Bare Metal Worker Node',
-        color: 'var(--k-amber)',
-        colorVar: 'k-amber',
+        color: 'var(--k-sky)',
+        colorVar: 'k-sky',
         nodes: [
           {
             id: 'kubelet-host',
             title: 'Kubelet',
             typePrefix: 'systemd',
-            badges: [{ label: 'CRI client', color: 'var(--k-amber)' }],
+            badges: [{ label: 'CRI client', color: 'var(--k-sky)' }],
           },
           {
             id: 'crio-host',
             title: 'CRI-O',
             typePrefix: 'systemd',
             badges: [
-              { label: 'OCI', color: 'var(--k-amber)' },
-              { label: 'gRPC', color: 'var(--k-amber)' },
+              { label: 'OCI', color: 'var(--k-sky)' },
+              { label: 'gRPC', color: 'var(--k-sky)' },
             ],
           },
           {
@@ -164,31 +164,31 @@ export const ZONES = [
             title: 'Open vSwitch',
             typePrefix: 'systemd',
             badges: [
-              { label: 'br-int', color: 'var(--k-amber)' },
-              { label: 'OpenFlow', color: 'var(--k-amber)' },
+              { label: 'br-int', color: 'var(--k-sky)' },
+              { label: 'OpenFlow', color: 'var(--k-sky)' },
             ],
           },
           {
             id: 'ovn-node-host',
             title: 'OVN-K8s Node',
             typePrefix: 'Pod',
-            badges: [{ label: 'CNI', color: 'var(--k-amber)' }],
+            badges: [{ label: 'CNI', color: 'var(--k-sky)' }],
           },
         ],
         zones: [
           {
             id: 'kubevirt-launcher-zone',
             label: 'KubeVirt Launcher Container',
-            color: 'var(--k-green)',
-            colorVar: 'k-green',
+            color: 'var(--k-amber)',
+            colorVar: 'k-amber',
             nodes: [
               {
                 id: 'kubevirt-launcher',
                 title: 'KubeVirt Launcher',
                 typePrefix: 'Pod',
                 badges: [
-                  { label: 'QEMU/KVM', color: 'var(--k-green)' },
-                  { label: 'tap0', color: 'var(--k-green)' },
+                  { label: 'QEMU/KVM', color: 'var(--k-amber)' },
+                  { label: 'tap0', color: 'var(--k-amber)' },
                 ],
               },
             ],
@@ -196,22 +196,22 @@ export const ZONES = [
               {
                 id: 'guest-vm-zone',
                 label: 'Guest Worker Node · VirtualMachineInstance',
-                color: 'var(--k-cyan)',
-                colorVar: 'k-cyan',
+                color: 'var(--k-orange)',
+                colorVar: 'k-orange',
                 nodes: [
                   {
                     id: 'kubelet-guest',
                     title: 'Kubelet (Guest)',
                     typePrefix: 'systemd',
-                    badges: [{ label: 'CRI client', color: 'var(--k-cyan)' }],
+                    badges: [{ label: 'CRI client', color: 'var(--k-orange)' }],
                   },
                   {
                     id: 'crio-guest',
                     title: 'CRI-O (Guest)',
                     typePrefix: 'systemd',
                     badges: [
-                      { label: 'OCI', color: 'var(--k-cyan)' },
-                      { label: 'CNI', color: 'var(--k-cyan)' },
+                      { label: 'OCI', color: 'var(--k-orange)' },
+                      { label: 'CNI', color: 'var(--k-orange)' },
                     ],
                   },
                   {
@@ -219,35 +219,35 @@ export const ZONES = [
                     title: 'Open vSwitch (Guest)',
                     typePrefix: 'systemd',
                     badges: [
-                      { label: 'br-int', color: 'var(--k-cyan)' },
-                      { label: 'virtio-net', color: 'var(--k-cyan)' },
+                      { label: 'br-int', color: 'var(--k-orange)' },
+                      { label: 'virtio-net', color: 'var(--k-orange)' },
                     ],
                   },
                   {
                     id: 'ovn-node-guest',
                     title: 'OVN-K8s Guest Node',
                     typePrefix: 'Pod',
-                    badges: [{ label: 'CNI', color: 'var(--k-cyan)' }],
+                    badges: [{ label: 'CNI', color: 'var(--k-orange)' }],
                   },
                   {
                     id: 'konnectivity-agent',
                     title: 'Konnectivity Agent',
                     typePrefix: 'Pod',
-                    badges: [{ label: 'Tunnel', color: 'var(--k-cyan)' }],
+                    badges: [{ label: 'Tunnel', color: 'var(--k-orange)' }],
                   },
                   {
                     id: 'coredns-node',
                     title: 'CoreDNS Node',
                     typePrefix: 'Pod',
-                    badges: [{ label: 'DNS :53', color: 'var(--k-cyan)' }],
+                    badges: [{ label: 'DNS :53', color: 'var(--k-orange)' }],
                   },
                   {
                     id: 'openshift-ingress-router-guest',
                     title: 'Ingress Router (Guest)',
                     typePrefix: 'Pod',
                     badges: [
-                      { label: 'HAProxy', color: 'var(--k-cyan)' },
-                      { label: 'Route CR', color: 'var(--k-cyan)' },
+                      { label: 'HAProxy', color: 'var(--k-orange)' },
+                      { label: 'Route CR', color: 'var(--k-orange)' },
                     ],
                   },
                   {
@@ -255,8 +255,8 @@ export const ZONES = [
                     title: 'Front-End Workload',
                     typePrefix: 'Pod',
                     badges: [
-                      { label: 'e-commerce-prod', color: 'var(--k-cyan)' },
-                      { label: ':8080', color: 'var(--k-cyan)' },
+                      { label: 'e-commerce-prod', color: 'var(--k-orange)' },
+                      { label: ':8080', color: 'var(--k-orange)' },
                     ],
                   },
                   {
@@ -264,8 +264,8 @@ export const ZONES = [
                     title: 'Back-End Workload',
                     typePrefix: 'Pod',
                     badges: [
-                      { label: 'e-commerce-prod', color: 'var(--k-cyan)' },
-                      { label: ':3000', color: 'var(--k-cyan)' },
+                      { label: 'e-commerce-prod', color: 'var(--k-orange)' },
+                      { label: ':3000', color: 'var(--k-orange)' },
                     ],
                   },
                 ],
