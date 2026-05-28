@@ -35,7 +35,7 @@ export default function NodeCard({
       {typePrefix && (
         <span
           className="node-type-prefix"
-          style={{ color, textShadow: `0 0 8px ${color}80` }}
+          style={{ color: 'var(--k-purple)', textShadow: '0 0 8px #7c3aed80' }}
         >
           [{typePrefix}]
         </span>
