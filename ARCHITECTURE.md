@@ -18,6 +18,20 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │
   ├── [Management Master Node Zone]
   │     │
+  │     │   // The master node's own host-resident node agents
+  │     ├── [systemd Service] Kubelet (Host Resident Node Manager)
+  │     ├── [systemd Service] CRI-O (Host Resident Container Engine)
+  │     ├── [systemd Service] Open vSwitch (Host Native Data Path)
+  │     ├── [Pod] OVN-Kubernetes Node Instance
+  │     │
+  │     ├── [Management Control Plane · Static Pods Zone]
+  │     │     │   // The management (bare metal) cluster's OWN control plane,
+  │     │     │   // run by the master kubelet from /etc/kubernetes/manifests
+  │     │     ├── [Static Pod] Management Kube API Server Instance
+  │     │     ├── [Static Pod] Management Etcd Instance
+  │     │     ├── [Static Pod] Management Controller Manager Instance
+  │     │     └── [Static Pod] Management Kube-Scheduler Instance
+  │     │
   │     └── [Dedicated Guest Control Plane Namespace Zone]
   │           │   // Core Management, Lifecycles & Operators
   │           ├── [Pod] HyperShift Operator Instance

@@ -244,6 +244,142 @@
     ]
   },
   {
+    "componentId": "kubelet-master",
+    "displayName": "Kubelet (Master)",
+    "typePrefix": "systemd",
+    "layer": "Bare Metal Master Node",
+    "problemSolved": "The node agent running on the bare metal master node. It runs the management cluster's own control plane as Static Pods read from /etc/kubernetes/manifests, and also manages the regular guest control-plane Pods scheduled onto this node.",
+    "interactions": [
+      "Watches /etc/kubernetes/manifests and runs the management control plane (kube-apiserver, etcd, scheduler, controller-manager) as Static Pods.",
+      "Polls the Management Kube API Server for regular Pods assigned to this node, including guest control-plane Deployments.",
+      "Calls CRI-O over the CRI gRPC interface to manage container lifecycle and reports node status back to the management API Server."
+    ],
+    "explorationCommands": [
+      "# Check kubelet status on the master\nsystemctl status kubelet",
+      "# See which static pods the kubelet is running\nls /etc/kubernetes/manifests",
+      "# Inspect the master node object\noc get node <baremetal-master> -o wide"
+    ]
+  },
+  {
+    "componentId": "crio-master",
+    "displayName": "CRI-O (Master)",
+    "typePrefix": "systemd",
+    "layer": "Bare Metal Master Node",
+    "problemSolved": "The OCI-compliant container runtime on the bare metal master node. It creates and runs the containers for both the management cluster's control-plane Static Pods and the guest control-plane Pods scheduled onto this node.",
+    "interactions": [
+      "Receives gRPC CRI calls from the master kubelet.",
+      "Pulls control-plane images and sets up each container's namespaces and cgroups.",
+      "Invokes the OVN-Kubernetes CNI plugin to wire each container into the master node's OVS bridge."
+    ],
+    "explorationCommands": [
+      "# List running containers on the master\ncrictl ps",
+      "# Inspect the kube-apiserver static pod container\ncrictl inspect $(crictl ps --name kube-apiserver -q)",
+      "# View CRI-O logs\njournalctl -u crio --no-pager | tail -50"
+    ]
+  },
+  {
+    "componentId": "ovs-master",
+    "displayName": "Open vSwitch (Master)",
+    "typePrefix": "systemd",
+    "layer": "Bare Metal Master Node",
+    "problemSolved": "The host-side Open vSwitch service driving the OVN integration bridge (br-int) on the bare metal master node. Every control-plane Pod veth pair and the Geneve overlay uplink connect through this bridge.",
+    "interactions": [
+      "Manages the br-int OVS bridge and its port configuration on the master node.",
+      "Receives OpenFlow rules from the local OVN controller.",
+      "Handles Geneve encapsulation for control-plane traffic to the other management cluster nodes."
+    ],
+    "explorationCommands": [
+      "# Show OVS bridge topology\novs-vsctl show",
+      "# Dump OpenFlow rules on br-int\novs-ofctl dump-flows br-int | head -30",
+      "# Check OVS service health\nsystemctl status openvswitch"
+    ]
+  },
+  {
+    "componentId": "ovn-node-master",
+    "displayName": "OVN-K8s Node (Master)",
+    "typePrefix": "Pod",
+    "layer": "Bare Metal Master Node",
+    "problemSolved": "The per-node OVN-Kubernetes DaemonSet Pod running on the bare metal master node. It syncs the OVN Southbound DB flows to the local OVS bridge and runs the CNI plugin that wires control-plane Pods into the cluster network.",
+    "interactions": [
+      "Runs the OVN controller that translates Southbound DB entries into OpenFlow rules on the master's br-int.",
+      "Invokes the CNI plugin to create veth pairs and assign IPs when control-plane Pods start.",
+      "Maintains the Geneve tunnel endpoints connecting the master node to the rest of the overlay."
+    ],
+    "explorationCommands": [
+      "# View OVN node logs\noc logs -n openshift-ovn-kubernetes -l app=ovnkube-node --tail=50",
+      "# List OVS flows on this node\novs-ofctl dump-flows br-int",
+      "# Check OVN southbound DB entries\novn-sbctl show"
+    ]
+  },
+  {
+    "componentId": "mgmt-kube-apiserver",
+    "displayName": "Management Kube API Server",
+    "typePrefix": "Static Pod",
+    "layer": "Bare Metal Master Node",
+    "problemSolved": "The Kubernetes API Server of the management (bare metal) cluster itself, running as a Static Pod on the master node. This is the API the HyperShift Operator talks to: it stores HostedCluster/NodePool CRs and the guest control-plane Deployments. It is distinct from the per-guest Guest API Server that runs as a regular Pod inside each HCP namespace.",
+    "interactions": [
+      "Started directly by the master kubelet from a manifest in /etc/kubernetes/manifests, before any scheduler exists.",
+      "Persists all management cluster state to the Management Etcd Static Pod on the same node.",
+      "Serves the HyperShift Operator, CVO, and every controller that reconciles guest control-plane workloads."
+    ],
+    "explorationCommands": [
+      "# Confirm the API server static pod is running on the master\noc get pods -n openshift-kube-apiserver -l apiserver=true -o wide",
+      "# Check API server health locally on the node\ncurl -k https://localhost:6443/healthz",
+      "# View the static pod manifest\ncat /etc/kubernetes/manifests/kube-apiserver-pod.yaml | head -40"
+    ]
+  },
+  {
+    "componentId": "mgmt-etcd",
+    "displayName": "Management Etcd",
+    "typePrefix": "Static Pod",
+    "layer": "Bare Metal Master Node",
+    "problemSolved": "The etcd key-value store for the management (bare metal) cluster, running as a Static Pod on the master node. It persists all management cluster state, including the HostedCluster, NodePool, and guest control-plane object definitions. Each guest cluster keeps its own separate etcd that runs as a Pod inside its HCP namespace.",
+    "interactions": [
+      "Receives reads and writes exclusively from the Management Kube API Server on the same node.",
+      "Replicates writes across the master nodes' etcd members via the Raft consensus protocol.",
+      "Backed up and health-checked by the management cluster's cluster-etcd-operator."
+    ],
+    "explorationCommands": [
+      "# Check management etcd health\noc exec -n openshift-etcd etcd-<master> -- etcdctl endpoint health",
+      "# List etcd members\noc exec -n openshift-etcd etcd-<master> -- etcdctl member list -w table",
+      "# View the static pod manifest\ncat /etc/kubernetes/manifests/etcd-pod.yaml | head -40"
+    ]
+  },
+  {
+    "componentId": "mgmt-controller-manager",
+    "displayName": "Management Controller Manager",
+    "typePrefix": "Static Pod",
+    "layer": "Bare Metal Master Node",
+    "problemSolved": "The kube-controller-manager of the management (bare metal) cluster, running as a Static Pod on the master node. It runs the core control loops (Deployment, ReplicaSet, Node, Endpoint) that keep the management cluster — including the guest control-plane Deployments — reconciled to desired state.",
+    "interactions": [
+      "Watches the Management Kube API Server for resource events.",
+      "Scales the guest control-plane Deployments (Guest API Server, OAuth, etc.) created by the HyperShift Operator.",
+      "Manages node lifecycle and writes status updates back to the management API Server."
+    ],
+    "explorationCommands": [
+      "# Check the controller-manager static pod\noc get pods -n openshift-kube-controller-manager -l kube-controller-manager=true",
+      "# View controller leases\noc get lease -n kube-system",
+      "# View the static pod manifest\ncat /etc/kubernetes/manifests/kube-controller-manager-pod.yaml | head -40"
+    ]
+  },
+  {
+    "componentId": "mgmt-scheduler",
+    "displayName": "Management Scheduler",
+    "typePrefix": "Static Pod",
+    "layer": "Bare Metal Master Node",
+    "problemSolved": "The kube-scheduler of the management (bare metal) cluster, running as a Static Pod on the master node. It assigns pending management cluster Pods — including the guest control-plane Pods and the KubeVirt Launcher Pods — to bare metal nodes based on capacity and constraints.",
+    "interactions": [
+      "Watches the Management Kube API Server for Pods with no node assignment.",
+      "Evaluates bare metal node capacity, taints, tolerations, and affinity rules.",
+      "Writes Binding objects back to the API Server to place guest control-plane and KubeVirt Pods onto nodes."
+    ],
+    "explorationCommands": [
+      "# Check the scheduler static pod\noc get pods -n openshift-kube-scheduler -l app=openshift-kube-scheduler",
+      "# Inspect scheduling decisions for a control-plane pod\noc describe pod <pod> -n <hcp-namespace> | grep -A5 Events",
+      "# View the static pod manifest\ncat /etc/kubernetes/manifests/kube-scheduler-pod.yaml | head -40"
+    ]
+  },
+  {
     "componentId": "kubelet-host",
     "displayName": "Kubelet (Host)",
     "typePrefix": "systemd",
