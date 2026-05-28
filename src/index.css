@@ -146,6 +146,10 @@ body::after {
   .zone-content-inner {
     gap: 8px;
   }
+
+  .node {
+    padding: 6px 7px 5px;
+  }
 }
 
 /* Nested zones — visual containment boxes within a zone */
