@@ -1,9 +1,10 @@
-export default function Zone({ label, color, children }) {
+export default function Zone({ label, color, dashed = false, depth = 0, children }) {
   return (
     <div
-      className="zone"
+      className={`zone ${dashed ? 'zone--dashed' : ''} ${depth > 0 ? 'zone--nested' : ''}`}
       style={{
-        background: `${color}18`,
+        background: `${color}${depth === 0 ? '14' : '0e'}`,
+        '--zone-depth': depth,
       }}
     >
       <div
@@ -12,6 +13,7 @@ export default function Zone({ label, color, children }) {
           color,
           borderColor: `${color}55`,
           background: `${color}10`,
+          borderStyle: dashed ? 'dashed' : 'solid',
         }}
       >
         {label}

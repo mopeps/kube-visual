@@ -1,6 +1,5 @@
-// Zone definitions — top-to-bottom layout of the cluster.
-// Each zone references componentIds from components.json and pairs them with
-// a short subtitle + badge list that surface what the box "is" at a glance.
+// Zone tree — top-to-bottom nested layout of the HCP cluster.
+// Each zone may have `nodes` (rendered as NodeCards) and/or `zones` (nested sub-zones).
 
 export const ZONES = [
   {
@@ -12,122 +11,289 @@ export const ZONES = [
       {
         id: 'external-client',
         title: 'External Client',
-        subtitle: 'curl / browser / external service\nTLS 1.3 to public Route hostname',
+        typePrefix: 'Client',
         badges: [
-          { label: 'TCP :443', color: 'var(--k-cyan)' },
+          { label: 'HTTPS :443', color: 'var(--k-cyan)' },
           { label: 'TLS 1.3', color: 'var(--k-cyan)' },
         ],
       },
     ],
   },
   {
-    id: 'management',
-    label: 'Mgmt Plane',
+    id: 'management-context',
+    label: 'Management Cluster Context',
     color: 'var(--k-sky)',
     colorVar: 'k-sky',
-    nodes: [
+    zones: [
       {
-        id: 'ingress-router-haproxy',
-        title: 'Ingress Router',
-        subtitle: 'HAProxy pod in openshift-ingress ns\nTerminates / re-encrypts TLS\nResolves Route → Service',
-        badges: [
-          { label: 'HAProxy', color: 'var(--k-sky)' },
-          { label: 'Route CR', color: 'var(--k-sky)' },
+        id: 'master-node',
+        label: 'Management Master Node',
+        color: 'var(--k-sky)',
+        colorVar: 'k-sky',
+        zones: [
+          {
+            id: 'guest-cp-namespace',
+            label: 'Guest Control Plane Namespace',
+            color: 'var(--k-purple)',
+            colorVar: 'k-purple',
+            dashed: true,
+            nodes: [
+              {
+                id: 'hypershift-operator',
+                title: 'HyperShift Operator',
+                typePrefix: 'Pod',
+                badges: [{ label: 'HostedCluster CR', color: 'var(--k-purple)' }],
+              },
+              {
+                id: 'cluster-version-operator',
+                title: 'Cluster Version Operator',
+                typePrefix: 'Pod',
+                badges: [{ label: 'ClusterVersion CR', color: 'var(--k-purple)' }],
+              },
+              {
+                id: 'guest-api-server',
+                title: 'Guest API Server',
+                typePrefix: 'Pod',
+                badges: [
+                  { label: ':6443', color: 'var(--k-purple)' },
+                  { label: 'gRPC', color: 'var(--k-purple)' },
+                ],
+              },
+              {
+                id: 'guest-oauth-server',
+                title: 'Guest OAuth Server',
+                typePrefix: 'Pod',
+                badges: [{ label: 'OAuth2', color: 'var(--k-purple)' }],
+              },
+              {
+                id: 'guest-controller-manager',
+                title: 'Guest Controller Manager',
+                typePrefix: 'Pod',
+                badges: [{ label: 'Controllers', color: 'var(--k-purple)' }],
+              },
+              {
+                id: 'guest-kube-scheduler',
+                title: 'Guest Scheduler',
+                typePrefix: 'Pod',
+                badges: [{ label: 'Bindings', color: 'var(--k-purple)' }],
+              },
+              {
+                id: 'etcd-static-pod',
+                title: 'Etcd',
+                typePrefix: 'Static Pod',
+                badges: [
+                  { label: 'State Store', color: 'var(--k-purple)' },
+                  { label: 'Raft', color: 'var(--k-purple)' },
+                ],
+              },
+              {
+                id: 'shared-ingress-proxy',
+                title: 'Shared Ingress Proxy',
+                typePrefix: 'Pod',
+                badges: [
+                  { label: 'HAProxy', color: 'var(--k-purple)' },
+                  { label: 'Route CR', color: 'var(--k-purple)' },
+                ],
+              },
+              {
+                id: 'ovn-master-control',
+                title: 'OVN-K8s Master',
+                typePrefix: 'Pod',
+                badges: [{ label: 'Northbound DB', color: 'var(--k-purple)' }],
+              },
+              {
+                id: 'cloud-controller-manager',
+                title: 'Cloud Controller Manager',
+                typePrefix: 'Pod',
+                badges: [{ label: 'Cloud API', color: 'var(--k-purple)' }],
+              },
+              {
+                id: 'konnectivity-server',
+                title: 'Konnectivity Server',
+                typePrefix: 'Pod',
+                badges: [{ label: 'Tunnel :8091', color: 'var(--k-purple)' }],
+              },
+              {
+                id: 'ignition-server',
+                title: 'Ignition Server',
+                typePrefix: 'Pod',
+                badges: [{ label: 'Bootstrap', color: 'var(--k-purple)' }],
+              },
+              {
+                id: 'guest-coredns',
+                title: 'Guest CoreDNS',
+                typePrefix: 'Pod',
+                badges: [{ label: 'DNS :53', color: 'var(--k-purple)' }],
+              },
+              {
+                id: 'cluster-monitoring',
+                title: 'Cluster Monitoring',
+                typePrefix: 'Pod',
+                badges: [{ label: 'Prometheus', color: 'var(--k-purple)' }],
+              },
+            ],
+          },
         ],
       },
       {
-        id: 'api-server',
-        title: 'kube-apiserver',
-        subtitle: 'REST front-end on :6443\nAuthN/AuthZ + admission\nWatches & persists state',
-        badges: [
-          { label: 'Deployment', color: 'var(--k-sky)' },
-          { label: ':6443', color: 'var(--k-sky)' },
+        id: 'worker-node',
+        label: 'Management Worker Node',
+        color: 'var(--k-amber)',
+        colorVar: 'k-amber',
+        nodes: [
+          {
+            id: 'kubelet-host',
+            title: 'Kubelet',
+            typePrefix: 'systemd',
+            badges: [{ label: 'CRI client', color: 'var(--k-amber)' }],
+          },
+          {
+            id: 'crio-host',
+            title: 'CRI-O',
+            typePrefix: 'systemd',
+            badges: [
+              { label: 'OCI', color: 'var(--k-amber)' },
+              { label: 'gRPC', color: 'var(--k-amber)' },
+            ],
+          },
+          {
+            id: 'ovs-host',
+            title: 'Open vSwitch',
+            typePrefix: 'systemd',
+            badges: [
+              { label: 'br-int', color: 'var(--k-amber)' },
+              { label: 'OpenFlow', color: 'var(--k-amber)' },
+            ],
+          },
+          {
+            id: 'ovn-node-host',
+            title: 'OVN-K8s Node',
+            typePrefix: 'Pod',
+            badges: [{ label: 'CNI', color: 'var(--k-amber)' }],
+          },
         ],
-      },
-      {
-        id: 'scheduler',
-        title: 'kube-scheduler',
-        subtitle: 'Watches unscheduled Pods\nBinds to a node by capacity\nWrites binding back to API',
-        badges: [
-          { label: 'Deployment', color: 'var(--k-sky)' },
-        ],
-      },
-      {
-        id: 'kubelet',
-        title: 'kubelet',
-        subtitle: 'Node-local agent\nWatches API for its PodSpecs\nDrives CRI + reports status',
-        badges: [
-          { label: 'systemd', color: 'var(--k-sky)' },
-          { label: 'CRI client', color: 'var(--k-sky)' },
-        ],
-      },
-      {
-        id: 'crio',
-        title: 'CRI-O',
-        subtitle: 'OCI runtime via runc/crun\nCalls CNI for pod netns\nSets up cgroup hierarchy',
-        badges: [
-          { label: 'gRPC', color: 'var(--k-sky)' },
-          { label: 'OCI', color: 'var(--k-sky)' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'host-net',
-    label: 'Host.Net',
-    color: 'var(--k-amber)',
-    colorVar: 'k-amber',
-    nodes: [
-      {
-        id: 'ovs-bridge-br-int',
-        title: 'OVS Bridge · br-int',
-        subtitle: 'OVN-Kubernetes integration bridge\nAll pod veths + uplink as ports\nGeneve tunnels for inter-node',
-        badges: [
-          { label: 'OpenFlow', color: 'var(--k-amber)' },
-          { label: 'Geneve', color: 'var(--k-amber)' },
-        ],
-      },
-      {
-        id: 'host-veth-pair',
-        title: 'veth Pair (host end)',
-        subtitle: 'Virtual Ethernet, host-side leg\nPlugged into br-int as a port\nPeer lives in pod netns',
-        badges: [
-          { label: 'CNI', color: 'var(--k-amber)' },
+        zones: [
+          {
+            id: 'kubevirt-launcher-zone',
+            label: 'KubeVirt Launcher Container',
+            color: 'var(--k-green)',
+            colorVar: 'k-green',
+            nodes: [
+              {
+                id: 'kubevirt-launcher',
+                title: 'KubeVirt Launcher',
+                typePrefix: 'Pod',
+                badges: [
+                  { label: 'QEMU/KVM', color: 'var(--k-green)' },
+                  { label: 'tap0', color: 'var(--k-green)' },
+                ],
+              },
+            ],
+            zones: [
+              {
+                id: 'guest-vm-zone',
+                label: 'Guest Worker Node · VirtualMachineInstance',
+                color: 'var(--k-cyan)',
+                colorVar: 'k-cyan',
+                nodes: [
+                  {
+                    id: 'kubelet-guest',
+                    title: 'Kubelet (Guest)',
+                    typePrefix: 'systemd',
+                    badges: [{ label: 'CRI client', color: 'var(--k-cyan)' }],
+                  },
+                  {
+                    id: 'crio-guest',
+                    title: 'CRI-O (Guest)',
+                    typePrefix: 'systemd',
+                    badges: [
+                      { label: 'OCI', color: 'var(--k-cyan)' },
+                      { label: 'CNI', color: 'var(--k-cyan)' },
+                    ],
+                  },
+                  {
+                    id: 'ovs-guest',
+                    title: 'Open vSwitch (Guest)',
+                    typePrefix: 'systemd',
+                    badges: [
+                      { label: 'br-int', color: 'var(--k-cyan)' },
+                      { label: 'virtio-net', color: 'var(--k-cyan)' },
+                    ],
+                  },
+                  {
+                    id: 'ovn-node-guest',
+                    title: 'OVN-K8s Guest Node',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'CNI', color: 'var(--k-cyan)' }],
+                  },
+                  {
+                    id: 'konnectivity-agent',
+                    title: 'Konnectivity Agent',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'Tunnel', color: 'var(--k-cyan)' }],
+                  },
+                  {
+                    id: 'coredns-node',
+                    title: 'CoreDNS Node',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'DNS :53', color: 'var(--k-cyan)' }],
+                  },
+                  {
+                    id: 'openshift-ingress-router-guest',
+                    title: 'Ingress Router (Guest)',
+                    typePrefix: 'Pod',
+                    badges: [
+                      { label: 'HAProxy', color: 'var(--k-cyan)' },
+                      { label: 'Route CR', color: 'var(--k-cyan)' },
+                    ],
+                  },
+                  {
+                    id: 'frontend-workload-pod',
+                    title: 'Front-End Workload',
+                    typePrefix: 'Pod',
+                    badges: [
+                      { label: 'e-commerce-prod', color: 'var(--k-cyan)' },
+                      { label: ':8080', color: 'var(--k-cyan)' },
+                    ],
+                  },
+                  {
+                    id: 'backend-workload-pod',
+                    title: 'Back-End Workload',
+                    typePrefix: 'Pod',
+                    badges: [
+                      { label: 'e-commerce-prod', color: 'var(--k-cyan)' },
+                      { label: ':3000', color: 'var(--k-cyan)' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
         ],
       },
     ],
   },
 ]
 
-// Arrow rows sit between zones. Each entry describes what happens as the
-// packet (or control-flow) crosses from the zone above into the one below.
-export const ARROW_ROWS = [
-  {
-    between: ['client', 'management'],
-    steps: [
-      { n: 1, text: 'DNS → A-record for Route hostname → cluster LB' },
-      { n: 2, text: 'TCP SYN → :443; TLS terminated at HAProxy Ingress Router pod' },
-    ],
-  },
-  {
-    between: ['management', 'host-net'],
-    steps: [
-      { n: 3, text: 'CNI plugin: provision veth pair, attach to OVS br-int' },
-      { n: 4, text: 'kube-proxy / OVN flow rules program DNAT + forwarding' },
-    ],
-  },
-]
-
-// Map: componentId → zone color (for hop-list coloring etc.)
-export const COMPONENT_COLOR = {
-  ...ZONES.flatMap(z =>
-    z.nodes.map(n => [n.id, z.color])
-  ).reduce((acc, [k, v]) => { acc[k] = v; return acc }, {}),
-  'pod-netns': 'var(--k-green)',
-  'pod-cgroups': 'var(--k-green)',
-  'container-process': 'var(--k-green)',
+// Recursively collect all nodes from the zone tree.
+function collectNodes(zones, result = []) {
+  for (const zone of zones) {
+    if (zone.nodes) {
+      for (const node of zone.nodes) result.push({ node, zone })
+    }
+    if (zone.zones) collectNodes(zone.zones, result)
+  }
+  return result
 }
 
-export const COMPONENT_ZONE = ZONES.flatMap(z =>
-  z.nodes.map(n => [n.id, z])
-).reduce((acc, [k, v]) => { acc[k] = v; return acc }, {})
+const allNodes = collectNodes(ZONES)
+
+// Map componentId → zone accent color (for hop-list coloring, connector strokes, etc.)
+export const COMPONENT_COLOR = Object.fromEntries(
+  allNodes.map(({ node, zone }) => [node.id, zone.color])
+)
+
+// Map componentId → zone object (for DetailPanel zone label display)
+export const COMPONENT_ZONE = Object.fromEntries(
+  allNodes.map(({ node, zone }) => [node.id, zone])
+)

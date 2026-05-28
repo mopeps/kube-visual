@@ -1,18 +1,28 @@
 import componentsData from '../data/components.json'
 import { COMPONENT_COLOR } from '../data/zones'
 
-// Only the host-net and pod-kernel zones map to "Linux primitives" pages.
-const LINUX_LAYERS = ['Host Networking Subsystem', 'Linux Kernel Primitives']
+// Show kernel-adjacent layers: KVM/VMI, host OS services, and Linux kernel primitives.
+const LINUX_LAYERS = ['KubeVirt', 'Management Worker Node', 'Guest Worker Node', 'Linux Kernel Primitives']
 
 const ICONS = {
-  'ovs-bridge-br-int':   '🌐',
-  'host-veth-pair':      '🔌',
-  'pod-netns':           '🧭',
-  'pod-cgroups':         '🧮',
-  'container-process':   '⚙️',
-  'ingress-router-haproxy': '🚦',
-  'crio':                '📦',
-  'kubelet':             '🛰️',
+  'kubevirt-launcher':           '🖥️',
+  'guest-worker-node-vm':        '⚡',
+  'kubelet-host':                '🛰️',
+  'crio-host':                   '📦',
+  'ovs-host':                    '🌐',
+  'ovn-node-host':               '🔀',
+  'kubelet-guest':               '🛰️',
+  'crio-guest':                  '📦',
+  'ovs-guest':                   '🌐',
+  'ovn-node-guest':              '🔀',
+  'konnectivity-agent':          '🔗',
+  'coredns-node':                '📡',
+  'openshift-ingress-router-guest': '🚦',
+  'frontend-workload-pod':       '🌍',
+  'backend-workload-pod':        '⚙️',
+  'pod-netns':                   '🧭',
+  'pod-cgroups':                 '🧮',
+  'container-process':           '▣',
 }
 
 function LayerCard({ component }) {
@@ -26,7 +36,14 @@ function LayerCard({ component }) {
         style={{ color, background: `${color}14` }}
       >
         <span style={{ fontSize: '1.1rem' }}>{icon}</span>
-        <span>{component.displayName}</span>
+        <span>
+          {component.typePrefix && (
+            <span style={{ fontSize: '0.55rem', opacity: 0.6, marginRight: 4, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              [{component.typePrefix}]
+            </span>
+          )}
+          {component.displayName}
+        </span>
       </div>
       <div className="layer-card-body">
         <p>{component.problemSolved}</p>
@@ -45,12 +62,11 @@ export default function LinuxInternalsTab() {
     <div>
       <div className="mb-5">
         <div className="font-display text-[1.35rem] font-semibold mb-1">
-          Linux / OpenShift Internals
+          Linux / KVM Internals
         </div>
         <p className="text-[0.78rem]" style={{ color: 'var(--tx-muted)' }}>
-          The kernel and host-networking primitives that back every Pod —
-          one card per concept, with a starter command to inspect it on a
-          live cluster.
+          The KubeVirt, host OS, and Linux kernel primitives backing the Guest Worker Node —
+          one card per concept, with a starter command to inspect it live.
         </p>
       </div>
       <div

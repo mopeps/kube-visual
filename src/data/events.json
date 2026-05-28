@@ -2,111 +2,159 @@
   {
     "eventId": "route-ingress-traffic",
     "eventName": "External Ingress Traffic Flow",
-    "description": "Tracing an HTTPS request from an external client to an app pod via OVN-Kubernetes.",
+    "description": "Tracing an inbound HTTPS request from an external web client through the management cluster's ingress proxy, across the OVS overlay fabric, into the KubeVirt VM, and down to the front-end workload Pod.",
     "steps": [
       {
         "step": 1,
         "sourceComponentId": "external-client",
-        "targetComponentId": "ingress-router-haproxy",
-        "description": "Client initiates connection; HAProxy terminates TLS at the Route layer."
+        "targetComponentId": "shared-ingress-proxy",
+        "description": "Client sends HTTPS request to the Route hostname. The Shared Ingress Proxy (HAProxy) in the management cluster terminates TLS and identifies the guest cluster backend."
       },
       {
         "step": 2,
-        "sourceComponentId": "ingress-router-haproxy",
-        "targetComponentId": "ovs-bridge-br-int",
-        "description": "Traffic is forwarded into the OVN-Kubernetes host integration bridge."
+        "sourceComponentId": "shared-ingress-proxy",
+        "targetComponentId": "ovs-host",
+        "description": "HAProxy forwards the decrypted request into the management worker node's OVS br-int bridge, which applies OVN flow rules to route the packet toward the KubeVirt Launcher."
       },
       {
         "step": 3,
-        "sourceComponentId": "ovs-bridge-br-int",
-        "targetComponentId": "host-veth-pair",
-        "description": "OVS routes the packet through the host-side virtual Ethernet interface."
+        "sourceComponentId": "ovs-host",
+        "targetComponentId": "kubevirt-launcher",
+        "description": "OVS routes the packet through the tap0 virtual interface into the KubeVirt Launcher Pod, crossing the host-to-VM network boundary."
       },
       {
         "step": 4,
-        "sourceComponentId": "host-veth-pair",
-        "targetComponentId": "pod-netns",
-        "description": "Packet crosses the boundary into the Pod's isolated Linux Network Namespace."
+        "sourceComponentId": "kubevirt-launcher",
+        "targetComponentId": "guest-worker-node-vm",
+        "description": "The KubeVirt Launcher delivers the packet to the virtio-net NIC of the Guest Worker Node VM, shifting context from the host kernel to the guest RHCOS kernel."
       },
       {
         "step": 5,
-        "sourceComponentId": "pod-netns",
-        "targetComponentId": "container-process",
-        "description": "The application process (PID 1) accepts the cleartext socket connection."
+        "sourceComponentId": "guest-worker-node-vm",
+        "targetComponentId": "ovs-guest",
+        "description": "The guest RHCOS kernel hands the packet to the in-VM Open vSwitch service, which evaluates guest OVN flow rules to identify the target workload Pod."
+      },
+      {
+        "step": 6,
+        "sourceComponentId": "ovs-guest",
+        "targetComponentId": "openshift-ingress-router-guest",
+        "description": "Guest OVS delivers the packet to the OpenShift Ingress Router Pod running inside the VM, which re-routes it to the correct guest Service endpoint."
+      },
+      {
+        "step": 7,
+        "sourceComponentId": "openshift-ingress-router-guest",
+        "targetComponentId": "frontend-workload-pod",
+        "description": "The guest Ingress Router forwards the request to the Front-End Workload Pod via its ClusterIP Service. The application process accepts the connection and returns a response."
       }
     ]
   },
   {
     "eventId": "pod-spawning",
-    "eventName": "Pod Spawning",
-    "description": "Tracing the lifecycle of a new Pod being scheduled and started by the Kubernetes control plane.",
+    "eventName": "Guest Pod Lifecycle (Spawn)",
+    "description": "Tracing how a new workload Pod is scheduled and started in the guest cluster: from a kubectl apply hitting the Guest API Server through scheduling, kubelet notification, and CRI-O container creation inside the Guest VM.",
     "steps": [
       {
         "step": 1,
-        "sourceComponentId": "api-server",
-        "targetComponentId": "scheduler",
-        "description": "API Server receives a Pod creation request and notifies the Scheduler."
+        "sourceComponentId": "external-client",
+        "targetComponentId": "guest-api-server",
+        "description": "Developer runs 'oc apply -f deployment.yaml'. The request reaches the Guest API Server, which validates it, persists the Deployment to etcd, and notifies controllers via watch events."
       },
       {
         "step": 2,
-        "sourceComponentId": "scheduler",
-        "targetComponentId": "kubelet",
-        "description": "Scheduler selects a node and binds the Pod; Kubelet on the node is notified."
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "guest-kube-scheduler",
+        "description": "The Guest Scheduler watches for Pods with no node assignment. It evaluates guest worker node capacity and affinity rules, then selects the Guest Worker Node VM."
       },
       {
         "step": 3,
-        "sourceComponentId": "kubelet",
-        "targetComponentId": "crio",
-        "description": "Kubelet instructs CRI-O to pull the container image and create the container."
+        "sourceComponentId": "guest-kube-scheduler",
+        "targetComponentId": "guest-api-server",
+        "description": "The Scheduler writes a Binding object back to the Guest API Server, officially assigning the Pod to the Guest Worker Node."
       },
       {
         "step": 4,
-        "sourceComponentId": "crio",
-        "targetComponentId": "pod-cgroups",
-        "description": "CRI-O sets up cgroup resource limits for the new container."
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "konnectivity-server",
+        "description": "The Guest API Server needs to notify the guest kubelet inside the VM. The notification travels through the Konnectivity Server tunnel in the management cluster."
       },
       {
         "step": 5,
-        "sourceComponentId": "crio",
-        "targetComponentId": "pod-netns",
-        "description": "CNI plugin provisions a new Network Namespace and assigns a Pod IP address."
+        "sourceComponentId": "konnectivity-server",
+        "targetComponentId": "konnectivity-agent",
+        "description": "The Konnectivity Server relays the PodSpec through the persistent tunnel to the Konnectivity Agent running inside the Guest Worker Node VM."
+      },
+      {
+        "step": 6,
+        "sourceComponentId": "konnectivity-agent",
+        "targetComponentId": "kubelet-guest",
+        "description": "The Konnectivity Agent delivers the PodSpec to the guest kubelet. Kubelet validates the spec and instructs guest CRI-O to pull the image and create the container."
+      },
+      {
+        "step": 7,
+        "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "crio-guest",
+        "description": "Guest CRI-O receives a RunPodSandbox and CreateContainer gRPC call, pulls the image, sets up the cgroup hierarchy, and invokes the CNI plugin to provision the Pod's network namespace."
+      },
+      {
+        "step": 8,
+        "sourceComponentId": "crio-guest",
+        "targetComponentId": "frontend-workload-pod",
+        "description": "Guest CRI-O starts the container via runc. The workload process becomes PID 1 inside its namespaces, registers with the guest network, and the Pod transitions to Running status."
       }
     ]
   },
   {
-    "eventId": "pod-to-pod-ovn",
-    "eventName": "Pod-to-Pod OVN Traffic",
-    "description": "Tracing a TCP connection between two pods on the same node via OVN-Kubernetes virtual switching.",
+    "eventId": "hcp-provisioning",
+    "eventName": "HCP Control Plane Provisioning",
+    "description": "Tracing how the HyperShift Operator bootstraps a new Hosted Control Plane: creating the guest control-plane namespace, launching the Guest API Server and etcd, and establishing the Konnectivity tunnel to the first worker node.",
     "steps": [
       {
         "step": 1,
-        "sourceComponentId": "container-process",
-        "targetComponentId": "pod-netns",
-        "description": "Source container sends a packet into its network namespace."
+        "sourceComponentId": "external-client",
+        "targetComponentId": "guest-api-server",
+        "description": "Platform admin applies a HostedCluster manifest via 'oc apply'. The Management API Server persists it and notifies the HyperShift Operator."
       },
       {
         "step": 2,
-        "sourceComponentId": "pod-netns",
-        "targetComponentId": "host-veth-pair",
-        "description": "Packet exits the network namespace via the veth pair to the host."
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "hypershift-operator",
+        "description": "The HyperShift Operator reconciles the HostedCluster CR and begins provisioning: it creates the Dedicated Guest Control Plane Namespace and populates it with control-plane Deployments."
       },
       {
         "step": 3,
-        "sourceComponentId": "host-veth-pair",
-        "targetComponentId": "ovs-bridge-br-int",
-        "description": "OVS bridge receives the packet and evaluates OVN flow rules."
+        "sourceComponentId": "hypershift-operator",
+        "targetComponentId": "etcd-static-pod",
+        "description": "HyperShift deploys the Etcd StatefulSet in the guest namespace. Once etcd is healthy and a quorum is established, the Guest API Server is allowed to start."
       },
       {
         "step": 4,
-        "sourceComponentId": "ovs-bridge-br-int",
-        "targetComponentId": "host-veth-pair",
-        "description": "OVS forwards the packet through the destination pod's veth interface."
+        "sourceComponentId": "hypershift-operator",
+        "targetComponentId": "konnectivity-server",
+        "description": "HyperShift deploys the Konnectivity Server. It starts listening for inbound tunnel connections from worker node agents before nodes are provisioned."
       },
       {
         "step": 5,
-        "sourceComponentId": "host-veth-pair",
-        "targetComponentId": "pod-netns",
-        "description": "Packet arrives in the destination pod's network namespace and is delivered."
+        "sourceComponentId": "hypershift-operator",
+        "targetComponentId": "ignition-server",
+        "description": "HyperShift starts the Ignition Server to serve bootstrap configuration payloads to new worker nodes as they boot for the first time."
+      },
+      {
+        "step": 6,
+        "sourceComponentId": "ignition-server",
+        "targetComponentId": "kubevirt-launcher",
+        "description": "The first Guest Worker Node VM boots and fetches its Ignition config from the Ignition Server over TLS. The config contains kubelet certificates and bootstrap manifests."
+      },
+      {
+        "step": 7,
+        "sourceComponentId": "kubevirt-launcher",
+        "targetComponentId": "konnectivity-agent",
+        "description": "Once RHCOS boots inside the VM, the Konnectivity Agent starts and opens an outbound persistent tunnel to the Konnectivity Server in the management cluster."
+      },
+      {
+        "step": 8,
+        "sourceComponentId": "konnectivity-agent",
+        "targetComponentId": "kubelet-guest",
+        "description": "With the tunnel established, the guest kubelet starts and registers the node with the Guest API Server. The guest control plane is now fully operational."
       }
     ]
   }

@@ -2,172 +2,555 @@
   {
     "componentId": "external-client",
     "displayName": "External Client",
+    "typePrefix": "Client",
     "layer": "External",
-    "problemSolved": "Represents an end-user or external service initiating an HTTPS request to an application hosted in the OpenShift cluster.",
+    "problemSolved": "Represents an end-user browser, mobile app, or external API consumer initiating an HTTPS request to a workload running inside the HCP Guest Cluster.",
     "interactions": [
-      "Sends HTTPS requests to the cluster's public Route hostname.",
-      "Receives TLS certificate presented by the HAProxy ingress router."
+      "Sends HTTPS requests to the cluster's public Route hostname resolved by external DNS.",
+      "TLS is terminated at the Shared Ingress Proxy running in the Management Cluster."
     ],
     "explorationCommands": [
       "# Simulate a request from outside the cluster\ncurl -v https://<route-hostname>/api/endpoint"
     ]
   },
   {
-    "componentId": "api-server",
-    "displayName": "API Server",
-    "layer": "Management Layer",
-    "problemSolved": "The central control plane component that exposes the Kubernetes/OpenShift API. All cluster mutations (Pod creation, config changes) pass through it, providing authentication, authorization, and admission control.",
+    "componentId": "hypershift-operator",
+    "displayName": "HyperShift Operator",
+    "typePrefix": "Pod",
+    "layer": "Management Control Plane",
+    "problemSolved": "Orchestrates the full lifecycle of Hosted Control Planes. It reconciles HostedCluster and NodePool CRs, provisions the control-plane namespace, and manages all guest control-plane components as standard Pods in the management cluster.",
     "interactions": [
-      "Receives all kubectl / oc commands and REST API calls.",
-      "Writes cluster state to etcd and notifies controllers via watch events.",
-      "Validates and persists resource objects before they are acted on by other components."
+      "Watches HostedCluster and NodePool custom resources.",
+      "Creates and manages the Dedicated Guest Control Plane Namespace.",
+      "Delegates node provisioning to the appropriate infrastructure provider (AWS, Azure, bare-metal)."
     ],
     "explorationCommands": [
-      "# Check API server health\noc get --raw /healthz",
-      "# List all available API groups\noc api-resources --verbs=list --namespaced -o name"
+      "# Check HyperShift operator status\noc get pods -n hypershift",
+      "# List all HostedClusters\noc get hostedcluster -A",
+      "# View a HostedCluster spec\noc get hostedcluster <name> -n <namespace> -o yaml"
     ]
   },
   {
-    "componentId": "scheduler",
-    "displayName": "Scheduler",
-    "layer": "Management Layer",
-    "problemSolved": "Watches for unscheduled Pods and assigns them to nodes based on resource availability, affinity rules, taints, and tolerations. Ensures workloads are distributed efficiently.",
+    "componentId": "cluster-version-operator",
+    "displayName": "Cluster Version Operator",
+    "typePrefix": "Pod",
+    "layer": "Management Control Plane",
+    "problemSolved": "Manages the lifecycle and upgrade path of the guest OpenShift cluster. It applies the release payload, reconciles cluster operators, and enforces version constraints between components.",
     "interactions": [
-      "Watches the API Server for Pods with no assigned node.",
-      "Evaluates node capacity (CPU, memory) before binding a Pod.",
-      "Writes the scheduling decision back to the API Server as a binding object."
+      "Reads the ClusterVersion CR to determine target version.",
+      "Applies manifests from the release image to the guest API Server.",
+      "Monitors ClusterOperator status and blocks upgrades when operators are degraded."
     ],
     "explorationCommands": [
-      "# View scheduler logs\noc logs -n openshift-kube-scheduler -l app=openshift-kube-scheduler --tail=50",
-      "# Describe scheduling events for a pod\noc describe pod <pod-name> -n <namespace> | grep -A5 Events"
+      "# View cluster version and upgrade status\noc get clusterversion",
+      "# Check cluster operator conditions\noc get clusteroperators",
+      "# View CVO logs\noc logs -n <hcp-namespace> deployment/cluster-version-operator --tail=50"
     ]
   },
   {
-    "componentId": "kubelet",
-    "displayName": "Kubelet",
-    "layer": "Management Layer",
-    "problemSolved": "The node-level agent that runs on every worker node. It watches the API Server for Pods assigned to its node, then instructs the container runtime (CRI-O) to start, monitor, and stop containers accordingly.",
+    "componentId": "guest-api-server",
+    "displayName": "Guest API Server",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "problemSolved": "The Kubernetes API Server for the guest cluster, running as a Pod in the management cluster. All kubectl/oc commands targeting the guest cluster reach this process. It handles authn/authz, admission webhooks, and persists state to the co-located etcd.",
     "interactions": [
-      "Polls the API Server for PodSpec updates for its node.",
-      "Calls the CRI (Container Runtime Interface) to manage container lifecycle.",
-      "Reports node and Pod status back to the API Server.",
-      "Mounts volumes and applies cgroup resource limits."
+      "Exposes the guest cluster's API on a dedicated Service port.",
+      "Persists objects to the Etcd Static Pod instance in the same namespace.",
+      "Notifies guest controllers (scheduler, controller-manager) of state changes via watch events."
     ],
     "explorationCommands": [
-      "# Check kubelet status on a node\nsystemctl status kubelet",
-      "# View kubelet logs\njournalctl -u kubelet -f --no-pager | tail -50"
+      "# Get guest API server URL\noc get hostedcluster <name> -n <ns> -o jsonpath='{.status.controlPlaneEndpoint}'",
+      "# Check guest API server health\ncurl -k https://<guest-api-endpoint>/healthz",
+      "# View API server logs\noc logs -n <hcp-namespace> deployment/kube-apiserver --tail=50"
     ]
   },
   {
-    "componentId": "crio",
-    "displayName": "CRI-O",
-    "layer": "Management Layer",
-    "problemSolved": "A lightweight container runtime implementing the Kubernetes CRI (Container Runtime Interface). It pulls images, creates containers using OCI-compliant runtimes (runc/crun), and manages the container lifecycle on behalf of kubelet.",
+    "componentId": "guest-oauth-server",
+    "displayName": "Guest OAuth Server",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "problemSolved": "Handles OpenShift OAuth authentication flows for the guest cluster, issuing tokens to users. It runs as a Pod in the management cluster, isolated from the guest node infrastructure.",
     "interactions": [
-      "Receives gRPC calls from the Kubelet via the CRI protocol.",
-      "Delegates container process creation to runc or crun.",
-      "Calls CNI plugins to set up container networking (netns, veth, IP assignment).",
-      "Sets up cgroup v2 hierarchies for resource enforcement."
+      "Validates identity provider credentials and issues OAuth tokens.",
+      "Integrates with the Guest API Server for RBAC enforcement.",
+      "Stores sessions and tokens in the management cluster etcd."
     ],
     "explorationCommands": [
-      "# List running containers managed by CRI-O\ncrictl ps",
-      "# Inspect a specific container\ncrictl inspect <container_id>",
-      "# View CRI-O logs\njournalctl -u crio -f --no-pager | tail -50"
+      "# View OAuth server logs\noc logs -n <hcp-namespace> deployment/oauth-server --tail=50",
+      "# Check OAuth routes on the guest cluster\noc get route oauth-openshift -n openshift-authentication"
     ]
   },
   {
-    "componentId": "ingress-router-haproxy",
-    "displayName": "Ingress Router Pod (HAProxy)",
-    "layer": "Management Layer",
-    "problemSolved": "The OpenShift ingress controller, running as an HAProxy Pod in the openshift-ingress namespace. It watches Route objects and dynamically updates its configuration to proxy external HTTP/HTTPS traffic to the correct backend Services and Pods.",
+    "componentId": "guest-controller-manager",
+    "displayName": "Guest Controller Manager",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "problemSolved": "Runs the core Kubernetes control loops for the guest cluster as a single Pod in the management cluster: NodeLifecycleController, EndpointController, DeploymentController, and others. Ensures desired state is reconciled continuously.",
     "interactions": [
-      "Terminates TLS using certificates stored in Secrets or provided by cert-manager.",
-      "Re-encrypts or passes through traffic depending on the Route's TLS termination policy.",
-      "Forwards traffic to ClusterIP Services which load-balance across Pod endpoints."
+      "Watches the Guest API Server for resource events.",
+      "Manages ReplicaSet scaling, Endpoint slice population, and node health.",
+      "Writes status updates back to the Guest API Server."
     ],
     "explorationCommands": [
-      "# Check router pods\noc get pods -n openshift-ingress",
-      "# View HAProxy config inside the router pod\noc exec -n openshift-ingress <router-pod> -- cat /var/lib/haproxy/conf/haproxy.config | head -60",
-      "# View route object\noc get route <route-name> -n <namespace> -o yaml"
+      "# View controller manager logs\noc logs -n <hcp-namespace> deployment/kube-controller-manager --tail=50",
+      "# Check controller leases\noc get lease -n kube-system"
     ]
   },
   {
-    "componentId": "ovs-bridge-br-int",
-    "displayName": "OVS Bridge (br-int)",
-    "layer": "Host Networking Subsystem",
-    "problemSolved": "The Open vSwitch integration bridge managed by OVN-Kubernetes. It is the central virtual switching fabric on each node. All pod veth interfaces and the host uplink connect to this bridge, and OVN flow rules govern how packets are forwarded between them.",
+    "componentId": "guest-kube-scheduler",
+    "displayName": "Guest Scheduler",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "problemSolved": "Watches the Guest API Server for Pods with no assigned node and binds them to guest worker nodes based on resource availability, taints, tolerations, and affinity rules.",
     "interactions": [
-      "Connected to all pod veth pairs on the node.",
-      "Receives OpenFlow rules from the OVN controller specifying forwarding logic.",
-      "Handles local pod-to-pod traffic without leaving the node.",
-      "Encapsulates inter-node traffic using Geneve tunnels."
+      "Watches Guest API Server for pending Pods.",
+      "Evaluates guest node capacity reported by guest kubelet via guest API Server.",
+      "Writes binding objects back to the Guest API Server to finalize scheduling."
     ],
     "explorationCommands": [
-      "# List all interfaces on the OVS bridge\novs-vsctl show",
-      "# Dump OpenFlow rules for the integration bridge\novs-ofctl dump-flows br-int | head -30",
-      "# View OVN logical switch ports\novn-nbctl show"
+      "# View scheduler logs\noc logs -n <hcp-namespace> deployment/kube-scheduler --tail=50",
+      "# Inspect scheduling events for a guest pod\noc describe pod <pod-name> -n <ns> | grep -A5 Events"
     ]
   },
   {
-    "componentId": "host-veth-pair",
-    "displayName": "Host veth Interface",
-    "layer": "Host Networking Subsystem",
-    "problemSolved": "One end of a virtual Ethernet pair (veth). Each pod gets a veth pair: one end lives inside the pod's network namespace (as 'eth0'), the other end lives in the host's root namespace and is plugged into the OVS bridge. This is how traffic crosses the namespace boundary.",
+    "componentId": "etcd-static-pod",
+    "displayName": "Etcd",
+    "typePrefix": "Static Pod",
+    "layer": "Guest Control Plane",
+    "problemSolved": "The distributed key-value store that persists all guest cluster state. Running as a Static Pod in the management cluster, it stores every Kubernetes object (Pods, ConfigMaps, Secrets, CRDs) for the guest cluster.",
     "interactions": [
-      "Peer interface resides inside the Pod's network namespace as eth0.",
-      "Host-side end is attached to the OVS br-int bridge as a port.",
-      "Created and managed by the OVN-Kubernetes CNI plugin during pod startup."
+      "Receives reads and writes exclusively from the Guest API Server.",
+      "Replicates data across an etcd cluster for high availability.",
+      "The HyperShift Operator manages etcd member lifecycle and backups."
     ],
     "explorationCommands": [
-      "# List veth pairs on the host\nip link show type veth",
-      "# Find which veth belongs to a specific pod (match by peer index)\nip link | grep -A1 'veth'",
-      "# Show bridge ports\nbridge link show"
+      "# Check etcd health\noc exec -n <hcp-namespace> etcd-0 -- etcdctl endpoint health",
+      "# List etcd members\noc exec -n <hcp-namespace> etcd-0 -- etcdctl member list",
+      "# Check etcd size\noc exec -n <hcp-namespace> etcd-0 -- etcdctl endpoint status --write-out=table"
+    ]
+  },
+  {
+    "componentId": "shared-ingress-proxy",
+    "displayName": "Shared Ingress Proxy",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "problemSolved": "An HAProxy-based ingress router running in the management cluster that handles external HTTPS traffic destined for guest workloads. It terminates TLS for guest Routes and forwards traffic through the management OVS fabric toward the target guest worker node.",
+    "interactions": [
+      "Watches Route objects in the guest cluster via the Guest API Server.",
+      "Terminates TLS and proxies connections to guest Pod endpoints.",
+      "Traffic is forwarded via the management cluster's OVS bridge to the KubeVirt Launcher."
+    ],
+    "explorationCommands": [
+      "# Check ingress proxy pods\noc get pods -n openshift-ingress",
+      "# View HAProxy config\noc exec -n openshift-ingress <router-pod> -- cat /var/lib/haproxy/conf/haproxy.config | head -60",
+      "# View Route objects\noc get route -A"
+    ]
+  },
+  {
+    "componentId": "ovn-master-control",
+    "displayName": "OVN-K8s Master",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "problemSolved": "The OVN-Kubernetes control plane Pod running in the management cluster. It programs the OVN Northbound DB with logical network topology for the guest cluster, translating Kubernetes Network Policies and Services into OpenFlow rules.",
+    "interactions": [
+      "Watches the Guest API Server for Pod, Service, and NetworkPolicy events.",
+      "Writes to the OVN Northbound Database to update logical switch topology.",
+      "Northbound DB is synced to the OVN Southbound DB and pushed to each node's OVN controller."
+    ],
+    "explorationCommands": [
+      "# View OVN master logs\noc logs -n openshift-ovn-kubernetes daemonset/ovnkube-master --tail=50",
+      "# Inspect logical switches\novn-nbctl show",
+      "# Check OVN southbound flows\novn-sbctl lflow-list | head -30"
+    ]
+  },
+  {
+    "componentId": "cloud-controller-manager",
+    "displayName": "Cloud Controller Manager",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "problemSolved": "Bridges the guest cluster with the underlying cloud infrastructure. It manages cloud-specific resources such as load balancers, routes, and node addresses by calling cloud provider APIs on behalf of the guest cluster.",
+    "interactions": [
+      "Watches Node objects in the guest cluster for ProviderID fields.",
+      "Calls cloud provider APIs to provision or update load balancers for LoadBalancer-type Services.",
+      "Reports cloud-specific node metadata back to the Guest API Server."
+    ],
+    "explorationCommands": [
+      "# Check CCM logs\noc logs -n <hcp-namespace> deployment/cloud-controller-manager --tail=50",
+      "# List cloud provider resources\noc get nodes -o wide"
+    ]
+  },
+  {
+    "componentId": "konnectivity-server",
+    "displayName": "Konnectivity Server",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "problemSolved": "Provides a secure tunnel from the management cluster control plane to the guest worker nodes. Enables the Guest API Server to reach kubelet on guest nodes (for exec, logs, port-forward) without requiring direct network connectivity.",
+    "interactions": [
+      "Maintains persistent tunnels from the management cluster to Konnectivity Agents on each guest worker node.",
+      "Proxies API Server → kubelet calls (exec, logs, port-forward) through the tunnel.",
+      "Used by the Guest API Server for all node-targeted traffic."
+    ],
+    "explorationCommands": [
+      "# Check konnectivity server\noc logs -n <hcp-namespace> deployment/konnectivity-server --tail=50",
+      "# Verify tunnel health\noc get pods -n <hcp-namespace> -l app=konnectivity-server"
+    ]
+  },
+  {
+    "componentId": "ignition-server",
+    "displayName": "Ignition Server",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "problemSolved": "Serves Ignition configuration payloads to guest worker nodes during their initial boot sequence. Enables zero-touch provisioning: each new node fetches its complete OS, kubelet, and certificate configuration from this endpoint.",
+    "interactions": [
+      "Provides a TLS-secured endpoint serving node-specific Ignition configs.",
+      "Injects kubelet bootstrap certificates and static Pod manifests.",
+      "Called once per node boot; after that, the node's kubelet manages its own certs."
+    ],
+    "explorationCommands": [
+      "# Check ignition server\noc get pods -n <hcp-namespace> -l app=ignition-server",
+      "# View ignition config for a node (requires admin certs)\ncurl -k https://<ignition-endpoint>/ignition"
+    ]
+  },
+  {
+    "componentId": "guest-coredns",
+    "displayName": "Guest CoreDNS",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "problemSolved": "Provides DNS resolution for the guest cluster's Service FQDN space (*.svc.cluster.local). Running in the management cluster, it resolves in-cluster Service names to ClusterIP addresses for guest workloads.",
+    "interactions": [
+      "Serves DNS queries from guest Pods forwarded by the node-level CoreDNS instance.",
+      "Watches Guest API Server for Service and Endpoint changes.",
+      "Forwards external DNS queries to upstream resolvers."
+    ],
+    "explorationCommands": [
+      "# Check CoreDNS pods\noc get pods -n openshift-dns -l dns.operator.openshift.io/daemonset-dns=default",
+      "# Test DNS resolution from a guest pod\noc exec <pod> -n <ns> -- nslookup kubernetes.default.svc.cluster.local"
+    ]
+  },
+  {
+    "componentId": "cluster-monitoring",
+    "displayName": "Cluster Monitoring",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "problemSolved": "Collects metrics from guest cluster components and user workloads. Provides Prometheus-compatible telemetry for platform SREs and guest cluster operators, enabling alerting and capacity planning.",
+    "interactions": [
+      "Scrapes metrics endpoints on guest cluster Pods and nodes.",
+      "Stores time-series data in a Thanos-backed Prometheus instance.",
+      "Exposes metrics via the OpenShift monitoring console."
+    ],
+    "explorationCommands": [
+      "# Check monitoring stack\noc get pods -n openshift-monitoring",
+      "# Query Prometheus directly\noc exec -n openshift-monitoring prometheus-k8s-0 -- promtool query instant http://localhost:9090 'up'"
+    ]
+  },
+  {
+    "componentId": "kubelet-host",
+    "displayName": "Kubelet (Host)",
+    "typePrefix": "systemd",
+    "layer": "Management Worker Node",
+    "problemSolved": "The node agent running on the management worker node. It manages the lifecycle of Pods scheduled to this node — including the KubeVirt Launcher Pod — by instructing CRI-O to create and monitor containers.",
+    "interactions": [
+      "Polls the Management API Server for PodSpecs assigned to this node.",
+      "Calls CRI-O via the CRI gRPC interface to manage container lifecycle.",
+      "Reports node and Pod resource usage back to the Management API Server."
+    ],
+    "explorationCommands": [
+      "# Check kubelet status\nsystemctl status kubelet",
+      "# View kubelet logs\njournalctl -u kubelet -f --no-pager | tail -50",
+      "# Check node conditions\noc describe node <management-worker-node>"
+    ]
+  },
+  {
+    "componentId": "crio-host",
+    "displayName": "CRI-O (Host)",
+    "typePrefix": "systemd",
+    "layer": "Management Worker Node",
+    "problemSolved": "The OCI-compliant container runtime on the management worker node. It creates and manages containers for host-side Pods, including the KubeVirt Launcher container that wraps the guest Virtual Machine.",
+    "interactions": [
+      "Receives gRPC CRI calls from the host Kubelet.",
+      "Pulls container images from the registry and creates container namespaces.",
+      "Invokes the CNI plugin to connect containers to the OVS bridge."
+    ],
+    "explorationCommands": [
+      "# List running containers\ncrictl ps",
+      "# Inspect the KubeVirt launcher container\ncrictl inspect $(crictl ps --name launcher | awk 'NR>1{print $1}')",
+      "# View CRI-O logs\njournalctl -u crio --no-pager | tail -50"
+    ]
+  },
+  {
+    "componentId": "ovs-host",
+    "displayName": "Open vSwitch (Host)",
+    "typePrefix": "systemd",
+    "layer": "Management Worker Node",
+    "problemSolved": "The host-side Open vSwitch service that drives the OVN integration bridge (br-int) on the management worker node. All Pod veth pairs, the VXLAN/Geneve uplink, and the KubeVirt tap interface connect through this bridge.",
+    "interactions": [
+      "Manages the br-int OVS bridge and its port configuration.",
+      "Receives OpenFlow rules from the local OVN controller.",
+      "Handles Geneve encapsulation for inter-node overlay traffic.",
+      "Connects the KubeVirt VM's tap interface to the overlay network."
+    ],
+    "explorationCommands": [
+      "# Show OVS bridge topology\novs-vsctl show",
+      "# Dump OpenFlow rules\novs-ofctl dump-flows br-int | head -30",
+      "# Check OVS service health\nsystemctl status openvswitch"
+    ]
+  },
+  {
+    "componentId": "ovn-node-host",
+    "displayName": "OVN-K8s Node",
+    "typePrefix": "Pod",
+    "layer": "Management Worker Node",
+    "problemSolved": "The per-node OVN-Kubernetes DaemonSet Pod that runs on the management worker node. It syncs the OVN Southbound DB flows to the local OVS bridge and manages the host-side CNI plugin for Pod network provisioning.",
+    "interactions": [
+      "Runs the OVN controller that translates Southbound DB entries to OpenFlow rules.",
+      "Invokes the CNI plugin to create veth pairs and assign IPs when Pods start.",
+      "Manages the Geneve tunnel endpoints for cross-node traffic."
+    ],
+    "explorationCommands": [
+      "# View OVN node logs\noc logs -n openshift-ovn-kubernetes -l app=ovnkube-node --tail=50",
+      "# List OVS flows on this node\novs-ofctl dump-flows br-int",
+      "# Check OVN SB entries for this node\novn-sbctl show"
+    ]
+  },
+  {
+    "componentId": "kubevirt-launcher",
+    "displayName": "KubeVirt Launcher",
+    "typePrefix": "Pod",
+    "layer": "KubeVirt",
+    "problemSolved": "A privileged Pod that wraps a single VirtualMachineInstance. It manages the QEMU/KVM process life cycle, sets up the virtual NIC (tap0) bridged to the host OVS network, and monitors the VM's health on behalf of the KubeVirt Virt-Handler DaemonSet.",
+    "interactions": [
+      "Spawns and supervises the qemu-kvm process for the Guest Worker Node VM.",
+      "Creates a tap interface (tap0) and connects it to the host OVS bridge via a macvtap or bridge port.",
+      "Exposes virtio device interfaces (virtio-net, virtio-blk) to the guest OS."
+    ],
+    "explorationCommands": [
+      "# Find the launcher pod\noc get pods -n <hcp-namespace> -l kubevirt.io=virt-launcher",
+      "# Inspect qemu process\noc exec -n <hcp-namespace> <launcher-pod> -- ps aux | grep qemu",
+      "# View virtual NIC config\noc exec -n <hcp-namespace> <launcher-pod> -- ip link show tap0"
+    ]
+  },
+  {
+    "componentId": "guest-worker-node-vm",
+    "displayName": "Guest Worker Node",
+    "typePrefix": "VirtualMachineInstance",
+    "layer": "KubeVirt",
+    "logicalContext": {
+      "openShiftProject": "openshift-guest-workers",
+      "associatedObject": "KubeVirt Launcher Pod"
+    },
+    "problemSolved": "A full RHCOS Virtual Machine running inside the KubeVirt Launcher, acting as a guest cluster worker node. It runs a full Kubernetes node stack (kubelet, CRI-O, OVS) and hosts application workload Pods for the guest cluster.",
+    "interactions": [
+      "Registers with the Guest API Server as a standard Kubernetes Node.",
+      "Runs guest kubelet, CRI-O, and OVN-Kubernetes node DaemonSet inside the VM.",
+      "Network traffic enters and exits through the tap0 virtual NIC managed by the KubeVirt Launcher."
+    ],
+    "explorationCommands": [
+      "# SSH into the guest worker node (via virtctl)\nvirtctl ssh core@<vmi-name> -n <hcp-namespace>",
+      "# Check node status from guest cluster perspective\noc get nodes --kubeconfig <guest-kubeconfig>",
+      "# View qemu-kvm process on host\noc exec -n <hcp-namespace> <launcher-pod> -- ps aux | grep qemu"
+    ]
+  },
+  {
+    "componentId": "kubelet-guest",
+    "displayName": "Kubelet (Guest)",
+    "typePrefix": "systemd",
+    "layer": "Guest Worker Node",
+    "problemSolved": "The Kubernetes node agent running inside the Guest Worker Node VM. It watches the Guest API Server (via the Konnectivity tunnel) for Pods assigned to this node and instructs the guest CRI-O to create them.",
+    "interactions": [
+      "Connects to the Guest API Server endpoint via the Konnectivity tunnel.",
+      "Calls guest CRI-O to manage container lifecycle for workload Pods.",
+      "Reports node resource usage and Pod status back to the Guest API Server."
+    ],
+    "explorationCommands": [
+      "# Check kubelet inside the VM\nvirtctl ssh core@<vmi> -- systemctl status kubelet",
+      "# View guest kubelet logs\nvirtctl ssh core@<vmi> -- journalctl -u kubelet --no-pager | tail -50"
+    ]
+  },
+  {
+    "componentId": "crio-guest",
+    "displayName": "CRI-O (Guest)",
+    "typePrefix": "systemd",
+    "layer": "Guest Worker Node",
+    "problemSolved": "The OCI-compliant container runtime inside the Guest Worker Node VM. It creates and manages containers for workload Pods running in the guest cluster, setting up network namespaces and cgroup hierarchies for each container.",
+    "interactions": [
+      "Receives gRPC CRI calls from the guest Kubelet.",
+      "Invokes the CNI plugin to connect containers to the guest OVS bridge.",
+      "Sets up cgroup v2 hierarchies for workload Pod resource isolation."
+    ],
+    "explorationCommands": [
+      "# List containers inside the guest VM\nvirtctl ssh core@<vmi> -- crictl ps",
+      "# Inspect a container\nvirtctl ssh core@<vmi> -- crictl inspect <container_id>",
+      "# View CRI-O logs in guest\nvirtctl ssh core@<vmi> -- journalctl -u crio --no-pager | tail -50"
+    ]
+  },
+  {
+    "componentId": "ovs-guest",
+    "displayName": "Open vSwitch (Guest)",
+    "typePrefix": "systemd",
+    "layer": "Guest Worker Node",
+    "problemSolved": "Open vSwitch running inside the Guest Worker Node VM, driving the guest-side OVN integration bridge (br-int). All workload Pod veth pairs inside the VM connect through this bridge, and the guest OVN-Kubernetes DaemonSet programs its flow rules.",
+    "interactions": [
+      "Manages the in-VM br-int OVS bridge for guest Pod networking.",
+      "Receives OpenFlow rules from the guest OVN-Kubernetes node DaemonSet.",
+      "Traffic exits the VM through the virtio-net interface to the host tap0 device."
+    ],
+    "explorationCommands": [
+      "# Show guest OVS topology\nvirtctl ssh core@<vmi> -- ovs-vsctl show",
+      "# Dump guest OpenFlow rules\nvirtctl ssh core@<vmi> -- ovs-ofctl dump-flows br-int | head -30"
+    ]
+  },
+  {
+    "componentId": "ovn-node-guest",
+    "displayName": "OVN-K8s Guest Node",
+    "typePrefix": "Pod",
+    "layer": "Guest Worker Node",
+    "problemSolved": "The OVN-Kubernetes DaemonSet Pod running inside the Guest Worker Node VM. It syncs the guest OVN Southbound DB to the in-VM OVS bridge and handles CNI requests for workload Pod network provisioning.",
+    "interactions": [
+      "Runs the OVN controller that programs guest OVS flows.",
+      "Invokes CNI to create veth pairs for workload Pods inside the VM.",
+      "Maintains Geneve tunnel configuration for cross-node (cross-VM) traffic."
+    ],
+    "explorationCommands": [
+      "# View OVN guest node logs\nvirtctl ssh core@<vmi> -- oc logs -n openshift-ovn-kubernetes ovnkube-node-<id>",
+      "# Check guest OVN southbound DB\nvirtctl ssh core@<vmi> -- ovn-sbctl show"
+    ]
+  },
+  {
+    "componentId": "konnectivity-agent",
+    "displayName": "Konnectivity Agent",
+    "typePrefix": "Pod",
+    "layer": "Guest Worker Node",
+    "problemSolved": "The node-side counterpart to the Konnectivity Server in the management cluster. It maintains a persistent outbound tunnel to the Konnectivity Server, enabling the Guest API Server to reach the guest kubelet for exec, logs, and port-forward operations.",
+    "interactions": [
+      "Opens a persistent TLS connection to the Konnectivity Server in the management cluster.",
+      "Proxies API Server → kubelet traffic through the established tunnel.",
+      "Required for 'oc exec', 'oc logs', and 'oc port-forward' to work on guest Pods."
+    ],
+    "explorationCommands": [
+      "# Check konnectivity agent inside VM\nvirtctl ssh core@<vmi> -- oc get pods -n kube-system -l app=konnectivity-agent",
+      "# Verify tunnel connectivity\nvirtctl ssh core@<vmi> -- curl -k https://<konnectivity-server>:8091/healthz"
+    ]
+  },
+  {
+    "componentId": "coredns-node",
+    "displayName": "CoreDNS Node",
+    "typePrefix": "Pod",
+    "layer": "Guest Worker Node",
+    "problemSolved": "A per-node CoreDNS DaemonSet Pod inside the Guest Worker Node VM. It caches DNS responses locally to reduce round-trip latency and serves as the DNS resolver for all Pods running on this node.",
+    "interactions": [
+      "Configured as the upstream DNS server for all containers via the kubelet's clusterDNS setting.",
+      "Forwards cluster-local queries (*.svc.cluster.local) to the Guest CoreDNS in the management cluster.",
+      "Caches resolved records to reduce lookup latency for busy workloads."
+    ],
+    "explorationCommands": [
+      "# Check node-level CoreDNS\nvirtctl ssh core@<vmi> -- oc get pods -n openshift-dns -l dns.operator.openshift.io/daemonset-dns=default",
+      "# Test DNS from a workload pod\noc exec <pod> -n <ns> -- nslookup kubernetes.default.svc.cluster.local"
+    ]
+  },
+  {
+    "componentId": "openshift-ingress-router-guest",
+    "displayName": "Ingress Router (Guest)",
+    "typePrefix": "Pod",
+    "layer": "Guest Worker Node",
+    "problemSolved": "An HAProxy-based OpenShift Ingress Router running as a Pod inside the Guest Worker Node VM. It watches Route objects in the guest cluster and proxies the decrypted HTTPS traffic — after TLS re-encryption by the Shared Ingress Proxy — to the correct workload Pod.",
+    "interactions": [
+      "Watches Route objects in the guest cluster via the Guest API Server.",
+      "Receives traffic forwarded by the Shared Ingress Proxy through the host OVS fabric.",
+      "Forwards the request to the target Service's endpoint (frontend-workload-pod)."
+    ],
+    "explorationCommands": [
+      "# Check guest ingress router\nvirtctl ssh core@<vmi> -- oc get pods -n openshift-ingress",
+      "# View guest routes\nvirtctl ssh core@<vmi> -- oc get route -A",
+      "# Inspect HAProxy config\nvirtctl ssh core@<vmi> -- oc exec -n openshift-ingress <router-pod> -- cat /var/lib/haproxy/conf/haproxy.config | head -40"
+    ]
+  },
+  {
+    "componentId": "frontend-workload-pod",
+    "displayName": "Front-End Workload",
+    "typePrefix": "Pod",
+    "layer": "Guest Workload",
+    "logicalContext": {
+      "openShiftProject": "e-commerce-prod",
+      "associatedObject": "Deployment/frontend"
+    },
+    "problemSolved": "The user-facing application container. Receives HTTP requests forwarded by the Guest Ingress Router, processes business logic, and returns responses. This is the terminal destination of the external traffic flow.",
+    "interactions": [
+      "Listens on a private Pod IP address within the guest cluster network.",
+      "Receives traffic from the Guest Ingress Router via the in-VM OVS bridge.",
+      "May call the Back-End Workload Pod via east-west Service traffic within the guest cluster."
+    ],
+    "explorationCommands": [
+      "# Check workload pods\noc get pods -n e-commerce-prod -l app=frontend",
+      "# View app logs\noc logs -n e-commerce-prod deploy/frontend --tail=50",
+      "# Exec into the container\noc exec -it deploy/frontend -n e-commerce-prod -- /bin/sh",
+      "# Check listening ports\noc exec deploy/frontend -n e-commerce-prod -- ss -tlnp"
+    ]
+  },
+  {
+    "componentId": "backend-workload-pod",
+    "displayName": "Back-End Workload",
+    "typePrefix": "Pod",
+    "layer": "Guest Workload",
+    "logicalContext": {
+      "openShiftProject": "e-commerce-prod",
+      "associatedObject": "Deployment/backend"
+    },
+    "problemSolved": "The backend service container handling data processing, database access, and API logic for the guest application. Called by the Front-End Workload via internal Service routing within the guest cluster.",
+    "interactions": [
+      "Exposes a ClusterIP Service consumed by the Front-End Workload.",
+      "Connects to persistent storage and external databases.",
+      "Communicates over the in-VM guest OVS bridge via the OVN virtual fabric."
+    ],
+    "explorationCommands": [
+      "# Check backend pods\noc get pods -n e-commerce-prod -l app=backend",
+      "# View backend logs\noc logs -n e-commerce-prod deploy/backend --tail=50",
+      "# Check service endpoints\noc get endpoints backend-svc -n e-commerce-prod"
     ]
   },
   {
     "componentId": "pod-netns",
     "displayName": "Linux Network Namespace (netns)",
     "layer": "Linux Kernel Primitives",
-    "problemSolved": "Provides network virtualization and isolation. It gives each Pod a private routing table, IP address, and packet filtering space, preventing port conflicts on the host.",
+    "problemSolved": "Provides network virtualization and isolation inside the Guest RHCOS VM. It gives each workload Pod a private routing table, IP address, and packet filtering space.",
     "interactions": [
-      "Attaches to a host-side veth pair to bridge traffic out of the namespace.",
-      "Provisioned and configured by the OVN-Kubernetes CNI plugin during pod creation."
+      "Attaches to a guest-side veth pair managed by the OVN-Kubernetes Guest Node DaemonSet.",
+      "Provisioned and configured by the guest CRI-O runtime via CNI instructions."
     ],
     "explorationCommands": [
-      "# Step 1: Find the target host PID of the container process\ncrictl inspect <container_id> | grep pid",
-      "# Step 2: Enter the isolated network namespace using the PID to view interfaces\nnsenter -t <PID> -n ip addr show"
+      "# Find the target host PID of the container\nvirtctl ssh core@<vmi> -- crictl inspect <container_id> | grep pid",
+      "# Enter the isolated network namespace\nvirtctl ssh core@<vmi> -- nsenter -t <PID> -n ip addr show"
     ]
   },
   {
     "componentId": "pod-cgroups",
-    "displayName": "Control Groups (cgroups)",
+    "displayName": "Control Groups (cgroups v2)",
     "layer": "Linux Kernel Primitives",
-    "problemSolved": "Enforces CPU, memory, and I/O resource limits and accounting for each container. Prevents a single runaway container from starving other workloads on the same node.",
+    "problemSolved": "Enforces CPU, memory, and I/O resource limits for each container inside the Guest VM. Prevents a single runaway container from starving other workloads on the guest node.",
     "interactions": [
-      "Hierarchy is created by CRI-O/runc when the container starts.",
-      "Kubelet monitors cgroup usage to report resource consumption back to the API Server.",
-      "OOM killer is triggered by the kernel when a container exceeds its memory limit."
+      "Hierarchy created by guest CRI-O/runc when the container starts inside the VM.",
+      "Guest kubelet monitors cgroup usage and reports resource consumption.",
+      "OOM killer is triggered when a container exceeds its memory limit."
     ],
     "explorationCommands": [
-      "# Find cgroup path for a container\ncrictl inspect <container_id> | grep cgroupsPath",
-      "# View memory limits from the cgroup\ncat /sys/fs/cgroup/<cgroup_path>/memory.max",
-      "# View CPU quota\ncat /sys/fs/cgroup/<cgroup_path>/cpu.max"
+      "# Find cgroup path for a container\nvirtctl ssh core@<vmi> -- crictl inspect <container_id> | grep cgroupsPath",
+      "# View memory limit\nvirtctl ssh core@<vmi> -- cat /sys/fs/cgroup/<cgroup_path>/memory.max",
+      "# View CPU quota\nvirtctl ssh core@<vmi> -- cat /sys/fs/cgroup/<cgroup_path>/cpu.max"
     ]
   },
   {
     "componentId": "container-process",
     "displayName": "Container Process (PID 1)",
     "layer": "Linux Kernel Primitives",
-    "problemSolved": "The actual application process running as PID 1 inside the container's PID namespace. It is the leaf node of the entire Kubernetes ownership chain — the workload the entire infrastructure exists to run.",
+    "problemSolved": "The actual application process running as PID 1 inside the container's PID namespace within the Guest VM. It is the leaf node of the entire HCP ownership chain.",
     "interactions": [
-      "Runs inside the intersection of a Network Namespace (netns), cgroup slice, and PID namespace.",
-      "Receives inbound socket connections on its private IP address.",
-      "Writes logs to stdout/stderr which are captured by the container runtime."
+      "Runs inside the intersection of a Network Namespace, cgroup slice, and PID namespace — all inside the Guest VM.",
+      "Receives inbound socket connections on its private Pod IP address.",
+      "Writes logs to stdout/stderr captured by the guest container runtime."
     ],
     "explorationCommands": [
-      "# Execute a shell inside the running container\noc exec -it <pod-name> -n <namespace> -- /bin/sh",
-      "# View the process tree inside the container\noc exec <pod-name> -n <namespace> -- ps aux",
-      "# Check what port PID 1 is listening on\noc exec <pod-name> -n <namespace> -- ss -tlnp"
+      "# Exec into the container\noc exec -it <pod-name> -n <namespace> -- /bin/sh",
+      "# View the process tree\noc exec <pod-name> -n <namespace> -- ps aux",
+      "# Check listening ports\noc exec <pod-name> -n <namespace> -- ss -tlnp"
     ]
   }
 ]

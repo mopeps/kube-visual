@@ -1,10 +1,11 @@
-import { ZONES, ARROW_ROWS } from '../data/zones'
+import { useRef } from 'react'
+import { ZONES } from '../data/zones'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
-import ArrowRow from './ArrowRow'
+import ArrowOverlay from './ArrowOverlay'
 
 // Map componentId → step number it first appears in the active event.
-function stepNumMap(activeEvent) {
+function buildStepNumMap(activeEvent) {
   const map = new Map()
   if (!activeEvent) return map
   activeEvent.steps.forEach(s => {
@@ -14,71 +15,56 @@ function stepNumMap(activeEvent) {
   return map
 }
 
-// Which static arrow-step numbers should glow when an event is active?
-// Heuristic: any arrow row whose `between` zones contain a source→target hop
-// of the active event lights all of its steps.
-function activeArrowSteps(activeEvent, activeComponentIds) {
-  const set = new Set()
-  if (!activeEvent) return set
-  // gather zones touched by the event
-  const touchedZones = new Set()
-  ZONES.forEach(z => {
-    if (z.nodes.some(n => activeComponentIds.has(n.id))) {
-      touchedZones.add(z.id)
-    }
-  })
-  ARROW_ROWS.forEach(row => {
-    const [a, b] = row.between
-    if (touchedZones.has(a) && touchedZones.has(b)) {
-      row.steps.forEach(s => set.add(s.n))
-    }
-  })
-  return set
-}
-
 export default function OverviewTab({
   activeEvent,
   activeComponentIds,
   onSelectComponent,
 }) {
-  const steps = stepNumMap(activeEvent)
+  const canvasRef = useRef(null)
+  const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
-  const arrowActive = activeArrowSteps(activeEvent, activeComponentIds || new Set())
+
+  function renderZone(zone, depth = 0) {
+    return (
+      <Zone
+        key={zone.id}
+        label={zone.label}
+        color={zone.color}
+        dashed={zone.dashed}
+        depth={depth}
+      >
+        {/* Nodes in this zone */}
+        {zone.nodes?.map(node => {
+          const isHighlighted = activeComponentIds?.has?.(node.id)
+          return (
+            <NodeCard
+              key={node.id}
+              id={node.id}
+              title={node.title}
+              typePrefix={node.typePrefix}
+              badges={node.badges}
+              color={zone.color}
+              stepNum={stepNums.get(node.id)}
+              isActive={isHighlighted}
+              isDimmed={hasActive && !isHighlighted}
+              onClick={onSelectComponent}
+            />
+          )
+        })}
+        {/* Child zones */}
+        {zone.zones?.map(child => renderZone(child, depth + 1))}
+      </Zone>
+    )
+  }
 
   return (
     <div
-      className="border border-border-w rounded-lg overflow-hidden"
-      style={{ background: 'rgba(0,0,0,0.2)' }}
+      ref={canvasRef}
+      className="border border-border-w rounded-lg overflow-visible"
+      style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
     >
-      {ZONES.map((zone, idx) => (
-        <div key={zone.id}>
-          <Zone label={zone.label} color={zone.color}>
-            {zone.nodes.map(node => {
-              const isHighlighted = activeComponentIds?.has?.(node.id)
-              return (
-                <NodeCard
-                  key={node.id}
-                  id={node.id}
-                  title={node.title}
-                  subtitle={node.subtitle}
-                  badges={node.badges}
-                  color={zone.color}
-                  stepNum={steps.get(node.id)}
-                  isActive={isHighlighted}
-                  isDimmed={hasActive && !isHighlighted}
-                  onClick={onSelectComponent}
-                />
-              )
-            })}
-          </Zone>
-          {idx < ZONES.length - 1 && activeEvent && (
-            <ArrowRow
-              steps={ARROW_ROWS[idx].steps}
-              activeStepNums={arrowActive}
-            />
-          )}
-        </div>
-      ))}
+      {ZONES.map(zone => renderZone(zone))}
+      <ArrowOverlay activeEvent={activeEvent} canvasRef={canvasRef} />
     </div>
   )
 }
