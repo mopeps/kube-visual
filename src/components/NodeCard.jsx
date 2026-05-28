@@ -25,7 +25,7 @@ export default function NodeCard({
           {stepNum}
         </span>
       )}
-      {typePrefix && (
+      {typePrefix && typePrefix !== 'Pod' && (
         <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>
           [{typePrefix}]
         </span>
