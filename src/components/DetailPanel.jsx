@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import componentsData from '../data/components.json'
 import { COMPONENT_COLOR, COMPONENT_ZONE, COMPONENT_BADGES } from '../data/zones'
 import { BADGE_GLOSSARY } from '../data/badge-glossary'
@@ -100,17 +100,50 @@ function PrimitiveInline({ primitive, color }) {
   )
 }
 
+// How far (px) the page must scroll before the sheet is dismissed. The panel
+// tracks scroll 1:1 up to this point, then closes and the CSS transition
+// finishes sliding it off the bottom of the screen.
+const SCROLL_DISMISS_PX = 90
+
 export default function DetailPanel({ componentId, onClose, onSelectComponent }) {
   const [expandedPrimitive, setExpandedPrimitive] = useState(null)
   const [expandedBadge, setExpandedBadge] = useState(null)
+  // Distance the sheet is pushed down as the page scrolls away beneath it.
+  const [scrollOffset, setScrollOffset] = useState(0)
 
   useEffect(() => {
     if (!componentId) return
     setExpandedPrimitive(null)
     setExpandedBadge(null)
+    setScrollOffset(0)
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+  }, [componentId, onClose])
+
+  // Slide the sheet down as the user scrolls the page away, then dismiss it
+  // once it has been scrolled off far enough.
+  useEffect(() => {
+    if (!componentId) return
+    const startScroll = window.scrollY
+    let raf = null
+    const onScroll = () => {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = null
+        const dist = Math.abs(window.scrollY - startScroll)
+        if (dist >= SCROLL_DISMISS_PX) {
+          onClose()
+        } else {
+          setScrollOffset(dist)
+        }
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (raf) cancelAnimationFrame(raf)
+    }
   }, [componentId, onClose])
 
   if (!componentId) return <aside className="detail-panel" aria-hidden="true" />
@@ -125,7 +158,16 @@ export default function DetailPanel({ componentId, onClose, onSelectComponent })
     : PRIMITIVES_BY_TYPE[component.typePrefix] || null
 
   return (
-    <aside className="detail-panel is-open" role="dialog" aria-label={component.displayName}>
+    <aside
+      className="detail-panel is-open"
+      role="dialog"
+      aria-label={component.displayName}
+      style={
+        scrollOffset > 0
+          ? { transform: `translateY(${scrollOffset}px)`, transition: 'none' }
+          : undefined
+      }
+    >
       <div className="detail-drag-handle" />
       <button className="detail-close" onClick={onClose} aria-label="Close (Esc)">
         ✕
