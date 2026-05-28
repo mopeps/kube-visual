@@ -28,16 +28,18 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │     │     │   // The management (bare metal) cluster's OWN control plane,
   │     │     │   // run by the master kubelet from /etc/kubernetes/manifests
   │     │     ├── [Static Pod] Management Kube API Server Instance
-  │     │     ├── [Static Pod] Management Etcd Instance
+  │     │     ├── [Static Pod] Management Etcd Instance ──┐  // expandable "intent store"
+  │     │     │      // CRs are desired-state records persisted here, not processes
+  │     │     │      ├── [Custom Resource] HostedCluster
+  │     │     │      └── [Custom Resource] NodePool
   │     │     ├── [Static Pod] Management Controller Manager Instance
   │     │     └── [Static Pod] Management Kube-Scheduler Instance
   │     │
   │     ├── [HyperShift · hypershift Namespace Zone]
   │     │     │   // Cluster-wide management operator (ONE per mgmt cluster,
-  │     │     │   // not per guest) plus the top-level HCP API objects.
-  │     │     ├── [Pod] HyperShift Operator Instance
-  │     │     ├── [Custom Resource] HostedCluster
-  │     │     └── [Custom Resource] NodePool
+  │     │     │   // not per guest). The HostedCluster/NodePool CRs it
+  │     │     │   // reconciles are intent records inside Management Etcd above.
+  │     │     └── [Pod] HyperShift Operator Instance
   │     │
   │     └── [Dedicated Guest Control Plane Namespace Zone]
   │           │   // Per-HCP operators & lifecycle controllers
@@ -122,6 +124,7 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    * **systemd Services:** Reveal corresponding host service unit configuration paths and tracking metrics.
    * **VirtualMachineInstance:** Expose the host qemu-kvm process execution details, host-side virtual network tap configuration (tap0), and master cgroup runtime boundaries.
    * **Guest Controller Manager:** Reveal internal control loops (NodeLifecycleController, EndpointController, etc.) running inside the binary.
+ * **Etcd Intent Store (expandable node):** The **Management Etcd** node doubles as the home for *cluster intent* — the `HostedCluster` and `NodePool` Custom Resources. These are persisted desired-state records, **not** Linux processes, so they are deliberately not rendered as sibling cards next to real Pods. Clicking the etcd node enlarges it in place to reveal these intent objects. Inside the expanded store: clicking the **title** (ⓘ) opens etcd's own detail popup; clicking an **intent object** opens that CR's popup; clicking the empty body, the ▴ chevron, outside the card, or pressing **Esc** collapses it. A node declares this behavior via an `intentObjects` array in `zones.js`.
 ## 3. Reference Data Schemas
 ### Metadata Schema (components.json)
 ```json

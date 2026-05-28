@@ -401,9 +401,10 @@
     "displayName": "Management Etcd",
     "typePrefix": "Static Pod",
     "layer": "Bare Metal Master Node",
-    "problemSolved": "The etcd key-value store for the management (bare metal) cluster, running as a Static Pod on the master node. It persists all management cluster state, including the HostedCluster, NodePool, and guest control-plane object definitions. Each guest cluster keeps its own separate etcd that runs as a Pod inside its HCP namespace.",
+    "problemSolved": "The etcd key-value store for the management (bare metal) cluster, running as a Static Pod on the master node. It persists all management cluster state, including the HostedCluster and NodePool Custom Resources and the guest control-plane object definitions. This is where infrastructure *intent* lives: a HostedCluster or NodePool is a desired-state record stored here, not a running Linux process. Each guest cluster keeps its own separate etcd that runs as a Pod inside its HCP namespace.",
     "interactions": [
       "Receives reads and writes exclusively from the Management Kube API Server on the same node.",
+      "Persists the HostedCluster and NodePool intent objects that the HyperShift Operator reconciles.",
       "Replicates writes across the master nodes' etcd members via the Raft consensus protocol.",
       "Backed up and health-checked by the management cluster's cluster-etcd-operator."
     ],

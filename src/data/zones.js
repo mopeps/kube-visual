@@ -97,6 +97,26 @@ export const ZONES = [
                   { label: 'Static Manifest', color: 'var(--k-blue)' },
                   { label: 'Raft', color: 'var(--k-blue)' },
                 ],
+                // Etcd is the single home for cluster *intent*: the Custom
+                // Resources that declare desired infrastructure. These are
+                // persisted records in the key-value store, not Linux
+                // processes — so they live *inside* etcd rather than beside
+                // real Pods. The overview renders this node as an expandable
+                // "intent store" that reveals these objects on click.
+                intentObjects: [
+                  {
+                    id: 'hostedcluster-cr',
+                    title: 'HostedCluster',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'HostedCluster CR', color: 'var(--k-blue)' }],
+                  },
+                  {
+                    id: 'nodepool-cr',
+                    title: 'NodePool',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'NodePool CR', color: 'var(--k-blue)' }],
+                  },
+                ],
               },
               {
                 id: 'mgmt-controller-manager',
@@ -124,26 +144,16 @@ export const ZONES = [
             color: 'var(--k-blue)',
             colorVar: 'k-blue',
             dashed: true,
-            // Cluster-wide management operator + the top-level HCP API objects.
-            // One HyperShift Operator serves every HostedCluster on the mgmt cluster.
+            // Cluster-wide management operator. One HyperShift Operator serves
+            // every HostedCluster on the mgmt cluster. The HostedCluster and
+            // NodePool CRs it reconciles are intent records — they live inside
+            // the Management Etcd "intent store", not beside the operator Pod.
             nodes: [
               {
                 id: 'hypershift-operator',
                 title: 'HyperShift Operator',
                 typePrefix: 'Pod',
                 badges: [{ label: 'cluster-wide', color: 'var(--k-blue)' }],
-              },
-              {
-                id: 'hostedcluster-cr',
-                title: 'HostedCluster',
-                typePrefix: 'Custom Resource',
-                badges: [{ label: 'HostedCluster CR', color: 'var(--k-blue)' }],
-              },
-              {
-                id: 'nodepool-cr',
-                title: 'NodePool',
-                typePrefix: 'Custom Resource',
-                badges: [{ label: 'NodePool CR', color: 'var(--k-blue)' }],
               },
             ],
           },
@@ -421,7 +431,15 @@ function collectNodes(zones, result = []) {
       result.push({ node: { id: zone.componentId, badges: zone.badges }, zone })
     }
     if (zone.nodes) {
-      for (const node of zone.nodes) result.push({ node, zone })
+      for (const node of zone.nodes) {
+        result.push({ node, zone })
+        // Intent objects (CRs nested inside an etcd "intent store" node) are
+        // not rendered as standalone cards, but still need their color / zone /
+        // badge lookups resolved so the DetailPanel can open for them.
+        if (node.intentObjects) {
+          for (const obj of node.intentObjects) result.push({ node: obj, zone })
+        }
+      }
     }
     if (zone.zones) collectNodes(zone.zones, result)
   }
