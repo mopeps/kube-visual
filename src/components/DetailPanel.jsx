@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import componentsData from '../data/components.json'
 import { COMPONENT_COLOR, COMPONENT_ZONE, COMPONENT_BADGES } from '../data/zones'
 import { BADGE_GLOSSARY } from '../data/badge-glossary'
@@ -100,18 +100,87 @@ function PrimitiveInline({ primitive, color }) {
   )
 }
 
+// How far (px) the page must scroll before the sheet is dismissed. The panel
+// tracks scroll 1:1 up to this point, then closes and the CSS transition
+// finishes sliding it off the bottom of the screen.
+const SCROLL_DISMISS_PX = 90
+// How far (px) the sheet must be dragged down by touch before it dismisses.
+const DRAG_DISMISS_PX = 110
+
 export default function DetailPanel({ componentId, onClose, onSelectComponent }) {
   const [expandedPrimitive, setExpandedPrimitive] = useState(null)
   const [expandedBadge, setExpandedBadge] = useState(null)
+  // Distance the sheet is currently pushed down (by page scroll or touch drag).
+  const [offset, setOffset] = useState(0)
+  // While true the sheet animates (snapping back / sliding off); while false it
+  // tracks the gesture 1:1 with no transition.
+  const [snapping, setSnapping] = useState(false)
+  const panelRef = useRef(null)
+  const dragStartY = useRef(null)
 
   useEffect(() => {
     if (!componentId) return
     setExpandedPrimitive(null)
     setExpandedBadge(null)
+    setOffset(0)
+    setSnapping(false)
+    dragStartY.current = null
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [componentId, onClose])
+
+  // Slide the sheet down as the user scrolls the page away, then dismiss it
+  // once it has been scrolled off far enough.
+  useEffect(() => {
+    if (!componentId) return
+    const startScroll = window.scrollY
+    let raf = null
+    const onScroll = () => {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = null
+        const dist = Math.abs(window.scrollY - startScroll)
+        setSnapping(false)
+        if (dist >= SCROLL_DISMISS_PX) {
+          onClose()
+        } else {
+          setOffset(dist)
+        }
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [componentId, onClose])
+
+  // Touch-drag to dismiss: swiping the sheet down on mobile pushes it down and,
+  // past the threshold, sends it away. Only engages when the sheet's own
+  // content is scrolled to the top so it doesn't fight internal scrolling.
+  const onTouchStart = (e) => {
+    if (panelRef.current && panelRef.current.scrollTop > 0) return
+    dragStartY.current = e.touches[0].clientY
+    setSnapping(false)
+  }
+  const onTouchMove = (e) => {
+    if (dragStartY.current == null) return
+    const dy = e.touches[0].clientY - dragStartY.current
+    // only respond to downward drags; an upward drag resumes normal scrolling
+    setOffset(dy > 0 ? dy : 0)
+  }
+  const onTouchEnd = () => {
+    if (dragStartY.current == null) return
+    const dragged = offset
+    dragStartY.current = null
+    setSnapping(true)
+    if (dragged >= DRAG_DISMISS_PX) {
+      onClose()
+    } else {
+      setOffset(0)
+    }
+  }
 
   if (!componentId) return <aside className="detail-panel" aria-hidden="true" />
 
@@ -125,7 +194,24 @@ export default function DetailPanel({ componentId, onClose, onSelectComponent })
     : PRIMITIVES_BY_TYPE[component.typePrefix] || null
 
   return (
-    <aside className="detail-panel is-open" role="dialog" aria-label={component.displayName}>
+    <aside
+      ref={panelRef}
+      className="detail-panel is-open"
+      role="dialog"
+      aria-label={component.displayName}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchEnd}
+      style={
+        offset > 0 || snapping
+          ? {
+              transform: `translateY(${offset}px)`,
+              transition: snapping ? 'transform 0.3s ease' : 'none',
+            }
+          : undefined
+      }
+    >
       <div className="detail-drag-handle" />
       <button className="detail-close" onClick={onClose} aria-label="Close (Esc)">
         ✕
