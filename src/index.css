@@ -145,12 +145,15 @@ body::after {
 
   .zone-content-inner {
     gap: 8px;
+    justify-content: center;
   }
 
-  /* Fluid 2-up grid: nodes grow to fill the row instead of hugging the left
-     edge at a fixed 128px. 4px = half the 8px row gap. */
+  /* Fluid 2-up grid: nodes share the row evenly instead of hugging the left
+     edge at a fixed 128px. 4px = half the 8px row gap. The max-width cap keeps
+     a lone last node at half width; justify-content centers it. */
   .node {
     flex: 1 1 calc(50% - 4px);
+    max-width: calc(50% - 4px);
     width: auto;
     padding: 8px 9px 7px;
   }
