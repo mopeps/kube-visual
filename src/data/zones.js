@@ -213,22 +213,22 @@ export const ZONES = [
       {
         id: 'worker-node',
         label: 'Bare Metal Worker Node',
-        color: 'var(--k-blue)',
-        colorVar: 'k-blue',
+        color: 'var(--k-blue-worker)',
+        colorVar: 'k-blue-worker',
         nodes: [
           {
             id: 'kubelet-host',
             title: 'Kubelet',
             typePrefix: 'systemd',
-            badges: [{ label: 'CRI client', color: 'var(--k-blue)' }],
+            badges: [{ label: 'CRI client', color: 'var(--k-blue-worker)' }],
           },
           {
             id: 'crio-host',
             title: 'CRI-O',
             typePrefix: 'systemd',
             badges: [
-              { label: 'OCI', color: 'var(--k-blue)' },
-              { label: 'gRPC', color: 'var(--k-blue)' },
+              { label: 'OCI', color: 'var(--k-blue-worker)' },
+              { label: 'gRPC', color: 'var(--k-blue-worker)' },
             ],
           },
           {
@@ -236,15 +236,15 @@ export const ZONES = [
             title: 'Open vSwitch',
             typePrefix: 'systemd',
             badges: [
-              { label: 'br-int', color: 'var(--k-blue)' },
-              { label: 'OpenFlow', color: 'var(--k-blue)' },
+              { label: 'br-int', color: 'var(--k-blue-worker)' },
+              { label: 'OpenFlow', color: 'var(--k-blue-worker)' },
             ],
           },
           {
             id: 'ovn-node-host',
             title: 'OVN-K8s Node',
             typePrefix: 'Pod',
-            badges: [{ label: 'CNI', color: 'var(--k-blue)' }],
+            badges: [{ label: 'CNI', color: 'var(--k-blue-worker)' }],
           },
         ],
         zones: [

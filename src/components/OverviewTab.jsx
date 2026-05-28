@@ -75,7 +75,7 @@ export default function OverviewTab({
     <div
       ref={canvasRef}
       className="border border-border-w rounded-lg overflow-visible"
-      style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
+      style={{ background: 'rgba(0,0,0,0.2)', position: 'relative', display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px' }}
     >
       {visibleZones.flatMap(zone =>
         zone.hideWrapper

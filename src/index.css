@@ -24,7 +24,8 @@
   /* Zone accents form a top-to-bottom gradient through the stack:
      external client → bare metal → guest control plane → virtualization → guest VM */
   --k-cyan:   #00e5ff;   /* External client (sits above the gradient) */
-  --k-blue:   #3b82f6;   /* Bare metal infrastructure — cluster / master / worker */
+  --k-blue:        #3b82f6;   /* Bare metal master node */
+  --k-blue-worker: #60a5fa;   /* Bare metal worker node (lighter blue) */
   --k-sky:    #38bdf8;   /* Guest control plane namespace (lighter blue) */
   --k-teal:   #14b8a6;   /* KubeVirt launcher container (blue → green) */
   --k-green:  #22c55e;   /* Guest worker node · VirtualMachineInstance */
