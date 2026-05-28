@@ -23,12 +23,14 @@ export default {
         'tx-muted':  'rgba(255,255,255,0.55)',
         'tx-dim':    'rgba(255,255,255,0.35)',
 
-        // Zone accents
-        'k-cyan':   '#00e5ff',   // External / Client
-        'k-sky':    '#0ea5e9',   // Management
-        'k-purple': '#7c3aed',   // Ingress / LB
-        'k-amber':  '#f59e0b',   // Host Networking
-        'k-green':  '#10b981',   // Pod / Kernel
+        // Zone accents — top-to-bottom gradient through the stack
+        'k-cyan':   '#00e5ff',   // External client
+        'k-blue':   '#2563eb',   // Bare metal infrastructure
+        'k-sky':    '#38bdf8',   // Guest control plane namespace
+        'k-teal':   '#14b8a6',   // KubeVirt launcher container
+        'k-green':  '#22c55e',   // Guest worker node · VMI
+        'k-purple': '#7c3aed',
+        'k-amber':  '#f59e0b',
 
         // Trace
         'packet':   '#ff4d6d',

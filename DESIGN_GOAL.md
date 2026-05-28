@@ -20,7 +20,7 @@ flow.
 | Surface | Deep navy `#070b14`, faint cyan grid overlay (`40px` cells) |
 | Headings | `Syne` 600/800, tight tracking, gradient fills for the H1 |
 | Body / labels | `JetBrains Mono`, uppercase mini-labels with `0.12em–0.18em` tracking |
-| Zone accents | Cyan · Sky · Purple · Amber · Green — one per layer, used for borders, badges, vertical zone labels |
+| Zone accents | A cool-to-green gradient that descends the stack — Cyan (external client) → Blue (bare metal infra: cluster / master / worker) → Sky (guest control plane namespace) → Teal (KubeVirt launcher) → Green (guest worker VMI). Used for borders, badges, and zone labels. Bare-metal zones all share the one blue so the physical layer reads as a single unit. |
 | Packet accent | Red-pink `#ff4d6d` — only for the active trace (nodes, arrow steps, highlighted hop) |
 | Borders | 1px solid + dashed inner separators, no rounded "card" feel beyond a soft 8px radius |
 
