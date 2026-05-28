@@ -27,6 +27,7 @@ export const ZONES = [
     label: 'Bare Metal Cluster',
     color: 'var(--k-blue)',
     colorVar: 'k-blue',
+    hideWrapper: true,
     zones: [
       {
         id: 'master-node',
