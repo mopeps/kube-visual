@@ -100,17 +100,13 @@ function PrimitiveInline({ primitive, color }) {
   )
 }
 
-// How far (px) the page must scroll before the sheet is dismissed. The panel
-// tracks scroll 1:1 up to this point, then closes and the CSS transition
-// finishes sliding it off the bottom of the screen.
-const SCROLL_DISMISS_PX = 90
 // How far (px) the sheet must be dragged down by touch before it dismisses.
 const DRAG_DISMISS_PX = 110
 
 export default function DetailPanel({ componentId, onClose, onSelectComponent }) {
   const [expandedPrimitive, setExpandedPrimitive] = useState(null)
   const [expandedBadge, setExpandedBadge] = useState(null)
-  // Distance the sheet is currently pushed down (by page scroll or touch drag).
+  // Distance the sheet is currently pushed down by a touch drag.
   const [offset, setOffset] = useState(0)
   // While true the sheet animates (snapping back / sliding off); while false it
   // tracks the gesture 1:1 with no transition.
@@ -130,31 +126,31 @@ export default function DetailPanel({ componentId, onClose, onSelectComponent })
     return () => window.removeEventListener('keydown', onKey)
   }, [componentId, onClose])
 
-  // Slide the sheet down as the user scrolls the page away, then dismiss it
-  // once it has been scrolled off far enough.
+  // Lock the page behind the sheet so it can't scroll while the popup is open.
+  // Pins <body> at its current scroll position and restores it on close so the
+  // background stays put and the page doesn't jump.
   useEffect(() => {
     if (!componentId) return
-    const startScroll = window.scrollY
-    let raf = null
-    const onScroll = () => {
-      if (raf) return
-      raf = requestAnimationFrame(() => {
-        raf = null
-        const dist = Math.abs(window.scrollY - startScroll)
-        setSnapping(false)
-        if (dist >= SCROLL_DISMISS_PX) {
-          onClose()
-        } else {
-          setOffset(dist)
-        }
-      })
+    const scrollY = window.scrollY
+    const body = document.body
+    const prev = {
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+      overflow: body.style.overflow,
     }
-    window.addEventListener('scroll', onScroll, { passive: true })
+    body.style.position = 'fixed'
+    body.style.top = `-${scrollY}px`
+    body.style.width = '100%'
+    body.style.overflow = 'hidden'
     return () => {
-      window.removeEventListener('scroll', onScroll)
-      if (raf) cancelAnimationFrame(raf)
+      body.style.position = prev.position
+      body.style.top = prev.top
+      body.style.width = prev.width
+      body.style.overflow = prev.overflow
+      window.scrollTo(0, scrollY)
     }
-  }, [componentId, onClose])
+  }, [componentId])
 
   // Touch-drag to dismiss: swiping the sheet down on mobile pushes it down and,
   // past the threshold, sends it away. Only engages when the sheet's own
