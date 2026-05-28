@@ -1,159 +1,130 @@
+
 # AI Coding Agent Instructions
-
-This file contains the original prompt instructions used to build kube-visual.
-
----
-
-# Instruction 1: Interactive OpenShift-to-Linux Blueprint Tool
-
+This document defines the architectural specifications and data models for building **kube-visual**—an interactive, frontend-only web blueprint mapping OpenShift Hosted Control Planes (HCP) to their underlying systems infrastructure.
+# Instruction 1: Multitier Cluster Topology Canvas & Mobile Optimization
 ## Project Goal
-Build a frontend-only interactive web application that provides a nested, containment-based visual mapping of OpenShift cluster-level logical objects down to their underlying Linux kernel primitives. The core utility is tracing dynamic interaction and communication flows across these layers based on user-selected cluster events.
-
-## 1. UI Structural & Visual Hierarchy
-The application must render a containment-based grid layout using a strict visual hierarchy. Avoid linear flowcharts; use nested HTML container boxes to show strict ownership and boundaries.
-
+Build a frontend-only interactive layout providing a nested visual mapping of an OpenShift Management Cluster hosting a Client Cluster (HCP topology), tracing communication flows based on user-selected infrastructure events.
+## 1. UI Structural & Mobile Responsiveness Rules
+ * **Nomenclature:** Use Context / Zone for macro physical/virtual infrastructure, Container / Instance for runtime isolation, and ensure every element line begins with its exact API/system type in square brackets ([Pod], [Static Pod], [systemd Service]).
+ * **Mobile-First Sizing:** The application must deliver excellent usability on mobile displays. Scale down individual block dimensions so that **at least two instances can sit side-by-side** without breaking layout integrity or clipping text strings when viewed on mobile screen width dimensions.
 ### Component Nesting Map
+The main workspace viewport must render this exact structural hierarchy:
 ```text
-[Cluster Boundary]
-  ├── [Management Layer (Red/Purple Boxes)]
-  │     └── API Server, Controllers, Kubelet, CRI-O
-  └── [Infrastructure Node Boundary (Green Boxes)]
-        ├── [Logical Kubernetes Namespace / Project Boundary (Dashed Blue Boxes)]
-        │     └── [Pod Boundary]
-        │           └── [Linux Isolation Layer (Kernel Primitives)]
-        │                 ├── Network Namespace (netns)
-        │                 ├── Control Groups (cgroups)
-        │                 └── [Container Process (PID 1)]
-        └── [Host Networking Subsystem]
-              └── OVS Bridge (br-int), veth pairs, Routing Tables
+[Management Cluster Context]
+  │
+  ├── [Management Master Node Zone]
+  │     └── [Dedicated Guest Control Plane Namespace Zone]
+  │           ├── [Pod] Guest API Server Instance
+  │           ├── [Pod] Guest Controller Manager Instance
+  │           ├── [Pod] Guest Kube-Scheduler Instance
+  │           ├── [Pod] Cluster Version Operator (CVO) Instance
+  │           ├── [Pod] OVN-Kubernetes Master Control Instance
+  │           └── [Static Pod] Etcd State Instance
+  │
+  └── [Management Worker Node Zone]
+        ├── [systemd Service] Kubelet (Host Resident Node Manager)
+        ├── [systemd Service] CRI-O (Host Resident Container Engine)
+        ├── [systemd Service] Open vSwitch (Host Native Data Path)
+        ├── [Pod] OVN-Kubernetes Node Instance (Plumbs Host Network)
+        │
+        └── [Pod] KubeVirt Launcher Container
+              └── [VirtualMachineInstance] Guest Worker Node
+                    ├── [systemd Service] Kubelet (Guest Resident Node Manager)
+                    ├── [systemd Service] CRI-O (Guest Resident Container Engine)
+                    ├── [systemd Service] Open vSwitch (Guest Native Data Path)
+                    ├── [Pod] OVN-Kubernetes Guest Node Instance (Manages guest veth routing)
+                    │
+                    ├── [Pod] Front-End Workload Instance
+                    └── [Pod] Back-End Workload Instance
+
 ```
-
-## 2. Core Features & Interactivity Requirements
- * **State 1: Default Structural Map:** Display the nested topology cleanly. All components are visible but dimmed to an idle opacity (e.g., opacity-40).
- * **State 2: Event-Driven Tracing:** Provide a sidebar dropdown or list of "Events" (e.g., *Pod Spawning*, *Ingress TLS Termination*, *Pod-to-Pod OVN Traffic*).
- * **Dynamic Illumination:** When an event is selected:
-   1. Highlight only the participating boxes/primitives to opacity-100.
-   2. Draw ordered, numbered, directional connecting arrows between the components to show the data path or reconciliation loop.
-   3. Display a small, concise step-by-step text sidebar explaining the chronological interactions.
-
+## 2. Interactivity Requirements
+ * **Idle State:** All components are visible but set to a dimmed idle opacity state. No raw Linux kernel primitives are rendered by default.
+ * **Event Selection:** Selecting an infrastructure workflow from the sidebar menu highlights participating objects to full opacity and dynamically renders ordered, sequential badged (①, ②, ③) connection vectors showing execution flow.
 ## 3. Recommended Technical Stack
-To keep the project lightweight, maintainable, and open-source friendly, use the following stack:
- * **Framework:** React or Vue.js (for state management of active layers/events).
- * **Styling:** Tailwind CSS (for crisp, color-coded, flexible layout wrappers).
- * **Connector Lines:** leader-line (JS library) or react-xarrows to dynamically render smooth, responsive connecting vectors between nested HTML elements.
- * **Data Layer:** A clean, decoupled events.json data model.
-
-## 4. MVP Target: Initial Event Data Model
-Implement this specific data schema in a standalone JSON file to trace the **Pod Network Traffic Ingress via Route** event:
-```json
-{
-  "eventId": "route-ingress-traffic",
-  "eventName": "External Ingress Traffic Flow",
-  "description": "Tracing an HTTPS request from an external client to an app pod via OVN-Kubernetes.",
-  "steps": [
-    {
-      "step": 1,
-      "sourceComponentId": "external-client",
-      "targetComponentId": "ingress-router-haproxy",
-      "description": "Client initiates connection; HAProxy terminates TLS at the Route layer."
-    },
-    {
-      "step": 2,
-      "sourceComponentId": "ingress-router-haproxy",
-      "targetComponentId": "ovs-bridge-br-int",
-      "description": "Traffic is forwarded into the OVN-Kubernetes host integration bridge."
-    },
-    {
-      "step": 3,
-      "sourceComponentId": "ovs-bridge-br-int",
-      "targetComponentId": "host-veth-pair",
-      "description": "OVS routes the packet through the host-side virtual Ethernet interface."
-    },
-    {
-      "step": 4,
-      "sourceComponentId": "host-veth-pair",
-      "targetComponentId": "pod-netns",
-      "description": "Packet crosses the boundary into the Pod's isolated Linux Network Namespace."
-    },
-    {
-      "step": 5,
-      "sourceComponentId": "pod-netns",
-      "targetComponentId": "container-process",
-      "description": "The application process (PID 1) accepts the cleartext socket connection."
-    }
-  ]
-}
-```
-
-## Next Action Items for the Agent
- 1. Scaffold the base web page with a sidebar on the left and a massive canvas workspace container on the right.
- 2. Build the visual layout of nested components using hardcoded CSS grids or flexboxes based on Section 1.
- 3. Wire the JSON event data model to trigger opacity updates and render connecting lines when an event is clicked.
-
----
-
-# Instruction 2: UI Layering & Progressive Disclosure
-
+ * **Framework & Data:** React or Vue.js 3, pulling from a decoupled events.json model.
+ * **Layout & Lines:** Tailwind CSS/custom styles linked with react-xarrows or leader-line to handle fluid, responsive vectors that auto-recalculate on viewport resize.
+# Instruction 2: Progressive Disclosure & On-Click Modals
 ## Objective
-Implement a multi-layered, zoomable visual interface that prevents cognitive overload by hiding deep Linux implementation details until explicitly requested by the user.
-
-## 1. Visibility Matrix (The 3-Stage Reveal)
-Configure the components into three distinct visibility states based on user interaction:
-
-| Component / Layer | Default View State | Expanded View State | Visual Style |
-|---|---|---|---|
-| **Layer 1: Cluster & Nodes** | **Visible** | **Visible** | Solid outer boundaries (Gray/Dark background) |
-| **Layer 2: Projects & Pods** | **Visible** | **Visible** | Solid logical boxes (Blue/Purple accents) |
-| **Layer 3: CRI-O Containers** | **Hidden** | **Visible** | Nested inside Pods (Dashed borders) |
-| **Layer 4: Linux Kernel Primitives** (netns, veth, cgroups) | **Hidden** | **Visible** | Nested deep inside Pods/Nodes (Green accents) |
-
-## 2. Interaction Triggers for Expanding Deep Layers
-The coding agent must programmatically transition hidden layers (Layers 3 and 4) from display: none or collapsed states into fully visible states via two triggers:
-
-### Trigger A: Direct User Selection (Drill-Down)
- * When a user **clicks** on a specific Pod box, smoothly expand the box or open a side panel to reveal its internal container runtime boundary and Linux kernel primitives (netns, veth mapping).
-
-### Trigger B: Event-Driven Automation
- * When an event is selected from the sidebar, the application must **automatically expand only the specific parent containers** involved in that workflow.
- * *Example:* If "Pod-to-Pod OVN Traffic" is selected, automatically expand the involved Pod boxes to reveal their inner Network Namespaces and host veth interfaces so connector arrows can map the path accurately. Unrelated layers (like Storage/PVs) remain collapsed.
-
-## 3. Visual Styling Rules
- * **Depth Cueing:** Use progressive background shading. Inner nested boxes must use a darker, contrasting background than their parent containers to create a distinct visual illusion of depth.
- * **Breadcrumb Navigation:** When deep layers are exposed, render a dynamic structural breadcrumb at the top of the workspace canvas (e.g., Cluster ➔ Node-01 ➔ Project: App ➔ Pod: Web ➔ Linux NetNS).
- * **Idle State:** When an event is active, dim all non-participating structural elements to opacity-30 or opacity-40 to maintain focus on the active data path.
-
----
-
-# Instruction 3: Interactive Object Inspector Sidebar
-
-## Objective
-Implement an "Object Inspector" slide-out panel or floating card that activates whenever a user clicks on any visual block in the blueprint canvas. This panel provides deep architectural context, dependency tracking, and real-world terminal verification commands.
-
-## 1. Metadata Schema (components.json)
-Every clickable box on the canvas must map to a standalone structural data entry following this exact JSON schema format:
+Isolate detailed Linux implementations (Namespaces, Cgroups, Processes) inside an interactive pop-up overlay to keep the main canvas streamlined and clean.
+## 1. Canvas Constraints
+Do not render box boundaries for OpenShift Projects or Kubernetes Namespaces on the primary overview. The main canvas traces layout containment strictly down to the [VirtualMachineInstance] level.
+## 2. Interactive Modal System
+An onClick mouse state event on any element container launches a centered, mobile-friendly pop-up modal rendering its structural metadata and host-level mappings:
+ * **For Pods ([Pod] / [Static Pod]):** Expose logical Namespace metadata, its isolated Linux Network Namespace (netns), host-side veth pair IDs, and cgroups slice allocation.
+ * **For Services ([systemd Service]):** Reveal systemd host configuration path details and parent host process metrics.
+ * **For VMs ([VirtualMachineInstance]):** Expose the host qemu-kvm runtime process, host-side virtual network tap configuration (tap0), and master cgroup resource blocks.
+# Instruction 3: Data Schemas
+## 1. Components Data Schema (components.json)
 ```json
 {
   "componentId": "pod-netns",
   "displayName": "Linux Network Namespace (netns)",
   "layer": "Linux Kernel Primitives",
-  "problemSolved": "Provides network virtualization and isolation. It gives each Pod a private routing table, IP address, and packet filtering space, preventing port conflicts on the host.",
+  "logicalContext": {
+    "openShiftProject": "e-commerce-prod",
+    "associatedObject": "Front-End Workload Instance"
+  },
+  "problemSolved": "Provides network virtualization and isolation inside the Guest RHCOS VM.",
   "interactions": [
-    "Attaches to a host-side veth pair to bridge traffic out of the namespace.",
-    "Provisioned and configured by the OVN-Kubernetes CNI plugin during pod creation."
+    "Attaches to a guest-side veth pair managed by the OVN-Kubernetes Guest Node Daemon.",
+    "Provisioned and configured by the CRI-O runtime via CNI instructions."
   ],
   "explorationCommands": [
-    "# Step 1: Find the target host PID of the container process\ncrictl inspect <container_id> | grep pid",
-    "# Step 2: Enter the isolated network namespace using the PID to view interfaces\nnsenter -t <PID> -n ip addr show"
+    "crictl inspect <container_id> | grep pid",
+    "nsenter -t <PID> -n ip addr show"
   ]
 }
-```
 
-## 2. UI & Interaction Requirements
- * **Trigger State:** Clicking any structural container box captures its unique componentId and sets the active component state.
- * **Component Feedback:** The clicked box on the canvas must immediately receive a distinct active border outline (e.g., a glowing ring or high-contrast border) to signal selection.
- * **The Inspector Panel Layout:** Render a clean, non-obtrusive right-side slide-out panel containing:
-   1. **Header:** Displays displayName and the corresponding layer category banner.
-   2. **Problem Solved Section:** A text block rendering the problemSolved string to explain architectural intent.
-   3. **Interactions List:** A bulleted loop rendering the items in the interactions array.
-   4. **Terminal Exploration Block:** A dark, monospaced code snippet container block displaying the commands in explorationCommands with a 1-click "Copy Code" clipboard button helper.
- * **Dismissal:** Provide an obvious close button (X) or allow clicking on the empty canvas background to clear the active selection and close the panel.
+```
+## 2. Event Workflow Schema (events.json)
+```json
+{
+  "eventId": "route-ingress-traffic",
+  "eventName": "External Ingress Traffic Flow via Route",
+  "description": "Tracing an inbound HTTPS request from an external web client down into an application pod runtime running inside a Guest KubeVirt VM.",
+  "steps": [
+    {
+      "step": 1,
+      "sourceComponentId": "external-client",
+      "targetComponentId": "guest-api-server",
+      "description": "Client establishes handshake with the isolated Guest API Server Instance running in the Management Master Node Zone."
+    },
+    {
+      "step": 2,
+      "sourceComponentId": "guest-api-server",
+      "targetComponentId": "management-ovs-bridge",
+      "description": "Traffic routes across the management overlay fabric, hitting the Open vSwitch service on the Management Worker Node."
+    },
+    {
+      "step": 3,
+      "sourceComponentId": "management-ovs-bridge",
+      "targetComponentId": "kubevirt-launcher",
+      "description": "OVS switches the network frames directly into the KubeVirt Launcher Container handling the virtual network tap."
+    },
+    {
+      "step": 4,
+      "sourceComponentId": "kubevirt-launcher",
+      "targetComponentId": "guest-worker-node-vm",
+      "description": "The packet passes through the virtual tap interface boundary, shifting context directly into the running Guest Worker Node Virtual Machine Instance."
+    },
+    {
+      "step": 5,
+      "sourceComponentId": "guest-worker-node-vm",
+      "targetComponentId": "guest-ovs-bridge",
+      "description": "The guest-resident Open vSwitch systemd service processes the frame and identifies the target workload container destination."
+    },
+    {
+      "step": 6,
+      "sourceComponentId": "guest-ovs-bridge",
+      "targetComponentId": "frontend-workload-pod",
+      "description": "The packet crosses the guest-side veth wire directly into the Front-End Workload Instance Pod where the application container processes it."
+    }
+  ]
+}
+
+```
+## Agent Execution Roadmap
+ 1. **Layout Grid Scaffolding:** Code a flexible viewport grid supporting the nested node architecture while observing strict width boundaries to guarantee that components can tile cleanly side-by-side on tight screens.
+ 2. **Modal Portaling:** Hook up the onClick interaction handlers to feed the modal pop-ups dynamically using components.json.
+ 3. **Vector Vectorization:** Wire up the animation path loops parsing events.json to project directional connector lines that dynamically morph as layouts compress across mobile profiles.
