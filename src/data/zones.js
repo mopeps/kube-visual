@@ -7,6 +7,9 @@ export const ZONES = [
     label: 'Client',
     color: 'var(--k-cyan)',
     colorVar: 'k-cyan',
+    // External to the cluster — hidden from the default overview, shown only
+    // when an active trace flow involves a node inside this zone.
+    traceOnly: true,
     nodes: [
       {
         id: 'external-client',
