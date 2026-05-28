@@ -2,7 +2,6 @@ export default function NodeCard({
   id,
   title,
   typePrefix,
-  badges = [],
   color,
   stepNum,
   isActive,
@@ -41,23 +40,6 @@ export default function NodeCard({
         </span>
       )}
       <div className="node-title" style={{ color }}>{title}</div>
-      {badges.length > 0 && (
-        <div className="node-badges">
-          {badges.map((b, i) => (
-            <span
-              key={i}
-              className="node-badge"
-              style={{
-                color: b.color,
-                borderColor: `${b.color}55`,
-                background: `${b.color}1a`,
-              }}
-            >
-              {b.label}
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

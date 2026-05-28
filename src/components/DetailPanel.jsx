@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import componentsData from '../data/components.json'
-import { COMPONENT_COLOR, COMPONENT_ZONE } from '../data/zones'
+import { COMPONENT_COLOR, COMPONENT_ZONE, COMPONENT_BADGES } from '../data/zones'
+import { BADGE_GLOSSARY } from '../data/badge-glossary'
 
 const KERNEL_PRIMITIVES = [
   { id: 'pod-netns',         label: 'Network Namespace' },
@@ -102,10 +103,12 @@ function KernelPrimitiveInline({ primitive }) {
 export default function DetailPanel({ componentId, onClose, onSelectComponent }) {
   const [copiedIndex, setCopiedIndex] = useState(null)
   const [expandedPrimitive, setExpandedPrimitive] = useState(null)
+  const [expandedBadge, setExpandedBadge] = useState(null)
 
   useEffect(() => {
     if (!componentId) return
     setExpandedPrimitive(null)
+    setExpandedBadge(null)
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -143,6 +146,65 @@ export default function DetailPanel({ componentId, onClose, onSelectComponent })
       <div className="detail-type" style={{ color }}>
         {zone?.label || component.layer}
       </div>
+
+      {(() => {
+        const badges = COMPONENT_BADGES[componentId] || []
+        if (!badges.length) return null
+        const explanation = expandedBadge ? BADGE_GLOSSARY[expandedBadge] : null
+        return (
+          <div className="detail-section">
+            <h4>Tags</h4>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: explanation ? 12 : 0 }}>
+              {badges.map((b) => {
+                const isOpen = expandedBadge === b.label
+                const hasExplanation = !!BADGE_GLOSSARY[b.label]
+                return (
+                  <button
+                    key={b.label}
+                    onClick={() => setExpandedBadge(isOpen ? null : b.label)}
+                    className="node-badge"
+                    style={{
+                      color: isOpen ? 'var(--bg)' : b.color,
+                      borderColor: isOpen ? b.color : `${b.color}66`,
+                      background: isOpen ? b.color : `${b.color}1a`,
+                      fontSize: '0.62rem',
+                      padding: '4px 10px',
+                      cursor: hasExplanation ? 'pointer' : 'default',
+                      fontFamily: 'inherit',
+                      transition: 'background 0.15s, color 0.15s',
+                      opacity: hasExplanation ? 1 : 0.6,
+                    }}
+                    onMouseEnter={e => {
+                      if (hasExplanation && !isOpen) e.currentTarget.style.background = `${b.color}35`
+                    }}
+                    onMouseLeave={e => {
+                      if (!isOpen) e.currentTarget.style.background = `${b.color}1a`
+                    }}
+                    title={hasExplanation ? 'Click for explanation' : undefined}
+                  >
+                    {b.label}
+                  </button>
+                )
+              })}
+            </div>
+            {explanation && (
+              <div
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 8,
+                  border: `1px solid ${(COMPONENT_BADGES[componentId].find(b => b.label === expandedBadge)?.color) || color}40`,
+                  background: 'rgba(0,0,0,0.35)',
+                  fontSize: '0.74rem',
+                  lineHeight: 1.7,
+                  color: 'var(--tx)',
+                }}
+              >
+                {explanation}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {component.logicalContext && (
         <div className="detail-section">

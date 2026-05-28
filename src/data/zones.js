@@ -297,3 +297,8 @@ export const COMPONENT_COLOR = Object.fromEntries(
 export const COMPONENT_ZONE = Object.fromEntries(
   allNodes.map(({ node, zone }) => [node.id, zone])
 )
+
+// Map componentId → badge array (for DetailPanel tag chips)
+export const COMPONENT_BADGES = Object.fromEntries(
+  allNodes.map(({ node }) => [node.id, node.badges || []])
+)
