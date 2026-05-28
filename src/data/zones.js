@@ -33,7 +33,89 @@ export const ZONES = [
         label: 'Bare Metal Master Node',
         color: 'var(--k-blue)',
         colorVar: 'k-blue',
+        // The master node's own host-level agents — the same node stack every
+        // bare metal node runs (mirrors the worker node), distinct from the
+        // guest control-plane Pods it also hosts.
+        nodes: [
+          {
+            id: 'kubelet-master',
+            title: 'Kubelet',
+            typePrefix: 'systemd',
+            badges: [{ label: 'CRI client', color: 'var(--k-blue)' }],
+          },
+          {
+            id: 'crio-master',
+            title: 'CRI-O',
+            typePrefix: 'systemd',
+            badges: [
+              { label: 'OCI', color: 'var(--k-blue)' },
+              { label: 'gRPC', color: 'var(--k-blue)' },
+            ],
+          },
+          {
+            id: 'ovs-master',
+            title: 'Open vSwitch',
+            typePrefix: 'systemd',
+            badges: [
+              { label: 'br-int', color: 'var(--k-blue)' },
+              { label: 'OpenFlow', color: 'var(--k-blue)' },
+            ],
+          },
+          {
+            id: 'ovn-node-master',
+            title: 'OVN-K8s Node',
+            typePrefix: 'Pod',
+            badges: [{ label: 'CNI', color: 'var(--k-blue)' }],
+          },
+        ],
         zones: [
+          {
+            // The management (bare metal) cluster's OWN control plane, run by
+            // the master kubelet as Static Pods from /etc/kubernetes/manifests.
+            // Not to be confused with the per-guest control plane namespace.
+            id: 'management-control-plane',
+            label: 'Management Control Plane · Static Pods',
+            color: 'var(--k-blue)',
+            colorVar: 'k-blue',
+            nodes: [
+              {
+                id: 'mgmt-kube-apiserver',
+                title: 'Kube API Server',
+                typePrefix: 'Static Pod',
+                badges: [
+                  { label: 'Static Manifest', color: 'var(--k-blue)' },
+                  { label: ':6443', color: 'var(--k-blue)' },
+                ],
+              },
+              {
+                id: 'mgmt-etcd',
+                title: 'Etcd',
+                typePrefix: 'Static Pod',
+                badges: [
+                  { label: 'Static Manifest', color: 'var(--k-blue)' },
+                  { label: 'Raft', color: 'var(--k-blue)' },
+                ],
+              },
+              {
+                id: 'mgmt-controller-manager',
+                title: 'Controller Manager',
+                typePrefix: 'Static Pod',
+                badges: [
+                  { label: 'Static Manifest', color: 'var(--k-blue)' },
+                  { label: 'Controllers', color: 'var(--k-blue)' },
+                ],
+              },
+              {
+                id: 'mgmt-scheduler',
+                title: 'Scheduler',
+                typePrefix: 'Static Pod',
+                badges: [
+                  { label: 'Static Manifest', color: 'var(--k-blue)' },
+                  { label: 'Bindings', color: 'var(--k-blue)' },
+                ],
+              },
+            ],
+          },
           {
             id: 'guest-cp-namespace',
             label: 'Guest Control Plane Namespace',

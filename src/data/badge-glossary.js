@@ -21,6 +21,8 @@ export const BADGE_GLOSSARY = {
     'Scheduler decisions written back to the API server as Binding objects, assigning a pending Pod to a specific node. Once bound, the kubelet on that node pulls and starts the containers.',
   'State Store':
     'etcd persists all Kubernetes cluster state as ordered key-value pairs. Every API object — Pods, Services, Secrets, ConfigMaps — is stored and replicated here.',
+  'Static Manifest':
+    'A Static Pod is defined by a YAML file in /etc/kubernetes/manifests on the node. The kubelet — not the scheduler — watches this directory and runs the Pod directly, which is how the management cluster bootstraps its own control plane before any API server is available.',
   'Raft':
     'Consensus algorithm used by etcd to replicate writes across cluster members. A write is only committed once a majority quorum acknowledges it, guaranteeing consistency under partial failures.',
   'HAProxy':
