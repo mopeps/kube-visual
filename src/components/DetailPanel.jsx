@@ -2,14 +2,7 @@ import { useEffect, useState } from 'react'
 import componentsData from '../data/components.json'
 import { COMPONENT_COLOR, COMPONENT_ZONE, COMPONENT_BADGES } from '../data/zones'
 import { BADGE_GLOSSARY } from '../data/badge-glossary'
-
-const KERNEL_PRIMITIVES = [
-  { id: 'pod-netns',         label: 'Network Namespace' },
-  { id: 'pod-cgroups',       label: 'cgroups v2' },
-  { id: 'container-process', label: 'PID 1 · Process' },
-]
-const KERNEL_IDS = new Set(KERNEL_PRIMITIVES.map(p => p.id))
-const KERNEL_COLOR = '#10b981'
+import { PRIMITIVES_BY_TYPE, SELF_PRIMITIVE_IDS } from '../data/primitives'
 
 function ExploreCommands({ commands, color }) {
   const [copiedIndex, setCopiedIndex] = useState(null)
@@ -65,36 +58,34 @@ function ExploreCommands({ commands, color }) {
   )
 }
 
-function KernelPrimitiveInline({ primitive }) {
-  const comp = componentsData.find(c => c.componentId === primitive.id)
-  if (!comp) return null
+function PrimitiveInline({ primitive, color }) {
   return (
     <div
       style={{
         marginTop: 8,
         padding: '10px 12px',
         borderRadius: 6,
-        border: `1px solid ${KERNEL_COLOR}40`,
-        background: `${KERNEL_COLOR}0d`,
+        border: `1px solid ${color}40`,
+        background: `${color}0d`,
       }}
     >
-      <div style={{ fontWeight: 600, fontSize: '0.72rem', color: KERNEL_COLOR, marginBottom: 4 }}>
-        {comp.displayName}
+      <div style={{ fontWeight: 600, fontSize: '0.72rem', color, marginBottom: 4 }}>
+        {primitive.label}
       </div>
       <p style={{ fontSize: '0.72rem', color: 'var(--tx)', margin: '0 0 8px' }}>
-        {comp.problemSolved}
+        {primitive.description}
       </p>
-      {comp.interactions?.length > 0 && (
+      {primitive.interactions?.length > 0 && (
         <ul style={{ margin: '0 0 8px', paddingLeft: 16 }}>
-          {comp.interactions.map((line, i) => (
+          {primitive.interactions.map((line, i) => (
             <li key={i} style={{ fontSize: '0.7rem', color: 'var(--tx-muted)', marginBottom: 2 }}>
               {line}
             </li>
           ))}
         </ul>
       )}
-      {comp.explorationCommands?.length > 0 && (
-        <ExploreCommands commands={comp.explorationCommands} color={KERNEL_COLOR} />
+      {primitive.commands?.length > 0 && (
+        <ExploreCommands commands={primitive.commands} color={color} />
       )}
     </div>
   )
@@ -121,7 +112,9 @@ export default function DetailPanel({ componentId, onClose, onSelectComponent })
 
   const color = COMPONENT_COLOR[componentId] || 'var(--k-cyan)'
   const zone = COMPONENT_ZONE[componentId]
-  const showKernelPrimitives = !KERNEL_IDS.has(componentId) && component.layer !== 'External'
+  const primitiveSet = SELF_PRIMITIVE_IDS.has(componentId) || component.layer === 'External'
+    ? null
+    : PRIMITIVES_BY_TYPE[component.typePrefix] || null
 
   const copy = (text, i) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -228,11 +221,11 @@ export default function DetailPanel({ componentId, onClose, onSelectComponent })
         </div>
       )}
 
-      {showKernelPrimitives && (
+      {primitiveSet && (
         <div className="detail-section">
-          <h4>Kernel Primitives</h4>
+          <h4>{primitiveSet.sectionTitle}</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {KERNEL_PRIMITIVES.map(p => {
+            {primitiveSet.items.map(p => {
               const isExpanded = expandedPrimitive === p.id
               return (
                 <button
@@ -240,9 +233,9 @@ export default function DetailPanel({ componentId, onClose, onSelectComponent })
                   onClick={() => setExpandedPrimitive(isExpanded ? null : p.id)}
                   className="node-badge"
                   style={{
-                    color: isExpanded ? 'var(--bg)' : KERNEL_COLOR,
-                    borderColor: KERNEL_COLOR,
-                    background: isExpanded ? KERNEL_COLOR : `${KERNEL_COLOR}1a`,
+                    color: isExpanded ? 'var(--bg)' : primitiveSet.color,
+                    borderColor: primitiveSet.color,
+                    background: isExpanded ? primitiveSet.color : `${primitiveSet.color}1a`,
                     fontSize: '0.62rem',
                     padding: '3px 8px',
                     cursor: 'pointer',
@@ -250,10 +243,10 @@ export default function DetailPanel({ componentId, onClose, onSelectComponent })
                     transition: 'background 0.15s, border-color 0.15s, color 0.15s',
                   }}
                   onMouseEnter={e => {
-                    if (!isExpanded) e.currentTarget.style.background = `${KERNEL_COLOR}35`
+                    if (!isExpanded) e.currentTarget.style.background = `${primitiveSet.color}35`
                   }}
                   onMouseLeave={e => {
-                    if (!isExpanded) e.currentTarget.style.background = `${KERNEL_COLOR}1a`
+                    if (!isExpanded) e.currentTarget.style.background = `${primitiveSet.color}1a`
                   }}
                 >
                   {p.label}
@@ -262,7 +255,10 @@ export default function DetailPanel({ componentId, onClose, onSelectComponent })
             })}
           </div>
           {expandedPrimitive && (
-            <KernelPrimitiveInline primitive={KERNEL_PRIMITIVES.find(p => p.id === expandedPrimitive)} />
+            <PrimitiveInline
+              primitive={primitiveSet.items.find(p => p.id === expandedPrimitive)}
+              color={primitiveSet.color}
+            />
           )}
         </div>
       )}
