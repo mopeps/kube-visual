@@ -74,29 +74,17 @@
       {
         "step": 4,
         "sourceComponentId": "guest-api-server",
-        "targetComponentId": "konnectivity-server",
-        "description": "The Guest API Server needs to notify the guest kubelet inside the VM. The notification travels through the Konnectivity Server tunnel in the bare metal cluster."
+        "targetComponentId": "kubelet-guest",
+        "description": "The guest kubelet maintains its own outbound watch on the Guest API Server (via the exposed apiserver endpoint) and observes the newly bound Pod assigned to its node. The kubelet pulls its workload — the API Server never pushes to it, and this path does not use the Konnectivity tunnel (that tunnel only carries API-Server-initiated traffic such as exec/logs/port-forward)."
       },
       {
         "step": 5,
-        "sourceComponentId": "konnectivity-server",
-        "targetComponentId": "konnectivity-agent",
-        "description": "The Konnectivity Server relays the PodSpec through the persistent tunnel to the Konnectivity Agent running inside the Guest Worker Node VM."
+        "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "crio-guest",
+        "description": "Kubelet validates the spec and issues RunPodSandbox and CreateContainer gRPC calls to guest CRI-O, which pulls the image, sets up the cgroup hierarchy, and invokes the CNI plugin to provision the Pod's network namespace."
       },
       {
         "step": 6,
-        "sourceComponentId": "konnectivity-agent",
-        "targetComponentId": "kubelet-guest",
-        "description": "The Konnectivity Agent delivers the PodSpec to the guest kubelet. Kubelet validates the spec and instructs guest CRI-O to pull the image and create the container."
-      },
-      {
-        "step": 7,
-        "sourceComponentId": "kubelet-guest",
-        "targetComponentId": "crio-guest",
-        "description": "Guest CRI-O receives a RunPodSandbox and CreateContainer gRPC call, pulls the image, sets up the cgroup hierarchy, and invokes the CNI plugin to provision the Pod's network namespace."
-      },
-      {
-        "step": 8,
         "sourceComponentId": "crio-guest",
         "targetComponentId": "frontend-workload-pod",
         "description": "Guest CRI-O starts the container via runc. The workload process becomes PID 1 inside its namespaces, registers with the guest network, and the Pod transitions to Running status."
@@ -105,56 +93,56 @@
   },
   {
     "eventId": "hcp-provisioning",
-    "eventName": "HCP Control Plane Provisioning",
-    "description": "Tracing how the HyperShift Operator bootstraps a new Hosted Control Plane: creating the guest control-plane namespace, launching the Guest API Server and etcd, and establishing the Konnectivity tunnel to the first worker node.",
+    "eventName": "HCP Control Plane + NodePool Provisioning",
+    "description": "Tracing how a new Hosted Control Plane and its first KubeVirt worker come up: the HyperShift Operator reconciles the HostedCluster, the per-HCP control-plane-operator brings up etcd and the Guest API Server, and the NodePool is turned into a VirtualMachineInstance via Cluster API and the KubeVirt provider.",
     "steps": [
       {
         "step": 1,
         "sourceComponentId": "external-client",
-        "targetComponentId": "guest-api-server",
-        "description": "Platform admin applies a HostedCluster manifest via 'oc apply'. The Bare Metal API Server persists it and notifies the HyperShift Operator."
+        "targetComponentId": "mgmt-kube-apiserver",
+        "description": "Platform admin applies a HostedCluster and a NodePool manifest via 'oc apply'. These CRs live in the management (bare metal) cluster, so the Management Kube API Server persists them and notifies the HyperShift Operator."
       },
       {
         "step": 2,
-        "sourceComponentId": "guest-api-server",
+        "sourceComponentId": "mgmt-kube-apiserver",
         "targetComponentId": "hypershift-operator",
-        "description": "The HyperShift Operator reconciles the HostedCluster CR and begins provisioning: it creates the Dedicated Guest Control Plane Namespace and populates it with control-plane Deployments."
+        "description": "The HyperShift Operator (a cluster-wide singleton in the 'hypershift' namespace) reconciles the HostedCluster CR: it creates the dedicated HCP namespace and deploys the per-HCP control-plane-operator into it."
       },
       {
         "step": 3,
         "sourceComponentId": "hypershift-operator",
-        "targetComponentId": "etcd-static-pod",
-        "description": "HyperShift deploys the Etcd StatefulSet in the guest namespace. Once etcd is healthy and a quorum is established, the Guest API Server is allowed to start."
+        "targetComponentId": "control-plane-operator",
+        "description": "The control-plane-operator becomes the per-hosted-cluster owner of the guest control plane, reconciling each control-plane component (etcd, Guest API Server, OAuth, Konnectivity, Ignition) inside the HCP namespace."
       },
       {
         "step": 4,
-        "sourceComponentId": "hypershift-operator",
-        "targetComponentId": "konnectivity-server",
-        "description": "HyperShift deploys the Konnectivity Server. It starts listening for inbound tunnel connections from worker node agents before nodes are provisioned."
+        "sourceComponentId": "control-plane-operator",
+        "targetComponentId": "guest-etcd",
+        "description": "The control-plane-operator deploys the etcd StatefulSet. Once etcd reaches quorum it brings up the Guest API Server, OAuth Server, Konnectivity Server, and Ignition Server as Deployments."
       },
       {
         "step": 5,
         "sourceComponentId": "hypershift-operator",
-        "targetComponentId": "ignition-server",
-        "description": "HyperShift starts the Ignition Server to serve bootstrap configuration payloads to new worker nodes as they boot for the first time."
+        "targetComponentId": "capk-provider",
+        "description": "In parallel, the HyperShift Operator reconciles the NodePool into Cluster API objects (Cluster, MachineDeployment). The cluster-api-provider-kubevirt (CAPK) running in the HCP namespace requests a KubeVirt VirtualMachine for each desired replica."
       },
       {
         "step": 6,
-        "sourceComponentId": "ignition-server",
+        "sourceComponentId": "capk-provider",
         "targetComponentId": "kubevirt-launcher",
-        "description": "The first Guest Worker Node VM boots and fetches its Ignition config from the Ignition Server over TLS. The config contains kubelet certificates and bootstrap manifests."
+        "description": "CAPK creates a VirtualMachine object; KubeVirt's virt-handler on a bare metal worker node launches the virt-launcher Pod, which starts the qemu-kvm process and boots the RHCOS VirtualMachineInstance."
       },
       {
         "step": 7,
-        "sourceComponentId": "kubevirt-launcher",
-        "targetComponentId": "konnectivity-agent",
-        "description": "Once RHCOS boots inside the VM, the Konnectivity Agent starts and opens an outbound persistent tunnel to the Konnectivity Server in the bare metal cluster."
+        "sourceComponentId": "ignition-server",
+        "targetComponentId": "guest-worker-node-vm",
+        "description": "As RHCOS boots, the VM fetches its Ignition config from the Ignition Server over TLS. The payload carries the kubelet bootstrap certificates and machine config needed to join the guest cluster."
       },
       {
         "step": 8,
         "sourceComponentId": "konnectivity-agent",
         "targetComponentId": "kubelet-guest",
-        "description": "With the tunnel established, the guest kubelet starts and registers the node with the Guest API Server. The guest control plane is now fully operational."
+        "description": "Inside the VM the Konnectivity Agent dials out to the Konnectivity Server, and the guest kubelet registers the node with the Guest API Server. The worker goes Ready and the hosted cluster can schedule workloads."
       }
     ]
   }

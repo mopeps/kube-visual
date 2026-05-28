@@ -68,44 +68,85 @@ export const ZONES = [
             typePrefix: 'Pod',
             badges: [{ label: 'CNI', color: 'var(--k-blue)' }],
           },
-          {
-            id: 'mgmt-kube-apiserver',
-            title: 'Kube API Server',
-            typePrefix: 'Static Pod',
-            badges: [
-              { label: 'Static Manifest', color: 'var(--k-blue)' },
-              { label: ':6443', color: 'var(--k-blue)' },
-            ],
-          },
-          {
-            id: 'mgmt-etcd',
-            title: 'Etcd',
-            typePrefix: 'Static Pod',
-            badges: [
-              { label: 'Static Manifest', color: 'var(--k-blue)' },
-              { label: 'Raft', color: 'var(--k-blue)' },
-            ],
-          },
-          {
-            id: 'mgmt-controller-manager',
-            title: 'Controller Manager',
-            typePrefix: 'Static Pod',
-            badges: [
-              { label: 'Static Manifest', color: 'var(--k-blue)' },
-              { label: 'Controllers', color: 'var(--k-blue)' },
-            ],
-          },
-          {
-            id: 'mgmt-scheduler',
-            title: 'Scheduler',
-            typePrefix: 'Static Pod',
-            badges: [
-              { label: 'Static Manifest', color: 'var(--k-blue)' },
-              { label: 'Bindings', color: 'var(--k-blue)' },
-            ],
-          },
         ],
         zones: [
+          {
+            id: 'mgmt-static-pods',
+            label: 'Management Control Plane · Static Pods',
+            color: 'var(--k-blue)',
+            colorVar: 'k-blue',
+            dashed: true,
+            // The management (bare metal) cluster's OWN control plane, run by the
+            // master kubelet from /etc/kubernetes/manifests — distinct from the
+            // per-guest control plane in the namespace zone below.
+            nodes: [
+              {
+                id: 'mgmt-kube-apiserver',
+                title: 'Kube API Server',
+                typePrefix: 'Static Pod',
+                badges: [
+                  { label: 'Static Manifest', color: 'var(--k-blue)' },
+                  { label: ':6443', color: 'var(--k-blue)' },
+                ],
+              },
+              {
+                id: 'mgmt-etcd',
+                title: 'Etcd',
+                typePrefix: 'Static Pod',
+                badges: [
+                  { label: 'Static Manifest', color: 'var(--k-blue)' },
+                  { label: 'Raft', color: 'var(--k-blue)' },
+                ],
+              },
+              {
+                id: 'mgmt-controller-manager',
+                title: 'Controller Manager',
+                typePrefix: 'Static Pod',
+                badges: [
+                  { label: 'Static Manifest', color: 'var(--k-blue)' },
+                  { label: 'Controllers', color: 'var(--k-blue)' },
+                ],
+              },
+              {
+                id: 'mgmt-scheduler',
+                title: 'Scheduler',
+                typePrefix: 'Static Pod',
+                badges: [
+                  { label: 'Static Manifest', color: 'var(--k-blue)' },
+                  { label: 'Bindings', color: 'var(--k-blue)' },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'hypershift-namespace',
+            label: 'HyperShift · hypershift namespace',
+            color: 'var(--k-blue)',
+            colorVar: 'k-blue',
+            dashed: true,
+            // Cluster-wide management operator + the top-level HCP API objects.
+            // One HyperShift Operator serves every HostedCluster on the mgmt cluster.
+            nodes: [
+              {
+                id: 'hypershift-operator',
+                title: 'HyperShift Operator',
+                typePrefix: 'Pod',
+                badges: [{ label: 'cluster-wide', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'hostedcluster-cr',
+                title: 'HostedCluster',
+                typePrefix: 'Custom Resource',
+                badges: [{ label: 'HostedCluster CR', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'nodepool-cr',
+                title: 'NodePool',
+                typePrefix: 'Custom Resource',
+                badges: [{ label: 'NodePool CR', color: 'var(--k-blue)' }],
+              },
+            ],
+          },
           {
             id: 'guest-cp-namespace',
             label: 'Guest Control Plane Namespace',
@@ -114,16 +155,28 @@ export const ZONES = [
             dashed: true,
             nodes: [
               {
-                id: 'hypershift-operator',
-                title: 'HyperShift Operator',
+                id: 'control-plane-operator',
+                title: 'Control Plane Operator',
                 typePrefix: 'Pod',
-                badges: [{ label: 'HostedCluster CR', color: 'var(--k-sky)' }],
+                badges: [{ label: 'per-HCP owner', color: 'var(--k-sky)' }],
               },
               {
                 id: 'cluster-version-operator',
                 title: 'Cluster Version Operator',
                 typePrefix: 'Pod',
                 badges: [{ label: 'ClusterVersion CR', color: 'var(--k-sky)' }],
+              },
+              {
+                id: 'capi-manager',
+                title: 'Cluster API Manager',
+                typePrefix: 'Pod',
+                badges: [{ label: 'Machines', color: 'var(--k-sky)' }],
+              },
+              {
+                id: 'capk-provider',
+                title: 'CAPI Provider (KubeVirt)',
+                typePrefix: 'Pod',
+                badges: [{ label: 'VirtualMachine', color: 'var(--k-sky)' }],
               },
               {
                 id: 'guest-api-server',
@@ -153,11 +206,11 @@ export const ZONES = [
                 badges: [{ label: 'Bindings', color: 'var(--k-sky)' }],
               },
               {
-                id: 'etcd-static-pod',
-                title: 'Etcd',
-                typePrefix: 'Static Pod',
+                id: 'guest-etcd',
+                title: 'Guest Etcd',
+                typePrefix: 'Pod',
                 badges: [
-                  { label: 'State Store', color: 'var(--k-sky)' },
+                  { label: 'StatefulSet', color: 'var(--k-sky)' },
                   { label: 'Raft', color: 'var(--k-sky)' },
                 ],
               },
@@ -193,18 +246,6 @@ export const ZONES = [
                 title: 'Ignition Server',
                 typePrefix: 'Pod',
                 badges: [{ label: 'Bootstrap', color: 'var(--k-sky)' }],
-              },
-              {
-                id: 'guest-coredns',
-                title: 'Guest CoreDNS',
-                typePrefix: 'Pod',
-                badges: [{ label: 'DNS :53', color: 'var(--k-sky)' }],
-              },
-              {
-                id: 'cluster-monitoring',
-                title: 'Cluster Monitoring',
-                typePrefix: 'Pod',
-                badges: [{ label: 'Prometheus', color: 'var(--k-sky)' }],
               },
             ],
           },
@@ -245,6 +286,12 @@ export const ZONES = [
             title: 'OVN-K8s Node',
             typePrefix: 'Pod',
             badges: [{ label: 'CNI', color: 'var(--k-blue-worker)' }],
+          },
+          {
+            id: 'virt-handler',
+            title: 'KubeVirt virt-handler',
+            typePrefix: 'Pod',
+            badges: [{ label: 'VMI node agent', color: 'var(--k-blue-worker)' }],
           },
         ],
         zones: [
@@ -348,6 +395,12 @@ export const ZONES = [
                       { label: 'e-commerce-prod', color: 'var(--k-green)' },
                       { label: ':3000', color: 'var(--k-green)' },
                     ],
+                  },
+                  {
+                    id: 'cluster-monitoring',
+                    title: 'Cluster Monitoring',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'Prometheus', color: 'var(--k-green)' }],
                   },
                 ],
               },
