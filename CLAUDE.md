@@ -1,9 +1,8 @@
 # kube-visual
 
 Frontend-only React app that visualises an OpenShift **Hosted Control Plane (HCP)**
-cluster as a nested stack of **zones** (Client → Management Cluster Context → Master
-Node → Guest Control Plane Namespace + Worker Node → KubeVirt Launcher → Guest VMI)
-and traces event-driven flows down to Linux kernel primitives.
+cluster as a nested stack of **zones** and traces event-driven flows down to Linux
+kernel primitives. (Full topology lives in `ARCHITECTURE.md`.)
 Deployed to GitHub Pages on every push to `main`.
 
 ## Reference docs (read these first)
@@ -21,7 +20,7 @@ Deployed to GitHub Pages on every push to `main`.
 |---|---|
 | Framework | React 19 |
 | Build | Vite 8 |
-| Styling | Tailwind CSS 3 + CSS variables in `src/index.css` (`--k-cyan`, `--k-sky`, `--k-purple`, `--k-amber`, `--k-green`, `--packet`) |
+| Styling | Tailwind CSS 3 + CSS variables in `src/index.css` (`--k-*` zone accents, `--packet`) |
 | Layout | Flex-wrap zones — nodes have `min-width 180px / max-width 300px` and reflow as the viewport resizes |
 | Data | Static JSON — `src/data/events.json`, `src/data/components.json`, plus `src/data/zones.js` which maps components to zones + cosmetic metadata |
 
@@ -68,10 +67,9 @@ src/
 - **`ArrowOverlay` positions paths via `document.getElementById(componentId)`.** Every
   NodeCard renders its `id` as the DOM `id`, so each `componentId` must be unique in the
   DOM at render time or its connector step is silently dropped.
-- **Adding a new component** means: a new entry in `components.json` (with `typePrefix`,
-  and `logicalContext` for workload pods/VMIs), a node in the correct zone in
-  `data/zones.js`, and ideally KIND/PRIMITIVE/icon mappings in `LinuxInternalsTab.jsx` /
-  `ObjectMapTab.jsx`. Keep all of this consistent with `ARCHITECTURE.md`.
 - **`.claude/skills/*` predates this redesign** and still references the
   previous tmux/Catppuccin design (`ComponentBox`, `PodLayer`, `ArrowOverlay`).
   Treat those skills as historical context until they are refreshed.
+
+> Adding a new component? See **"Adding a New Component"** in `ARCHITECTURE.md` for the
+> exact files and fields to touch.

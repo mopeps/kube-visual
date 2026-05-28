@@ -140,6 +140,25 @@ The workspace viewport canvas must render this exact structural hierarchy:
 }
 
 ```
+## Adding a New Component
+
+Adding a component touches several places — keep them in sync:
+
+1. **`src/data/components.json`** — new entry with `componentId`, `displayName`, `layer`,
+   `typePrefix` (e.g. `Pod`, `Static Pod`, `systemd`, `VirtualMachineInstance`),
+   `problemSolved`, `interactions[]`, `explorationCommands[]`. Add `logicalContext`
+   (`openShiftProject` + `associatedObject`) for workload pods and VMIs.
+2. **`src/data/zones.js`** — add a node (with `id`, `title`, `typePrefix`, `badges`) to
+   the correct zone in the recursive `ZONES` tree. `COMPONENT_COLOR` / `COMPONENT_ZONE`
+   derive automatically from the tree.
+3. **`src/components/LinuxInternalsTab.jsx`** / **`ObjectMapTab.jsx`** — add
+   KIND / PRIMITIVE / icon mappings if the component should surface in those tabs.
+4. **`src/data/events.json`** — reference the new `componentId` in any flow steps that
+   should highlight it and draw connectors to/from it.
+
+The `componentId` must be unique: `ArrowOverlay` locates nodes via
+`document.getElementById(componentId)`, so a duplicate id silently drops connector steps.
+
 ## Agent Implementation Strategy
  1. **Layout Grid Scaffolding:** Code a highly flexible viewport grid supporting the multi-tier nested node tree. Ensure strict sub-component scale limits to guarantee parts can tile side-by-side on mobile devices.
  2. **Modal Portaling:** Connect global onClick handlers across canvas components to mount data-driven pop-ups fed by components.json.
