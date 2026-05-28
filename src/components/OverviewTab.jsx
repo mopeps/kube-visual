@@ -15,6 +15,13 @@ function buildStepNumMap(activeEvent) {
   return map
 }
 
+// All node ids within a zone subtree (used to decide trace-only visibility).
+function collectZoneNodeIds(zone, ids = []) {
+  zone.nodes?.forEach(n => ids.push(n.id))
+  zone.zones?.forEach(z => collectZoneNodeIds(z, ids))
+  return ids
+}
+
 export default function OverviewTab({
   activeEvent,
   activeComponentIds,
@@ -23,6 +30,13 @@ export default function OverviewTab({
   const canvasRef = useRef(null)
   const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
+
+  // Trace-only zones (e.g. the external Client) stay hidden until an active
+  // trace flow actually references a node inside them.
+  const visibleZones = ZONES.filter(zone =>
+    !zone.traceOnly ||
+    collectZoneNodeIds(zone).some(id => activeComponentIds?.has?.(id))
+  )
 
   function renderZone(zone, depth = 0) {
     return (
@@ -63,7 +77,7 @@ export default function OverviewTab({
       className="border border-border-w rounded-lg overflow-visible"
       style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
     >
-      {ZONES.map(zone => renderZone(zone))}
+      {visibleZones.map(zone => renderZone(zone))}
       <ArrowOverlay activeEvent={activeEvent} canvasRef={canvasRef} />
     </div>
   )
