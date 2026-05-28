@@ -1,61 +1,72 @@
 
-# AI Coding Agent Instructions
-This document defines the architectural specifications and data models for building **kube-visual**—an interactive, frontend-only web blueprint mapping OpenShift Hosted Control Planes (HCP) to their underlying systems infrastructure.
-# Instruction 1: Multitier Cluster Topology Canvas & Mobile Optimization
-## Project Goal
-Build a frontend-only interactive layout providing a nested visual mapping of an OpenShift Management Cluster hosting a Client Cluster (HCP topology), tracing communication flows based on user-selected infrastructure events.
-## 1. UI Structural & Mobile Responsiveness Rules
- * **Nomenclature:** Use Context / Zone for macro physical/virtual infrastructure, Container / Instance for runtime isolation, and ensure every element line begins with its exact API/system type in square brackets ([Pod], [Static Pod], [systemd Service]).
- * **Mobile-First Sizing:** The application must deliver excellent usability on mobile displays. Scale down individual block dimensions so that **at least two instances can sit side-by-side** without breaking layout integrity or clipping text strings when viewed on mobile screen width dimensions.
-### Component Nesting Map
-The main workspace viewport must render this exact structural hierarchy:
+# AI Coding Agent Instructions: kube-visual Blueprint Tool
+This document defines the structural specifications, component hierarchies, and data models for building **kube-visual**—an interactive, frontend-only web-based architectural map of OpenShift Hosted Control Planes (HCP).
+## 1. UI Structural Nomenclature & Multitier Canvas Layout
+### Layout & Sizing Rules
+ * **Nomenclature:** Use Context / Zone for macro physical/virtual infrastructure layers and Container / Instance for platform runtime isolation boundaries.
+ * **Prefix System:** Every line on the canvas must explicitly start with its exact system or API object classification in square brackets ([Pod], [Static Pod], [systemd Service]).
+ * **Mobile-First Footprint:** Minimize individual block dimensions. The UI layout tree components must compress cleanly so that **at least two instances sit side-by-side** without clipping content strings when viewed on compact mobile display widths.
+### Component Nesting Structure
+The workspace viewport canvas must render this exact structural hierarchy:
 ```text
 [Management Cluster Context]
   │
   ├── [Management Master Node Zone]
+  │     │
   │     └── [Dedicated Guest Control Plane Namespace Zone]
+  │           │   // Core Management, Lifecycles & Operators
+  │           ├── [Pod] HyperShift Operator Instance
+  │           ├── [Pod] Cluster Version Operator (CVO) Instance
+  │           │
+  │           │   // Guest API, State & Authentication Engines
   │           ├── [Pod] Guest API Server Instance
+  │           ├── [Pod] Guest OAuth Server Instance
   │           ├── [Pod] Guest Controller Manager Instance
   │           ├── [Pod] Guest Kube-Scheduler Instance
-  │           ├── [Pod] Cluster Version Operator (CVO) Instance
+  │           ├── [Static Pod] Etcd State Instance
+  │           │
+  │           │   // Ingress Control, Networking & Proxy Systems
+  │           ├── [Pod] Shared Ingress Proxy Instance
   │           ├── [Pod] OVN-Kubernetes Master Control Instance
-  │           └── [Static Pod] Etcd State Instance
+  │           ├── [Pod] Cloud Controller Manager (CCM) Instance
+  │           ├── [Pod] Konnectivity Server Instance
+  │           │
+  │           │   // Infrastructure Tooling & Telemetry
+  │           ├── [Pod] Ignition Server Instance
+  │           ├── [Pod] Guest CoreDNS Instance
+  │           └── [Pod] Cluster User Workload Monitoring Instance
   │
   └── [Management Worker Node Zone]
         ├── [systemd Service] Kubelet (Host Resident Node Manager)
         ├── [systemd Service] CRI-O (Host Resident Container Engine)
         ├── [systemd Service] Open vSwitch (Host Native Data Path)
-        ├── [Pod] OVN-Kubernetes Node Instance (Plumbs Host Network)
+        ├── [Pod] OVN-Kubernetes Node Instance
         │
         └── [Pod] KubeVirt Launcher Container
               └── [VirtualMachineInstance] Guest Worker Node
                     ├── [systemd Service] Kubelet (Guest Resident Node Manager)
                     ├── [systemd Service] CRI-O (Guest Resident Container Engine)
                     ├── [systemd Service] Open vSwitch (Guest Native Data Path)
-                    ├── [Pod] OVN-Kubernetes Guest Node Instance (Manages guest veth routing)
+                    ├── [Pod] OVN-Kubernetes Guest Node Instance
+                    ├── [Pod] Konnectivity Agent Instance
+                    ├── [Pod] CoreDNS Node Instance
+                    ├── [Pod] OpenShift Ingress Router Instance
                     │
+                    │   // Workload Instances sitting directly inside the VM
                     ├── [Pod] Front-End Workload Instance
                     └── [Pod] Back-End Workload Instance
 
 ```
-## 2. Interactivity Requirements
- * **Idle State:** All components are visible but set to a dimmed idle opacity state. No raw Linux kernel primitives are rendered by default.
- * **Event Selection:** Selecting an infrastructure workflow from the sidebar menu highlights participating objects to full opacity and dynamically renders ordered, sequential badged (①, ②, ③) connection vectors showing execution flow.
-## 3. Recommended Technical Stack
- * **Framework & Data:** React or Vue.js 3, pulling from a decoupled events.json model.
- * **Layout & Lines:** Tailwind CSS/custom styles linked with react-xarrows or leader-line to handle fluid, responsive vectors that auto-recalculate on viewport resize.
-# Instruction 2: Progressive Disclosure & On-Click Modals
-## Objective
-Isolate detailed Linux implementations (Namespaces, Cgroups, Processes) inside an interactive pop-up overlay to keep the main canvas streamlined and clean.
-## 1. Canvas Constraints
-Do not render box boundaries for OpenShift Projects or Kubernetes Namespaces on the primary overview. The main canvas traces layout containment strictly down to the [VirtualMachineInstance] level.
-## 2. Interactive Modal System
-An onClick mouse state event on any element container launches a centered, mobile-friendly pop-up modal rendering its structural metadata and host-level mappings:
- * **For Pods ([Pod] / [Static Pod]):** Expose logical Namespace metadata, its isolated Linux Network Namespace (netns), host-side veth pair IDs, and cgroups slice allocation.
- * **For Services ([systemd Service]):** Reveal systemd host configuration path details and parent host process metrics.
- * **For VMs ([VirtualMachineInstance]):** Expose the host qemu-kvm runtime process, host-side virtual network tap configuration (tap0), and master cgroup resource blocks.
-# Instruction 3: Data Schemas
-## 1. Components Data Schema (components.json)
+## 2. Dynamic Interactivity & Progressive Disclosure
+ * **Default State:** All topology components are visible but set to a dimmed idle opacity state. Do not render raw Linux kernel primitives (netns, cgroups, host PIDs) or Project/Namespace boundaries on the main view.
+ * **Event Selection Integration:** Selecting an infrastructure workflow parses events.json, transitions participating objects to full opacity, and dynamically overlays ordered, numbered, directional connecting vectors (①, ②, ③) showing execution paths. Vector lines must auto-recalculate paths on window resize.
+ * **Interactive Modal System:** Clicking any structural component container opens a mobile-friendly overlay pop-up modal serving progressive metadata disclosures:
+   * **Workload Pods:** Expose logical OpenShift Project metadata, isolated Linux Network Namespace (netns), host-side veth pair IDs, and cgroups slice boundaries.
+   * **systemd Services:** Reveal corresponding host service unit configuration paths and tracking metrics.
+   * **VirtualMachineInstance:** Expose the host qemu-kvm process execution details, host-side virtual network tap configuration (tap0), and master cgroup runtime boundaries.
+   * **Guest Controller Manager:** Reveal internal control loops (NodeLifecycleController, EndpointController, etc.) running inside the binary.
+## 3. Reference Data Schemas
+### Metadata Schema (components.json)
 ```json
 {
   "componentId": "pod-netns",
@@ -77,7 +88,7 @@ An onClick mouse state event on any element container launches a centered, mobil
 }
 
 ```
-## 2. Event Workflow Schema (events.json)
+### Event Workflow Schema (events.json)
 ```json
 {
   "eventId": "route-ingress-traffic",
@@ -124,7 +135,7 @@ An onClick mouse state event on any element container launches a centered, mobil
 }
 
 ```
-## Agent Execution Roadmap
- 1. **Layout Grid Scaffolding:** Code a flexible viewport grid supporting the nested node architecture while observing strict width boundaries to guarantee that components can tile cleanly side-by-side on tight screens.
- 2. **Modal Portaling:** Hook up the onClick interaction handlers to feed the modal pop-ups dynamically using components.json.
- 3. **Vector Vectorization:** Wire up the animation path loops parsing events.json to project directional connector lines that dynamically morph as layouts compress across mobile profiles.
+## Agent Implementation Strategy
+ 1. **Layout Grid Scaffolding:** Code a highly flexible viewport grid supporting the multi-tier nested node tree. Ensure strict sub-component scale limits to guarantee parts can tile side-by-side on mobile devices.
+ 2. **Modal Portaling:** Connect global onClick handlers across canvas components to mount data-driven pop-ups fed by components.json.
+ 3. **Vector Vectorization:** Implement react-xarrows or leader-line rendering modules to capture bounding coordinates of active IDs from events.json and cleanly project adaptive connectors.
