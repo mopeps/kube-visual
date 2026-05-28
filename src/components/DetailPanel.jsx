@@ -8,9 +8,9 @@ const KERNEL_PRIMITIVES = [
   { id: 'container-process', label: 'PID 1 · Process' },
 ]
 const KERNEL_IDS = new Set(KERNEL_PRIMITIVES.map(p => p.id))
-const KERNEL_COLOR = 'var(--k-green)'
+const KERNEL_COLOR = '#10b981'
 
-export default function DetailPanel({ componentId, onClose }) {
+export default function DetailPanel({ componentId, onClose, onSelectComponent }) {
   const [copiedIndex, setCopiedIndex] = useState(null)
 
   useEffect(() => {
@@ -121,8 +121,9 @@ export default function DetailPanel({ componentId, onClose }) {
           <h4>Kernel Primitives</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {KERNEL_PRIMITIVES.map(p => (
-              <span
+              <button
                 key={p.id}
+                onClick={() => onSelectComponent?.(p.id)}
                 className="node-badge"
                 style={{
                   color: KERNEL_COLOR,
@@ -130,10 +131,21 @@ export default function DetailPanel({ componentId, onClose }) {
                   background: `${KERNEL_COLOR}1a`,
                   fontSize: '0.62rem',
                   padding: '3px 8px',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'background 0.15s, border-color 0.15s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = `${KERNEL_COLOR}35`
+                  e.currentTarget.style.borderColor = KERNEL_COLOR
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = `${KERNEL_COLOR}1a`
+                  e.currentTarget.style.borderColor = `${KERNEL_COLOR}55`
                 }}
               >
                 {p.label}
-              </span>
+              </button>
             ))}
           </div>
         </div>
