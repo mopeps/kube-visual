@@ -25,7 +25,7 @@ export default {
 
         // Zone accents — top-to-bottom gradient through the stack
         'k-cyan':   '#00e5ff',   // External client
-        'k-blue':   '#2563eb',   // Bare metal infrastructure
+        'k-blue':   '#3b82f6',   // Bare metal infrastructure
         'k-sky':    '#38bdf8',   // Guest control plane namespace
         'k-teal':   '#14b8a6',   // KubeVirt launcher container
         'k-green':  '#22c55e',   // Guest worker node · VMI
