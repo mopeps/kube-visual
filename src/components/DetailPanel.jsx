@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react'
 import componentsData from '../data/components.json'
 import { COMPONENT_COLOR, COMPONENT_ZONE } from '../data/zones'
 
+const KERNEL_PRIMITIVES = [
+  { id: 'pod-netns',         label: 'Network Namespace' },
+  { id: 'pod-cgroups',       label: 'cgroups v2' },
+  { id: 'container-process', label: 'PID 1 · Process' },
+]
+const KERNEL_IDS = new Set(KERNEL_PRIMITIVES.map(p => p.id))
+const KERNEL_COLOR = 'var(--k-green)'
+
 export default function DetailPanel({ componentId, onClose }) {
   const [copiedIndex, setCopiedIndex] = useState(null)
 
@@ -19,6 +27,7 @@ export default function DetailPanel({ componentId, onClose }) {
 
   const color = COMPONENT_COLOR[componentId] || 'var(--k-cyan)'
   const zone = COMPONENT_ZONE[componentId]
+  const showKernelPrimitives = !KERNEL_IDS.has(componentId) && component.layer !== 'External'
 
   const copy = (text, i) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -29,6 +38,7 @@ export default function DetailPanel({ componentId, onClose }) {
 
   return (
     <aside className="detail-panel is-open" role="dialog" aria-label={component.displayName}>
+      <div className="detail-drag-handle" />
       <button className="detail-close" onClick={onClose} aria-label="Close (Esc)">
         ✕
       </button>
@@ -101,6 +111,29 @@ export default function DetailPanel({ componentId, onClose }) {
                   {cmd}
                 </pre>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showKernelPrimitives && (
+        <div className="detail-section">
+          <h4>Kernel Primitives</h4>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {KERNEL_PRIMITIVES.map(p => (
+              <span
+                key={p.id}
+                className="node-badge"
+                style={{
+                  color: KERNEL_COLOR,
+                  borderColor: `${KERNEL_COLOR}55`,
+                  background: `${KERNEL_COLOR}1a`,
+                  fontSize: '0.62rem',
+                  padding: '3px 8px',
+                }}
+              >
+                {p.label}
+              </span>
             ))}
           </div>
         </div>
