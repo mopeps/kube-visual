@@ -147,8 +147,25 @@ body::after {
     gap: 8px;
   }
 
+  /* Fluid 2-up grid: nodes grow to fill the row instead of hugging the left
+     edge at a fixed 128px. 4px = half the 8px row gap. */
   .node {
-    padding: 6px 7px 5px;
+    flex: 1 1 calc(50% - 4px);
+    width: auto;
+    padding: 8px 9px 7px;
+  }
+
+  .node-title    { font-size: 0.92rem; }
+  .node-subtitle { font-size: 0.7rem; }
+  .zone-label    { font-size: 0.66rem; }
+
+  .arrow-zone {
+    padding: 8px 12px;
+  }
+
+  .detail-panel {
+    padding: 20px 18px calc(28px + env(safe-area-inset-bottom));
+    max-height: 85dvh;
   }
 }
 
