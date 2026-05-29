@@ -15,7 +15,7 @@ export const PIPELINE_LAYERS = [
     order: 1,
     label: 'Logical Intent',
     colorVar: '--k-cyan',
-    icon: '📜',
+    icon: 'document',
     blurb: 'Declarative desired state — Deployments, ReplicaSets, Custom Resources, and the operators that reconcile them.',
   },
   {
@@ -23,7 +23,7 @@ export const PIPELINE_LAYERS = [
     order: 2,
     label: 'API object',
     colorVar: '--k-sky',
-    icon: '🔌',
+    icon: 'cube',
     blurb: 'The Pod object metadata and API surfaces (API servers, Services, ingress, etcd) that accept and persist intent.',
   },
   {
@@ -31,7 +31,7 @@ export const PIPELINE_LAYERS = [
     order: 3,
     label: 'Translation Engine',
     colorVar: '--k-amber',
-    icon: '⚙️',
+    icon: 'gear',
     blurb: 'Host daemons — systemd Kubelet, CRI-O, OVN/OVS — that translate API objects into running processes and wiring.',
   },
   {
@@ -39,7 +39,7 @@ export const PIPELINE_LAYERS = [
     order: 3.5,
     label: 'Consumed Resources',
     colorVar: '--k-purple',
-    icon: '🧩',
+    icon: 'layers',
     blurb: 'API objects injected into the Pod — Secrets, ConfigMaps, PersistentVolumeClaims — materialized as host files.',
   },
   {
@@ -47,7 +47,7 @@ export const PIPELINE_LAYERS = [
     order: 4,
     label: 'Linux Kernel Primitives',
     colorVar: '--k-green',
-    icon: '🧬',
+    icon: 'chip',
     blurb: 'The kernel realization — cgroups, namespaces, tmpfs RAM mounts, and block-device mounts under PID 1.',
   },
 ]

@@ -871,7 +871,7 @@ body::after {
   font-size: 0.58rem;
   flex: 0 0 auto;
 }
-.tree-band-icon { font-size: 0.82rem; }
+.tree-band-icon { display: inline-flex; align-items: center; font-size: 0.9rem; }
 .tree-band-title { line-height: 1; }
 
 .tree-group { margin-bottom: 2px; }
