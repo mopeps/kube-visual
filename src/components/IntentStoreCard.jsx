@@ -126,19 +126,8 @@ export default function IntentStoreCard({
               [{obj.typePrefix}]
             </span>
             <span className="node-title" style={{ color }}>{obj.title}</span>
-            {obj.badges?.length > 0 && (
-              <span className="node-badges">
-                {obj.badges.map((b) => (
-                  <span
-                    key={b.label}
-                    className="node-badge"
-                    style={{ color: b.color, borderColor: `${b.color}66`, background: `${b.color}1a` }}
-                  >
-                    {b.label}
-                  </span>
-                ))}
-              </span>
-            )}
+            {/* Badges (API-group tags) are intentionally hidden on the canvas to
+                keep intent objects compact; they still surface in the detail popup. */}
           </button>
         ))}
       </div>
