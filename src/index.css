@@ -404,7 +404,12 @@ body::after {
 }
 
 @media (max-width: 640px) {
-  .intent-object { flex: 1 1 100%; }
+  /* Two intent objects per row on mobile. Gap is 10px, so each takes half
+     the row minus half the gap; min-width:0 lets them shrink past content. */
+  .intent-object {
+    flex: 1 1 calc(50% - 5px);
+    min-width: 0;
+  }
 }
 
 /* ── Arrow row between zones ──────────────────────────────────────── */
