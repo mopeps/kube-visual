@@ -27,6 +27,8 @@ export default function OverviewTab({
   activeEvent,
   activeComponentIds,
   onSelectComponent,
+  activeStep,
+  onSelectStep,
 }) {
   const canvasRef = useRef(null)
   const [expandedStoreId, setExpandedStoreId] = useState(null)
@@ -113,7 +115,12 @@ export default function OverviewTab({
             ]
           : [renderZone(zone)]
       )}
-      <ArrowOverlay activeEvent={activeEvent} canvasRef={canvasRef} />
+      <ArrowOverlay
+        activeEvent={activeEvent}
+        canvasRef={canvasRef}
+        activeStep={activeStep}
+        onSelectStep={onSelectStep}
+      />
     </div>
   )
 }

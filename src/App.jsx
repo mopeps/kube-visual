@@ -6,6 +6,7 @@ import OverviewTab from './components/OverviewTab'
 import PacketFlowTab from './components/PacketFlowTab'
 import ObjectMapTab from './components/ObjectMapTab'
 import AncestryModal from './components/AncestryModal'
+import HopInspector from './components/HopInspector'
 
 const TABS = [
   { id: 'overview',   label: 'Architecture Overview' },
@@ -29,10 +30,13 @@ export default function App() {
     activeEvent,
     activeComponentId,
     activeComponentIds,
+    activeStep,
     selectEvent,
     clearEvent,
     selectComponent,
     clearComponent,
+    selectStep,
+    clearStep,
   } = useEventState()
 
   return (
@@ -57,6 +61,8 @@ export default function App() {
               activeEvent={activeEvent}
               activeComponentIds={activeComponentIds}
               onSelectComponent={selectComponent}
+              activeStep={activeStep}
+              onSelectStep={selectStep}
             />
           )}
           {tab === 'packetflow' && (
@@ -71,7 +77,7 @@ export default function App() {
         >
           💡 Click any node to inspect its YAML role, interactions, and copy-paste
           shell commands. Pick a trace flow above to follow a packet from
-          client to PID 1.
+          client to PID 1, then tap a numbered arrow to read about that hop.
         </p>
       </div>
 
@@ -79,6 +85,16 @@ export default function App() {
         componentId={activeComponentId}
         onClose={clearComponent}
       />
+
+      {/* Bottom-docked hop inspector — only meaningful where the arrows live. */}
+      {tab === 'overview' && (
+        <HopInspector
+          activeEvent={activeEvent}
+          activeStep={activeStep}
+          onSelectStep={selectStep}
+          onClose={clearStep}
+        />
+      )}
     </div>
   )
 }
