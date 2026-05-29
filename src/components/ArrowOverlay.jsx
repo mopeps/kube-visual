@@ -24,7 +24,7 @@ function buildPath(srcEl, tgtEl, canvasEl) {
   return { d: `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${tx} ${ty}`, midX, midY }
 }
 
-export default function ArrowOverlay({ activeEvent, canvasRef }) {
+export default function ArrowOverlay({ activeEvent, canvasRef, activeStep, onSelectStep }) {
   const [paths, setPaths] = useState([])
   const tickRef = useRef(0)
 
@@ -105,51 +105,63 @@ export default function ArrowOverlay({ activeEvent, canvasRef }) {
         </filter>
       </defs>
 
-      {paths.map(p => (
-        <g key={p.step}>
-          {/* glow layer */}
-          <path
-            d={p.d}
-            fill="none"
-            stroke={p.color}
-            strokeWidth="4"
-            strokeOpacity="0.18"
-            filter="url(#arrow-glow)"
-          />
-          {/* main connector */}
-          <path
-            d={p.d}
-            fill="none"
-            stroke={p.color}
-            strokeWidth="1.5"
-            strokeOpacity="0.75"
-            strokeDasharray="6 3"
-            markerEnd={`url(#arrow-${p.step})`}
-          />
-          {/* step badge */}
-          <circle
-            cx={p.midX}
-            cy={p.midY}
-            r="11"
-            fill="var(--bg-2)"
-            stroke={p.color}
-            strokeWidth="1.5"
-            strokeOpacity="0.8"
-          />
-          <text
-            x={p.midX}
-            y={p.midY}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontSize="9"
-            fontWeight="700"
-            fill={p.color}
-            style={{ fontFamily: 'var(--font-mono, monospace)' }}
-          >
-            {p.step}
-          </text>
-        </g>
-      ))}
+      {paths.map(p => {
+        const isSelected = activeStep === p.step
+        // When a hop is selected, fade the others so the chosen one stands out.
+        const dimmed = activeStep != null && !isSelected
+        return (
+          <g key={p.step} opacity={dimmed ? 0.28 : 1} style={{ transition: 'opacity 0.2s' }}>
+            {/* glow layer */}
+            <path
+              d={p.d}
+              fill="none"
+              stroke={p.color}
+              strokeWidth={isSelected ? 6 : 4}
+              strokeOpacity={isSelected ? 0.32 : 0.18}
+              filter="url(#arrow-glow)"
+            />
+            {/* main connector */}
+            <path
+              d={p.d}
+              fill="none"
+              stroke={p.color}
+              strokeWidth={isSelected ? 2.4 : 1.5}
+              strokeOpacity={isSelected ? 1 : 0.75}
+              strokeDasharray="6 3"
+              markerEnd={`url(#arrow-${p.step})`}
+            />
+            {/* step badge — clickable to inspect this hop */}
+            <g
+              style={{ cursor: onSelectStep ? 'pointer' : 'default', pointerEvents: 'auto' }}
+              onClick={onSelectStep ? () => onSelectStep(p.step) : undefined}
+            >
+              {/* enlarged transparent hit target for easier tapping on mobile */}
+              <circle cx={p.midX} cy={p.midY} r="16" fill="transparent" />
+              <circle
+                cx={p.midX}
+                cy={p.midY}
+                r={isSelected ? 13 : 11}
+                fill="var(--bg-2)"
+                stroke={p.color}
+                strokeWidth={isSelected ? 2.2 : 1.5}
+                strokeOpacity={isSelected ? 1 : 0.8}
+              />
+              <text
+                x={p.midX}
+                y={p.midY}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize="9"
+                fontWeight="700"
+                fill={p.color}
+                style={{ fontFamily: 'var(--font-mono, monospace)' }}
+              >
+                {p.step}
+              </text>
+            </g>
+          </g>
+        )
+      })}
     </svg>
   )
 }

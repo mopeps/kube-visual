@@ -854,6 +854,114 @@ body::after {
   margin: 0 auto 18px;
   display: none; /* shown on mobile only */
 }
+
+/* ── Hop inspector ─────────────────────────────────────────────────────
+   A compact, non-modal panel docked at the bottom of the viewport. It does
+   NOT dim the page or lock scrolling, and is content-height (capped), so the
+   architecture diagram behind it stays visible — you keep spatial awareness
+   of where the hop sits in the flow. */
+.hop-inspector {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: calc(100% - 24px);
+  max-width: 640px;
+  max-height: 45vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  z-index: 100;
+  background: color-mix(in srgb, var(--bg-2) 94%, transparent);
+  border: 1px solid var(--border-w);
+  border-top: 2px solid var(--hop-accent, var(--k-cyan));
+  border-radius: 12px;
+  padding: 14px 16px 16px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+}
+.hop-inspector-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hop-inspector-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.hop-inspector-route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--tx-bright);
+}
+.hop-inspector-arrow { color: var(--tx-dim); }
+.hop-inspector-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.hop-inspector-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--tx-muted);
+  margin-right: 2px;
+}
+.hop-inspector-nav,
+.hop-inspector-close {
+  background: none;
+  border: 1px solid var(--border-w);
+  color: var(--tx-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s;
+}
+.hop-inspector-nav:hover:not(:disabled),
+.hop-inspector-close:hover {
+  color: var(--tx-bright);
+  border-color: var(--tx-muted);
+}
+.hop-inspector-nav:disabled { opacity: 0.3; cursor: default; }
+.hop-inspector-layers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--tx-muted);
+}
+.hop-inspector-desc {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--tx-muted);
+}
 /* ── Manifest → Kernel blueprint tree ──────────────────────────────── */
 /* Dense, monospace ASCII-style tree. One line per node; the short note sits
    dimmed beneath, and deeper detail unfolds on click. No card boxes.
