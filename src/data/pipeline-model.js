@@ -4,7 +4,7 @@
 //
 // The kernel/OS/virtualisation rows are derived from the existing
 // PRIMITIVES_BY_TYPE data (keyed by typePrefix), so Pods, Static Pods, systemd
-// daemons, and VMIs all get a meaningful Linux-primitive layer for free.
+// services, and VMIs all get a meaningful Linux-primitive layer for free.
 // Workload pods additionally carry hand-authored ancestry / consumedResources /
 // kernelRealization that enrich the upper bands.
 //
@@ -174,8 +174,8 @@ function podBands(component) {
 }
 
 function systemdBands(component) {
-  // Host daemons descend through the same four bands as a Pod — the symmetry is
-  // the point. The daemon's *intent* is not the .service file itself but a
+  // Host systemd services descend through the same four bands as a Pod — the
+  // symmetry is the point. The service's *intent* is not the .service file itself but a
   // MachineConfig reconciled by the Machine Config Operator and bridged onto the
   // host by Ignition at first boot. The on-disk unit is the concrete Runtime
   // Object (the Pod-equivalent) that systemd PID 1 then supervises.
@@ -222,7 +222,7 @@ function systemdBands(component) {
           bullets: [
             'Tracks unit state: activating → active → failed',
             'Applies Restart= / RestartSec= recovery policy',
-            'Places the daemon in its own cgroup slice',
+            'Places the service in its own cgroup slice',
           ],
         },
       }],

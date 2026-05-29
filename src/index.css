@@ -819,6 +819,44 @@ body::after {
   font-weight: 600;
 }
 
+/* ── Inline object tags ────────────────────────────────────────────── */
+/* OpenShift / K8s object references lifted out of prose into chips. A
+   navigable chip (button) is tinted with the referenced node's zone accent and
+   opens that node on click; a static chip (span) is a muted, dashed highlight
+   for API objects that aren't drawn on the canvas. `--object-tag-color` is set
+   per-chip inline. */
+.object-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.84em;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 1px 6px;
+  margin: 0 1px;
+  border-radius: 4px;
+  vertical-align: baseline;
+  white-space: nowrap;
+  border: 1px solid color-mix(in srgb, var(--object-tag-color, var(--tx-muted)) 45%, transparent);
+  background: color-mix(in srgb, var(--object-tag-color, var(--tx-muted)) 13%, transparent);
+  color: var(--object-tag-color, var(--tx));
+}
+
+button.object-tag {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+button.object-tag:hover {
+  background: color-mix(in srgb, var(--object-tag-color) 26%, transparent);
+  border-color: var(--object-tag-color);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--object-tag-color) 32%, transparent);
+}
+
+.object-tag--static {
+  font-weight: 500;
+  border-style: dashed;
+  color: var(--tx-muted);
+}
+
 /* ── Ancestry modal (React portal) ─────────────────────────────────── */
 .ancestry-overlay {
   position: fixed;

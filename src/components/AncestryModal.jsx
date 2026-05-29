@@ -11,7 +11,7 @@ import DetailSections from './DetailSections'
 const DRAG_DISMISS_PX = 130
 const DRAG_SLOP_PX = 8
 
-export default function AncestryModal({ componentId, onClose }) {
+export default function AncestryModal({ componentId, onClose, onSelectComponent }) {
   // Distance the modal is currently pushed down by a touch drag.
   const [offset, setOffset] = useState(0)
   // While true the modal animates (snapping back / sliding off); while false it
@@ -178,6 +178,7 @@ export default function AncestryModal({ componentId, onClose }) {
           component={component}
           color={color}
           suppressLegacyPrimitives={hasTree}
+          onSelectComponent={onSelectComponent}
         />
 
         <div

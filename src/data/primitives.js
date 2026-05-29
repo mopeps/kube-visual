@@ -60,7 +60,7 @@ export const PRIMITIVES_BY_TYPE = {
     ],
   },
 
-  // ── systemd-managed OS daemons ───────────────────────────────────────────
+  // ── systemd-managed OS services ──────────────────────────────────────────
   systemd: {
     sectionTitle: 'OS Primitives',
     color: '#f59e0b',
@@ -69,11 +69,11 @@ export const PRIMITIVES_BY_TYPE = {
         id: 'systemd-unit',
         label: 'systemd Unit',
         description:
-          'A declarative .service unit file that tells systemd — PID 1 on RHCOS — how to start, stop, restart, and health-check this daemon. Unit dependencies (After=, Requires=, Wants=) enforce the correct boot ordering across all node services.',
+          'A declarative .service unit file that tells systemd — PID 1 on RHCOS — how to start, stop, restart, and health-check this service. Unit dependencies (After=, Requires=, Wants=) enforce the correct boot ordering across all node services.',
         interactions: [
           'Unit state transitions (activating → active → failed) are tracked atomically by the systemd state machine.',
           'Restart= and RestartSec= policies govern automatic recovery after a crash.',
-          'Socket-activated variants start the daemon on-demand when the first connection arrives.',
+          'Socket-activated variants start the service on-demand when the first connection arrives.',
         ],
         commands: [
           '# Check unit status\nsystemctl status <unit-name>',
@@ -88,7 +88,7 @@ export const PRIMITIVES_BY_TYPE = {
           'systemd automatically places each service in its own cgroup hierarchy slice, giving the kernel a stable handle for per-service resource accounting. This is separate from the Pod cgroups managed by the container runtime above it.',
         interactions: [
           'CPU and memory limits can be set in the unit file via CPUQuota= and MemoryMax=.',
-          'All child processes forked by the daemon inherit the slice automatically.',
+          'All child processes forked by the service inherit the slice automatically.',
           'Visible at /sys/fs/cgroup/system.slice/<unit>.service on the host.',
         ],
         commands: [
@@ -97,8 +97,8 @@ export const PRIMITIVES_BY_TYPE = {
         ],
       },
       {
-        id: 'daemon-process',
-        label: 'Daemon Process',
+        id: 'service-process',
+        label: 'systemd Process',
         description:
           'The long-running kernel process spawned by systemd. Unlike a containerised process it runs directly in the host\'s root PID namespace (unless explicitly sandboxed) and communicates with the kernel via direct syscalls, netlink sockets, and device files.',
         interactions: [
@@ -107,7 +107,7 @@ export const PRIMITIVES_BY_TYPE = {
           'Has full access to the host filesystem unless restricted by systemd\'s ProtectSystem= or ReadOnlyPaths= directives.',
         ],
         commands: [
-          '# Show process details\nps aux | grep <daemon-name>',
+          '# Show process details\nps aux | grep <service-name>',
           '# Inspect open file descriptors and sockets\nls -la /proc/<PID>/fd',
           '# View recent journal entries\njournalctl -u <unit-name> --since "5 min ago" --no-pager',
         ],
@@ -179,6 +179,6 @@ PRIMITIVES_BY_TYPE['Static Pod'] = PRIMITIVES_BY_TYPE.Pod
 // (used to suppress the section on those entries themselves)
 export const SELF_PRIMITIVE_IDS = new Set([
   'pod-netns', 'pod-cgroups', 'container-process',
-  'systemd-unit', 'cgroup-slice', 'daemon-process',
+  'systemd-unit', 'cgroup-slice', 'service-process',
   'kvm-vcpu', 'qemu-process', 'vhost-net',
 ])

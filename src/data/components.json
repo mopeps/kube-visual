@@ -927,5 +927,305 @@
       "# View the process tree\noc exec <pod-name> -n <namespace> -- ps aux",
       "# Check listening ports\noc exec <pod-name> -n <namespace> -- ss -tlnp"
     ]
+  },
+  {
+    "componentId": "hostedcontrolplane-cr",
+    "displayName": "HostedControlPlane",
+    "typePrefix": "Custom Resource",
+    "layer": "HyperShift Management",
+    "problemSolved": "The per-guest control-plane intent object (HCP) the HyperShift Operator derives from a HostedCluster. It is persisted in the management etcd inside the guest's HCP namespace and is the object the Control Plane Operator actually reconciles into the individual control-plane Deployments (Guest API Server, etcd, OAuth, Konnectivity…). It is a desired-state record, not a running process.",
+    "interactions": [
+      "Created by the HyperShift Operator from the HostedCluster, in the guest's HCP namespace on the management API Server.",
+      "Reconciled by the Control Plane Operator, which renders it into the guest control-plane Deployments and StatefulSets.",
+      "Surfaces per-component control-plane status and the rolled-out release version."
+    ],
+    "explorationCommands": [
+      "# Inspect the HostedControlPlane\noc get hostedcontrolplane -n <hcp-namespace> -o yaml",
+      "# Watch its rollout conditions\noc get hostedcontrolplane -n <hcp-namespace> -o jsonpath='{.items[0].status.conditions}'"
+    ]
+  },
+  {
+    "componentId": "capi-cluster-cr",
+    "displayName": "Cluster (CAPI)",
+    "typePrefix": "Custom Resource",
+    "layer": "HyperShift Management",
+    "problemSolved": "The top-level Cluster API object (cluster.x-k8s.io) for this hosted cluster, living in the HCP namespace on the management API Server. The HyperShift NodePool controller renders it alongside an infrastructure reference; the Cluster API Manager reconciles it as the root of the Machine ownership tree that ultimately provisions guest worker VMs.",
+    "interactions": [
+      "Authored by the HyperShift Operator's NodePool controller in the HCP namespace.",
+      "Reconciled by the Cluster API Manager as the parent of the MachineDeployment / MachineSet / Machine tree.",
+      "References the KubeVirt infrastructure provider that backs this cluster's machines."
+    ],
+    "explorationCommands": [
+      "# Inspect the CAPI Cluster object\noc get cluster.cluster.x-k8s.io -n <hcp-namespace> -o yaml",
+      "# List the Machines it owns\noc get machines.cluster.x-k8s.io -n <hcp-namespace>"
+    ]
+  },
+  {
+    "componentId": "machinedeployment-cr",
+    "displayName": "MachineDeployment",
+    "typePrefix": "Custom Resource",
+    "layer": "HyperShift Management",
+    "problemSolved": "The Cluster API rollout object (cluster.x-k8s.io) that the HyperShift NodePool controller renders from a NodePool. Like a Deployment manages ReplicaSets, a MachineDeployment manages MachineSets — handling rolling upgrades of the guest worker pool by spinning up a new MachineSet and draining the old one.",
+    "interactions": [
+      "Rendered by the HyperShift NodePool controller from the NodePool's replica count and release.",
+      "Reconciled by the Cluster API Manager, which creates and scales the backing MachineSet.",
+      "Drives rolling upgrades by replacing MachineSets rather than mutating Machines in place."
+    ],
+    "explorationCommands": [
+      "# Inspect the MachineDeployment\noc get machinedeployment -n <hcp-namespace> -o yaml",
+      "# Check its rollout status\noc get machinedeployment -n <hcp-namespace>"
+    ]
+  },
+  {
+    "componentId": "machineset-cr",
+    "displayName": "MachineSet",
+    "typePrefix": "Custom Resource",
+    "layer": "HyperShift Management",
+    "problemSolved": "The Cluster API object (cluster.x-k8s.io) that guarantees a stable set of identical Machines, analogous to a ReplicaSet for Pods. It is owned by a MachineDeployment and creates or deletes Machine objects to match the desired guest-worker replica count.",
+    "interactions": [
+      "Owned by the MachineDeployment, which sets its replica count during rollouts.",
+      "Reconciled by the Cluster API Manager, which creates or deletes Machine objects to match desired replicas.",
+      "Reports the number of ready Machines back up to the MachineDeployment."
+    ],
+    "explorationCommands": [
+      "# Inspect the MachineSet\noc get machineset.cluster.x-k8s.io -n <hcp-namespace> -o yaml",
+      "# List the Machines it owns\noc get machines.cluster.x-k8s.io -n <hcp-namespace>"
+    ]
+  },
+  {
+    "componentId": "machine-cr",
+    "displayName": "Machine",
+    "typePrefix": "Custom Resource",
+    "layer": "HyperShift Management",
+    "problemSolved": "The Cluster API object (cluster.x-k8s.io) representing a single desired guest worker node. It is the generic, provider-agnostic node intent: the Cluster API Manager owns its lifecycle and delegates the actual infrastructure to a paired provider object — here a KubevirtMachine.",
+    "interactions": [
+      "Created by its owning MachineSet to represent one desired guest worker node.",
+      "Paired by the Cluster API Manager with a KubevirtMachine that supplies the real infrastructure.",
+      "Becomes Running once the backing VirtualMachineInstance registers as a guest cluster Node."
+    ],
+    "explorationCommands": [
+      "# Inspect a Machine\noc get machine.cluster.x-k8s.io -n <hcp-namespace> -o yaml",
+      "# See its phase (Provisioning / Running / Deleting)\noc get machines.cluster.x-k8s.io -n <hcp-namespace> -o wide"
+    ]
+  },
+  {
+    "componentId": "kubevirtmachine-cr",
+    "displayName": "KubevirtMachine",
+    "typePrefix": "Custom Resource",
+    "layer": "HyperShift Management",
+    "problemSolved": "The KubeVirt-specific Cluster API infrastructure object (infrastructure.cluster.x-k8s.io) paired with each Machine. The CAPI Provider (KubeVirt) reconciles it into an actual KubeVirt VirtualMachine, bridging the provider-agnostic Machine to a concrete virtualised worker.",
+    "interactions": [
+      "Created alongside each Machine as its infrastructure reference.",
+      "Reconciled by the CAPI Provider (KubeVirt), which creates the backing KubeVirt VirtualMachine.",
+      "Reports the VM's node addresses and ready state back to its paired Machine."
+    ],
+    "explorationCommands": [
+      "# Inspect a KubevirtMachine\noc get kubevirtmachine -n <hcp-namespace> -o yaml",
+      "# Map it to its VirtualMachine\noc get vm -n <hcp-namespace>"
+    ]
+  },
+  {
+    "componentId": "kubevirt-vm-cr",
+    "displayName": "VirtualMachine",
+    "typePrefix": "Custom Resource",
+    "layer": "HyperShift Management",
+    "problemSolved": "The KubeVirt VirtualMachine object (kubevirt.io) — the desired-state record of a guest worker VM in the HCP namespace. KubeVirt realises it as a running VirtualMachineInstance, which virt-handler then launches as a virt-launcher Pod. The VM is the intent; the VirtualMachineInstance on the canvas is its running realisation.",
+    "interactions": [
+      "Created by the CAPI Provider (KubeVirt) from a KubevirtMachine.",
+      "Reconciled by KubeVirt's virt-controller into a running VirtualMachineInstance when its runStrategy says so.",
+      "Spec changes (CPU, memory, disks) re-roll the VMI rather than mutating the live guest in place."
+    ],
+    "explorationCommands": [
+      "# Inspect the VirtualMachine\noc get vm -n <hcp-namespace> -o yaml",
+      "# Confirm the running VMI it produced\noc get vmi -n <hcp-namespace> -o wide"
+    ]
+  },
+  {
+    "componentId": "clusterversion-cr",
+    "displayName": "ClusterVersion",
+    "typePrefix": "Custom Resource",
+    "layer": "Guest Cluster State",
+    "problemSolved": "The singleton ClusterVersion object (config.openshift.io) in the guest cluster, persisted in the guest etcd. It declares the desired release image / upgrade channel for the guest cluster; the Cluster Version Operator reads it to drive the cluster to that version. A desired-state record, not a process.",
+    "interactions": [
+      "Read by the Cluster Version Operator to determine the guest cluster's target release.",
+      "Updated by an admin (oc adm upgrade) to request an upgrade to a new channel or version.",
+      "Surfaces the overall update progress and history in its status."
+    ],
+    "explorationCommands": [
+      "# View the ClusterVersion and upgrade status\noc get clusterversion --kubeconfig <guest-kubeconfig>",
+      "# Inspect available updates\noc adm upgrade --kubeconfig <guest-kubeconfig>"
+    ]
+  },
+  {
+    "componentId": "clusteroperator-cr",
+    "displayName": "ClusterOperator",
+    "typePrefix": "Custom Resource",
+    "layer": "Guest Cluster State",
+    "problemSolved": "A ClusterOperator object (config.openshift.io) per second-level operator in the guest cluster (ingress, dns, monitoring, network…), persisted in the guest etcd. Each one reports its operator's Available / Progressing / Degraded conditions, and the Cluster Version Operator gates upgrades on them.",
+    "interactions": [
+      "Written by each guest second-level operator to publish its Available / Progressing / Degraded state.",
+      "Watched by the Cluster Version Operator, which blocks upgrades while any operator is Degraded.",
+      "Read by admins to triage which guest cluster component is unhealthy."
+    ],
+    "explorationCommands": [
+      "# List ClusterOperators and their conditions\noc get clusteroperators --kubeconfig <guest-kubeconfig>",
+      "# Inspect one operator's conditions\noc get clusteroperator ingress -o yaml --kubeconfig <guest-kubeconfig>"
+    ]
+  },
+  {
+    "componentId": "route-cr",
+    "displayName": "Route",
+    "typePrefix": "Custom Resource",
+    "layer": "Guest Workload",
+    "logicalContext": {
+      "openShiftProject": "e-commerce-prod",
+      "associatedObject": "Front-End Service"
+    },
+    "problemSolved": "An OpenShift Route object (route.openshift.io) in the guest cluster declaring an external hostname and TLS policy for the front-end Service. It is pure config persisted in the guest etcd — the Ingress Router watches it and programs HAProxy accordingly. The Route has no process of its own, which is why it lives in etcd rather than on the canvas.",
+    "interactions": [
+      "Authored by the app owner to publish the Front-End Service under a public hostname.",
+      "Watched by the Guest Ingress Router, which compiles it into HAProxy frontend/backend config.",
+      "References a target Service and the TLS termination policy (edge / passthrough / reencrypt)."
+    ],
+    "explorationCommands": [
+      "# List Routes in the namespace\noc get route -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
+      "# Inspect a Route's host and TLS\noc get route frontend -n e-commerce-prod -o yaml --kubeconfig <guest-kubeconfig>"
+    ]
+  },
+  {
+    "componentId": "deployment-workload",
+    "displayName": "Deployment",
+    "typePrefix": "API Object",
+    "layer": "Guest Workload",
+    "logicalContext": {
+      "openShiftProject": "e-commerce-prod",
+      "associatedObject": "Deployment/frontend, Deployment/backend"
+    },
+    "problemSolved": "The workload Deployment objects (apps/v1) for the e-commerce app, persisted in the guest etcd. Each declares the desired replica count and Pod template for the front-end and back-end; the guest controller-manager's Deployment controller reconciles them into ReplicaSets, which in turn create the Pods shown on the canvas.",
+    "interactions": [
+      "Authored by the app owner to declare the desired replicas and container image for each tier.",
+      "Reconciled by the guest Deployment controller into a ReplicaSet on every spec change.",
+      "Drives rolling updates by creating a new ReplicaSet and scaling the old one to zero."
+    ],
+    "explorationCommands": [
+      "# List Deployments in the namespace\noc get deploy -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
+      "# Inspect the front-end Deployment\noc get deploy frontend -n e-commerce-prod -o yaml --kubeconfig <guest-kubeconfig>"
+    ]
+  },
+  {
+    "componentId": "replicaset-workload",
+    "displayName": "ReplicaSet",
+    "typePrefix": "API Object",
+    "layer": "Guest Workload",
+    "logicalContext": {
+      "openShiftProject": "e-commerce-prod",
+      "associatedObject": "Deployment/frontend, Deployment/backend"
+    },
+    "problemSolved": "The ReplicaSet objects (apps/v1) owned by the workload Deployments, persisted in the guest etcd. A ReplicaSet guarantees a fixed number of identical Pods exist; it is the direct owner of the Front-End and Back-End Workload Pods on the canvas, recreating any that are deleted or evicted.",
+    "interactions": [
+      "Created and owned by a Deployment, which sets its replica count during rollouts.",
+      "Reconciled by the guest ReplicaSet controller, which creates or deletes Pods to match desired replicas.",
+      "Owns the workload Pods via ownerReferences so they are garbage-collected with it."
+    ],
+    "explorationCommands": [
+      "# List ReplicaSets in the namespace\noc get rs -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
+      "# See which Pods a ReplicaSet owns\noc get pods -n e-commerce-prod -l app=frontend -o wide --kubeconfig <guest-kubeconfig>"
+    ]
+  },
+  {
+    "componentId": "secret-workload",
+    "displayName": "Secret",
+    "typePrefix": "API Object",
+    "layer": "Guest Workload",
+    "logicalContext": {
+      "openShiftProject": "e-commerce-prod",
+      "associatedObject": "Front-End / Back-End Workload"
+    },
+    "problemSolved": "The Secret objects (core/v1) holding sensitive workload config — frontend-tls-certs and backend-db-credentials — persisted (encrypted at rest) in the guest etcd. The guest kubelet projects them into the workload Pods as tmpfs-backed RAM files at mount time, so they never touch the node's disk.",
+    "interactions": [
+      "Referenced by the workload Pod specs as volume mounts or environment variables.",
+      "Projected by the guest kubelet into the Pod as an in-memory tmpfs mount, not a disk file.",
+      "Stored encrypted-at-rest in the guest etcd; access is gated by RBAC on the Secret resource."
+    ],
+    "explorationCommands": [
+      "# List Secrets in the namespace\noc get secret -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
+      "# Decode a Secret value\noc get secret backend-db-credentials -n e-commerce-prod -o jsonpath='{.data.password}' --kubeconfig <guest-kubeconfig> | base64 -d"
+    ]
+  },
+  {
+    "componentId": "configmap-workload",
+    "displayName": "ConfigMap",
+    "typePrefix": "API Object",
+    "layer": "Guest Workload",
+    "logicalContext": {
+      "openShiftProject": "e-commerce-prod",
+      "associatedObject": "Front-End / Back-End Workload"
+    },
+    "problemSolved": "The ConfigMap objects (core/v1) holding non-sensitive workload configuration — frontend-app-config and backend-env-config — persisted in the guest etcd. Like Secrets they are projected into the workload Pods as tmpfs files or environment variables by the guest kubelet, decoupling config from the container image.",
+    "interactions": [
+      "Referenced by the workload Pod specs as mounted volumes or envFrom sources.",
+      "Projected into the Pod by the guest kubelet as a tmpfs mount at container start.",
+      "Updated independently of the image; a rollout or reload picks up the new values."
+    ],
+    "explorationCommands": [
+      "# List ConfigMaps in the namespace\noc get configmap -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
+      "# Inspect a ConfigMap's data\noc get configmap frontend-app-config -n e-commerce-prod -o yaml --kubeconfig <guest-kubeconfig>"
+    ]
+  },
+  {
+    "componentId": "pvc-workload",
+    "displayName": "PersistentVolumeClaim",
+    "typePrefix": "API Object",
+    "layer": "Guest Workload",
+    "logicalContext": {
+      "openShiftProject": "e-commerce-prod",
+      "associatedObject": "Front-End / Back-End Workload"
+    },
+    "problemSolved": "The PersistentVolumeClaim objects (core/v1) — pvc-frontend-assets and pvc-backend-data — persisted in the guest etcd. A PVC is a namespaced request for storage; once bound to a PersistentVolume the guest kubelet mounts the backing block device into the workload Pod as a kernel filesystem mount.",
+    "interactions": [
+      "Authored alongside the workload to request a size and storage class.",
+      "Bound by the guest control plane to a matching PersistentVolume.",
+      "Triggers the guest kubelet to attach and mount the backing block device into the Pod."
+    ],
+    "explorationCommands": [
+      "# List PVCs in the namespace\noc get pvc -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
+      "# See which PV a claim is bound to\noc get pvc pvc-backend-data -n e-commerce-prod -o jsonpath='{.spec.volumeName}' --kubeconfig <guest-kubeconfig>"
+    ]
+  },
+  {
+    "componentId": "pv-workload",
+    "displayName": "PersistentVolume",
+    "typePrefix": "API Object",
+    "layer": "Guest Workload",
+    "problemSolved": "The cluster-scoped PersistentVolume objects (core/v1) — pv-block-assets and pv-block-data — persisted in the guest etcd. A PV represents a real storage asset (a CSI block device here); it is bound to a workload's PVC and ultimately surfaces inside the guest VM as a /dev/vdX block device mounted into the Pod.",
+    "interactions": [
+      "Provisioned (dynamically by a CSI driver, or statically by an admin) to satisfy a PVC.",
+      "Bound one-to-one to a PersistentVolumeClaim once their size and class match.",
+      "Realised inside the guest VM as a block device (/dev/vdb, /dev/vdc) mounted by the kubelet."
+    ],
+    "explorationCommands": [
+      "# List PersistentVolumes (cluster-scoped)\noc get pv --kubeconfig <guest-kubeconfig>",
+      "# Inspect a PV's source and claim binding\noc get pv pv-block-data -o yaml --kubeconfig <guest-kubeconfig>"
+    ]
+  },
+  {
+    "componentId": "endpointslice",
+    "displayName": "EndpointSlice",
+    "typePrefix": "API Object",
+    "layer": "Guest Workload",
+    "logicalContext": {
+      "openShiftProject": "e-commerce-prod",
+      "associatedObject": "Front-End / Back-End Service"
+    },
+    "problemSolved": "The EndpointSlice objects (discovery.k8s.io) backing the front-end and back-end Services, persisted in the guest etcd. The guest EndpointSlice controller keeps them in sync with the ready Pod IPs behind each Service; OVN-Kubernetes reads them to program the load-balancer flows that DNAT a ClusterIP to a real Pod.",
+    "interactions": [
+      "Maintained by the guest EndpointSlice controller as Pods behind a Service become ready or unready.",
+      "Lists the current ready Pod IPs and ports for its owning Service.",
+      "Read by OVN-Kubernetes to program the ClusterIP load-balancer (DNAT) flows."
+    ],
+    "explorationCommands": [
+      "# List EndpointSlices for a Service\noc get endpointslices -n e-commerce-prod -l kubernetes.io/service-name=frontend --kubeconfig <guest-kubeconfig>",
+      "# Inspect the ready endpoints\noc get endpointslices -n e-commerce-prod -o yaml --kubeconfig <guest-kubeconfig>"
+    ]
   }
 ]

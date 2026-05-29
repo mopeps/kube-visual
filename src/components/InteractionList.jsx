@@ -1,4 +1,5 @@
 import { classifyInteraction, INTERACTION_KINDS } from '../data/interaction-kinds'
+import ObjectText from './ObjectText'
 
 // Small inline icons (16×16, stroke = currentColor) used to telegraph each
 // interaction's relationship kind. Kept here so the SVG markup stays out of the
@@ -64,7 +65,7 @@ function KindIcon({ name }) {
 // as a row whose leading icon + accent colour convey direction/type at a glance
 // while the full sentence is preserved. A compact legend above the rows ties
 // the icons to their meaning so the visual language is self-explanatory.
-export default function InteractionList({ interactions }) {
+export default function InteractionList({ interactions, onSelectComponent, selfId }) {
   const rows = interactions.map((text) => classifyInteraction(text))
 
   // Only legend-list the kinds actually present in this component's rows, in a
@@ -110,7 +111,7 @@ export default function InteractionList({ interactions }) {
                   {r.verb}{' '}
                 </span>
               )}
-              {r.rest}
+              <ObjectText text={r.rest} onSelectComponent={onSelectComponent} selfId={selfId} />
             </span>
           </li>
         ))}
