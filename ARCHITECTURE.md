@@ -87,6 +87,29 @@ The workspace viewport canvas must render this exact structural hierarchy:
 
 ```
 
+### First Overview Rendering Rule (the primary canvas grid)
+
+The primary overview layout is a **whitelist**: it may render *only* components that
+fall into one of these three categories. Anything that is not one of these three is kept
+off the main canvas (it surfaces elsewhere — e.g. in a detail modal, the etcd intent
+store, or a trace-only zone).
+
+1. **The Context / Zone Boundaries** — the macro physical/virtual boundaries that frame
+   everything else: `[Management Cluster]`, `[Management Master Node]`,
+   `[Dedicated Guest Control Plane Namespace]`, `[Management Worker Node]`,
+   `[Guest Worker Node VM]`.
+2. **The Active Enforcers (`systemd` Services & Daemons)** — binary systems executing
+   continuous loop cycles directly on a host OS or guest OS instance: `Kubelet`, `CRI-O`,
+   `Open vSwitch`, `virt-handler`.
+3. **The Concrete Workload / Data Plane Instances** — discrete compute packages running
+   processes: `Pods`, `Static Pods`, `VirtualMachineInstances`.
+
+This reinforces the **Default State** rule in §2: desired-state records (the
+`HostedCluster` / `NodePool` Custom Resources), raw Linux kernel primitives
+(netns, cgroups, host PIDs), and Project/Namespace boundaries are *not* concrete instances
+or enforcers, so they never appear as cards on the first overview — they live inside the
+expandable etcd intent store or behind a node's detail modal instead.
+
 ### Modeling invariants (get these right)
 
 These are the easy-to-get-wrong facts the topology and flows must respect:
