@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import componentsData from '../data/components.json'
 import { COMPONENT_COLOR } from '../data/zones'
 
@@ -25,6 +26,21 @@ const ICONS = {
   'pod-netns':                   '🧭',
   'pod-cgroups':                 '🧮',
   'container-process':           '▣',
+}
+
+// Lowercased haystack of everything in a card a viewer might search by:
+// name, type prefix, layer, description, and the starter command.
+function searchText(c) {
+  return [
+    c.displayName,
+    c.typePrefix,
+    c.layer,
+    c.problemSolved,
+    c.explorationCommands?.[0],
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
 }
 
 function LayerCard({ component }) {
@@ -58,7 +74,20 @@ function LayerCard({ component }) {
 }
 
 export default function LinuxInternalsTab() {
-  const items = componentsData.filter(c => LINUX_LAYERS.includes(c.layer))
+  const [query, setQuery] = useState('')
+
+  // Static list of the kernel-adjacent components, with a precomputed search
+  // haystack so filtering is a cheap substring test per keystroke.
+  const items = useMemo(
+    () =>
+      componentsData
+        .filter(c => LINUX_LAYERS.includes(c.layer))
+        .map(c => ({ component: c, haystack: searchText(c) })),
+    [],
+  )
+
+  const q = query.trim().toLowerCase()
+  const visible = q ? items.filter(it => it.haystack.includes(q)) : items
 
   return (
     <div>
@@ -71,14 +100,44 @@ export default function LinuxInternalsTab() {
           one card per concept, with a starter command to inspect it live.
         </p>
       </div>
-      <div
-        className="grid gap-5"
-        style={{
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-        }}
-      >
-        {items.map(c => <LayerCard key={c.componentId} component={c} />)}
+
+      <div className="mb-5" style={{ position: 'relative', maxWidth: 420 }}>
+        <input
+          type="search"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Search name, primitive, layer, or command…"
+          aria-label="Search Linux / KVM internals"
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            fontSize: '0.78rem',
+            fontFamily: 'inherit',
+            color: 'var(--tx)',
+            background: 'rgba(0,0,0,0.3)',
+            border: '1px solid var(--border-w)',
+            borderRadius: 8,
+            outline: 'none',
+          }}
+        />
       </div>
+
+      {visible.length === 0 ? (
+        <p className="text-[0.78rem]" style={{ color: 'var(--tx-muted)' }}>
+          No components match “{query.trim()}”.
+        </p>
+      ) : (
+        <div
+          className="grid gap-5"
+          style={{
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+          }}
+        >
+          {visible.map(({ component }) => (
+            <LayerCard key={component.componentId} component={component} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
