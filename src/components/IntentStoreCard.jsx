@@ -45,7 +45,18 @@ export default function IntentStoreCard({
       <div
         id={node.id}
         ref={ref}
+        role="button"
+        tabIndex={0}
+        aria-expanded={false}
+        aria-label={`[${node.typePrefix}] ${node.title} — open intent store`}
         onClick={(e) => { e.stopPropagation(); onToggle() }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            e.stopPropagation()
+            onToggle()
+          }
+        }}
         className={`node intent-store ${isActive ? 'is-active' : ''} ${isDimmed ? 'is-dimmed' : ''}`}
         style={{ '--node-accent': color }}
         title="Open intent store"

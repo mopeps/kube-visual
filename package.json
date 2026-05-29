@@ -1,7 +1,7 @@
 {
   "name": "kube-visual",
   "version": "1.0.0",
-  "description": "Build a frontend-only interactive web application that provides a nested, containment-based visual mapping of OpenShift cluster-level logical objects down to their underlying Linux kernel primitives. The core utility is tracing dynamic interaction and communication flows across these layers based on user-selected cluster events. ## 1. UI Structural & Visual Hierarchy The application must render a containment-based grid layout using a strict visual hierarchy. Avoid linear flowcharts; use nested HTML container boxes to show strict ownership and boundaries. ### Component Nesting Map ```text [Cluster Boundary]   ├── [Management Layer (Red/Purple Boxes)]   │     └── API Server, Controllers, Kubelet, CRI-O   └── [Infrastructure Node Boundary (Green Boxes)]         ├── [Logical Kubernetes Namespace / Project Boundary (Dashed Blue Boxes)]         │     └── [Pod Boundary]         │           └── [Linux Isolation Layer (Kernel Primitives)]         │                 ├── Network Namespace (netns)         │                 ├── Control Groups (cgroups)         │                 └── [Container Process (PID 1)]         └── [Host Networking Subsystem]               └── OVS Bridge (br-int), veth pairs, Routing Tables",
+  "description": "Frontend-only React app that visualises an OpenShift Hosted Control Plane (HCP) cluster as a nested stack of zones and traces event-driven flows down to Linux kernel primitives. See ARCHITECTURE.md for the source-of-truth topology and data schemas.",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -25,7 +25,6 @@
   },
   "dependencies": {
     "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "react-xarrows": "^2.0.2"
+    "react-dom": "^19.2.6"
   }
 }

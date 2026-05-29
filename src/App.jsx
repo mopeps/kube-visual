@@ -14,12 +14,39 @@ const TABS = [
   { id: 'objects',    label: 'K8s Object Map' },
 ]
 
+// Zone accents in stack order — the key that lets a first-time viewer decode
+// the cool-to-green gradient that descends the topology, plus the reserved
+// packet-red trace accent.
+const LEGEND = [
+  { label: 'External Client', color: 'var(--k-cyan)' },
+  { label: 'Bare Metal Cluster', color: 'var(--k-blue)' },
+  { label: 'Guest Control Plane', color: 'var(--k-sky)' },
+  { label: 'KubeVirt Launcher', color: 'var(--k-teal)' },
+  { label: 'Guest Worker VM', color: 'var(--k-green)' },
+  { label: 'Active Trace', color: 'var(--packet)' },
+]
+
 function Header() {
   return (
-    <header className="text-center mb-10">
+    <header className="text-center mb-8">
       <h1 className="font-display title-gradient text-[clamp(1.9rem,4vw,3.2rem)] font-extrabold tracking-tight leading-tight">
-        kube-weird
+        kube-visual
       </h1>
+      <p
+        className="mt-2 text-[0.78rem] tracking-wide"
+        style={{ color: 'var(--tx-muted)' }}
+      >
+        An OpenShift Hosted Control Plane, traced from external client down to
+        Linux kernel primitives.
+      </p>
+      <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 mt-5">
+        {LEGEND.map((item) => (
+          <span key={item.label} className="legend-item">
+            <span className="legend-dot" style={{ background: item.color, color: item.color }} />
+            {item.label}
+          </span>
+        ))}
+      </div>
     </header>
   )
 }

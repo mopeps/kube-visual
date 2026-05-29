@@ -11,7 +11,17 @@ export default function NodeCard({
   return (
     <div
       id={id}
+      role="button"
+      tabIndex={0}
+      aria-label={`${typePrefix ? `[${typePrefix}] ` : ''}${title}`}
       onClick={(e) => { e.stopPropagation(); onClick?.(id) }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          e.stopPropagation()
+          onClick?.(id)
+        }
+      }}
       className={`node ${isActive ? 'is-active' : ''} ${isDimmed ? 'is-dimmed' : ''}`}
       style={{
         '--node-accent': color,

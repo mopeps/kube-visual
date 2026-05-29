@@ -139,7 +139,7 @@
     "problemSolved": "The Kubernetes API Server for the guest cluster, running as a Pod in the bare metal cluster. All kubectl/oc commands targeting the guest cluster reach this process. It handles authn/authz, admission webhooks, and persists state to the co-located etcd.",
     "interactions": [
       "Exposes the guest cluster's API on a dedicated Service port.",
-      "Persists objects to the Etcd Static Pod instance in the same namespace.",
+      "Persists objects to the guest Etcd StatefulSet Pod in the same namespace — a regular Pod, not a static pod.",
       "Notifies guest controllers (scheduler, controller-manager) of state changes via watch events."
     ],
     "explorationCommands": [
@@ -157,7 +157,7 @@
     "interactions": [
       "Validates identity provider credentials and issues OAuth tokens.",
       "Integrates with the Guest API Server for RBAC enforcement.",
-      "Stores sessions and tokens in the bare metal cluster etcd."
+      "Persists OAuth access/authorize tokens as objects in the guest cluster's own etcd (the guest Etcd StatefulSet), not the management cluster's etcd."
     ],
     "explorationCommands": [
       "# View OAuth server logs\noc logs -n <hcp-namespace> deployment/oauth-server --tail=50",
@@ -612,9 +612,9 @@
     "displayName": "Kubelet (Guest)",
     "typePrefix": "systemd",
     "layer": "Guest Worker Node",
-    "problemSolved": "The Kubernetes node agent running inside the Guest Worker Node VM. It watches the Guest API Server (via the Konnectivity tunnel) for Pods assigned to this node and instructs the guest CRI-O to create them.",
+    "problemSolved": "The Kubernetes node agent running inside the Guest Worker Node VM. It maintains its own outbound watch on the exposed Guest API Server endpoint for Pods assigned to this node and instructs the guest CRI-O to create them. The API Server never pushes PodSpecs to it, and this path does not use the Konnectivity tunnel (that tunnel carries only API-Server-initiated traffic such as exec/logs/port-forward).",
     "interactions": [
-      "Connects to the Guest API Server endpoint via the Konnectivity tunnel.",
+      "Maintains an outbound watch on the exposed Guest API Server endpoint — the kubelet pulls its workload; the API Server does not push to it through Konnectivity.",
       "Calls guest CRI-O to manage container lifecycle for workload Pods.",
       "Reports node resource usage and Pod status back to the Guest API Server."
     ],
@@ -695,8 +695,8 @@
     "layer": "Guest Worker Node",
     "problemSolved": "A per-node CoreDNS DaemonSet Pod inside the Guest Worker Node VM. It caches DNS responses locally to reduce round-trip latency and serves as the DNS resolver for all Pods running on this node.",
     "interactions": [
-      "Configured as the upstream DNS server for all containers via the kubelet's clusterDNS setting.",
-      "Forwards cluster-local queries (*.svc.cluster.local) to the Guest CoreDNS in the bare metal cluster.",
+      "Configured as the cluster DNS server for all containers via the kubelet's clusterDNS setting.",
+      "Answers cluster-local queries (*.svc.cluster.local) from the guest cluster's own Service/Endpoint records and forwards external names to the upstream resolvers configured on the node.",
       "Caches resolved records to reduce lookup latency for busy workloads."
     ],
     "explorationCommands": [
@@ -709,11 +709,11 @@
     "displayName": "Ingress Router (Guest)",
     "typePrefix": "Pod",
     "layer": "Guest Worker Node",
-    "problemSolved": "An HAProxy-based OpenShift Ingress Router running as a Pod inside the Guest Worker Node VM. It watches Route objects in the guest cluster and proxies the decrypted HTTPS traffic — after TLS re-encryption by the Shared Ingress Proxy — to the correct workload Pod.",
+    "problemSolved": "An HAProxy-based OpenShift Ingress Router running as a Pod inside the Guest Worker Node VM. It watches Route objects in the guest cluster and serves the application (*.apps wildcard) ingress path: it terminates the inbound TLS session, matches the request against its Route table, and forwards it to the target workload Service. This is the guest cluster's own ingress — entirely separate from the control-plane Shared Ingress Proxy, which never carries application traffic.",
     "interactions": [
       "Watches Route objects in the guest cluster via the Guest API Server.",
-      "Receives traffic forwarded by the Shared Ingress Proxy through the host OVS fabric.",
-      "Forwards the request to the target Service's endpoint (frontend-workload-pod)."
+      "Receives *.apps application traffic via the guest's router-default LoadBalancer, after it enters the VM from the infra-side Apps Ingress LoadBalancer — NOT through the Shared Ingress Proxy, which fronts the control-plane API only.",
+      "Terminates TLS and forwards each request to the matching Service (e.g. the Front-End Service) inside the guest cluster."
     ],
     "explorationCommands": [
       "# Check guest ingress router\nvirtctl ssh core@<vmi> -- oc get pods -n openshift-ingress",
