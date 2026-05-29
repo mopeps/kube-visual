@@ -645,35 +645,6 @@ body::after {
 .code-block .cm { color: var(--tx-dim); }
 .code-block .kw { color: var(--k-cyan); }
 
-/* ── Layer card (Linux Internals tab) ──────────────────────────────── */
-.layer-card {
-  border: 1px solid var(--border-w);
-  border-radius: 10px;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.25);
-  display: flex;
-  flex-direction: column;
-}
-.layer-card-header {
-  padding: 14px 18px;
-  font-family: 'Syne', sans-serif;
-  font-size: 0.92rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.layer-card-body {
-  padding: 14px 18px;
-  flex: 1;
-}
-.layer-card-body p {
-  font-size: 0.74rem;
-  color: var(--tx-muted);
-  line-height: 1.7;
-  margin-bottom: 10px;
-}
-
 /* ── Detail panel ──────────────────────────────────────────────────── */
 .detail-panel {
   position: fixed;

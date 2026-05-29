@@ -45,13 +45,11 @@ flow.
 - **Pick an event** → relevant nodes get the packet outline and a `01`, `02`
   step badge; relevant arrow rows highlight; the Step-by-Step tab populates
   with the hop list.
-- **Switch tabs** to see the same components from four angles:
+- **Switch tabs** to see the same components from three angles:
   1. **Architecture Overview** — the zoned diagram.
   2. **Step-by-Step Packet Flow** — the active event's hops as an expandable
      vertical list.
-  3. **Linux Internals** — one card per kernel/networking primitive, with
-     inline shell snippets.
-  4. **K8s Object Map** — a flat table mapping every component to its layer
+  3. **K8s Object Map** — a flat table mapping every component to its layer
      and underlying Linux primitive.
 
 ## Non-goals

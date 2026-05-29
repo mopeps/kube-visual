@@ -4,14 +4,12 @@ import Tabs from './components/Tabs'
 import EventSelector from './components/EventSelector'
 import OverviewTab from './components/OverviewTab'
 import PacketFlowTab from './components/PacketFlowTab'
-import LinuxInternalsTab from './components/LinuxInternalsTab'
 import ObjectMapTab from './components/ObjectMapTab'
 import AncestryModal from './components/AncestryModal'
 
 const TABS = [
   { id: 'overview',   label: 'Architecture Overview' },
   { id: 'packetflow', label: 'Step-by-Step Packet Flow' },
-  { id: 'linux',      label: 'Linux Internals' },
   { id: 'objects',    label: 'K8s Object Map' },
 ]
 
@@ -64,7 +62,6 @@ export default function App() {
           {tab === 'packetflow' && (
             <PacketFlowTab activeEvent={activeEvent} />
           )}
-          {tab === 'linux' && <LinuxInternalsTab />}
           {tab === 'objects' && <ObjectMapTab />}
         </div>
 

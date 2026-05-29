@@ -52,7 +52,6 @@ src/
     ArrowOverlay.jsx         # SVG layer: bezier connectors between active step nodes
     OverviewTab.jsx          # recursively renders ZONES tree + ArrowOverlay
     PacketFlowTab.jsx        # expandable hop list for active event
-    LinuxInternalsTab.jsx    # layer cards for KVM / host / kernel primitives
     ObjectMapTab.jsx         # flat table mapping component → kind → linux primitive
     DetailPanel.jsx          # slide-up bottom sheet when a node is clicked
 ```
