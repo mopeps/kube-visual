@@ -784,6 +784,216 @@ body::after {
   opacity: 0.6;
 }
 
+/* ── Ancestry modal (React portal) ─────────────────────────────────── */
+.ancestry-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 5vh 16px;
+  background: rgba(3, 6, 14, 0.72);
+  backdrop-filter: blur(4px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.ancestry-modal {
+  position: relative;
+  width: 100%;
+  max-width: 780px;
+  max-height: 90vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bg-2);
+  border: 1px solid var(--border-w);
+  border-radius: 14px;
+  padding: 26px 28px 32px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+.ancestry-drag-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 auto 18px;
+  display: none; /* shown on mobile only */
+}
+.pipeline-layer-chip {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Manifest → Kernel pipeline tree ───────────────────────────────── */
+.pipeline-tree {
+  display: flex;
+  flex-direction: column;
+}
+.pipeline-band {
+  border-left: 2px solid var(--band);
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 0 8px 8px 0;
+  padding: 12px 14px 14px;
+}
+.pipeline-band-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 10px;
+}
+.pipeline-band-order {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font-size: 0.62rem;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+.pipeline-band-icon { font-size: 0.9rem; }
+.pipeline-band-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pipeline-node {
+  border: 1px solid var(--border-w);
+  border-left-width: 3px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px 11px;
+  min-width: 0;
+}
+.pipeline-node-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.pipeline-node-note { color: var(--tx-muted); }
+.pipeline-bullets {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  list-style: none;
+}
+.pipeline-bullets li {
+  font-size: 0.68rem;
+  color: var(--tx-muted);
+  line-height: 1.6;
+  position: relative;
+  margin-bottom: 2px;
+}
+.pipeline-bullets li::before {
+  content: '•';
+  position: absolute;
+  left: -12px;
+  color: var(--tx-dim);
+}
+.pipeline-socket {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.pipeline-connector {
+  width: 2px;
+  height: 22px;
+  margin-left: 9px;
+  background: var(--band);
+  position: relative;
+  opacity: 0.6;
+}
+.pipeline-connector::after {
+  content: '▼';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--band);
+  font-size: 0.6rem;
+}
+.pipeline-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.pipeline-row-main {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.pipeline-consumed {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 1px dashed var(--k-purple);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(124, 58, 237, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pipeline-consumed-header {
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.pipeline-consumed-item {
+  border: 1px solid;
+  border-radius: 6px;
+  padding: 6px 9px;
+  background: rgba(0, 0, 0, 0.25);
+  min-width: 0;
+}
+.pipeline-consumed-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem;
+  margin-top: 3px;
+  padding-left: 8px;
+  overflow-wrap: anywhere;
+}
+.pipeline-subgroup {
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pipeline-subgroup:last-child { margin-bottom: 0; }
+.pipeline-subgroup-title {
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+/* Stack the consumed-resources column under its band on narrow screens so
+   host paths / config strings never clip or force horizontal scroll. */
+@media (max-width: 640px) {
+  .ancestry-overlay { padding: 0; }
+  .ancestry-modal {
+    max-width: 100%;
+    min-height: 100%;
+    max-height: none;
+    border-radius: 16px 16px 0 0;
+    padding: 18px 16px calc(28px + env(safe-area-inset-bottom));
+  }
+  .ancestry-drag-handle { display: block; }
+  .pipeline-row { flex-direction: column; }
+}
+
 /* ── Object map table ──────────────────────────────────────────────── */
 .object-table {
   width: 100%;
