@@ -1,6 +1,9 @@
-// The five pipeline-layer tags that classify every component on its journey
-// from declarative manifest to running Linux kernel primitive. Each component
-// in components.json carries exactly one `pipelineLayer` matching an `id` below.
+// The five pipeline layers that describe a component's descent from declarative
+// manifest to running Linux kernel primitive. These are *stages of a journey*,
+// not per-component classifications: a single component (e.g. a Pod) travels
+// through several of them. They surface only as the ordered bands of the
+// Manifest → Kernel pipeline tree (see pipeline-model.js / PipelineTree.jsx),
+// never as a standalone tag on an object.
 //
 // The colors deliberately track the existing top-to-bottom zone gradient
 // (cyan → green) so the modal's tree reads as a descent through the stack.
@@ -49,14 +52,8 @@ export const PIPELINE_LAYERS = [
   },
 ]
 
-// Quick lookup: pipelineLayer id → definition object.
+// Quick lookup: layer id → definition object. Consumed by PipelineTree to
+// render each band's number, icon, label, and color.
 export const PIPELINE_LAYER_BY_ID = Object.fromEntries(
   PIPELINE_LAYERS.map((l) => [l.id, l]),
 )
-
-// Resolve a layer tag to its CSS color value (e.g. 'var(--k-sky)'); falls back
-// to muted text for unknown/missing tags.
-export function pipelineLayerColor(id) {
-  const layer = PIPELINE_LAYER_BY_ID[id]
-  return layer ? `var(${layer.colorVar})` : 'var(--tx-muted)'
-}

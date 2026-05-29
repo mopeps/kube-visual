@@ -819,17 +819,6 @@ body::after {
   margin: 0 auto 18px;
   display: none; /* shown on mobile only */
 }
-.pipeline-layer-chip {
-  font-size: 0.62rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  padding: 4px 10px;
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
 /* ── Manifest → Kernel blueprint tree ──────────────────────────────── */
 /* Dense, monospace ASCII-style tree. One line per node; the short note sits
    dimmed beneath, and deeper detail unfolds on click. No card boxes.

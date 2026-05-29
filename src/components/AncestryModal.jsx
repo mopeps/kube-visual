@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import componentsData from '../data/components.json'
 import { COMPONENT_COLOR, COMPONENT_ZONE } from '../data/zones'
-import { PIPELINE_LAYER_BY_ID, pipelineLayerColor } from '../data/pipeline-layers'
 import { buildPipeline } from '../data/pipeline-model'
 import PipelineTree from './PipelineTree'
 import DetailSections from './DetailSections'
@@ -109,8 +108,6 @@ export default function AncestryModal({ componentId, onClose }) {
 
   const color = COMPONENT_COLOR[componentId] || 'var(--k-cyan)'
   const zone = COMPONENT_ZONE[componentId]
-  const layer = PIPELINE_LAYER_BY_ID[component.pipelineLayer]
-  const layerColor = pipelineLayerColor(component.pipelineLayer)
 
   const { bands } = buildPipeline(component)
   const hasTree = bands.length > 0
@@ -150,15 +147,6 @@ export default function AncestryModal({ componentId, onClose }) {
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 22 }}>
-          {layer && (
-            <span
-              className="pipeline-layer-chip"
-              style={{ color: layerColor, borderColor: layerColor, background: `${layerColor}1a` }}
-              title={layer.blurb}
-            >
-              {layer.icon} {layer.label}
-            </span>
-          )}
           <span className="detail-type" style={{ color, marginBottom: 0 }}>
             {zone?.label || component.layer}
           </span>
