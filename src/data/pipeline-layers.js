@@ -16,7 +16,7 @@ export const PIPELINE_LAYERS = [
     label: 'Logical Intent',
     colorVar: '--k-cyan',
     icon: 'document',
-    blurb: 'Declarative desired state — Deployments, ReplicaSets, MachineConfigs, Custom Resources, and the operators that reconcile them. The host plane lives here too: a daemon\'s intent is a MachineConfig reconciled by the Machine Config Operator.',
+    blurb: 'Declarative desired state — Deployments, ReplicaSets, MachineConfigs, Custom Resources, and the operators that reconcile them. The host plane lives here too: a systemd service\'s intent is a MachineConfig reconciled by the Machine Config Operator.',
   },
   {
     id: 'api-boundary',
@@ -32,7 +32,7 @@ export const PIPELINE_LAYERS = [
     label: 'Translation Engine',
     colorVar: '--k-amber',
     icon: 'gear',
-    blurb: 'Host daemons — systemd Kubelet, CRI-O, OVN/OVS — that translate API objects into running processes and wiring.',
+    blurb: 'Host systemd services — Kubelet, CRI-O, OVN/OVS — that translate API objects into running processes and wiring.',
   },
   {
     id: 'consumed-resource',

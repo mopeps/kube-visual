@@ -103,7 +103,7 @@ store, or a trace-only zone).
    everything else: `[Management Cluster]`, `[Management Master Node]`,
    `[Dedicated Guest Control Plane Namespace]`, `[Management Worker Node]`,
    `[Guest Worker Node VM]`.
-2. **The Active Enforcers (`systemd` Services & Daemons)** — binary systems executing
+2. **The Active Enforcers (`systemd` Services)** — binary systems executing
    continuous loop cycles directly on a host OS or guest OS instance: `Kubelet`, `CRI-O`,
    `Open vSwitch`, `virt-handler`.
 3. **The Concrete Workload / Data Plane Instances** — discrete compute packages running
@@ -174,7 +174,7 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
   },
   "problemSolved": "Provides network virtualization and isolation inside the Guest RHCOS VM.",
   "interactions": [
-    "Attaches to a guest-side veth pair managed by the OVN-Kubernetes Guest Node Daemon.",
+    "Attaches to a guest-side veth pair managed by the OVN-Kubernetes Guest Node DaemonSet.",
     "Provisioned and configured by the CRI-O runtime via CNI instructions."
   ],
   "explorationCommands": [

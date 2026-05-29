@@ -509,14 +509,14 @@ export const COMPONENT_BADGES = Object.fromEntries(
 )
 
 // First Overview rendering rule (ARCHITECTURE.md §1) — the primary canvas is a
-// whitelist: a NodeCard may only be a systemd enforcer/daemon, a concrete
+// whitelist: a NodeCard may only be a systemd enforcer/service, a concrete
 // workload instance (Pod / Static Pod / VMI), or a networking Service
 // abstraction (ClusterIP / LoadBalancer). Zone boundaries are the zones
 // themselves; pure-intent CRs render *inside* the etcd store, not as cards; and
 // trace-only zones (the external Client) are not part of the default canvas.
 // This dev-only guard flags any future node that drifts outside the rule.
 const OVERVIEW_NODE_TYPES = new Set([
-  'systemd', // Active Enforcers — services & daemons
+  'systemd', // Active Enforcers — systemd services
   'Pod', // Concrete workload / data-plane instances
   'Static Pod',
   'VirtualMachineInstance',
