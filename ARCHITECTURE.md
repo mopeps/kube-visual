@@ -239,8 +239,8 @@ Adding a component touches several places — keep them in sync:
 2. **`src/data/zones.js`** — add a node (with `id`, `title`, `typePrefix`, `badges`) to
    the correct zone in the recursive `ZONES` tree. `COMPONENT_COLOR` / `COMPONENT_ZONE`
    derive automatically from the tree.
-3. **`src/components/LinuxInternalsTab.jsx`** / **`ObjectMapTab.jsx`** — add
-   KIND / PRIMITIVE / icon mappings if the component should surface in those tabs.
+3. **`src/components/ObjectMapTab.jsx`** — add KIND / PRIMITIVE mappings if the
+   component should surface in that table.
 4. **`src/data/events.json`** — reference the new `componentId` in any flow steps that
    should highlight it and draw connectors to/from it.
 
