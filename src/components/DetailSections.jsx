@@ -4,8 +4,9 @@ import { BADGE_GLOSSARY } from '../data/badge-glossary'
 import { PRIMITIVES_BY_TYPE, SELF_PRIMITIVE_IDS } from '../data/primitives'
 import ExploreCommands from './ExploreCommands'
 import InteractionList from './InteractionList'
+import ObjectText from './ObjectText'
 
-function PrimitiveInline({ primitive, color }) {
+function PrimitiveInline({ primitive, color, onSelectComponent, selfId }) {
   return (
     <div
       style={{
@@ -26,7 +27,7 @@ function PrimitiveInline({ primitive, color }) {
         <ul style={{ margin: '0 0 8px', paddingLeft: 16 }}>
           {primitive.interactions.map((line, i) => (
             <li key={i} style={{ fontSize: '0.7rem', color: 'var(--tx-muted)', marginBottom: 2 }}>
-              {line}
+              <ObjectText text={line} onSelectComponent={onSelectComponent} selfId={selfId} />
             </li>
           ))}
         </ul>
@@ -46,7 +47,7 @@ function PrimitiveInline({ primitive, color }) {
 // `suppressLegacyPrimitives` hides the PRIMITIVES_BY_TYPE section for components
 // whose kernel primitives are already shown in the modal's pipeline tree
 // (Layer 4), so the same information isn't presented twice.
-export default function DetailSections({ component, color, suppressLegacyPrimitives = false }) {
+export default function DetailSections({ component, color, suppressLegacyPrimitives = false, onSelectComponent }) {
   const [expandedPrimitive, setExpandedPrimitive] = useState(null)
   const [expandedBadge, setExpandedBadge] = useState(null)
 
@@ -176,6 +177,8 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
             <PrimitiveInline
               primitive={primitiveSet.items.find(p => p.id === expandedPrimitive)}
               color={primitiveSet.color}
+              onSelectComponent={onSelectComponent}
+              selfId={componentId}
             />
           )}
         </div>
@@ -183,11 +186,21 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
 
       <div className="detail-section">
         <h4>Problem solved</h4>
-        <p>{component.problemSolved}</p>
+        <p>
+          <ObjectText
+            text={component.problemSolved}
+            onSelectComponent={onSelectComponent}
+            selfId={componentId}
+          />
+        </p>
       </div>
 
       {component.interactions?.length > 0 && (
-        <InteractionList interactions={component.interactions} />
+        <InteractionList
+          interactions={component.interactions}
+          onSelectComponent={onSelectComponent}
+          selfId={componentId}
+        />
       )}
 
       {component.explorationCommands?.length > 0 && (

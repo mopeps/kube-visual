@@ -84,6 +84,7 @@ export default function App() {
       <AncestryModal
         componentId={activeComponentId}
         onClose={clearComponent}
+        onSelectComponent={selectComponent}
       />
 
       {/* Bottom-docked hop inspector — only meaningful where the arrows live. */}
