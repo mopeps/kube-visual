@@ -3,6 +3,7 @@ import { COMPONENT_BADGES } from '../data/zones'
 import { BADGE_GLOSSARY } from '../data/badge-glossary'
 import { PRIMITIVES_BY_TYPE, SELF_PRIMITIVE_IDS } from '../data/primitives'
 import ExploreCommands from './ExploreCommands'
+import InteractionList from './InteractionList'
 
 function PrimitiveInline({ primitive, color }) {
   return (
@@ -186,16 +187,7 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
       </div>
 
       {component.interactions?.length > 0 && (
-        <div className="detail-section" style={{ color }}>
-          <h4 style={{ color: 'var(--tx-muted)' }}>Interactions</h4>
-          <ul>
-            {component.interactions.map((i, idx) => (
-              <li key={idx} style={{ color: 'var(--tx)' }}>
-                <span style={{ color }}>{i}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <InteractionList interactions={component.interactions} />
       )}
 
       {component.explorationCommands?.length > 0 && (
