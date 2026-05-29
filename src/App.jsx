@@ -6,7 +6,7 @@ import OverviewTab from './components/OverviewTab'
 import PacketFlowTab from './components/PacketFlowTab'
 import LinuxInternalsTab from './components/LinuxInternalsTab'
 import ObjectMapTab from './components/ObjectMapTab'
-import DetailPanel from './components/DetailPanel'
+import AncestryModal from './components/AncestryModal'
 
 const TABS = [
   { id: 'overview',   label: 'Architecture Overview' },
@@ -78,10 +78,9 @@ export default function App() {
         </p>
       </div>
 
-      <DetailPanel
+      <AncestryModal
         componentId={activeComponentId}
         onClose={clearComponent}
-        onSelectComponent={selectComponent}
       />
     </div>
   )
