@@ -112,24 +112,35 @@ export default function IntentStoreCard({
       </p>
 
       <div className="intent-store-objects">
-        {node.intentObjects.map((obj) => (
-          <button
-            type="button"
-            key={obj.id}
-            id={obj.id}
-            className="intent-object"
-            style={{ '--node-accent': color }}
-            onClick={(e) => { e.stopPropagation(); onSelectComponent(obj.id) }}
-            title={`Open ${obj.title} details`}
-          >
-            <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>
-              [{obj.typePrefix}]
-            </span>
-            <span className="node-title" style={{ color }}>{obj.title}</span>
-            {/* Badges (API-group tags) are intentionally hidden on the canvas to
-                keep intent objects compact; they still surface in the detail popup. */}
-          </button>
-        ))}
+        {node.intentObjects.map((obj) => {
+          // Almost every intent object is a Custom Resource, so the
+          // "[Custom Resource]" prefix is just noise on the canvas — hide it
+          // for CRs and keep it only for any other type.
+          const showPrefix = obj.typePrefix !== 'Custom Resource'
+          // Long names can't fit when two boxes share a mobile row, so those
+          // claim their own full-width line — readable names beat two-up.
+          const isWide = obj.title.length > 14
+          return (
+            <button
+              type="button"
+              key={obj.id}
+              id={obj.id}
+              className={`intent-object ${isWide ? 'intent-object--wide' : ''}`}
+              style={{ '--node-accent': color }}
+              onClick={(e) => { e.stopPropagation(); onSelectComponent(obj.id) }}
+              title={`Open ${obj.title} details`}
+            >
+              {showPrefix && (
+                <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>
+                  [{obj.typePrefix}]
+                </span>
+              )}
+              <span className="node-title" style={{ color }}>{obj.title}</span>
+              {/* Badges (API-group tags) are intentionally hidden on the canvas to
+                  keep intent objects compact; they still surface in the detail popup. */}
+            </button>
+          )
+        })}
       </div>
 
       <div className="intent-store-footer">Click outside or press Esc to collapse</div>
