@@ -3,11 +3,14 @@ import { createPortal } from 'react-dom'
 import componentsData from '../data/components.json'
 import { COMPONENT_COLOR, COMPONENT_ZONE } from '../data/zones'
 import { PIPELINE_LAYER_BY_ID, pipelineLayerColor } from '../data/pipeline-layers'
+import { buildPipeline } from '../data/pipeline-model'
 import PipelineTree from './PipelineTree'
 import DetailSections from './DetailSections'
 
-// How far (px) the sheet must be dragged down by touch before it dismisses.
-const DRAG_DISMISS_PX = 110
+// How far (px) the sheet must be dragged down by touch before it dismisses, and
+// how far the finger must move before we decide a touch is a drag vs a scroll.
+const DRAG_DISMISS_PX = 130
+const DRAG_SLOP_PX = 8
 
 export default function AncestryModal({ componentId, onClose }) {
   // Distance the modal is currently pushed down by a touch drag.
@@ -15,15 +18,20 @@ export default function AncestryModal({ componentId, onClose }) {
   // While true the modal animates (snapping back / sliding off); while false it
   // tracks the gesture 1:1 with no transition.
   const [snapping, setSnapping] = useState(false)
+  // Whether the Manifest → Kernel pipeline section is expanded (collapsed by default).
+  const [treeOpen, setTreeOpen] = useState(false)
   const modalRef = useRef(null)
-  const dragStartY = useRef(null)
+  // Drag gesture bookkeeping: startY, whether the modal was at the top when the
+  // touch began, and the decided mode (null = undecided, 'drag', or 'scroll').
+  const drag = useRef({ startY: 0, atTop: false, mode: 'scroll' })
 
-  // Esc to close + reset drag state whenever a new component opens.
+  // Esc to close + reset transient state whenever a new component opens.
   useEffect(() => {
     if (!componentId) return
     setOffset(0)
     setSnapping(false)
-    dragStartY.current = null
+    setTreeOpen(false)
+    drag.current = { startY: 0, atTop: false, mode: 'scroll' }
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -55,23 +63,40 @@ export default function AncestryModal({ componentId, onClose }) {
     }
   }, [componentId])
 
-  // Touch-drag to dismiss: swiping the modal down past the threshold closes it.
-  // Only engages when the modal's own content is scrolled to the top so it
-  // doesn't fight internal scrolling.
+  // Touch-drag to dismiss — deliberate gesture only, so fast scrolling never
+  // closes the sheet by accident. It engages only when ALL hold:
+  //   • the modal was already scrolled to the very top when the touch began,
+  //   • the first finger movement past the slop is downward (not an up-scroll),
+  //   • the content does not scroll during the gesture, and
+  //   • the total downward drag passes DRAG_DISMISS_PX.
   const onTouchStart = (e) => {
-    if (modalRef.current && modalRef.current.scrollTop > 0) return
-    dragStartY.current = e.touches[0].clientY
+    const atTop = !modalRef.current || modalRef.current.scrollTop <= 0
+    drag.current = { startY: e.touches[0].clientY, atTop, mode: null }
     setSnapping(false)
   }
   const onTouchMove = (e) => {
-    if (dragStartY.current == null) return
-    const dy = e.touches[0].clientY - dragStartY.current
+    const st = drag.current
+    if (!st.atTop) return // started mid-scroll → leave scrolling alone
+    const dy = e.touches[0].clientY - st.startY
+    if (st.mode === null) {
+      if (Math.abs(dy) < DRAG_SLOP_PX) return // not enough movement to decide yet
+      st.mode = dy > 0 ? 'drag' : 'scroll' // first intent: down = drag, up = scroll
+      if (st.mode === 'scroll') return
+    }
+    if (st.mode !== 'drag') return
+    // If the content scrolled after we started dragging, the user is scrolling.
+    if (modalRef.current && modalRef.current.scrollTop > 0) {
+      st.mode = 'scroll'
+      setOffset(0)
+      return
+    }
     setOffset(dy > 0 ? dy : 0)
   }
   const onTouchEnd = () => {
-    if (dragStartY.current == null) return
+    const wasDrag = drag.current.mode === 'drag'
     const dragged = offset
-    dragStartY.current = null
+    drag.current.mode = 'scroll'
+    if (!wasDrag) return
     setSnapping(true)
     if (dragged >= DRAG_DISMISS_PX) onClose()
     else setOffset(0)
@@ -87,7 +112,8 @@ export default function AncestryModal({ componentId, onClose }) {
   const layer = PIPELINE_LAYER_BY_ID[component.pipelineLayer]
   const layerColor = pipelineLayerColor(component.pipelineLayer)
 
-  const hasTree = !!(component.ancestry || component.consumedResources?.length || component.kernelRealization)
+  const { bands } = buildPipeline(component)
+  const hasTree = bands.length > 0
 
   return createPortal(
     <div
@@ -140,15 +166,30 @@ export default function AncestryModal({ componentId, onClose }) {
 
         {hasTree && (
           <div className="detail-section">
-            <h4>Manifest → Kernel Pipeline</h4>
-            <PipelineTree component={component} />
+            <button
+              type="button"
+              className="tree-section-toggle"
+              onClick={() => setTreeOpen(o => !o)}
+              aria-expanded={treeOpen}
+              style={{ color }}
+            >
+              <span className="tree-section-caret">{treeOpen ? '▾' : '▸'}</span>
+              <h4 style={{ margin: 0, border: 'none', padding: 0, color: 'var(--tx-muted)' }}>
+                Manifest → Kernel Pipeline
+              </h4>
+            </button>
+            {treeOpen && (
+              <div style={{ marginTop: 12 }}>
+                <PipelineTree bands={bands} />
+              </div>
+            )}
           </div>
         )}
 
         <DetailSections
           component={component}
           color={color}
-          suppressLegacyPrimitives={!!component.kernelRealization}
+          suppressLegacyPrimitives={hasTree}
         />
 
         <div
