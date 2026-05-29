@@ -174,15 +174,45 @@ function podBands(component) {
 }
 
 function systemdBands(component) {
+  // Host daemons descend through the same four bands as a Pod — the symmetry is
+  // the point. The daemon's *intent* is not the .service file itself but a
+  // MachineConfig reconciled by the Machine Config Operator and bridged onto the
+  // host by Ignition at first boot. The on-disk unit is the concrete Runtime
+  // Object (the Pod-equivalent) that systemd PID 1 then supervises.
   const bands = [{
+    // 1 · Logical intent — a MachineConfig, the host plane's Deployment-equivalent.
     layerId: 'logical-intent',
     groups: [{
       nodes: [{
-        label: `[unit] ${component.displayName}`,
-        note: 'declarative .service unit: start / stop / restart policy',
+        label: '[MachineConfig] desired host state',
+        note: 'units, drop-ins & kernel args reconciled by the MCO',
+        detail: {
+          bullets: [
+            'Machine Config Operator renders pool MachineConfigs into one Ignition config',
+            'Ignition applies it on first boot (HCP: served by the Ignition Server)',
+            'Base units like crio.service / ovs also ship in the immutable RHCOS image',
+          ],
+        },
       }],
     }],
   }, {
+    // 2 · Runtime Object — the on-disk .service unit handed to PID 1.
+    layerId: 'api-boundary',
+    groups: [{
+      nodes: [{
+        label: `[unit] ${component.displayName}`,
+        note: 'on-disk .service unit handed to PID 1',
+        detail: {
+          bullets: [
+            'Existence: shipped in the RHCOS image or delivered via MachineConfig',
+            'Config & enablement governed by MachineConfig → Ignition',
+            'Declares ExecStart, Restart= / RestartSec= recovery policy',
+          ],
+        },
+      }],
+    }],
+  }, {
+    // 3 · Translation engine — systemd PID 1 supervises the unit.
     layerId: 'translation-engine',
     groups: [{
       nodes: [{

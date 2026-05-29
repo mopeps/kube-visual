@@ -16,15 +16,15 @@ export const PIPELINE_LAYERS = [
     label: 'Logical Intent',
     colorVar: '--k-cyan',
     icon: 'document',
-    blurb: 'Declarative desired state — Deployments, ReplicaSets, Custom Resources, and the operators that reconcile them.',
+    blurb: 'Declarative desired state — Deployments, ReplicaSets, MachineConfigs, Custom Resources, and the operators that reconcile them. The host plane lives here too: a daemon\'s intent is a MachineConfig reconciled by the Machine Config Operator.',
   },
   {
     id: 'api-boundary',
     order: 2,
-    label: 'API object',
+    label: 'Runtime Object',
     colorVar: '--k-sky',
     icon: 'cube',
-    blurb: 'The Pod object metadata and API surfaces (API servers, Services, ingress, etcd) that accept and persist intent.',
+    blurb: 'The concrete, named instance the engine actually runs — a Pod, a VirtualMachineInstance, or an on-disk .service unit. Distinct from band 1 not by being an API object (the controllers above are too) but by being the single thing handed to a supervisor.',
   },
   {
     id: 'translation-engine',
