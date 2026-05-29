@@ -9,7 +9,7 @@ import ExploreCommands from './ExploreCommands'
 const BAND_GLYPHS = {
   // Logical Intent — a manifest/document with text lines and a folded corner.
   document: <><path d="M6 2.8h7l5 5v13.4H6z" /><path d="M13 2.8v5h5" /><path d="M9 12h6M9 15h6M9 9h3" /></>,
-  // API object — an isometric cube / packaged object.
+  // Runtime Object — an isometric cube / packaged object.
   cube: <><path d="M12 2.5 4 7v10l8 4.5 8-4.5V7z" /><path d="m4 7 8 4.5L20 7" /><path d="M12 11.5V21" /></>,
   // Translation Engine — a settings gear with spokes.
   gear: <><circle cx="12" cy="12" r="3" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2.1 2.1M16.9 16.9 19 19M19 5l-2.1 2.1M7.1 16.9 5 19" /></>,
