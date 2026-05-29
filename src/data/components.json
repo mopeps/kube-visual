@@ -4,7 +4,6 @@
     "displayName": "External Client",
     "typePrefix": "Client",
     "layer": "External",
-    "pipelineLayer": "logical-intent",
     "problemSolved": "Represents an end-user browser, mobile app, or external API consumer initiating an HTTPS request to a workload running inside the HCP Guest Cluster.",
     "interactions": [
       "Sends HTTPS requests to the cluster's public Route hostname resolved by external DNS.",
@@ -19,7 +18,6 @@
     "displayName": "HyperShift Operator",
     "typePrefix": "Pod",
     "layer": "HyperShift Management",
-    "pipelineLayer": "logical-intent",
     "problemSolved": "A cluster-wide singleton Deployment running in the 'hypershift' namespace of the management cluster — one instance manages every HostedCluster on the cluster, not one per guest. It reconciles HostedCluster and NodePool CRs, creates each guest's HCP namespace, and deploys the per-HCP control-plane-operator that in turn owns the individual control-plane components.",
     "interactions": [
       "Watches HostedCluster and NodePool custom resources in the management API Server.",
@@ -37,7 +35,6 @@
     "displayName": "HostedCluster",
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
-    "pipelineLayer": "logical-intent",
     "problemSolved": "The top-level HCP API object. A HostedCluster CR (in the management cluster's 'clusters' namespace) declares the desired guest control plane: release image, networking, platform (KubeVirt here), and publishing strategy. The HyperShift Operator reconciles it into a running control plane.",
     "interactions": [
       "Authored by the platform admin and stored in the management API Server.",
@@ -54,7 +51,6 @@
     "displayName": "NodePool",
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
-    "pipelineLayer": "logical-intent",
     "problemSolved": "The HCP abstraction for a set of identical worker nodes — the hosted-cluster analogue of a MachineSet. A NodePool CR declares replica count, instance type/VM template, and the release/upgrade strategy for the guest workers. There is no standalone Machine API in the guest; worker scaling is driven entirely through NodePools.",
     "interactions": [
       "Authored by the platform admin alongside the HostedCluster, stored in the management API Server.",
@@ -72,7 +68,6 @@
     "displayName": "Cluster Version Operator",
     "typePrefix": "Pod",
     "layer": "Management Control Plane",
-    "pipelineLayer": "logical-intent",
     "problemSolved": "Manages the lifecycle and upgrade path of the guest OpenShift cluster. It applies the release payload, reconciles cluster operators, and enforces version constraints between components.",
     "interactions": [
       "Reads the ClusterVersion CR to determine target version.",
@@ -90,7 +85,6 @@
     "displayName": "Control Plane Operator",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "pipelineLayer": "logical-intent",
     "problemSolved": "The per-hosted-cluster operator (CPO) that the HyperShift Operator deploys into each HCP namespace. While the HyperShift Operator is a single cluster-wide controller, the CPO is the one that actually reconciles this guest's individual control-plane components — etcd, Guest API Server, OAuth, Konnectivity, Ignition, OVN control plane — into existence.",
     "interactions": [
       "Reconciles the HostedControlPlane CR created by the HyperShift Operator.",
@@ -108,7 +102,6 @@
     "displayName": "Cluster API Manager",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "pipelineLayer": "logical-intent",
     "problemSolved": "The upstream Cluster API (CAPI) controller manager running in the HCP namespace. It reconciles the Cluster, MachineDeployment, MachineSet, and Machine objects that the HyperShift NodePool controller generates, driving the generic machine lifecycle while delegating infrastructure to a platform provider.",
     "interactions": [
       "Reconciles Cluster API Machine/MachineSet/MachineDeployment objects in the HCP namespace.",
@@ -126,7 +119,6 @@
     "displayName": "CAPI Provider (KubeVirt)",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "pipelineLayer": "logical-intent",
     "problemSolved": "The cluster-api-provider-kubevirt (CAPK) controller. It is the KubeVirt-specific Cluster API infrastructure provider: for each Machine, it creates a KubeVirt VirtualMachine object in the HCP namespace, which KubeVirt then realises as a running VirtualMachineInstance acting as a guest worker node.",
     "interactions": [
       "Watches KubevirtMachine objects produced by the CAPI manager.",
@@ -144,7 +136,6 @@
     "displayName": "Guest API Server",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "pipelineLayer": "api-boundary",
     "problemSolved": "The Kubernetes API Server for the guest cluster, running as a Pod in the bare metal cluster. All kubectl/oc commands targeting the guest cluster reach this process. It handles authn/authz, admission webhooks, and persists state to the co-located etcd.",
     "interactions": [
       "Exposes the guest cluster's API on a dedicated Service port.",
@@ -162,7 +153,6 @@
     "displayName": "Guest OAuth Server",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "pipelineLayer": "api-boundary",
     "problemSolved": "Handles OpenShift OAuth authentication flows for the guest cluster, issuing tokens to users. It runs as a Pod in the bare metal cluster, isolated from the guest node infrastructure.",
     "interactions": [
       "Validates identity provider credentials and issues OAuth tokens.",
@@ -179,7 +169,6 @@
     "displayName": "Guest Controller Manager",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "pipelineLayer": "logical-intent",
     "problemSolved": "Runs the core Kubernetes control loops for the guest cluster as a single Pod in the bare metal cluster: NodeLifecycleController, EndpointController, DeploymentController, and others. Ensures desired state is reconciled continuously.",
     "interactions": [
       "Watches the Guest API Server for resource events.",
@@ -196,7 +185,6 @@
     "displayName": "Guest Scheduler",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "pipelineLayer": "logical-intent",
     "problemSolved": "Watches the Guest API Server for Pods with no assigned node and binds them to guest worker nodes based on resource availability, taints, tolerations, and affinity rules.",
     "interactions": [
       "Watches Guest API Server for pending Pods.",
@@ -213,7 +201,6 @@
     "displayName": "Guest Etcd",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "pipelineLayer": "api-boundary",
     "problemSolved": "The distributed key-value store that persists all guest cluster state. In HCP it runs as a StatefulSet Pod inside the guest's HCP namespace in the management cluster — not as a static pod (static pods only exist on kubelet-managed nodes via /etc/kubernetes/manifests). It stores every Kubernetes object (Pods, ConfigMaps, Secrets, CRDs) for the guest cluster.",
     "interactions": [
       "Receives reads and writes exclusively from the Guest API Server.",
@@ -231,7 +218,6 @@
     "displayName": "Shared Ingress Proxy",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "pipelineLayer": "api-boundary",
     "problemSolved": "An HAProxy-based ingress router running in the bare metal cluster that handles external HTTPS traffic destined for guest workloads. It terminates TLS for guest Routes and forwards traffic through the bare metal OVS fabric toward the target guest worker node.",
     "interactions": [
       "Watches Route objects in the guest cluster via the Guest API Server.",
@@ -249,7 +235,6 @@
     "displayName": "OVN-K8s Master",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "The OVN-Kubernetes control plane Pod running in the bare metal cluster. It programs the OVN Northbound DB with logical network topology for the guest cluster, translating Kubernetes Network Policies and Services into OpenFlow rules.",
     "interactions": [
       "Watches the Guest API Server for Pod, Service, and NetworkPolicy events.",
@@ -267,7 +252,6 @@
     "displayName": "Cloud Controller Manager",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "pipelineLayer": "logical-intent",
     "problemSolved": "Bridges the guest cluster with the underlying cloud infrastructure. It manages cloud-specific resources such as load balancers, routes, and node addresses by calling cloud provider APIs on behalf of the guest cluster.",
     "interactions": [
       "Watches Node objects in the guest cluster for ProviderID fields.",
@@ -284,7 +268,6 @@
     "displayName": "Konnectivity Server",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "pipelineLayer": "api-boundary",
     "problemSolved": "Provides a secure tunnel from the bare metal cluster control plane to the guest worker nodes. Enables the Guest API Server to reach kubelet on guest nodes (for exec, logs, port-forward) without requiring direct network connectivity.",
     "interactions": [
       "Maintains persistent tunnels from the bare metal cluster to Konnectivity Agents on each guest worker node.",
@@ -301,7 +284,6 @@
     "displayName": "Ignition Server",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "pipelineLayer": "api-boundary",
     "problemSolved": "Serves Ignition configuration payloads to guest worker nodes during their initial boot sequence. Enables zero-touch provisioning: each new node fetches its complete OS, kubelet, and certificate configuration from this endpoint.",
     "interactions": [
       "Provides a TLS-secured endpoint serving node-specific Ignition configs.",
@@ -318,7 +300,6 @@
     "displayName": "Cluster Monitoring",
     "typePrefix": "Pod",
     "layer": "Guest Worker Node",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "The guest cluster's openshift-monitoring stack. Like in any OpenShift cluster, it runs as workloads on the guest worker nodes (inside the VMs) — not in the management control-plane namespace. It scrapes metrics from guest components and user workloads for alerting and capacity planning.",
     "interactions": [
       "Scrapes metrics endpoints on guest cluster Pods and nodes from within the guest cluster.",
@@ -335,7 +316,6 @@
     "displayName": "Kubelet (Master)",
     "typePrefix": "systemd",
     "layer": "Bare Metal Master Node",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "The node agent running on the bare metal master node. It runs the management cluster's own control plane as Static Pods read from /etc/kubernetes/manifests, and also manages the regular guest control-plane Pods scheduled onto this node.",
     "interactions": [
       "Watches /etc/kubernetes/manifests and runs the management control plane (kube-apiserver, etcd, scheduler, controller-manager) as Static Pods.",
@@ -353,7 +333,6 @@
     "displayName": "CRI-O (Master)",
     "typePrefix": "systemd",
     "layer": "Bare Metal Master Node",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "The OCI-compliant container runtime on the bare metal master node. It creates and runs the containers for both the management cluster's control-plane Static Pods and the guest control-plane Pods scheduled onto this node.",
     "interactions": [
       "Receives gRPC CRI calls from the master kubelet.",
@@ -371,7 +350,6 @@
     "displayName": "Open vSwitch (Master)",
     "typePrefix": "systemd",
     "layer": "Bare Metal Master Node",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "The host-side Open vSwitch service driving the OVN integration bridge (br-int) on the bare metal master node. Every control-plane Pod veth pair and the Geneve overlay uplink connect through this bridge.",
     "interactions": [
       "Manages the br-int OVS bridge and its port configuration on the master node.",
@@ -389,7 +367,6 @@
     "displayName": "OVN-K8s Node (Master)",
     "typePrefix": "Pod",
     "layer": "Bare Metal Master Node",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "The per-node OVN-Kubernetes DaemonSet Pod running on the bare metal master node. It syncs the OVN Southbound DB flows to the local OVS bridge and runs the CNI plugin that wires control-plane Pods into the cluster network.",
     "interactions": [
       "Runs the OVN controller that translates Southbound DB entries into OpenFlow rules on the master's br-int.",
@@ -407,7 +384,6 @@
     "displayName": "Management Kube API Server",
     "typePrefix": "Static Pod",
     "layer": "Bare Metal Master Node",
-    "pipelineLayer": "api-boundary",
     "problemSolved": "The Kubernetes API Server of the management (bare metal) cluster itself, running as a Static Pod on the master node. This is the API the HyperShift Operator talks to: it stores HostedCluster/NodePool CRs and the guest control-plane Deployments. It is distinct from the per-guest Guest API Server that runs as a regular Pod inside each HCP namespace.",
     "interactions": [
       "Started directly by the master kubelet from a manifest in /etc/kubernetes/manifests, before any scheduler exists.",
@@ -425,7 +401,6 @@
     "displayName": "Management Etcd",
     "typePrefix": "Static Pod",
     "layer": "Bare Metal Master Node",
-    "pipelineLayer": "api-boundary",
     "problemSolved": "The etcd key-value store for the management (bare metal) cluster, running as a Static Pod on the master node. It persists all management cluster state, including the HostedCluster and NodePool Custom Resources and the guest control-plane object definitions. This is where infrastructure *intent* lives: a HostedCluster or NodePool is a desired-state record stored here, not a running Linux process. Each guest cluster keeps its own separate etcd that runs as a Pod inside its HCP namespace.",
     "interactions": [
       "Receives reads and writes exclusively from the Management Kube API Server on the same node.",
@@ -444,7 +419,6 @@
     "displayName": "Management Controller Manager",
     "typePrefix": "Static Pod",
     "layer": "Bare Metal Master Node",
-    "pipelineLayer": "logical-intent",
     "problemSolved": "The kube-controller-manager of the management (bare metal) cluster, running as a Static Pod on the master node. It runs the core control loops (Deployment, ReplicaSet, Node, Endpoint) that keep the management cluster — including the guest control-plane Deployments — reconciled to desired state.",
     "interactions": [
       "Watches the Management Kube API Server for resource events.",
@@ -462,7 +436,6 @@
     "displayName": "Management Scheduler",
     "typePrefix": "Static Pod",
     "layer": "Bare Metal Master Node",
-    "pipelineLayer": "logical-intent",
     "problemSolved": "The kube-scheduler of the management (bare metal) cluster, running as a Static Pod on the master node. It assigns pending management cluster Pods — including the guest control-plane Pods and the KubeVirt Launcher Pods — to bare metal nodes based on capacity and constraints.",
     "interactions": [
       "Watches the Management Kube API Server for Pods with no node assignment.",
@@ -480,7 +453,6 @@
     "displayName": "Kubelet (Host)",
     "typePrefix": "systemd",
     "layer": "Bare Metal Worker Node",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "The node agent running on the bare metal worker node. It manages the lifecycle of Pods scheduled to this node — including the KubeVirt Launcher Pod — by instructing CRI-O to create and monitor containers.",
     "interactions": [
       "Polls the Bare Metal API Server for PodSpecs assigned to this node.",
@@ -498,7 +470,6 @@
     "displayName": "CRI-O (Host)",
     "typePrefix": "systemd",
     "layer": "Bare Metal Worker Node",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "The OCI-compliant container runtime on the bare metal worker node. It creates and manages containers for host-side Pods, including the KubeVirt Launcher container that wraps the guest Virtual Machine.",
     "interactions": [
       "Receives gRPC CRI calls from the host Kubelet.",
@@ -516,7 +487,6 @@
     "displayName": "Open vSwitch (Host)",
     "typePrefix": "systemd",
     "layer": "Bare Metal Worker Node",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "The host-side Open vSwitch service that drives the OVN integration bridge (br-int) on the bare metal worker node. All Pod veth pairs, the VXLAN/Geneve uplink, and the KubeVirt tap interface connect through this bridge.",
     "interactions": [
       "Manages the br-int OVS bridge and its port configuration.",
@@ -535,7 +505,6 @@
     "displayName": "OVN-K8s Node",
     "typePrefix": "Pod",
     "layer": "Bare Metal Worker Node",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "The per-node OVN-Kubernetes DaemonSet Pod that runs on the bare metal worker node. It syncs the OVN Southbound DB flows to the local OVS bridge and manages the host-side CNI plugin for Pod network provisioning.",
     "interactions": [
       "Runs the OVN controller that translates Southbound DB entries to OpenFlow rules.",
@@ -553,7 +522,6 @@
     "displayName": "KubeVirt virt-handler",
     "typePrefix": "Pod",
     "layer": "Bare Metal Worker Node",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "The KubeVirt node agent — a DaemonSet Pod on every bare metal node that can host VMs. It is the component that actually realises a VirtualMachineInstance: when the API holds a VMI scheduled to this node, virt-handler creates and supervises the virt-launcher Pod, then drives the VM's lifecycle (start, migrate, stop) to match desired state.",
     "interactions": [
       "Watches the management API Server for VirtualMachineInstances assigned to this node.",
@@ -571,7 +539,6 @@
     "displayName": "KubeVirt Launcher",
     "typePrefix": "Pod",
     "layer": "KubeVirt",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "A privileged Pod that wraps a single VirtualMachineInstance. It manages the QEMU/KVM process life cycle, sets up the virtual NIC (tap0) bridged to the host OVS network, and monitors the VM's health on behalf of the KubeVirt Virt-Handler DaemonSet.",
     "interactions": [
       "Spawns and supervises the qemu-kvm process for the Guest Worker Node VM.",
@@ -589,7 +556,6 @@
     "displayName": "Guest Worker Node",
     "typePrefix": "VirtualMachineInstance",
     "layer": "KubeVirt",
-    "pipelineLayer": "linux-primitive",
     "logicalContext": {
       "openShiftProject": "openshift-guest-workers",
       "associatedObject": "KubeVirt Launcher Pod"
@@ -611,7 +577,6 @@
     "displayName": "Kubelet (Guest)",
     "typePrefix": "systemd",
     "layer": "Guest Worker Node",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "The Kubernetes node agent running inside the Guest Worker Node VM. It watches the Guest API Server (via the Konnectivity tunnel) for Pods assigned to this node and instructs the guest CRI-O to create them.",
     "interactions": [
       "Connects to the Guest API Server endpoint via the Konnectivity tunnel.",
@@ -628,7 +593,6 @@
     "displayName": "CRI-O (Guest)",
     "typePrefix": "systemd",
     "layer": "Guest Worker Node",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "The OCI-compliant container runtime inside the Guest Worker Node VM. It creates and manages containers for workload Pods running in the guest cluster, setting up network namespaces and cgroup hierarchies for each container.",
     "interactions": [
       "Receives gRPC CRI calls from the guest Kubelet.",
@@ -646,7 +610,6 @@
     "displayName": "Open vSwitch (Guest)",
     "typePrefix": "systemd",
     "layer": "Guest Worker Node",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "Open vSwitch running inside the Guest Worker Node VM, driving the guest-side OVN integration bridge (br-int). All workload Pod veth pairs inside the VM connect through this bridge, and the guest OVN-Kubernetes DaemonSet programs its flow rules.",
     "interactions": [
       "Manages the in-VM br-int OVS bridge for guest Pod networking.",
@@ -663,7 +626,6 @@
     "displayName": "OVN-K8s Guest Node",
     "typePrefix": "Pod",
     "layer": "Guest Worker Node",
-    "pipelineLayer": "translation-engine",
     "problemSolved": "The OVN-Kubernetes DaemonSet Pod running inside the Guest Worker Node VM. It syncs the guest OVN Southbound DB to the in-VM OVS bridge and handles CNI requests for workload Pod network provisioning.",
     "interactions": [
       "Runs the OVN controller that programs guest OVS flows.",
@@ -680,7 +642,6 @@
     "displayName": "Konnectivity Agent",
     "typePrefix": "Pod",
     "layer": "Guest Worker Node",
-    "pipelineLayer": "api-boundary",
     "problemSolved": "The node-side counterpart to the Konnectivity Server in the bare metal cluster. It maintains a persistent outbound tunnel to the Konnectivity Server, enabling the Guest API Server to reach the guest kubelet for exec, logs, and port-forward operations.",
     "interactions": [
       "Opens a persistent TLS connection to the Konnectivity Server in the bare metal cluster.",
@@ -697,7 +658,6 @@
     "displayName": "CoreDNS Node",
     "typePrefix": "Pod",
     "layer": "Guest Worker Node",
-    "pipelineLayer": "api-boundary",
     "problemSolved": "A per-node CoreDNS DaemonSet Pod inside the Guest Worker Node VM. It caches DNS responses locally to reduce round-trip latency and serves as the DNS resolver for all Pods running on this node.",
     "interactions": [
       "Configured as the upstream DNS server for all containers via the kubelet's clusterDNS setting.",
@@ -714,7 +674,6 @@
     "displayName": "Ingress Router (Guest)",
     "typePrefix": "Pod",
     "layer": "Guest Worker Node",
-    "pipelineLayer": "api-boundary",
     "problemSolved": "An HAProxy-based OpenShift Ingress Router running as a Pod inside the Guest Worker Node VM. It watches Route objects in the guest cluster and proxies the decrypted HTTPS traffic — after TLS re-encryption by the Shared Ingress Proxy — to the correct workload Pod.",
     "interactions": [
       "Watches Route objects in the guest cluster via the Guest API Server.",
@@ -732,7 +691,6 @@
     "displayName": "Front-End Workload",
     "typePrefix": "Pod",
     "layer": "Guest Workload",
-    "pipelineLayer": "api-boundary",
     "logicalContext": {
       "openShiftProject": "e-commerce-prod",
       "associatedObject": "Deployment/frontend"
@@ -783,7 +741,6 @@
     "displayName": "Back-End Workload",
     "typePrefix": "Pod",
     "layer": "Guest Workload",
-    "pipelineLayer": "api-boundary",
     "logicalContext": {
       "openShiftProject": "e-commerce-prod",
       "associatedObject": "Deployment/backend"
@@ -832,7 +789,6 @@
     "componentId": "pod-netns",
     "displayName": "Linux Network Namespace (netns)",
     "layer": "Linux Kernel Primitives",
-    "pipelineLayer": "linux-primitive",
     "problemSolved": "Provides network virtualization and isolation inside the Guest RHCOS VM. It gives each workload Pod a private routing table, IP address, and packet filtering space.",
     "interactions": [
       "Attaches to a guest-side veth pair managed by the OVN-Kubernetes Guest Node DaemonSet.",
@@ -847,7 +803,6 @@
     "componentId": "pod-cgroups",
     "displayName": "Control Groups (cgroups v2)",
     "layer": "Linux Kernel Primitives",
-    "pipelineLayer": "linux-primitive",
     "problemSolved": "Enforces CPU, memory, and I/O resource limits for each container inside the Guest VM. Prevents a single runaway container from starving other workloads on the guest node.",
     "interactions": [
       "Hierarchy created by guest CRI-O/runc when the container starts inside the VM.",
@@ -864,7 +819,6 @@
     "componentId": "container-process",
     "displayName": "Container Process (PID 1)",
     "layer": "Linux Kernel Primitives",
-    "pipelineLayer": "linux-primitive",
     "problemSolved": "The actual application process running as PID 1 inside the container's PID namespace within the Guest VM. It is the leaf node of the entire HCP ownership chain.",
     "interactions": [
       "Runs inside the intersection of a Network Namespace, cgroup slice, and PID namespace — all inside the Guest VM.",
