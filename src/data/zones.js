@@ -443,3 +443,43 @@ export const COMPONENT_ZONE = Object.fromEntries(
 export const COMPONENT_BADGES = Object.fromEntries(
   allNodes.map(({ node }) => [node.id, node.badges || []])
 )
+
+// First Overview rendering rule (ARCHITECTURE.md §1) — the primary canvas is a
+// whitelist: a NodeCard may only be a systemd enforcer/daemon or a concrete
+// workload instance (Pod / Static Pod / VMI). Zone boundaries are the zones
+// themselves; intent CRs render *inside* the etcd store, not as cards; and
+// trace-only zones (the external Client) are not part of the default canvas.
+// This dev-only guard flags any future node that drifts outside the rule.
+const OVERVIEW_NODE_TYPES = new Set([
+  'systemd', // Active Enforcers — services & daemons
+  'Pod', // Concrete workload / data-plane instances
+  'Static Pod',
+  'VirtualMachineInstance',
+])
+
+function assertOverviewWhitelist(zones) {
+  const offenders = []
+  const walk = (list) => {
+    for (const zone of list) {
+      if (zone.traceOnly) continue // not rendered on the default overview
+      // intentObjects (CRs) live inside the etcd store, never as cards — skip.
+      zone.nodes?.forEach((n) => {
+        if (!OVERVIEW_NODE_TYPES.has(n.typePrefix)) {
+          offenders.push(`${n.id} [${n.typePrefix}]`)
+        }
+      })
+      if (zone.zones) walk(zone.zones)
+    }
+  }
+  walk(zones)
+  if (offenders.length) {
+    console.warn(
+      '[kube-visual] First Overview rendering-rule violation (ARCHITECTURE.md §1): ' +
+        'these nodes are not zone boundaries, systemd enforcers, or concrete ' +
+        'workload instances and must not render on the primary canvas:\n  ' +
+        offenders.join('\n  ')
+    )
+  }
+}
+
+if (import.meta.env?.DEV) assertOverviewWhitelist(ZONES)
