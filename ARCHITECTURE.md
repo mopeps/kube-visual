@@ -56,6 +56,7 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │           │
   │           │   // Ingress Control, Networking & Proxy Systems
   │           ├── [Pod] Shared Ingress Proxy Instance
+  │           ├── [Service · LoadBalancer] Shared Ingress VIP (MetalLB L2)
   │           ├── [Pod] OVN-Kubernetes Master Control Instance
   │           ├── [Pod] Cloud Controller Manager (CCM) Instance
   │           ├── [Pod] Konnectivity Server Instance
@@ -79,13 +80,46 @@ The workspace viewport canvas must render this exact structural hierarchy:
                     ├── [Pod] Konnectivity Agent Instance
                     ├── [Pod] CoreDNS Node Instance
                     ├── [Pod] OpenShift Ingress Router Instance
+                    ├── [Service · LoadBalancer] Ingress Router VIP (MetalLB L2)
                     ├── [Pod] Cluster Monitoring Instance (openshift-monitoring)
                     │
-                    │   // Workload Instances sitting directly inside the VM
+                    │   // Workload Instances (+ their ClusterIP Services) inside the VM
                     ├── [Pod] Front-End Workload Instance
-                    └── [Pod] Back-End Workload Instance
+                    ├── [Service · ClusterIP] Front-End Workload Service
+                    ├── [Pod] Back-End Workload Instance
+                    └── [Service · ClusterIP] Back-End Workload Service
 
 ```
+
+### First Overview Rendering Rule (the primary canvas grid)
+
+The primary overview layout is a **whitelist**: it may render *only* components that
+fall into one of these three categories. Anything that is not one of these three is kept
+off the main canvas (it surfaces elsewhere — e.g. in a detail modal, the etcd intent
+store, or a trace-only zone).
+
+1. **The Context / Zone Boundaries** — the macro physical/virtual boundaries that frame
+   everything else: `[Management Cluster]`, `[Management Master Node]`,
+   `[Dedicated Guest Control Plane Namespace]`, `[Management Worker Node]`,
+   `[Guest Worker Node VM]`.
+2. **The Active Enforcers (`systemd` Services & Daemons)** — binary systems executing
+   continuous loop cycles directly on a host OS or guest OS instance: `Kubelet`, `CRI-O`,
+   `Open vSwitch`, `virt-handler`.
+3. **The Concrete Workload / Data Plane Instances** — discrete compute packages running
+   processes: `Pods`, `Static Pods`, `VirtualMachineInstances`.
+4. **The Networking / Service Abstractions** — Kubernetes `Service` objects that front the
+   workloads above. Unlike pure-intent records, a Service has a *concrete data-plane
+   realization*: a `ClusterIP` is a virtual IP backed by OVN load-balancer flows (DNAT),
+   and a `LoadBalancer` (here, **MetalLB in L2 mode**) is an external VIP advertised over
+   ARP/NDP. That data-plane footprint earns it a card on the canvas, next to the Pods it
+   routes to: `[Service]`.
+
+This reinforces the **Default State** rule in §2: desired-state records that have *no*
+data-plane realization (the `HostedCluster` / `NodePool` Custom Resources), raw Linux
+kernel primitives (netns, cgroups, host PIDs), and Project/Namespace boundaries are *not*
+instances, enforcers, or realized Service abstractions, so they never appear as cards on
+the first overview — they live inside the expandable etcd intent store or behind a node's
+detail modal instead.
 
 ### Modeling invariants (get these right)
 
@@ -199,7 +233,7 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
 Adding a component touches several places — keep them in sync:
 
 1. **`src/data/components.json`** — new entry with `componentId`, `displayName`, `layer`,
-   `typePrefix` (e.g. `Pod`, `Static Pod`, `systemd`, `VirtualMachineInstance`),
+   `typePrefix` (e.g. `Pod`, `Static Pod`, `systemd`, `VirtualMachineInstance`, `Service`),
    `problemSolved`, `interactions[]`, `explorationCommands[]`. Add `logicalContext`
    (`openShiftProject` + `associatedObject`) for workload pods and VMIs.
 2. **`src/data/zones.js`** — add a node (with `id`, `title`, `typePrefix`, `badges`) to

@@ -231,6 +231,23 @@
     ]
   },
   {
+    "componentId": "svc-ingress-lb-shared",
+    "displayName": "Shared Ingress LoadBalancer",
+    "typePrefix": "Service",
+    "layer": "Guest Control Plane",
+    "problemSolved": "A LoadBalancer-type Service that exposes the Shared Ingress Proxy on a stable external VIP. Rather than a cloud provider, MetalLB in Layer 2 mode owns the address: a MetalLB speaker on one node answers ARP/NDP for the VIP, so external HTTPS traffic for guest Routes lands on the bare metal cluster and is forwarded to the HAProxy proxy Pods.",
+    "interactions": [
+      "Selects the Shared Ingress Proxy Pods and publishes their endpoints behind one external VIP.",
+      "MetalLB (L2 mode) advertises the VIP via gratuitous ARP/NDP from a single elected speaker node.",
+      "kube-proxy / OVN program load-balancer rules that DNAT the VIP to a healthy proxy Pod."
+    ],
+    "explorationCommands": [
+      "# Inspect the LoadBalancer service and its assigned external IP\noc get svc -n openshift-ingress -o wide",
+      "# Check which node MetalLB is advertising the VIP from\noc logs -n metallb-system -l component=speaker --tail=50 | grep announcing",
+      "# View the MetalLB L2 advertisement / address pool\noc get l2advertisement,ipaddresspool -n metallb-system"
+    ]
+  },
+  {
     "componentId": "ovn-master-control",
     "displayName": "OVN-K8s Master",
     "typePrefix": "Pod",
@@ -687,6 +704,23 @@
     ]
   },
   {
+    "componentId": "svc-ingress-lb-guest",
+    "displayName": "Ingress LoadBalancer",
+    "typePrefix": "Service",
+    "layer": "Guest Workload",
+    "problemSolved": "The LoadBalancer-type Service (the OpenShift router-default external IP) that fronts the guest cluster's Ingress Router. With no cloud load balancer available, MetalLB in Layer 2 mode hands out and advertises the VIP from inside the guest cluster, so application traffic for guest Routes reaches the HAProxy router Pods running in the VM.",
+    "interactions": [
+      "Selects the guest Ingress Router Pods and exposes them behind a single external VIP.",
+      "MetalLB speakers on the guest worker nodes advertise the VIP over ARP (IPv4) / NDP (IPv6) in L2 mode.",
+      "Traffic to the VIP is DNATed by OVN load-balancer flows to a healthy router Pod endpoint."
+    ],
+    "explorationCommands": [
+      "# View the router-default LoadBalancer service and its external IP\noc get svc router-default -n openshift-ingress -o wide --kubeconfig <guest-kubeconfig>",
+      "# Confirm MetalLB assigned the address from a pool\noc get ipaddresspool -n metallb-system --kubeconfig <guest-kubeconfig>",
+      "# See the speaker announcing the VIP\noc logs -n metallb-system -l component=speaker --tail=50 --kubeconfig <guest-kubeconfig> | grep announcing"
+    ]
+  },
+  {
     "componentId": "frontend-workload-pod",
     "displayName": "Front-End Workload",
     "typePrefix": "Pod",
@@ -737,6 +771,27 @@
     }
   },
   {
+    "componentId": "svc-frontend",
+    "displayName": "Front-End Service",
+    "typePrefix": "Service",
+    "layer": "Guest Workload",
+    "logicalContext": {
+      "openShiftProject": "e-commerce-prod",
+      "associatedObject": "Deployment/frontend"
+    },
+    "problemSolved": "A ClusterIP Service that gives the Front-End Workload Pods a single stable virtual IP and DNS name inside the guest cluster. The Guest Ingress Router forwards decrypted HTTP traffic to this Service, which load-balances across the frontend Pod replicas — decoupling clients from individual, churning Pod IPs.",
+    "interactions": [
+      "Selects the frontend Pods by label and tracks their ready endpoints via the EndpointSlice controller.",
+      "The Guest Ingress Router resolves the Service and forwards inbound requests to it.",
+      "The ClusterIP is virtual — OVN-Kubernetes programs load-balancer flows that DNAT it to a backing Pod IP."
+    ],
+    "explorationCommands": [
+      "# Inspect the ClusterIP service\noc get svc frontend -n e-commerce-prod -o wide",
+      "# List the endpoints it currently routes to\noc get endpointslices -n e-commerce-prod -l kubernetes.io/service-name=frontend",
+      "# Show the OVN load-balancer entry backing the ClusterIP\novn-nbctl lb-list | grep <cluster-ip>"
+    ]
+  },
+  {
     "componentId": "backend-workload-pod",
     "displayName": "Back-End Workload",
     "typePrefix": "Pod",
@@ -784,6 +839,27 @@
       "networkNamespace": "netns:[4026532601]",
       "mountNamespace": "Virtual File System Bind Mounts"
     }
+  },
+  {
+    "componentId": "svc-backend",
+    "displayName": "Back-End Service",
+    "typePrefix": "Service",
+    "layer": "Guest Workload",
+    "logicalContext": {
+      "openShiftProject": "e-commerce-prod",
+      "associatedObject": "Deployment/backend"
+    },
+    "problemSolved": "A ClusterIP Service exposing the Back-End Workload Pods on a stable in-cluster VIP. The Front-End Workload calls this Service for east-west API traffic instead of addressing back-end Pods directly, so back-end scaling and rollouts stay transparent to the front end.",
+    "interactions": [
+      "Selects the backend Pods by label and publishes their ready endpoints.",
+      "Consumed east-west by the Front-End Workload via the Service DNS name (backend.e-commerce-prod.svc).",
+      "The ClusterIP is realized as OVN load-balancer flows that DNAT to a backing Pod IP on the guest OVS fabric."
+    ],
+    "explorationCommands": [
+      "# Inspect the ClusterIP service\noc get svc backend -n e-commerce-prod -o wide",
+      "# Check the endpoints behind the service\noc get endpoints backend -n e-commerce-prod",
+      "# Resolve the service DNS from the frontend pod\noc exec deploy/frontend -n e-commerce-prod -- nslookup backend.e-commerce-prod.svc.cluster.local"
+    ]
   },
   {
     "componentId": "pod-netns",

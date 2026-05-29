@@ -215,6 +215,19 @@ export const ZONES = [
                   { label: 'Route CR', color: 'var(--k-sky)' },
                 ],
               },
+              // MetalLB L2 LoadBalancer VIP fronting the shared ingress proxy
+              // (control-plane ingress). A Service is a networking abstraction,
+              // not a process — allowed on the overview per the 4th category of
+              // the First Overview rendering rule (ARCHITECTURE.md §1).
+              {
+                id: 'svc-ingress-lb-shared',
+                title: 'Shared Ingress LoadBalancer',
+                typePrefix: 'Service',
+                badges: [
+                  { label: 'LoadBalancer', color: 'var(--k-sky)' },
+                  { label: 'MetalLB L2', color: 'var(--k-sky)' },
+                ],
+              },
               {
                 id: 'ovn-master-control',
                 title: 'OVN-K8s Master',
@@ -369,6 +382,18 @@ export const ZONES = [
                       { label: 'Route CR', color: 'var(--k-green)' },
                     ],
                   },
+                  // MetalLB L2 LoadBalancer VIP fronting the guest ingress
+                  // router — the standard OpenShift router-default external IP,
+                  // advertised by MetalLB speakers over ARP on the guest network.
+                  {
+                    id: 'svc-ingress-lb-guest',
+                    title: 'Ingress LoadBalancer',
+                    typePrefix: 'Service',
+                    badges: [
+                      { label: 'LoadBalancer', color: 'var(--k-green)' },
+                      { label: 'MetalLB L2', color: 'var(--k-green)' },
+                    ],
+                  },
                   {
                     id: 'frontend-workload-pod',
                     title: 'Front-End Workload',
@@ -378,6 +403,17 @@ export const ZONES = [
                       { label: ':8080', color: 'var(--k-green)' },
                     ],
                   },
+                  // ClusterIP Service giving the front-end Pods a stable in-cluster
+                  // VIP (realized as OVN load-balancer flows / DNAT).
+                  {
+                    id: 'svc-frontend',
+                    title: 'Front-End Service',
+                    typePrefix: 'Service',
+                    badges: [
+                      { label: 'ClusterIP', color: 'var(--k-green)' },
+                      { label: 'e-commerce-prod', color: 'var(--k-green)' },
+                    ],
+                  },
                   {
                     id: 'backend-workload-pod',
                     title: 'Back-End Workload',
@@ -385,6 +421,17 @@ export const ZONES = [
                     badges: [
                       { label: 'e-commerce-prod', color: 'var(--k-green)' },
                       { label: ':3000', color: 'var(--k-green)' },
+                    ],
+                  },
+                  // ClusterIP Service the front-end calls east-west to reach the
+                  // back-end Pods (stable VIP backed by OVN load-balancer flows).
+                  {
+                    id: 'svc-backend',
+                    title: 'Back-End Service',
+                    typePrefix: 'Service',
+                    badges: [
+                      { label: 'ClusterIP', color: 'var(--k-green)' },
+                      { label: 'e-commerce-prod', color: 'var(--k-green)' },
                     ],
                   },
                   {
@@ -443,3 +490,45 @@ export const COMPONENT_ZONE = Object.fromEntries(
 export const COMPONENT_BADGES = Object.fromEntries(
   allNodes.map(({ node }) => [node.id, node.badges || []])
 )
+
+// First Overview rendering rule (ARCHITECTURE.md §1) — the primary canvas is a
+// whitelist: a NodeCard may only be a systemd enforcer/daemon, a concrete
+// workload instance (Pod / Static Pod / VMI), or a networking Service
+// abstraction (ClusterIP / LoadBalancer). Zone boundaries are the zones
+// themselves; pure-intent CRs render *inside* the etcd store, not as cards; and
+// trace-only zones (the external Client) are not part of the default canvas.
+// This dev-only guard flags any future node that drifts outside the rule.
+const OVERVIEW_NODE_TYPES = new Set([
+  'systemd', // Active Enforcers — services & daemons
+  'Pod', // Concrete workload / data-plane instances
+  'Static Pod',
+  'VirtualMachineInstance',
+  'Service', // Networking / Service abstractions (ClusterIP, LoadBalancer)
+])
+
+function assertOverviewWhitelist(zones) {
+  const offenders = []
+  const walk = (list) => {
+    for (const zone of list) {
+      if (zone.traceOnly) continue // not rendered on the default overview
+      // intentObjects (CRs) live inside the etcd store, never as cards — skip.
+      zone.nodes?.forEach((n) => {
+        if (!OVERVIEW_NODE_TYPES.has(n.typePrefix)) {
+          offenders.push(`${n.id} [${n.typePrefix}]`)
+        }
+      })
+      if (zone.zones) walk(zone.zones)
+    }
+  }
+  walk(zones)
+  if (offenders.length) {
+    console.warn(
+      '[kube-visual] First Overview rendering-rule violation (ARCHITECTURE.md §1): ' +
+        'these nodes are not zone boundaries, systemd enforcers, or concrete ' +
+        'workload instances and must not render on the primary canvas:\n  ' +
+        offenders.join('\n  ')
+    )
+  }
+}
+
+if (import.meta.env?.DEV) assertOverviewWhitelist(ZONES)
