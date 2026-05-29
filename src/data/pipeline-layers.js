@@ -21,7 +21,7 @@ export const PIPELINE_LAYERS = [
   {
     id: 'api-boundary',
     order: 2,
-    label: 'API Boundary',
+    label: 'API object',
     colorVar: '--k-sky',
     icon: '🔌',
     blurb: 'The Pod object metadata and API surfaces (API servers, Services, ingress, etcd) that accept and persist intent.',
