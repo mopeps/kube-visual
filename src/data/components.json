@@ -218,16 +218,16 @@
     "displayName": "Shared Ingress Proxy",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
-    "problemSolved": "An HAProxy-based ingress router running in the bare metal cluster that handles external HTTPS traffic destined for guest workloads. It terminates TLS for guest Routes and forwards traffic through the bare metal OVS fabric toward the target guest worker node.",
+    "problemSolved": "An HAProxy-based proxy in the management cluster that fronts the hosted control-plane *endpoints* — it SNI-routes inbound TLS by hostname to the right guest's kube-apiserver, OAuth, Konnectivity, and Ignition Services in the HCP namespace. This is the control-plane / API ingress path only: it terminates at the guest control-plane Pods and never carries the guest's application (*.apps wildcard Route) traffic, which uses the guest cluster's own OpenShift Ingress Router and its Apps Ingress LoadBalancer instead.",
     "interactions": [
-      "Watches Route objects in the guest cluster via the Guest API Server.",
-      "Terminates TLS and proxies connections to guest Pod endpoints.",
-      "Traffic is forwarded via the bare metal cluster's OVS bridge to the KubeVirt Launcher."
+      "Fronts the guest control-plane endpoints (kube-apiserver :6443, oauth-openshift, konnectivity, ignition-server) and routes inbound TLS to them by SNI / hostname.",
+      "Selected by the Shared Ingress LoadBalancer Service, which gives it a single external VIP shared across hosted clusters.",
+      "Forwards to the per-guest control-plane Services in the HCP namespace — traffic terminates in the management control plane and never enters a guest worker VM."
     ],
     "explorationCommands": [
-      "# Check ingress proxy pods\noc get pods -n openshift-ingress",
-      "# View HAProxy config\noc exec -n openshift-ingress <router-pod> -- cat /var/lib/haproxy/conf/haproxy.config | head -60",
-      "# View Route objects\noc get route -A"
+      "# Check the shared ingress proxy pods\noc get pods -n hypershift-sharedingress",
+      "# View the HAProxy SNI routing config\noc exec -n hypershift-sharedingress <proxy-pod> -- cat /etc/haproxy/haproxy.cfg | head -60",
+      "# List the per-guest control-plane Services it fronts\noc get svc -n <hcp-namespace> kube-apiserver oauth-openshift konnectivity-server ignition-server"
     ]
   },
   {
@@ -235,16 +235,34 @@
     "displayName": "Shared Ingress LoadBalancer",
     "typePrefix": "Service",
     "layer": "Guest Control Plane",
-    "problemSolved": "A LoadBalancer-type Service that exposes the Shared Ingress Proxy on a stable external VIP. Rather than a cloud provider, MetalLB in Layer 2 mode owns the address: a MetalLB speaker on one node answers ARP/NDP for the VIP, so external HTTPS traffic for guest Routes lands on the bare metal cluster and is forwarded to the HAProxy proxy Pods.",
+    "problemSolved": "A LoadBalancer-type Service that exposes the Shared Ingress Proxy on a stable external VIP — the single entry point for the hosted clusters' control-plane endpoints (API server, OAuth, Konnectivity, Ignition). Rather than a cloud provider, MetalLB in Layer 2 mode owns the address: a MetalLB speaker on one node answers ARP/NDP for the VIP, so external API traffic for guest control planes lands on the bare metal cluster and is forwarded to the HAProxy proxy Pods. Application (*.apps wildcard Route) traffic does NOT use this VIP — it enters via the Apps Ingress LoadBalancer.",
     "interactions": [
-      "Selects the Shared Ingress Proxy Pods and publishes their endpoints behind one external VIP.",
+      "Selects the Shared Ingress Proxy Pods and publishes their endpoints behind one external control-plane VIP.",
       "MetalLB (L2 mode) advertises the VIP via gratuitous ARP/NDP from a single elected speaker node.",
       "kube-proxy / OVN program load-balancer rules that DNAT the VIP to a healthy proxy Pod."
     ],
     "explorationCommands": [
-      "# Inspect the LoadBalancer service and its assigned external IP\noc get svc -n openshift-ingress -o wide",
+      "# Inspect the LoadBalancer service and its assigned external IP\noc get svc -n hypershift-sharedingress -o wide",
       "# Check which node MetalLB is advertising the VIP from\noc logs -n metallb-system -l component=speaker --tail=50 | grep announcing",
       "# View the MetalLB L2 advertisement / address pool\noc get l2advertisement,ipaddresspool -n metallb-system"
+    ]
+  },
+  {
+    "componentId": "svc-apps-lb-infra",
+    "displayName": "Apps Ingress LoadBalancer",
+    "typePrefix": "Service",
+    "layer": "Guest Control Plane",
+    "problemSolved": "The infra-side LoadBalancer Service that exposes the guest cluster's application ingress (the *.apps wildcard) on the bare metal network. Because the guest's own router-default LoadBalancer has no cloud behind it, the kubevirt cloud provider (the Cloud Controller Manager in this HCP namespace) mirrors it into this management-cluster Service, which selects the virt-launcher Pods backing the guest worker VMIs and forwards to the NodePort where the in-VM OpenShift Ingress Router listens. MetalLB (L2) advertises its VIP, so external *.apps traffic lands on the bare metal cluster and is carried into the VM — entirely separate from the Shared Ingress Proxy, which only serves control-plane / API traffic.",
+    "interactions": [
+      "Created and reconciled by the kubevirt cloud provider (Cloud Controller Manager) to mirror the guest cluster's router-default LoadBalancer Service.",
+      "Selects the virt-launcher Pods that host the guest worker VMIs and forwards to the NodePort where the in-VM OpenShift Ingress Router listens.",
+      "MetalLB (L2 mode) advertises its external VIP via ARP/NDP; *.apps.<guest-domain> DNS resolves here.",
+      "Does NOT serve the guest API / OAuth / Konnectivity / Ignition endpoints — those ride the Shared Ingress Proxy."
+    ],
+    "explorationCommands": [
+      "# Find the infra LoadBalancer the kubevirt CCM created for the guest router\noc get svc -n <hcp-namespace> -l kubevirt.io/cluster-name -o wide",
+      "# Confirm the matching router-default LB inside the guest cluster\noc get svc router-default -n openshift-ingress -o wide --kubeconfig <guest-kubeconfig>",
+      "# See which node MetalLB advertises the VIP from\noc logs -n metallb-system -l component=speaker --tail=50 | grep announcing"
     ]
   },
   {
@@ -708,11 +726,11 @@
     "displayName": "Ingress LoadBalancer",
     "typePrefix": "Service",
     "layer": "Guest Workload",
-    "problemSolved": "The LoadBalancer-type Service (the OpenShift router-default external IP) that fronts the guest cluster's Ingress Router. With no cloud load balancer available, MetalLB in Layer 2 mode hands out and advertises the VIP from inside the guest cluster, so application traffic for guest Routes reaches the HAProxy router Pods running in the VM.",
+    "problemSolved": "The guest cluster's own router-default LoadBalancer Service — the guest-side half of the application (*.apps wildcard Route) ingress path that fronts the in-VM OpenShift Ingress Router. With no cloud behind the guest, the kubevirt cloud provider (Cloud Controller Manager) realises this LoadBalancer by mirroring it to the infra-side Apps Ingress LoadBalancer in the HCP namespace, whose VIP MetalLB advertises on the bare metal network. Inbound *.apps traffic that lands on that VIP is carried into the VM and DNATed here to a guest Ingress Router Pod. This is the application path only — distinct from the Shared Ingress Proxy that fronts the control-plane API.",
     "interactions": [
-      "Selects the guest Ingress Router Pods and exposes them behind a single external VIP.",
-      "MetalLB speakers on the guest worker nodes advertise the VIP over ARP (IPv4) / NDP (IPv6) in L2 mode.",
-      "Traffic to the VIP is DNATed by OVN load-balancer flows to a healthy router Pod endpoint."
+      "Selects the guest Ingress Router Pods and exposes them behind the router-default external IP.",
+      "Its external IP is assigned and wired to the infra-side Apps Ingress LoadBalancer by the kubevirt cloud provider (CCM), not by a MetalLB speaker inside the guest.",
+      "Traffic to the VIP is DNATed by guest OVN load-balancer flows to a healthy router Pod endpoint."
     ],
     "explorationCommands": [
       "# View the router-default LoadBalancer service and its external IP\noc get svc router-default -n openshift-ingress -o wide --kubeconfig <guest-kubeconfig>",

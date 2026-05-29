@@ -331,10 +331,13 @@ export const ZONES = [
                   { label: 'Route CR', color: 'var(--k-sky)' },
                 ],
               },
-              // MetalLB L2 LoadBalancer VIP fronting the shared ingress proxy
-              // (control-plane ingress). A Service is a networking abstraction,
-              // not a process — allowed on the overview per the 4th category of
-              // the First Overview rendering rule (ARCHITECTURE.md §1).
+              // MetalLB L2 LoadBalancer VIP fronting the shared ingress proxy.
+              // CONTROL-PLANE / API ingress only (kube-apiserver, OAuth,
+              // Konnectivity, Ignition) — NOT application/*.apps traffic, which
+              // enters via the Apps Ingress LoadBalancer below. A Service is a
+              // networking abstraction, not a process — allowed on the overview
+              // per the 4th category of the First Overview rendering rule
+              // (ARCHITECTURE.md §1).
               {
                 id: 'svc-ingress-lb-shared',
                 title: 'Shared Ingress LoadBalancer',
@@ -342,6 +345,22 @@ export const ZONES = [
                 badges: [
                   { label: 'LoadBalancer', color: 'var(--k-sky)' },
                   { label: 'MetalLB L2', color: 'var(--k-sky)' },
+                  { label: 'control-plane / API', color: 'var(--k-sky)' },
+                ],
+              },
+              // APPLICATION (*.apps wildcard) ingress entry point on the bare
+              // metal side: the infra-side LoadBalancer the kubevirt cloud
+              // provider (CCM) mirrors from the guest's router-default LB. This
+              // is the guest app-traffic path — it does NOT go through the
+              // Shared Ingress Proxy above.
+              {
+                id: 'svc-apps-lb-infra',
+                title: 'Apps Ingress LoadBalancer',
+                typePrefix: 'Service',
+                badges: [
+                  { label: 'LoadBalancer', color: 'var(--k-sky)' },
+                  { label: 'MetalLB L2', color: 'var(--k-sky)' },
+                  { label: 'kubevirt CCM mirror', color: 'var(--k-sky)' },
                 ],
               },
               {
@@ -498,16 +517,19 @@ export const ZONES = [
                       { label: 'Route CR', color: 'var(--k-green)' },
                     ],
                   },
-                  // MetalLB L2 LoadBalancer VIP fronting the guest ingress
-                  // router — the standard OpenShift router-default external IP,
-                  // advertised by MetalLB speakers over ARP on the guest network.
+                  // The guest cluster's own router-default LoadBalancer — the
+                  // guest-side half of the *.apps application ingress path. Its
+                  // external IP is realised by the kubevirt cloud provider (CCM),
+                  // which mirrors it to the infra-side Apps Ingress LoadBalancer
+                  // on the bare metal side (where MetalLB advertises the VIP).
                   {
                     id: 'svc-ingress-lb-guest',
                     title: 'Ingress LoadBalancer',
                     typePrefix: 'Service',
                     badges: [
                       { label: 'LoadBalancer', color: 'var(--k-green)' },
-                      { label: 'MetalLB L2', color: 'var(--k-green)' },
+                      { label: 'router-default', color: 'var(--k-green)' },
+                      { label: 'kubevirt CCM', color: 'var(--k-green)' },
                     ],
                   },
                   {

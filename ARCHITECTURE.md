@@ -70,8 +70,12 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │           │      └── [API Object] EndpointSlice
   │           │
   │           │   // Ingress Control, Networking & Proxy Systems
-  │           ├── [Pod] Shared Ingress Proxy Instance
-  │           ├── [Service · LoadBalancer] Shared Ingress VIP (MetalLB L2)
+  │           │   // Two SEPARATE north-south paths front this namespace:
+  │           │   //  · Shared Ingress = control-plane / API only (SNI-routed)
+  │           │   //  · Apps Ingress LB = guest *.apps wildcard app traffic
+  │           ├── [Pod] Shared Ingress Proxy Instance              // API/OAuth/Konnectivity/Ignition
+  │           ├── [Service · LoadBalancer] Shared Ingress VIP (MetalLB L2 · control-plane / API)
+  │           ├── [Service · LoadBalancer] Apps Ingress VIP (MetalLB L2 · kubevirt CCM mirror of guest router-default)
   │           ├── [Pod] OVN-Kubernetes Master Control Instance
   │           ├── [Pod] Cloud Controller Manager (CCM) Instance
   │           ├── [Pod] Konnectivity Server Instance
@@ -168,6 +172,19 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    does not create nodes.
 6. **Guest cluster operators (DNS, ingress, monitoring) run on guest worker
    nodes** (inside the VMs), not in the control-plane namespace.
+7. **Two separate north-south ingress paths — do not conflate them.** The
+   **Shared Ingress Proxy + its LoadBalancer VIP** carry *control-plane / API*
+   traffic only: they SNI-route the hosted cluster's `kube-apiserver`, OAuth,
+   Konnectivity, and Ignition endpoints and terminate at the control-plane Pods
+   in the HCP namespace — this traffic never enters a guest VM. **Application
+   (`*.apps` wildcard Route) traffic** takes a different path: the guest
+   cluster's own `router-default` LoadBalancer, which on the KubeVirt platform
+   the **Cloud Controller Manager (kubevirt cloud provider)** mirrors to the
+   infra-side **Apps Ingress LoadBalancer** Service (advertised by MetalLB);
+   that traffic crosses into the VM and is served by the guest OpenShift Ingress
+   Router. The `api-ingress-traffic` and `app-ingress-traffic` flows model these
+   two paths respectively. Never route app traffic through the Shared Ingress
+   Proxy.
 
 ## 2. Dynamic Interactivity & Progressive Disclosure
  * **Default State:** All topology components are visible but set to a dimmed idle opacity state. Do not render raw Linux kernel primitives (netns, cgroups, host PIDs) or Project/Namespace boundaries on the main view.
@@ -202,47 +219,35 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
 
 ```
 ### Event Workflow Schema (events.json)
+Note the two distinct ingress flows (modeling invariant #7): `api-ingress-traffic`
+(control-plane / API, terminating at the Guest API Server, shown below) and
+`app-ingress-traffic` (the `*.apps` wildcard application path through the guest's
+own ingress router). Application traffic must NOT be routed through the Shared
+Ingress Proxy.
+
 ```json
 {
-  "eventId": "route-ingress-traffic",
-  "eventName": "External Ingress Traffic Flow via Route",
-  "description": "Tracing an inbound HTTPS request from an external web client down into an application pod runtime running inside a Guest KubeVirt VM.",
+  "eventId": "api-ingress-traffic",
+  "eventName": "Control-Plane / API Ingress",
+  "description": "Tracing an 'oc'/'kubectl' request to the hosted cluster's API down to the Guest API Server, via the Shared Ingress proxy's MetalLB VIP and SNI routing. This path stays in the management cluster and never enters a guest VM.",
   "steps": [
     {
       "step": 1,
       "sourceComponentId": "external-client",
-      "targetComponentId": "guest-api-server",
-      "description": "Client establishes handshake with the isolated Guest API Server Instance running in the Management Master Node Zone."
+      "targetComponentId": "svc-ingress-lb-shared",
+      "description": "An 'oc' client resolves the guest's API hostname to the Shared Ingress LoadBalancer VIP; a MetalLB speaker answers ARP, so the request lands on the bare metal cluster."
     },
     {
       "step": 2,
-      "sourceComponentId": "guest-api-server",
-      "targetComponentId": "management-ovs-bridge",
-      "description": "Traffic routes across the management overlay fabric, hitting the Open vSwitch service on the Management Worker Node."
+      "sourceComponentId": "svc-ingress-lb-shared",
+      "targetComponentId": "shared-ingress-proxy",
+      "description": "The LoadBalancer Service DNATs the VIP to a Shared Ingress Proxy endpoint; HAProxy reads the TLS SNI hostname and selects this hosted cluster's control-plane backend."
     },
     {
       "step": 3,
-      "sourceComponentId": "management-ovs-bridge",
-      "targetComponentId": "kubevirt-launcher",
-      "description": "OVS switches the network frames directly into the KubeVirt Launcher Container handling the virtual network tap."
-    },
-    {
-      "step": 4,
-      "sourceComponentId": "kubevirt-launcher",
-      "targetComponentId": "guest-worker-node-vm",
-      "description": "The packet passes through the virtual tap interface boundary, shifting context directly into the running Guest Worker Node Virtual Machine Instance."
-    },
-    {
-      "step": 5,
-      "sourceComponentId": "guest-worker-node-vm",
-      "targetComponentId": "guest-ovs-bridge",
-      "description": "The guest-resident Open vSwitch systemd service processes the frame and identifies the target workload container destination."
-    },
-    {
-      "step": 6,
-      "sourceComponentId": "guest-ovs-bridge",
-      "targetComponentId": "frontend-workload-pod",
-      "description": "The packet crosses the guest-side veth wire directly into the Front-End Workload Instance Pod where the application container processes it."
+      "sourceComponentId": "shared-ingress-proxy",
+      "targetComponentId": "guest-api-server",
+      "description": "The proxy forwards to this guest's kube-apiserver Service in the HCP namespace; the Guest API Server Pod terminates and serves the request — traffic never leaves the management control plane."
     }
   ]
 }

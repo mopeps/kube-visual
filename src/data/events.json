@@ -1,65 +1,84 @@
 [
   {
-    "eventId": "route-ingress-traffic",
-    "eventName": "External Ingress Traffic Flow",
-    "description": "Tracing an inbound HTTPS request from an external web client through the bare metal cluster's MetalLB-advertised ingress VIP and proxy, across the OVS overlay fabric, into the KubeVirt VM, and — via the guest ingress VIP and the front-end ClusterIP Service — down to the front-end workload Pod.",
+    "eventId": "api-ingress-traffic",
+    "eventName": "Control-Plane / API Ingress",
+    "description": "Tracing an 'oc'/'kubectl' request to the hosted cluster's API. It enters the management cluster through the Shared Ingress proxy's MetalLB VIP, is SNI-routed by hostname to this guest's kube-apiserver Service, and terminates at the Guest API Server Pod in the HCP namespace. This control-plane path stays entirely in the management cluster and never enters a guest worker VM. The OAuth, Konnectivity, and Ignition endpoints ride the same shared ingress.",
     "steps": [
       {
         "step": 1,
         "sourceComponentId": "external-client",
         "targetComponentId": "svc-ingress-lb-shared",
-        "description": "Client sends an HTTPS request to the Route hostname, which resolves to the Shared Ingress LoadBalancer VIP. With no cloud LB present, a MetalLB speaker answers ARP for the VIP, so the packet lands on the bare metal cluster."
+        "description": "An 'oc' client resolves the guest's API hostname (api.<guest>) to the Shared Ingress LoadBalancer VIP. With no cloud LB present, a MetalLB speaker answers ARP for the VIP, so the request lands on the bare metal cluster."
       },
       {
         "step": 2,
         "sourceComponentId": "svc-ingress-lb-shared",
         "targetComponentId": "shared-ingress-proxy",
-        "description": "The LoadBalancer Service DNATs the VIP to a healthy Shared Ingress Proxy endpoint. HAProxy terminates TLS and identifies the guest cluster backend for this Route."
+        "description": "The LoadBalancer Service DNATs the VIP to a healthy Shared Ingress Proxy endpoint. HAProxy reads the TLS SNI hostname and selects this hosted cluster's control-plane backend (the same proxy fronts OAuth, Konnectivity, and Ignition by hostname too)."
       },
       {
         "step": 3,
         "sourceComponentId": "shared-ingress-proxy",
-        "targetComponentId": "ovs-host",
-        "description": "HAProxy forwards the decrypted request into the bare metal worker node's OVS br-int bridge, which applies OVN flow rules to route the packet toward the KubeVirt Launcher."
+        "targetComponentId": "guest-api-server",
+        "description": "The proxy forwards the connection to this guest's kube-apiserver Service in the HCP namespace. The Guest API Server Pod terminates the request, authenticates it, and serves it from etcd — the traffic never leaves the management control plane."
+      }
+    ]
+  },
+  {
+    "eventId": "app-ingress-traffic",
+    "eventName": "Application Ingress (Wildcard Route)",
+    "description": "Tracing an inbound HTTPS request to a guest application on the *.apps wildcard domain. Unlike API traffic, this never touches the Shared Ingress Proxy: it enters through the Apps Ingress LoadBalancer (the infra-side Service the kubevirt cloud provider mirrors from the guest's router-default LB, advertised by MetalLB), crosses into the KubeVirt VM, and is handled by the guest cluster's own OpenShift Ingress Router before reaching the front-end ClusterIP Service and Pod.",
+    "steps": [
+      {
+        "step": 1,
+        "sourceComponentId": "external-client",
+        "targetComponentId": "svc-apps-lb-infra",
+        "description": "The client resolves an app hostname under *.apps.<guest-domain> to the Apps Ingress LoadBalancer VIP. This infra-side LoadBalancer — created by the kubevirt cloud provider to back the guest's router-default Service — is advertised by a MetalLB speaker, so the packet lands on the bare metal cluster. The control-plane Shared Ingress Proxy is not involved."
       },
       {
-        "step": 4,
+        "step": 2,
+        "sourceComponentId": "svc-apps-lb-infra",
+        "targetComponentId": "ovs-host",
+        "description": "The LoadBalancer Service DNATs the VIP to a virt-launcher endpoint, and the packet enters the bare metal worker node's OVS br-int bridge, which applies OVN flow rules to route it toward the KubeVirt Launcher hosting the guest router's node."
+      },
+      {
+        "step": 3,
         "sourceComponentId": "ovs-host",
         "targetComponentId": "kubevirt-launcher",
         "description": "OVS routes the packet through the tap0 virtual interface into the KubeVirt Launcher Pod, crossing the host-to-VM network boundary."
       },
       {
-        "step": 5,
+        "step": 4,
         "sourceComponentId": "kubevirt-launcher",
         "targetComponentId": "guest-worker-node-vm",
         "description": "The KubeVirt Launcher delivers the packet to the virtio-net NIC of the Guest Worker Node VM, shifting context from the host kernel to the guest RHCOS kernel."
       },
       {
-        "step": 6,
+        "step": 5,
         "sourceComponentId": "guest-worker-node-vm",
         "targetComponentId": "ovs-guest",
-        "description": "The guest RHCOS kernel hands the packet to the in-VM Open vSwitch service, which evaluates guest OVN flow rules to route it toward the ingress VIP."
+        "description": "The guest RHCOS kernel hands the packet to the in-VM Open vSwitch service, which evaluates guest OVN flow rules for the router-default Service."
+      },
+      {
+        "step": 6,
+        "sourceComponentId": "ovs-guest",
+        "targetComponentId": "svc-ingress-lb-guest",
+        "description": "Guest OVS matches the router-default LoadBalancer (the guest-side half of this path, whose external IP the kubevirt CCM wired to the infra VIP) and applies its OVN load-balancer flow."
       },
       {
         "step": 7,
-        "sourceComponentId": "ovs-guest",
-        "targetComponentId": "svc-ingress-lb-guest",
-        "description": "Guest OVS matches the Ingress LoadBalancer VIP (the router-default external IP advertised by MetalLB inside the guest cluster) and applies the OVN load-balancer flow for it."
+        "sourceComponentId": "svc-ingress-lb-guest",
+        "targetComponentId": "openshift-ingress-router-guest",
+        "description": "The Service DNATs to an OpenShift Ingress Router Pod inside the VM, which terminates TLS and matches the request against its Route table for the *.apps hostname."
       },
       {
         "step": 8,
-        "sourceComponentId": "svc-ingress-lb-guest",
-        "targetComponentId": "openshift-ingress-router-guest",
-        "description": "The LoadBalancer Service DNATs the VIP to an OpenShift Ingress Router Pod endpoint inside the VM, which matches the request against its Route table."
-      },
-      {
-        "step": 9,
         "sourceComponentId": "openshift-ingress-router-guest",
         "targetComponentId": "svc-frontend",
         "description": "The guest Ingress Router forwards the request to the Front-End Service — the ClusterIP that fronts the frontend Pods — addressing its stable virtual IP rather than a Pod directly."
       },
       {
-        "step": 10,
+        "step": 9,
         "sourceComponentId": "svc-frontend",
         "targetComponentId": "frontend-workload-pod",
         "description": "OVN load-balancer flows DNAT the ClusterIP to a ready Front-End Workload Pod endpoint. The application process accepts the connection and returns a response."
