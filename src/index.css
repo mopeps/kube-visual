@@ -410,6 +410,11 @@ body::after {
     flex: 1 1 calc(50% - 5px);
     min-width: 0;
   }
+  /* Long-named objects don't fit at half-width, so they take their own full
+     row — keeping the name readable matters more than packing two per line. */
+  .intent-object--wide {
+    flex-basis: 100%;
+  }
 }
 
 /* ── Arrow row between zones ──────────────────────────────────────── */
