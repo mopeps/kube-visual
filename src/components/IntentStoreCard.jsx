@@ -107,8 +107,8 @@ export default function IntentStoreCard({
       </div>
 
       <p className="intent-store-caption">
-        Custom Resources — desired-state intent persisted in etcd as records, not
-        running processes.
+        API objects — desired-state records persisted in etcd, not running
+        processes. They have no card on the overview; they live in here.
       </p>
 
       <div className="intent-store-objects">

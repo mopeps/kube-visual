@@ -94,18 +94,65 @@ export const ZONES = [
             // processes — so they live *inside* etcd rather than beside
             // real Pods. The overview renders this node as an expandable
             // "intent store" that reveals these objects on click.
+            // Two intent threads persisted here: the HCP control-plane intent
+            // (HostedCluster → HostedControlPlane) and the worker-provisioning
+            // chain (NodePool → Cluster API → KubeVirt) that the operators
+            // reconcile into the running control plane and guest worker VMs.
+            // All are desired-state records, never rendered as cards.
             intentObjects: [
               {
                 id: 'hostedcluster-cr',
                 title: 'HostedCluster',
                 typePrefix: 'Custom Resource',
-                badges: [{ label: 'HostedCluster CR', color: 'var(--k-blue)' }],
+                badges: [{ label: 'hypershift.openshift.io', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'hostedcontrolplane-cr',
+                title: 'HostedControlPlane',
+                typePrefix: 'Custom Resource',
+                badges: [{ label: 'hypershift.openshift.io', color: 'var(--k-blue)' }],
               },
               {
                 id: 'nodepool-cr',
                 title: 'NodePool',
                 typePrefix: 'Custom Resource',
-                badges: [{ label: 'NodePool CR', color: 'var(--k-blue)' }],
+                badges: [{ label: 'hypershift.openshift.io', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'capi-cluster-cr',
+                title: 'Cluster (CAPI)',
+                typePrefix: 'Custom Resource',
+                badges: [{ label: 'cluster.x-k8s.io', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'machinedeployment-cr',
+                title: 'MachineDeployment',
+                typePrefix: 'Custom Resource',
+                badges: [{ label: 'cluster.x-k8s.io', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'machineset-cr',
+                title: 'MachineSet',
+                typePrefix: 'Custom Resource',
+                badges: [{ label: 'cluster.x-k8s.io', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'machine-cr',
+                title: 'Machine',
+                typePrefix: 'Custom Resource',
+                badges: [{ label: 'cluster.x-k8s.io', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'kubevirtmachine-cr',
+                title: 'KubevirtMachine',
+                typePrefix: 'Custom Resource',
+                badges: [{ label: 'infrastructure.cluster.x-k8s.io', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'kubevirt-vm-cr',
+                title: 'VirtualMachine',
+                typePrefix: 'Custom Resource',
+                badges: [{ label: 'kubevirt.io', color: 'var(--k-blue)' }],
               },
             ],
           },
@@ -204,6 +251,75 @@ export const ZONES = [
                 badges: [
                   { label: 'StatefulSet', color: 'var(--k-sky)' },
                   { label: 'Raft', color: 'var(--k-sky)' },
+                ],
+                // Guest Etcd is also an intent store: it persists the guest
+                // cluster's OWN API objects — the records that have no
+                // data-plane card on the overview (ClusterVersion/Operator,
+                // Route, the workload Deployment→ReplicaSet chain, its
+                // Secrets/ConfigMaps/PVCs/PVs and the EndpointSlices behind its
+                // Services). Realized Services & the NetworkPolicy keep their
+                // own cards; these pure records live in here.
+                intentObjects: [
+                  {
+                    id: 'clusterversion-cr',
+                    title: 'ClusterVersion',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'config.openshift.io', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'clusteroperator-cr',
+                    title: 'ClusterOperator',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'config.openshift.io', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'route-cr',
+                    title: 'Route',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'route.openshift.io', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'deployment-workload',
+                    title: 'Deployment',
+                    typePrefix: 'API Object',
+                    badges: [{ label: 'apps/v1', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'replicaset-workload',
+                    title: 'ReplicaSet',
+                    typePrefix: 'API Object',
+                    badges: [{ label: 'apps/v1', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'secret-workload',
+                    title: 'Secret',
+                    typePrefix: 'API Object',
+                    badges: [{ label: 'core/v1', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'configmap-workload',
+                    title: 'ConfigMap',
+                    typePrefix: 'API Object',
+                    badges: [{ label: 'core/v1', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'pvc-workload',
+                    title: 'PersistentVolumeClaim',
+                    typePrefix: 'API Object',
+                    badges: [{ label: 'core/v1', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'pv-workload',
+                    title: 'PersistentVolume',
+                    typePrefix: 'API Object',
+                    badges: [{ label: 'core/v1', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'endpointslice',
+                    title: 'EndpointSlice',
+                    typePrefix: 'API Object',
+                    badges: [{ label: 'discovery.k8s.io', color: 'var(--k-sky)' }],
+                  },
                 ],
               },
               {

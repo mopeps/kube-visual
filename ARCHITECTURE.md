@@ -29,9 +29,17 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │     │   // these sit directly on the master node alongside its host agents.
   │     ├── [Static Pod] Management Kube API Server Instance
   │     ├── [Static Pod] Management Etcd Instance ──┐  // expandable "intent store"
-  │     │      // CRs are desired-state records persisted here, not processes
+  │     │      // Desired-state records persisted here, not processes:
+  │     │      // the HCP control-plane intent + the Cluster API → KubeVirt chain
   │     │      ├── [Custom Resource] HostedCluster
-  │     │      └── [Custom Resource] NodePool
+  │     │      ├── [Custom Resource] HostedControlPlane
+  │     │      ├── [Custom Resource] NodePool
+  │     │      ├── [Custom Resource] Cluster (CAPI)
+  │     │      ├── [Custom Resource] MachineDeployment
+  │     │      ├── [Custom Resource] MachineSet
+  │     │      ├── [Custom Resource] Machine
+  │     │      ├── [Custom Resource] KubevirtMachine
+  │     │      └── [Custom Resource] VirtualMachine (KubeVirt)
   │     ├── [Static Pod] Management Controller Manager Instance
   │     ├── [Static Pod] Management Kube-Scheduler Instance
   │     │
@@ -52,7 +60,14 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │           ├── [Pod] Guest OAuth Server Instance
   │           ├── [Pod] Guest Controller Manager Instance
   │           ├── [Pod] Guest Kube-Scheduler Instance
-  │           ├── [Pod] Guest Etcd Instance (StatefulSet — NOT a static pod)
+  │           ├── [Pod] Guest Etcd Instance (StatefulSet — NOT a static pod) ──┐  // also an "intent store"
+  │           │      // The guest cluster's own API records — no overview card:
+  │           │      ├── [Custom Resource] ClusterVersion / ClusterOperator
+  │           │      ├── [Custom Resource] Route
+  │           │      ├── [API Object] Deployment / ReplicaSet (e-commerce workloads)
+  │           │      ├── [API Object] Secret / ConfigMap
+  │           │      ├── [API Object] PersistentVolumeClaim / PersistentVolume
+  │           │      └── [API Object] EndpointSlice
   │           │
   │           │   // Ingress Control, Networking & Proxy Systems
   │           ├── [Pod] Shared Ingress Proxy Instance
@@ -118,10 +133,12 @@ store, or a trace-only zone).
    the canvas, next to the Pods it routes to or guards: `[Service]`, `[NetworkPolicy]`.
 
 This reinforces the **Default State** rule in §2: desired-state records that have *no*
-data-plane realization (the `HostedCluster` / `NodePool` Custom Resources), raw Linux
-kernel primitives (netns, cgroups, host PIDs), and Project/Namespace boundaries are *not*
-instances, enforcers, or realized Service/policy abstractions, so they never appear as
-cards on the first overview — they live inside the expandable etcd intent store or behind
+data-plane realization (the HCP and Cluster API Custom Resources, plus the guest cluster's
+own `ClusterVersion`/`ClusterOperator`, `Route`, workload `Deployment`/`ReplicaSet`,
+`Secret`/`ConfigMap`/`PVC`/`PV`, and `EndpointSlice`s), raw Linux kernel primitives (netns,
+cgroups, host PIDs), and Project/Namespace boundaries are *not* instances, enforcers, or
+realized Service/policy abstractions, so they never appear as cards on the first overview —
+they live inside the expandable etcd intent stores (Management Etcd / Guest Etcd) or behind
 a node's detail modal instead.
 
 ### Modeling invariants (get these right)
@@ -160,7 +177,7 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    * **systemd Services:** Reveal corresponding host service unit configuration paths and tracking metrics.
    * **VirtualMachineInstance:** Expose the host qemu-kvm process execution details, host-side virtual network tap configuration (tap0), and master cgroup runtime boundaries.
    * **Guest Controller Manager:** Reveal internal control loops (NodeLifecycleController, EndpointController, etc.) running inside the binary.
- * **Etcd Intent Store (expandable node):** The **Management Etcd** node doubles as the home for *cluster intent* — the `HostedCluster` and `NodePool` Custom Resources. These are persisted desired-state records, **not** Linux processes, so they are deliberately not rendered as sibling cards next to real Pods. Clicking the etcd node enlarges it in place to reveal these intent objects. Inside the expanded store: clicking the **title** (ⓘ) opens etcd's own detail popup; clicking an **intent object** opens that CR's popup; clicking the empty body, the ▴ chevron, outside the card, or pressing **Esc** collapses it. A node declares this behavior via an `intentObjects` array in `zones.js`.
+ * **Etcd Intent Stores (expandable nodes):** Both etcd nodes double as homes for the API objects they persist — desired-state records, **not** Linux processes, so they are deliberately not rendered as sibling cards next to real Pods. **Management Etcd** holds the HCP control-plane intent and the worker-provisioning chain (`HostedCluster`, `HostedControlPlane`, `NodePool`, and the Cluster API → KubeVirt objects: `Cluster`, `MachineDeployment`, `MachineSet`, `Machine`, `KubevirtMachine`, `VirtualMachine`). **Guest Etcd** holds the guest cluster's own records that have no data-plane card (`ClusterVersion`, `ClusterOperator`, `Route`, the workload `Deployment`/`ReplicaSet`, their `Secret`/`ConfigMap`/`PersistentVolumeClaim`/`PersistentVolume`, and the `EndpointSlice`s behind its Services). Realized Services and the NetworkPolicy keep their own cards; only pure records live inside the store. Clicking an etcd node enlarges it in place to reveal these objects. Inside the expanded store: clicking the **title** (ⓘ) opens etcd's own detail popup; clicking an **object** opens that record's popup; clicking the empty body, the ▴ chevron, outside the card, or pressing **Esc** collapses it. A node declares this behavior via an `intentObjects` array in `zones.js`.
 ## 3. Reference Data Schemas
 ### Metadata Schema (components.json)
 ```json

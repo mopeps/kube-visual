@@ -85,25 +85,29 @@ const ENTRIES = [
   { componentId: 'svc-backend', aliases: ['Back-End ClusterIP Service', 'Back-End Service'] },
   { componentId: 'netpol-ecommerce', aliases: ['E-Commerce Network Policy'] },
 
-  // ── Highlight-only: real API objects that aren't drawn on the canvas ───
-  { kind: 'HostedControlPlane', aliases: ['HostedControlPlane'] },
-  { kind: 'ClusterVersion', aliases: ['ClusterVersion'] },
-  { kind: 'ClusterOperator', aliases: ['ClusterOperator'] },
-  { kind: 'Route', aliases: ['Route'] },
+  // ── API objects that live inside an etcd intent store (no overview card) ──
+  // These resolve to the records persisted in the Management / Guest Etcd
+  // stores, so a chip opens that object's detail just like a node chip does.
+  { componentId: 'hostedcontrolplane-cr', aliases: ['HostedControlPlane'] },
+  { componentId: 'clusterversion-cr', aliases: ['ClusterVersion'] },
+  { componentId: 'clusteroperator-cr', aliases: ['ClusterOperator'] },
+  { componentId: 'route-cr', aliases: ['Route'] },
+  { componentId: 'machinedeployment-cr', aliases: ['MachineDeployment'] },
+  { componentId: 'machineset-cr', aliases: ['MachineSet'] },
+  { componentId: 'kubevirtmachine-cr', aliases: ['KubevirtMachine'] },
+  { componentId: 'machine-cr', aliases: ['Machine'] },
+  { componentId: 'guest-worker-node-vm', aliases: ['VirtualMachineInstance', 'VMI'] },
+  { componentId: 'kubevirt-vm-cr', aliases: ['VirtualMachine'] },
+  { componentId: 'endpointslice', aliases: ['EndpointSlice', 'Endpoint slice'] },
+  { componentId: 'secret-workload', aliases: ['Secret'] },
+  { componentId: 'configmap-workload', aliases: ['ConfigMap'] },
+  { componentId: 'pvc-workload', aliases: ['PersistentVolumeClaim'] },
+  { componentId: 'pv-workload', aliases: ['PersistentVolume'] },
+  { componentId: 'replicaset-workload', aliases: ['ReplicaSet'] },
+
+  // ── Highlight-only: kinds with no single backing object ────────────────
   { kind: 'Cluster API', aliases: ['Cluster API'] },
-  { kind: 'MachineDeployment', aliases: ['MachineDeployment'] },
-  { kind: 'MachineSet', aliases: ['MachineSet'] },
-  { kind: 'KubevirtMachine', aliases: ['KubevirtMachine'] },
-  { kind: 'Machine', aliases: ['Machine'] },
-  { kind: 'VirtualMachineInstance', aliases: ['VirtualMachineInstance', 'VMI'] },
-  { kind: 'VirtualMachine', aliases: ['VirtualMachine'] },
-  { kind: 'EndpointSlice', aliases: ['EndpointSlice', 'Endpoint slice'] },
   { kind: 'NetworkPolicy', aliases: ['NetworkPolicy', 'Network Policy', 'Network Policies'] },
-  { kind: 'Secret', aliases: ['Secret'] },
-  { kind: 'ConfigMap', aliases: ['ConfigMap'] },
-  { kind: 'PersistentVolumeClaim', aliases: ['PersistentVolumeClaim'] },
-  { kind: 'PersistentVolume', aliases: ['PersistentVolume'] },
-  { kind: 'ReplicaSet', aliases: ['ReplicaSet'] },
   { kind: 'CRD', aliases: ['CRD'] },
 ]
 
