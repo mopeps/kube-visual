@@ -1,21 +1,13 @@
 import { useState } from 'react'
 import { PIPELINE_LAYER_BY_ID } from '../data/pipeline-layers'
-
-const PURPLE = 'var(--k-purple)'
-
-// Short human label for a consumed resource's underlying kernel primitive.
-function primitiveNote(p) {
-  if (/tmpfs/i.test(p)) return 'tmpfs RAM-disk mount · volatile'
-  if (/kernel mount/i.test(p)) return 'XFS/Ext4 block-device mount'
-  return 'host-backed mount'
-}
+import ExploreCommands from './ExploreCommands'
 
 // Compose the monospace gutter for a node: one cell per ancestor (spine or gap)
 // plus this node's branch glyph. Produces a true ASCII tree.
 function gutter(ancestorsLast, isLast) {
   let s = ''
-  for (const last of ancestorsLast) s += last ? '   ' : '│  '
-  return s + (isLast ? '└─ ' : '├─ ')
+  for (const last of ancestorsLast) s += last ? '   ' : '│  '
+  return s + (isLast ? '└─ ' : '├─ ')
 }
 
 // Flatten a node spec tree (DFS) into ordered rows carrying their gutter prefix.
@@ -25,9 +17,12 @@ function flatten(node, ancestorsLast, isLast, out) {
   kids.forEach((k, i) => flatten(k, [...ancestorsLast, isLast], i === kids.length - 1, out))
 }
 
-function RowDetail({ detail }) {
+function RowDetail({ detail, color }) {
   return (
     <div className="tree-detail">
+      {detail.lines?.map((l, i) => (
+        <div key={`l${i}`} className="tree-detail-line">{l}</div>
+      ))}
       {detail.bullets?.map((b, i) => (
         <div key={`b${i}`} className="tree-detail-bullet">• {b}</div>
       ))}
@@ -37,9 +32,11 @@ function RowDetail({ detail }) {
           <span className="tree-detail-v">{p.v}</span>
         </div>
       ))}
-      {detail.lines?.map((l, i) => (
-        <div key={`l${i}`} className="tree-detail-line">{l}</div>
-      ))}
+      {detail.commands?.length > 0 && (
+        <div style={{ marginTop: 4 }}>
+          <ExploreCommands commands={detail.commands} color={color} />
+        </div>
+      )}
     </div>
   )
 }
@@ -64,7 +61,7 @@ function Row({ row, bandColor }) {
           {hasDetail && <span className="tree-toggle">{open ? '⊟' : '⊕'}</span>}
         </button>
         {node.note && <div className="tree-note">{'➔'} {node.note}</div>}
-        {hasDetail && open && <RowDetail detail={node.detail} />}
+        {hasDetail && open && <RowDetail detail={node.detail} color={color} />}
       </div>
     </div>
   )
@@ -95,122 +92,13 @@ function Band({ layerId, groups, last }) {
   )
 }
 
-export default function PipelineTree({ component }) {
-  const { ancestry, consumedResources, kernelRealization } = component
-  const cr = consumedResources || []
-  const hasAny = ancestry || cr.length || kernelRealization
-  if (!hasAny) return null
-
-  const bands = []
-
-  if (ancestry) {
-    bands.push({
-      layerId: 'logical-intent',
-      groups: [{
-        nodes: [
-          ancestry.deployment && {
-            label: `[Deployment] ${ancestry.deployment}`,
-            note: 'defines replicas, strategy & pod template',
-          },
-          ancestry.replicaSet && {
-            label: `[ReplicaSet] ${ancestry.replicaSet}`,
-            note: 'stamps out unique pod-hash replicas',
-          },
-        ].filter(Boolean),
-      }],
-    })
-  }
-
-  const podName = ancestry?.podName || component.displayName
-  bands.push({
-    layerId: 'api-boundary',
-    groups: [{
-      nodes: [{
-        label: `[${component.typePrefix || 'Pod'}] ${podName}`,
-        note: 'schedulable API object handed to the node',
-        children: cr.map(r => ({
-          color: PURPLE,
-          label: r.apiObject,
-          note: primitiveNote(r.linuxPrimitive),
-          detail: {
-            kv: [
-              { k: 'host', v: r.hostPath },
-              ...(r.linkedObject ? [{ k: 'backed by', v: r.linkedObject }] : []),
-            ],
-          },
-        })),
-      }],
-    }],
-  })
-
-  bands.push({
-    layerId: 'translation-engine',
-    groups: [{
-      nodes: [
-        {
-          label: '[systemd] Kubelet',
-          note: 'resolves the Pod spec into on-disk state',
-          detail: {
-            bullets: [
-              'Listens to the Guest API Server for Pod assignment',
-              'Creates local dir /var/lib/kubelet/pods/',
-              'Resolves Secrets / ConfigMaps into RAM files',
-              'Executes storage-plugin mount commands',
-            ],
-          },
-        },
-        {
-          label: '[systemd] CRI-O',
-          note: 'issues the kernel syscalls that build the sandbox',
-          detail: {
-            bullets: [
-              'Receives low-level container runtime requests',
-              'Issues clone() / unshare() / setns() syscalls',
-            ],
-            lines: ['via Unix socket /var/run/crio/crio.sock'],
-          },
-        },
-      ],
-    }],
-  })
-
-  if (kernelRealization || cr.length) {
-    const groups = []
-    if (kernelRealization) {
-      groups.push({
-        subhead: '🧬 Isolation Boundaries',
-        nodes: [
-          kernelRealization.cgroupPath && {
-            label: `[cgroup v2] ${kernelRealization.cgroupPath}`,
-            note: 'throttles CPU / RAM limits',
-          },
-          kernelRealization.networkNamespace && {
-            label: `[netns] ${kernelRealization.networkNamespace}`,
-            note: 'isolates network sockets',
-          },
-          kernelRealization.mountNamespace && {
-            label: `[mount ns] ${kernelRealization.mountNamespace}`,
-            note: 'container-private VFS',
-          },
-        ].filter(Boolean),
-      })
-    }
-    if (cr.length) {
-      groups.push({
-        subhead: '📁 File Footprint',
-        nodes: cr.map(r => ({
-          label: `${r.linuxPrimitive} ${r.hostPath}`,
-          note: r.apiObject,
-        })),
-      })
-    }
-    bands.push({ layerId: 'linux-primitive', groups })
-  }
-
+// Pure renderer for a pre-built band model (see data/pipeline-model.js).
+export default function PipelineTree({ bands }) {
+  if (!bands?.length) return null
   return (
     <div className="pipeline-tree">
       {bands.map((b, i) => (
-        <Band key={b.layerId} layerId={b.layerId} groups={b.groups} last={i === bands.length - 1} />
+        <Band key={`${b.layerId}-${i}`} layerId={b.layerId} groups={b.groups} last={i === bands.length - 1} />
       ))}
     </div>
   )
