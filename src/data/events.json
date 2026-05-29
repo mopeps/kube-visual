@@ -112,7 +112,7 @@
   {
     "eventId": "east-west-service-traffic",
     "eventName": "East-West Service Traffic (Front-End → Back-End)",
-    "description": "Tracing an in-cluster call from the Front-End Workload to the Back-End Workload through the Back-End ClusterIP Service: name resolution to a virtual IP, OVN load-balancer DNAT on the guest OVS fabric, and delivery to a backing Pod — no ingress, no traffic leaving the VM.",
+    "description": "Tracing an in-cluster call from the Front-End Workload to the Back-End Workload through the Back-End ClusterIP Service: name resolution to a virtual IP, OVN load-balancer DNAT on the guest OVS fabric, a NetworkPolicy ACL check, and delivery to a backing Pod — no ingress, no traffic leaving the VM.",
     "steps": [
       {
         "step": 1,
@@ -129,8 +129,14 @@
       {
         "step": 3,
         "sourceComponentId": "ovs-guest",
+        "targetComponentId": "netpol-ecommerce",
+        "description": "Before the packet is delivered, the OVN logical pipeline on br-int evaluates the NetworkPolicy ACLs compiled for the backend port group. The policy admits the Front-End Pods' address set as an allowed ingress source, so the connection passes the ACL gate (traffic from any other source would be dropped here)."
+      },
+      {
+        "step": 4,
+        "sourceComponentId": "netpol-ecommerce",
         "targetComponentId": "backend-workload-pod",
-        "description": "OVS DNATs the destination from the ClusterIP to the chosen Back-End Workload Pod IP and delivers the packet over its veth pair. The backend process accepts the connection and returns its response."
+        "description": "With the policy allowing the flow, OVS DNATs the destination from the ClusterIP to the chosen Back-End Workload Pod IP and delivers the packet over its veth pair. The backend process accepts the connection and returns its response."
       }
     ]
   },

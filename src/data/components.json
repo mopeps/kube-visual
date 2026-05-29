@@ -862,6 +862,27 @@
     ]
   },
   {
+    "componentId": "netpol-ecommerce",
+    "displayName": "E-Commerce Network Policy",
+    "typePrefix": "NetworkPolicy",
+    "layer": "Guest Workload",
+    "logicalContext": {
+      "openShiftProject": "e-commerce-prod",
+      "associatedObject": "Deployment/backend"
+    },
+    "problemSolved": "A namespaced NetworkPolicy in e-commerce-prod that locks down east-west traffic: it denies all ingress to the Back-End Workload Pods by default, then admits only connections originating from the Front-End Workload Pods on the backend port. Like a Service it is a declarative API object — but it has a concrete data-plane realization: OVN-Kubernetes compiles it into address sets and ACLs in the OVN Northbound DB, which become allow/drop logical flows enforced on the guest br-int bridge. That datapath footprint earns it a card on the overview, next to the workloads it guards.",
+    "interactions": [
+      "Selects the Back-End Workload Pods via podSelector and gates their ingress to the Front-End Pods' address set on the backend port.",
+      "Watched by the OVN-Kubernetes Master, which translates it into ACLs and address sets in the OVN Northbound DB.",
+      "Enforced in the data plane as allow/drop OpenFlow rules on the guest Open vSwitch br-int — non-matching traffic is dropped before it reaches the backend veth."
+    ],
+    "explorationCommands": [
+      "# List NetworkPolicies in the namespace\noc get networkpolicy -n e-commerce-prod",
+      "# Inspect the policy rules\noc get networkpolicy backend-allow-frontend -n e-commerce-prod -o yaml",
+      "# Show the OVN ACLs the policy compiled into\novn-nbctl acl-list <port-group>"
+    ]
+  },
+  {
     "componentId": "pod-netns",
     "displayName": "Linux Network Namespace (netns)",
     "layer": "Linux Kernel Primitives",

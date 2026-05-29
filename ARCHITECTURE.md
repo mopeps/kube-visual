@@ -87,7 +87,8 @@ The workspace viewport canvas must render this exact structural hierarchy:
                     ├── [Pod] Front-End Workload Instance
                     ├── [Service · ClusterIP] Front-End Workload Service
                     ├── [Pod] Back-End Workload Instance
-                    └── [Service · ClusterIP] Back-End Workload Service
+                    ├── [Service · ClusterIP] Back-End Workload Service
+                    └── [NetworkPolicy] E-Commerce Network Policy (front-end → back-end ingress)
 
 ```
 
@@ -107,19 +108,21 @@ store, or a trace-only zone).
    `Open vSwitch`, `virt-handler`.
 3. **The Concrete Workload / Data Plane Instances** — discrete compute packages running
    processes: `Pods`, `Static Pods`, `VirtualMachineInstances`.
-4. **The Networking / Service Abstractions** — Kubernetes `Service` objects that front the
-   workloads above. Unlike pure-intent records, a Service has a *concrete data-plane
-   realization*: a `ClusterIP` is a virtual IP backed by OVN load-balancer flows (DNAT),
-   and a `LoadBalancer` (here, **MetalLB in L2 mode**) is an external VIP advertised over
-   ARP/NDP. That data-plane footprint earns it a card on the canvas, next to the Pods it
-   routes to: `[Service]`.
+4. **The Networking / Policy Abstractions** — Kubernetes `Service` and `NetworkPolicy`
+   objects that front or guard the workloads above. Unlike pure-intent records, these have
+   a *concrete data-plane realization*: a `ClusterIP` is a virtual IP backed by OVN
+   load-balancer flows (DNAT), and a `LoadBalancer` (here, **MetalLB in L2 mode**) is an
+   external VIP advertised over ARP/NDP. A `NetworkPolicy` is likewise declarative, but OVN
+   compiles it into address sets + ACLs in the Northbound DB that become allow/drop
+   OpenFlow rules enforced on `br-int`. That data-plane footprint earns each one a card on
+   the canvas, next to the Pods it routes to or guards: `[Service]`, `[NetworkPolicy]`.
 
 This reinforces the **Default State** rule in §2: desired-state records that have *no*
 data-plane realization (the `HostedCluster` / `NodePool` Custom Resources), raw Linux
 kernel primitives (netns, cgroups, host PIDs), and Project/Namespace boundaries are *not*
-instances, enforcers, or realized Service abstractions, so they never appear as cards on
-the first overview — they live inside the expandable etcd intent store or behind a node's
-detail modal instead.
+instances, enforcers, or realized Service/policy abstractions, so they never appear as
+cards on the first overview — they live inside the expandable etcd intent store or behind
+a node's detail modal instead.
 
 ### Modeling invariants (get these right)
 
@@ -233,7 +236,8 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
 Adding a component touches several places — keep them in sync:
 
 1. **`src/data/components.json`** — new entry with `componentId`, `displayName`, `layer`,
-   `typePrefix` (e.g. `Pod`, `Static Pod`, `systemd`, `VirtualMachineInstance`, `Service`),
+   `typePrefix` (e.g. `Pod`, `Static Pod`, `systemd`, `VirtualMachineInstance`, `Service`,
+   `NetworkPolicy`),
    `problemSolved`, `interactions[]`, `explorationCommands[]`. Add `logicalContext`
    (`openShiftProject` + `associatedObject`) for workload pods and VMIs.
 2. **`src/data/zones.js`** — add a node (with `id`, `title`, `typePrefix`, `badges`) to

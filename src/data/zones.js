@@ -434,6 +434,23 @@ export const ZONES = [
                       { label: 'e-commerce-prod', color: 'var(--k-green)' },
                     ],
                   },
+                  // Namespaced NetworkPolicy gating east-west traffic in
+                  // e-commerce-prod: it denies ingress to the back-end Pods
+                  // except from the front-end. Like a Service it is a
+                  // declarative object, but it has a concrete data-plane
+                  // realization — OVN compiles it into ACLs / allow-drop
+                  // OpenFlow rules on the guest br-int — so it earns a card on
+                  // the overview next to the workloads it guards (per the 4th
+                  // category of the First Overview rendering rule, §1).
+                  {
+                    id: 'netpol-ecommerce',
+                    title: 'E-Commerce Network Policy',
+                    typePrefix: 'NetworkPolicy',
+                    badges: [
+                      { label: 'frontend → backend', color: 'var(--k-green)' },
+                      { label: 'OVN ACL', color: 'var(--k-green)' },
+                    ],
+                  },
                   {
                     id: 'cluster-monitoring',
                     title: 'Cluster Monitoring',
@@ -504,6 +521,7 @@ const OVERVIEW_NODE_TYPES = new Set([
   'Static Pod',
   'VirtualMachineInstance',
   'Service', // Networking / Service abstractions (ClusterIP, LoadBalancer)
+  'NetworkPolicy', // Policy abstractions realized as OVN ACLs / OpenFlow rules
 ])
 
 function assertOverviewWhitelist(zones) {
