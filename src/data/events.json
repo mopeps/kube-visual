@@ -2,49 +2,67 @@
   {
     "eventId": "route-ingress-traffic",
     "eventName": "External Ingress Traffic Flow",
-    "description": "Tracing an inbound HTTPS request from an external web client through the bare metal cluster's ingress proxy, across the OVS overlay fabric, into the KubeVirt VM, and down to the front-end workload Pod.",
+    "description": "Tracing an inbound HTTPS request from an external web client through the bare metal cluster's MetalLB-advertised ingress VIP and proxy, across the OVS overlay fabric, into the KubeVirt VM, and — via the guest ingress VIP and the front-end ClusterIP Service — down to the front-end workload Pod.",
     "steps": [
       {
         "step": 1,
         "sourceComponentId": "external-client",
-        "targetComponentId": "shared-ingress-proxy",
-        "description": "Client sends HTTPS request to the Route hostname. The Shared Ingress Proxy (HAProxy) in the bare metal cluster terminates TLS and identifies the guest cluster backend."
+        "targetComponentId": "svc-ingress-lb-shared",
+        "description": "Client sends an HTTPS request to the Route hostname, which resolves to the Shared Ingress LoadBalancer VIP. With no cloud LB present, a MetalLB speaker answers ARP for the VIP, so the packet lands on the bare metal cluster."
       },
       {
         "step": 2,
+        "sourceComponentId": "svc-ingress-lb-shared",
+        "targetComponentId": "shared-ingress-proxy",
+        "description": "The LoadBalancer Service DNATs the VIP to a healthy Shared Ingress Proxy endpoint. HAProxy terminates TLS and identifies the guest cluster backend for this Route."
+      },
+      {
+        "step": 3,
         "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "ovs-host",
         "description": "HAProxy forwards the decrypted request into the bare metal worker node's OVS br-int bridge, which applies OVN flow rules to route the packet toward the KubeVirt Launcher."
       },
       {
-        "step": 3,
+        "step": 4,
         "sourceComponentId": "ovs-host",
         "targetComponentId": "kubevirt-launcher",
         "description": "OVS routes the packet through the tap0 virtual interface into the KubeVirt Launcher Pod, crossing the host-to-VM network boundary."
       },
       {
-        "step": 4,
+        "step": 5,
         "sourceComponentId": "kubevirt-launcher",
         "targetComponentId": "guest-worker-node-vm",
         "description": "The KubeVirt Launcher delivers the packet to the virtio-net NIC of the Guest Worker Node VM, shifting context from the host kernel to the guest RHCOS kernel."
       },
       {
-        "step": 5,
+        "step": 6,
         "sourceComponentId": "guest-worker-node-vm",
         "targetComponentId": "ovs-guest",
-        "description": "The guest RHCOS kernel hands the packet to the in-VM Open vSwitch service, which evaluates guest OVN flow rules to identify the target workload Pod."
-      },
-      {
-        "step": 6,
-        "sourceComponentId": "ovs-guest",
-        "targetComponentId": "openshift-ingress-router-guest",
-        "description": "Guest OVS delivers the packet to the OpenShift Ingress Router Pod running inside the VM, which re-routes it to the correct guest Service endpoint."
+        "description": "The guest RHCOS kernel hands the packet to the in-VM Open vSwitch service, which evaluates guest OVN flow rules to route it toward the ingress VIP."
       },
       {
         "step": 7,
+        "sourceComponentId": "ovs-guest",
+        "targetComponentId": "svc-ingress-lb-guest",
+        "description": "Guest OVS matches the Ingress LoadBalancer VIP (the router-default external IP advertised by MetalLB inside the guest cluster) and applies the OVN load-balancer flow for it."
+      },
+      {
+        "step": 8,
+        "sourceComponentId": "svc-ingress-lb-guest",
+        "targetComponentId": "openshift-ingress-router-guest",
+        "description": "The LoadBalancer Service DNATs the VIP to an OpenShift Ingress Router Pod endpoint inside the VM, which matches the request against its Route table."
+      },
+      {
+        "step": 9,
         "sourceComponentId": "openshift-ingress-router-guest",
+        "targetComponentId": "svc-frontend",
+        "description": "The guest Ingress Router forwards the request to the Front-End Service — the ClusterIP that fronts the frontend Pods — addressing its stable virtual IP rather than a Pod directly."
+      },
+      {
+        "step": 10,
+        "sourceComponentId": "svc-frontend",
         "targetComponentId": "frontend-workload-pod",
-        "description": "The guest Ingress Router forwards the request to the Front-End Workload Pod via its ClusterIP Service. The application process accepts the connection and returns a response."
+        "description": "OVN load-balancer flows DNAT the ClusterIP to a ready Front-End Workload Pod endpoint. The application process accepts the connection and returns a response."
       }
     ]
   },
@@ -88,6 +106,31 @@
         "sourceComponentId": "crio-guest",
         "targetComponentId": "frontend-workload-pod",
         "description": "Guest CRI-O starts the container via runc. The workload process becomes PID 1 inside its namespaces, registers with the guest network, and the Pod transitions to Running status."
+      }
+    ]
+  },
+  {
+    "eventId": "east-west-service-traffic",
+    "eventName": "East-West Service Traffic (Front-End → Back-End)",
+    "description": "Tracing an in-cluster call from the Front-End Workload to the Back-End Workload through the Back-End ClusterIP Service: name resolution to a virtual IP, OVN load-balancer DNAT on the guest OVS fabric, and delivery to a backing Pod — no ingress, no traffic leaving the VM.",
+    "steps": [
+      {
+        "step": 1,
+        "sourceComponentId": "frontend-workload-pod",
+        "targetComponentId": "svc-backend",
+        "description": "The Front-End resolves backend.e-commerce-prod.svc.cluster.local to the Back-End Service's ClusterIP and opens a connection to that stable virtual IP rather than to a specific backend Pod."
+      },
+      {
+        "step": 2,
+        "sourceComponentId": "svc-backend",
+        "targetComponentId": "ovs-guest",
+        "description": "The connection to the ClusterIP enters the in-VM OVS br-int bridge, where the OVN-Kubernetes load-balancer flow installed for this Service matches the virtual IP and selects a healthy backend endpoint."
+      },
+      {
+        "step": 3,
+        "sourceComponentId": "ovs-guest",
+        "targetComponentId": "backend-workload-pod",
+        "description": "OVS DNATs the destination from the ClusterIP to the chosen Back-End Workload Pod IP and delivers the packet over its veth pair. The backend process accepts the connection and returns its response."
       }
     ]
   },
