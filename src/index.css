@@ -830,157 +830,137 @@ body::after {
   white-space: nowrap;
 }
 
-/* ── Manifest → Kernel pipeline tree ───────────────────────────────── */
+/* ── Manifest → Kernel blueprint tree ──────────────────────────────── */
+/* Dense, monospace ASCII-style tree. One line per node; the short note sits
+   dimmed beneath, and deeper detail unfolds on click. No card boxes. */
 .pipeline-tree {
-  display: flex;
-  flex-direction: column;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  line-height: 1.45;
 }
-.pipeline-band {
-  border-left: 2px solid var(--band);
-  background: rgba(255, 255, 255, 0.025);
-  border-radius: 0 8px 8px 0;
-  padding: 12px 14px 14px;
-}
-.pipeline-band-header {
+.tree-band { margin-bottom: 2px; }
+.tree-band-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   font-family: 'Syne', sans-serif;
-  font-size: 0.8rem;
+  font-size: 0.66rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  margin-bottom: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 8px 0 4px;
 }
-.pipeline-band-order {
+.tree-band-num {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   border: 1px solid currentColor;
-  font-size: 0.62rem;
-  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
   flex: 0 0 auto;
 }
-.pipeline-band-icon { font-size: 0.9rem; }
-.pipeline-band-body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.pipeline-node {
-  border: 1px solid var(--border-w);
-  border-left-width: 3px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 8px 11px;
-  min-width: 0;
-}
-.pipeline-node-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
-  line-height: 1.5;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-.pipeline-node-note { color: var(--tx-muted); }
-.pipeline-bullets {
-  margin: 6px 0 0;
-  padding-left: 16px;
-  list-style: none;
-}
-.pipeline-bullets li {
-  font-size: 0.68rem;
-  color: var(--tx-muted);
-  line-height: 1.6;
-  position: relative;
-  margin-bottom: 2px;
-}
-.pipeline-bullets li::before {
-  content: '•';
-  position: absolute;
-  left: -12px;
-  color: var(--tx-dim);
-}
-.pipeline-socket {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.68rem;
-  margin-top: 4px;
-  overflow-wrap: anywhere;
-}
-.pipeline-connector {
-  width: 2px;
-  height: 22px;
-  margin-left: 9px;
-  background: var(--band);
-  position: relative;
-  opacity: 0.6;
-}
-.pipeline-connector::after {
-  content: '▼';
-  position: absolute;
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: var(--band);
-  font-size: 0.6rem;
-}
-.pipeline-row {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-}
-.pipeline-row-main {
-  flex: 1 1 0;
-  min-width: 0;
-}
-.pipeline-consumed {
-  flex: 1 1 0;
-  min-width: 0;
-  border: 1px dashed var(--k-purple);
-  border-radius: 8px;
-  padding: 10px 12px;
-  background: rgba(124, 58, 237, 0.06);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.pipeline-consumed-header {
+.tree-band-icon { font-size: 0.82rem; }
+.tree-band-title { line-height: 1; }
+
+.tree-group { margin-bottom: 2px; }
+.tree-subhead {
   font-size: 0.62rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-.pipeline-consumed-item {
-  border: 1px solid;
-  border-radius: 6px;
-  padding: 6px 9px;
-  background: rgba(0, 0, 0, 0.25);
-  min-width: 0;
-}
-.pipeline-consumed-sub {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.66rem;
-  margin-top: 3px;
-  padding-left: 8px;
-  overflow-wrap: anywhere;
-}
-.pipeline-subgroup {
-  margin-bottom: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.pipeline-subgroup:last-child { margin-bottom: 0; }
-.pipeline-subgroup-title {
-  font-size: 0.66rem;
-  letter-spacing: 0.06em;
-  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+  margin: 4px 0 1px;
+  padding-left: 3px;
 }
 
-/* Stack the consumed-resources column under its band on narrow screens so
-   host paths / config strings never clip or force horizontal scroll. */
+.tree-row {
+  display: flex;
+  align-items: flex-start;
+}
+.tree-gutter {
+  white-space: pre;
+  color: var(--tx-dim);
+  flex: 0 0 auto;
+  user-select: none;
+}
+.tree-body {
+  min-width: 0;
+  flex: 1 1 auto;
+  padding-bottom: 1px;
+}
+.tree-row-head {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+}
+.tree-label {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.tree-row-head:hover .tree-label,
+.tree-row-head[aria-expanded] .tree-label { text-decoration: none; }
+.tree-row-head[aria-expanded]:hover .tree-label { opacity: 0.85; }
+.tree-toggle {
+  font-size: 0.66rem;
+  color: var(--tx-muted);
+  flex: 0 0 auto;
+}
+.tree-note {
+  color: var(--tx-muted);
+  font-size: 0.64rem;
+  opacity: 0.9;
+  overflow-wrap: anywhere;
+}
+.tree-detail {
+  margin: 3px 0 5px;
+  padding: 6px 9px;
+  border-left: 2px solid var(--border-w);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 0 5px 5px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tree-detail-bullet {
+  font-size: 0.64rem;
+  color: var(--tx-muted);
+  overflow-wrap: anywhere;
+}
+.tree-detail-kv {
+  display: flex;
+  gap: 8px;
+  font-size: 0.64rem;
+  overflow-wrap: anywhere;
+}
+.tree-detail-k {
+  color: var(--tx-dim);
+  flex: 0 0 auto;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tree-detail-v {
+  color: var(--tx);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tree-detail-line {
+  font-size: 0.64rem;
+  color: var(--tx-dim);
+  overflow-wrap: anywhere;
+}
+.tree-connector {
+  font-size: 0.6rem;
+  line-height: 1;
+  padding: 2px 0 1px 3px;
+  opacity: 0.55;
+}
+
 @media (max-width: 640px) {
   .ancestry-overlay { padding: 0; }
   .ancestry-modal {
@@ -991,7 +971,6 @@ body::after {
     padding: 18px 16px calc(28px + env(safe-area-inset-bottom));
   }
   .ancestry-drag-handle { display: block; }
-  .pipeline-row { flex-direction: column; }
 }
 
 /* ── Object map table ──────────────────────────────────────────────── */
