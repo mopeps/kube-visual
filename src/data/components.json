@@ -1043,7 +1043,7 @@
   {
     "componentId": "netpol-ecommerce",
     "displayName": "E-Commerce Network Policy",
-    "typePrefix": "NWPOLICY",
+    "typePrefix": "NetworkPolicy",
     "layer": "Guest Workload",
     "logicalContext": {
       "openShiftProject": "e-commerce-prod",

@@ -17,7 +17,7 @@ const TYPE_GLYPH_KEY = {
   'API Object': 'api-object',
   'Custom Resource': 'custom-resource',
   'VirtualMachineInstance': 'vmi',
-  'NWPOLICY': 'networkpolicy',
+  'NetworkPolicy': 'networkpolicy',
   'Client': 'client',
 }
 

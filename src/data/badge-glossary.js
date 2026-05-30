@@ -5,8 +5,6 @@ export const BADGE_GLOSSARY = {
     'Port 443 is the standard HTTPS port. All external traffic arrives here encrypted; the Shared Ingress Proxy terminates the TLS session before forwarding to backend services.',
   'TLS 1.3':
     'Transport Layer Security 1.3 — the current standard for encrypting data in transit. Provides forward secrecy and faster 1-RTT handshakes compared to TLS 1.2.',
-  'HostedCluster CR':
-    'Custom Resource that describes the desired state of a Hosted Control Plane cluster. The HyperShift Operator watches these objects and reconciles all guest control-plane components accordingly.',
   'ClusterVersion CR':
     'Custom Resource that tracks the current and target OpenShift release version. The Cluster Version Operator reads this object to drive cluster-wide upgrades.',
   ':6443':
@@ -19,8 +17,6 @@ export const BADGE_GLOSSARY = {
     'Kubernetes control loops that continuously watch the API server for desired-state changes and reconcile the actual state to match (e.g. ReplicaSet, Deployment, Service, and Endpoint controllers).',
   'Bindings':
     'Scheduler decisions written back to the API server as Binding objects, assigning a pending Pod to a specific node. Once bound, the kubelet on that node pulls and starts the containers.',
-  'State Store':
-    'etcd persists all Kubernetes cluster state as ordered key-value pairs. Every API object — Pods, Services, Secrets, ConfigMaps — is stored and replicated here.',
   'Static Manifest':
     'A Static Pod is defined by a YAML file in /etc/kubernetes/manifests on the node. The kubelet — not the scheduler — watches this directory and runs the Pod directly, which is how the management cluster bootstraps its own control plane before any API server is available.',
   'Raft':
@@ -32,7 +28,7 @@ export const BADGE_GLOSSARY = {
   'Northbound DB':
     'OVN\'s logical network database. Stores high-level constructs (logical switches, routers, load balancers, ACLs). ovn-controller on each node translates these into low-level OpenFlow rules on the OVS bridge.',
   'Cloud API':
-    'The cloud provider\'s control-plane API (e.g. AWS EC2, Azure ARM, GCP Compute). The Cloud Controller Manager calls it to provision and reconcile load balancers, node objects, and persistent storage volumes.',
+    'The infrastructure API the Cloud Controller Manager reconciles against. On this KubeVirt platform there is no external cloud — the kubevirt cloud provider plays that role, mirroring the guest\'s router-default LoadBalancer onto an infra-side Service and reporting VMI node addresses back to the guest API server.',
   'Tunnel :8091':
     'Konnectivity Server listens on port 8091 for persistent gRPC connections from Konnectivity Agents running inside the guest nodes. This tunnel lets the bare metal cluster API server reach Pods behind the NAT boundary.',
   'Bootstrap':
