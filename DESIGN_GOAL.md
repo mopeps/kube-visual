@@ -12,23 +12,20 @@ governs everything else:
    padding, no detours into analogy. If an explanation swerves around the point
    instead of landing on it, cut it down until it lands.
 2. **Zero abstract cloud metaphors.** No clouds, no faceless "managed service"
-   boxes, no hand-wavy logos standing in for real systems. Every box on the
-   canvas is a thing that actually runs — a `[Pod]`, a `[systemd]` service, a
-   `[VirtualMachineInstance]`, a `[Service]`, a `[NetworkPolicy]` — labeled with
-   its exact API/system classification. If you can't name the real object, it
-   doesn't get a box.
-3. **Immediate depth, zero clutter.** The full nested topology is visible at
-   first glance — the user scans once and sees where every piece lives — but the
-   idle canvas stays quiet: dimmed components, no floating connectors, no
-   intent-only records crowding the real workloads. Depth is *present*, not
-   *noisy*. Detail is summoned on demand, never dumped up front.
-4. **Progressive disclosure to the metal.** Every interactive surface drills
-   *downward toward the kernel*, not sideways into more abstraction. The detail
-   modals must expose the raw Linux primitives behind each component — the
-   `cgroups` slice path, the network-namespace (`netns`) identity, the host-side
-   `veth`/`tap` tags — alongside copy-paste exploration commands (`nsenter`,
-   `crictl`, …) the reader can run to see the same thing on a live cluster. The
-   destination of every click is always closer to the metal.
+   boxes, no logos standing in for real systems. Every box is a thing that
+   actually runs — a `[Pod]`, a `[systemd]` service, a `[VirtualMachineInstance]`,
+   a `[Service]`, a `[NetworkPolicy]` — labeled with its exact API/system kind.
+3. **Immediate depth, zero clutter.** The full nested topology is visible at a
+   glance — scan once, see where every piece lives — but the idle canvas stays
+   quiet: components dimmed, no floating connectors, no intent-only records
+   crowding the real workloads. Depth is *present*, not *noisy*; detail is
+   summoned on demand, never dumped up front.
+4. **Progressive disclosure to the metal.** Every interaction drills *down toward
+   the kernel*, never sideways into more abstraction. Detail modals expose the
+   raw Linux primitives behind a component — the `cgroups` slice path, the
+   network-namespace (`netns`) identity, the host-side `veth`/`tap` tags — plus
+   copy-paste exploration commands (`nsenter`, `crictl`, …) to see the same thing
+   on a live cluster.
 
 ## Intent
 
