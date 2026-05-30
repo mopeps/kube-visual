@@ -2,21 +2,27 @@
 
 ## Core Philosophy: The No-Abstractions Rule
 
-This visualizer exists to make infrastructure *concrete*. Three principles are
-non-negotiable and override every other choice in this document:
+This visualizer exists to make infrastructure *concrete*. Four principles are
+non-negotiable and override every other choice in this document — the first
+governs everything else:
 
-1. **Zero abstract cloud metaphors.** No clouds, no faceless "managed service"
+1. **Say it straight, show it first.** This is the principle the other three
+   serve. Lead with the diagram; keep prose terse and direct. Explain the real
+   mechanism in the fewest words that still hit the heart of it — no hedging, no
+   padding, no detours into analogy. If an explanation swerves around the point
+   instead of landing on it, cut it down until it lands.
+2. **Zero abstract cloud metaphors.** No clouds, no faceless "managed service"
    boxes, no hand-wavy logos standing in for real systems. Every box on the
    canvas is a thing that actually runs — a `[Pod]`, a `[systemd]` service, a
    `[VirtualMachineInstance]`, a `[Service]`, a `[NetworkPolicy]` — labeled with
    its exact API/system classification. If you can't name the real object, it
    doesn't get a box.
-2. **Immediate depth, zero clutter.** The full nested topology is visible at
+3. **Immediate depth, zero clutter.** The full nested topology is visible at
    first glance — the user scans once and sees where every piece lives — but the
    idle canvas stays quiet: dimmed components, no floating connectors, no
    intent-only records crowding the real workloads. Depth is *present*, not
    *noisy*. Detail is summoned on demand, never dumped up front.
-3. **Progressive disclosure to the metal.** Every interactive surface drills
+4. **Progressive disclosure to the metal.** Every interactive surface drills
    *downward toward the kernel*, not sideways into more abstraction. The detail
    modals must expose the raw Linux primitives behind each component — the
    `cgroups` slice path, the network-namespace (`netns`) identity, the host-side
