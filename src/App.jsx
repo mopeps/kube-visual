@@ -156,10 +156,10 @@ export default function App() {
           className="mt-8 text-[0.7rem]"
           style={{ color: 'var(--tx-muted)' }}
         >
-          💡 Click any node to inspect its YAML role, interactions, and copy-paste
-          shell commands. Pick a trace flow in the Packet Flow tab to follow a
-          packet from client to PID 1, then tap a numbered arrow to read about
-          that hop.
+          💡 Click any node to inspect its role, interactions, Manifest → Kernel
+          pipeline, and copy-paste shell commands. Pick a trace flow in the Packet
+          Flow tab to follow a packet from client to PID 1, then tap a numbered
+          arrow to read about that hop.
         </p>
       </div>
 
