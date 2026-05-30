@@ -108,7 +108,44 @@ function EventGallery({ onSelectEvent }) {
   )
 }
 
-export default function PacketFlowTab({ activeEvent, onSelectEvent, activeStep, onSelectStep }) {
+// Always-available switcher: jump straight to any other flow, or clear back to
+// the gallery. This carries the trace-picking that used to live in the header
+// dropdown, so the tab is self-sufficient.
+function FlowSwitcher({ activeEvent, onSelectEvent, onClearEvent }) {
+  return (
+    <div className="flow-switcher">
+      <span className="flow-switcher-label">Trace flow</span>
+      {events.map(e => (
+        <button
+          key={e.eventId}
+          type="button"
+          className={`event-pill ${activeEvent?.eventId === e.eventId ? 'is-active' : ''}`}
+          onClick={() => onSelectEvent(e)}
+          title={e.description}
+        >
+          {e.eventName}
+        </button>
+      ))}
+      {onClearEvent && (
+        <button
+          type="button"
+          className="event-pill flow-switcher-clear"
+          onClick={onClearEvent}
+        >
+          × Clear
+        </button>
+      )}
+    </div>
+  )
+}
+
+export default function PacketFlowTab({
+  activeEvent,
+  onSelectEvent,
+  onClearEvent,
+  activeStep,
+  onSelectStep,
+}) {
   const [open, setOpen] = useState(new Set())
 
   if (!activeEvent) {
@@ -128,6 +165,11 @@ export default function PacketFlowTab({ activeEvent, onSelectEvent, activeStep, 
 
   return (
     <div>
+      <FlowSwitcher
+        activeEvent={activeEvent}
+        onSelectEvent={onSelectEvent}
+        onClearEvent={onClearEvent}
+      />
       <div className="mb-5">
         <div className="font-display text-[1.35rem] font-semibold mb-1">
           {activeEvent.eventName}

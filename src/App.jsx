@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import useEventState from './hooks/useEventState'
 import useMediaQuery from './hooks/useMediaQuery'
 import Tabs from './components/Tabs'
-import EventSelector from './components/EventSelector'
 import OverviewTab from './components/OverviewTab'
 import PacketFlowTab from './components/PacketFlowTab'
 import ObjectMapTab from './components/ObjectMapTab'
@@ -77,7 +76,11 @@ export default function App() {
     />
   )
   const packetPanel = (
-    <PacketFlowTab activeEvent={activeEvent} onSelectEvent={selectEvent} />
+    <PacketFlowTab
+      activeEvent={activeEvent}
+      onSelectEvent={selectEvent}
+      onClearEvent={clearEvent}
+    />
   )
   const objectsPanel = <ObjectMapTab />
 
@@ -94,12 +97,6 @@ export default function App() {
         style={{ maxWidth: 1500 }}
       >
         <Header />
-
-        <EventSelector
-          activeEvent={activeEvent}
-          onSelectEvent={selectEvent}
-          onClearEvent={clearEvent}
-        />
 
         <div className="tabs-row">
           <Tabs tabs={visibleTabs} active={tab} onSelect={setTab} />
@@ -146,6 +143,7 @@ export default function App() {
                 <PacketFlowTab
                   activeEvent={activeEvent}
                   onSelectEvent={selectEvent}
+                  onClearEvent={clearEvent}
                   activeStep={activeStep}
                   onSelectStep={selectStep}
                 />
@@ -164,8 +162,9 @@ export default function App() {
           style={{ color: 'var(--tx-muted)' }}
         >
           💡 Click any node to inspect its YAML role, interactions, and copy-paste
-          shell commands. Pick a trace flow above to follow a packet from
-          client to PID 1, then tap a numbered arrow to read about that hop.
+          shell commands. Pick a trace flow in the Packet Flow tab to follow a
+          packet from client to PID 1, then tap a numbered arrow to read about
+          that hop.
         </p>
       </div>
 

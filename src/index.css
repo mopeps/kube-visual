@@ -647,6 +647,27 @@ body::after {
   box-shadow: 0 0 24px rgba(255, 77, 109, 0.4);
 }
 
+/* Inline trace switcher at the top of the packet-flow tab. */
+.flow-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-w);
+}
+.flow-switcher-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tx-dim);
+  margin-right: 4px;
+}
+.flow-switcher .event-pill { font-size: 0.66rem; padding: 6px 12px; }
+.flow-switcher-clear { color: var(--tx-dim); }
+
 /* ── Hop list ──────────────────────────────────────────────────────── */
 .hop {
   display: flex;
