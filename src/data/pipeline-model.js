@@ -171,12 +171,18 @@ function podBands(component) {
   return bands
 }
 
-function systemdBands(component) {
-  // Host systemd services descend through the same four bands as a Pod — the
-  // symmetry is the point. The service's *intent* is not the .service file itself but a
-  // MachineConfig reconciled by the Machine Config Operator and bridged onto the
-  // host by Ignition at first boot. The on-disk unit is the concrete Runtime
-  // Object (the Pod-equivalent) that systemd PID 1 then supervises.
+function systemdBands() {
+  // Host systemd services flatten to two bands — Logical Intent → Linux
+  // Primitive. Unlike a Pod, where the kubelet and CRI-O genuinely *translate* an
+  // abstract object into a concrete one (pulling images, resolving Secrets into
+  // RAM files), a systemd service has no such resolution step: once the
+  // MachineConfig's intent is bridged onto the host by Ignition at first boot,
+  // the .service unit, its cgroup slice, and the running process are all just
+  // Linux primitives that PID 1 supervises directly. So we skip the Runtime
+  // Object and Translation Engine bands the Pod pipeline uses, and let the unit
+  // file live in the Linux-primitive band as its single home (via the systemd
+  // entry in PRIMITIVES_BY_TYPE, whose `systemd Unit` item also carries the PID-1
+  // supervision detail the dropped Translation Engine band used to spell out).
   const bands = [{
     // 1 · Logical intent — a MachineConfig, the host plane's Deployment-equivalent.
     layerId: 'logical-intent',
@@ -189,38 +195,6 @@ function systemdBands(component) {
             'Machine Config Operator renders pool MachineConfigs into one Ignition config',
             'Ignition applies it on first boot (HCP: served by the Ignition Server)',
             'Base units like crio.service / ovs also ship in the immutable RHCOS image',
-          ],
-        },
-      }],
-    }],
-  }, {
-    // 2 · Runtime Object — the on-disk .service unit handed to PID 1.
-    layerId: 'api-boundary',
-    groups: [{
-      nodes: [{
-        label: `[unit] ${component.displayName}`,
-        note: 'on-disk .service unit handed to PID 1',
-        detail: {
-          bullets: [
-            'Existence: shipped in the RHCOS image or delivered via MachineConfig',
-            'Config & enablement governed by MachineConfig → Ignition',
-            'Declares ExecStart, Restart= / RestartSec= recovery policy',
-          ],
-        },
-      }],
-    }],
-  }, {
-    // 3 · Translation engine — systemd PID 1 supervises the unit.
-    layerId: 'translation-engine',
-    groups: [{
-      nodes: [{
-        label: '[systemd] PID 1',
-        note: 'starts & supervises the unit per its .service file',
-        detail: {
-          bullets: [
-            'Tracks unit state: activating → active → failed',
-            'Applies Restart= / RestartSec= recovery policy',
-            'Places the service in its own cgroup slice',
           ],
         },
       }],
