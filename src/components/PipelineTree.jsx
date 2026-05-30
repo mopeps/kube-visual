@@ -5,9 +5,10 @@ import ExploreCommands from './ExploreCommands'
 // Monochrome line glyphs for the pipeline bands. Each is a single-stroke SVG
 // drawn with `currentColor`, so it inherits the band head's accent color, and
 // sized at 1em so it tracks `.tree-band-icon`'s font-size. The stroke weight is
-// tuned to match the detail-modal interaction icons (.interaction-icon) once the
-// 24-unit viewBox is scaled down to ~15px. Keyed by the layer's `icon` id in
-// pipeline-layers.js.
+// tuned to match the detail-modal interaction icons (.interaction-icon): once the
+// 24-unit viewBox is scaled down by `.tree-band-icon`'s 1.15rem font-size, a 2.0
+// stroke lands at the same ~1.5px effective weight the 16-unit interaction icons
+// draw at. Keyed by the layer's `icon` id in pipeline-layers.js.
 const BAND_GLYPHS = {
   // Logical Intent — a manifest/document with text lines and a folded corner.
   document: <><path d="M6 2.8h7l5 5v13.4H6z" /><path d="M13 2.8v5h5" /><path d="M9 12h6M9 15h6M9 9h3" /></>,
@@ -32,7 +33,7 @@ function BandIcon({ name }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2.2"
+      strokeWidth="2.0"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
