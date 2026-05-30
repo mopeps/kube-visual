@@ -17,7 +17,7 @@ const TYPE_GLYPH_KEY = {
   'API Object': 'api-object',
   'Custom Resource': 'custom-resource',
   'VirtualMachineInstance': 'vmi',
-  'NetworkPolicy': 'networkpolicy',
+  'NWPOLICY': 'networkpolicy',
   'Client': 'client',
 }
 
@@ -81,30 +81,13 @@ const TYPE_GLYPHS = {
   ),
 }
 
-// Render the glyph for a given `typePrefix`. Returns null for unmapped prefixes
-// so callers can drop it in unconditionally. `size` accepts any CSS length
-// (defaults to 1em so it scales with the surrounding text).
-export default function TypeIcon({ typePrefix, size = '1em', className, title }) {
-  const glyph = TYPE_GLYPHS[TYPE_GLYPH_KEY[typePrefix]]
-  if (!glyph) return null
-  return (
-    <svg
-      className={className}
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden={title ? undefined : 'true'}
-      role={title ? 'img' : undefined}
-    >
-      {title && <title>{title}</title>}
-      {glyph}
-    </svg>
-  )
+// Type glyphs are currently hidden across the app — the bracketed [typePrefix]
+// label carries the type on its own, so the icon is suppressed everywhere to cut
+// visual noise. This component is kept (with its glyph definitions above) as a
+// no-op so call sites can drop it in unconditionally; re-enable the icons by
+// restoring the original render body that looked up TYPE_GLYPHS[TYPE_GLYPH_KEY].
+export default function TypeIcon() {
+  return null
 }
 
 // Exposed so other views (legends, etc.) can tell whether a prefix has a glyph.
