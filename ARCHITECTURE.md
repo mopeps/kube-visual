@@ -1,15 +1,15 @@
-# kube-visual — Architecture Specification
+# kube-weird-visualizer — Architecture Specification
 
-> **This is the source-of-truth spec for what kube-visual should be.** It defines the
+> **This is the source-of-truth spec for what kube-weird-visualizer should be.** It defines the
 > target topology, component hierarchy, interaction model, and data schemas. When the
 > app and this document disagree, treat this document as the intent and bring the app
 > back in line with it (or update this doc deliberately if the intent itself changed).
 
-This document defines the structural specifications, component hierarchies, and data models for **kube-visual** — an interactive, frontend-only web-based architectural map of OpenShift Hosted Control Planes (HCP).
+This document defines the structural specifications, component hierarchies, and data models for **kube-weird-visualizer** — an interactive, frontend-only web-based architectural map of OpenShift Hosted Control Planes (HCP).
 ## 1. UI Structural Nomenclature & Multitier Canvas Layout
 ### Layout & Sizing Rules
  * **Nomenclature:** Use Context / Zone for macro physical/virtual infrastructure layers and Container / Instance for platform runtime isolation boundaries.
- * **Prefix System:** Every line on the canvas must explicitly start with its exact system or API object classification in square brackets ([Pod], [Static Pod], [systemd Service]).
+ * **Prefix System:** Each card carries its exact system / API object classification in square brackets ([Static Pod], [systemd], [Service], [NetworkPolicy], [VirtualMachineInstance], …) — **with one deliberate exception: the plain `[Pod]` prefix is omitted.** Pods are by far the most common card, so `[Pod]` is treated as the implicit default and hidden to cut visual noise; every *non-Pod* type is still labeled explicitly. (See `NodeCard.jsx`, which suppresses the prefix only when `typePrefix === 'Pod'`.)
  * **Mobile-First Footprint:** Minimize individual block dimensions. The UI layout tree components must compress cleanly so that **at least two instances sit side-by-side** without clipping content strings when viewed on compact mobile display widths.
 ### Component Nesting Structure
 The workspace viewport canvas must render this exact structural hierarchy:

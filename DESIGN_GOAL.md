@@ -1,4 +1,4 @@
-# kube-visual · Design Goal
+# kube-weird-visualizer · Design Goal
 
 ## Intent
 
@@ -28,23 +28,28 @@ flow.
 
 1. **Zones are full-width horizontal rows.** Each zone has a thin vertical
    label on the left (rotated text) and a content area on the right.
-2. **Inside each zone, nodes flow with `flex-wrap`.** A node has
-   `min-width: 160px; max-width: 280px` so a narrow window gives one column,
-   a wide window gives three or four columns — the boxes reflow naturally
-   to fill available width.
-3. **Arrow rows live between zones**, not floating above them. Each arrow
-   step is a numbered chip with a one-line description of what happens at
-   that hop.
-4. **The detail panel slides in from the right** when a node is clicked.
-   It is never inline — the diagram stays put.
+2. **Inside each zone, nodes flow with `flex-wrap`.** On desktop a node is a
+   fixed `width: 128px`, so a wide zone packs several compact cards per row and
+   a narrow one wraps them naturally. Under 640px the cards switch to a fluid
+   two-up grid (`flex: 1 1 calc(50% - 4px)`) so at least two always sit
+   side-by-side without clipping (see `.node` in `src/index.css`).
+3. **Trace connectors are a numbered SVG overlay** drawn between the involved
+   nodes when an event is active — not arrow rows wedged between zones. Each
+   connector carries a clickable step badge (`①`, `②`, …); the overlay measures
+   node bounding rects and recomputes on resize. The step *ordering* lives in the
+   data (`events.json`), even though the geometry is screen-derived.
+4. **The detail inspector opens as an overlay sheet** when a node is clicked —
+   a centered modal on desktop, a full-height bottom sheet on mobile (swipe- or
+   tap-outside to dismiss). It is never inline — the diagram stays put behind it.
 
 ## Interaction model
 
-- **Click a node** → slide-in detail panel with `problemSolved`, `interactions`,
-  and copy-paste exploration commands. `ESC` closes it.
+- **Click a node** → detail sheet with `problemSolved`, `interactions`, a
+  Manifest → Kernel pipeline, and copy-paste exploration commands. `ESC` closes it.
 - **Pick an event** → relevant nodes get the packet outline and a `01`, `02`
-  step badge; relevant arrow rows highlight; the Step-by-Step tab populates
-  with the hop list.
+  step badge; numbered connectors are drawn between them; the Step-by-Step tab
+  populates with the hop list, and a bottom-docked hop inspector reads out the
+  selected hop on the Overview tab.
 - **Switch tabs** to see the same components from three angles:
   1. **Architecture Overview** — the zoned diagram.
   2. **Step-by-Step Packet Flow** — the active event's hops as an expandable
@@ -56,11 +61,11 @@ flow.
 
 - No tmux/CRT chrome anymore — the terminal aesthetic of the previous design
   is replaced.
-- No animated curved SVG arrows between arbitrary nodes — arrows are
-  zone-to-zone arrow rows. The step ordering lives in the data, not in
-  arbitrary screen geometry.
-- No sidebar event buffer — events are picked from a horizontal selector
-  at the top of the page; the canvas stays uncluttered.
+- No floating connectors on the idle canvas — connectors appear only while a
+  trace is active, and their step ordering comes from `events.json`, not from
+  hand-placed geometry.
+- No sidebar event buffer — events are picked from a trace selector at the top
+  of the page; the canvas stays uncluttered.
 
 ## Source of inspiration
 

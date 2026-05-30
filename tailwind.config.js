@@ -20,8 +20,8 @@ export default {
         // Text
         'tx-bright': '#ffffff',
         'tx':        'rgba(255,255,255,0.85)',
-        'tx-muted':  'rgba(255,255,255,0.55)',
-        'tx-dim':    'rgba(255,255,255,0.35)',
+        'tx-muted':  'rgba(255,255,255,0.62)',
+        'tx-dim':    'rgba(255,255,255,0.48)',
 
         // Zone accents — top-to-bottom gradient through the stack
         'k-cyan':   '#00e5ff',   // External client
@@ -37,13 +37,11 @@ export default {
       },
       keyframes: {
         'fade-in':       { from: { opacity: '0' }, to: { opacity: '1' } },
-        'slide-in':      { from: { transform: 'translateX(100%)' }, to: { transform: 'translateX(0)' } },
         'pulse-dot':     { '0%,100%': { opacity: '1', transform: 'scale(1)' }, '50%': { opacity: '0.4', transform: 'scale(0.7)' } },
         'shimmer':       { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(100%)' } },
       },
       animation: {
         'fade-in':   'fade-in 0.35s ease-out',
-        'slide-in':  'slide-in 0.3s ease-out',
         'pulse-dot': 'pulse-dot 1.2s ease-in-out infinite',
         'shimmer':   'shimmer 2.6s linear infinite',
       },

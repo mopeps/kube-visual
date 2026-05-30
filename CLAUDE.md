@@ -1,4 +1,4 @@
-# kube-visual
+# kube-weird-visualizer
 
 Frontend-only React app that visualises an OpenShift **Hosted Control Plane (HCP)**
 cluster as a nested stack of **zones** and traces event-driven flows down to Linux
@@ -21,7 +21,7 @@ Deployed to GitHub Pages on every push to `main`.
 | Framework | React 19 |
 | Build | Vite 8 |
 | Styling | Tailwind CSS 3 + CSS variables in `src/index.css` (`--k-*` zone accents, `--packet`) |
-| Layout | Flex-wrap zones — nodes have `min-width 180px / max-width 300px` and reflow as the viewport resizes |
+| Layout | Flex-wrap zones — node cards are a fixed `width: 128px` on desktop and reflow two-up (`flex: 1 1 calc(50% - 4px)`) under 640px (see `.node` in `src/index.css`) |
 | Data | Static JSON — `src/data/events.json`, `src/data/components.json`, plus `src/data/zones.js` which maps components to zones + cosmetic metadata |
 
 ## Commands
@@ -37,32 +37,45 @@ npm run preview   # serve dist locally
 
 ```
 src/
-  App.jsx                    # shell: header, legend, event pills, tabs, detail panel
-  index.css                  # design tokens, .zone, .node, .arrow-zone, .hop, .detail-panel
+  App.jsx                    # shell: header + zone legend, trace selector, tabs, modals
+  index.css                  # design tokens, .zone, .node, .hop, .ancestry-modal, .pipeline-tree
   data/
     components.json          # one entry per componentId (incl. typePrefix, logicalContext)
     events.json              # ordered step lists (source → target hops)
-    zones.js                 # recursive ZONES tree, COMPONENT_COLOR, COMPONENT_ZONE
-  hooks/useEventState.js     # active event + selected component state
+    zones.js                 # recursive ZONES tree, COMPONENT_COLOR / _ZONE / _BADGES
+    primitives.js            # kernel/OS/virt primitives keyed by typePrefix
+    pipeline-layers.js       # Manifest → Kernel band definitions
+    pipeline-model.js        # builds a component's pipeline-tree band model
+    interaction-kinds.js     # classifies interaction sentences (icon + accent)
+    object-tags.js           # turns object names in prose into clickable chips
+    badge-glossary.js        # explanations shown when a badge chip is clicked
+  hooks/useEventState.js     # active event + selected component + inspected hop state
   components/
     Tabs.jsx                 # tab nav
-    EventSelector.jsx        # horizontal trace pills
+    EventSelector.jsx        # trace-flow dropdown
     Zone.jsx                 # one labeled zone; renders nested child zones recursively
     NodeCard.jsx             # one box inside a zone (shows [typePrefix] label)
-    ArrowOverlay.jsx         # SVG layer: bezier connectors between active step nodes
+    IntentStoreCard.jsx      # an etcd node that expands in place to show its records
+    ArrowOverlay.jsx         # SVG layer: numbered bezier connectors between step nodes
     OverviewTab.jsx          # recursively renders ZONES tree + ArrowOverlay
     PacketFlowTab.jsx        # expandable hop list for active event
+    HopInspector.jsx         # bottom-docked single-hop reader (Overview tab)
     ObjectMapTab.jsx         # flat table mapping component → kind → linux primitive
-    DetailPanel.jsx          # slide-up bottom sheet when a node is clicked
+    AncestryModal.jsx        # node detail sheet (React portal); Esc / tap-outside closes
+    DetailSections.jsx       # tags, context, primitives, interactions, commands
+    PipelineTree.jsx         # the Manifest → Kernel ASCII-style tree
+    InteractionList.jsx      # classified interaction rows
+    ObjectText.jsx           # prose with inline object-reference chips
+    ExploreCommands.jsx      # copyable shell-command blocks
 ```
 
 ## Critical Gotchas
 
 - **`base: './'` in vite.config.js** — required for GitHub Pages. Do not change to `/`.
 - **No test suite** — verify changes manually with `npm run dev`. The dev server build catches import / syntax errors but not visual regressions.
-- **`react-xarrows` is in package.json but unused.** Do not import it. Connectors are
-  drawn by the hand-rolled `ArrowOverlay.jsx` (an absolutely-positioned SVG that
-  measures node bounding rects and draws bezier paths), not by a library.
+- **No arrow library.** Connectors are drawn by the hand-rolled `ArrowOverlay.jsx`
+  (an absolutely-positioned SVG that measures node bounding rects and draws bezier
+  paths). Do not add `react-xarrows` or similar back.
 - **`ArrowOverlay` positions paths via `document.getElementById(componentId)`.** Every
   NodeCard renders its `id` as the DOM `id`, so each `componentId` must be unique in the
   DOM at render time or its connector step is silently dropped.

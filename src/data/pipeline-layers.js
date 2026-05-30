@@ -35,14 +35,6 @@ export const PIPELINE_LAYERS = [
     blurb: 'Host systemd services — Kubelet, CRI-O, OVN/OVS — that translate API objects into running processes and wiring.',
   },
   {
-    id: 'consumed-resource',
-    order: 3.5,
-    label: 'Consumed Resources',
-    colorVar: '--k-purple',
-    icon: 'layers',
-    blurb: 'API objects injected into the Pod — Secrets, ConfigMaps, PersistentVolumeClaims — materialized as host files.',
-  },
-  {
     id: 'linux-primitive',
     order: 4,
     label: 'Linux Kernel Primitives',

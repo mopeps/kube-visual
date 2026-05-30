@@ -38,7 +38,17 @@ export default function Zone({
     >
       <div
         id={componentId}
+        role={isComponent ? 'button' : undefined}
+        tabIndex={isComponent ? 0 : undefined}
+        aria-label={isComponent ? label : undefined}
         onClick={isComponent ? (e) => { e.stopPropagation(); onClick?.(componentId) } : undefined}
+        onKeyDown={isComponent ? (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            e.stopPropagation()
+            onClick?.(componentId)
+          }
+        } : undefined}
         className="zone-label"
         style={{
           position: 'relative',
