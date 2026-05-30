@@ -1020,8 +1020,9 @@ button.object-tag:hover {
 
 .pipeline-tree {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
-  line-height: 1.5;
+  /* Node-row text matches the detail-modal interaction text (.interaction-text). */
+  font-size: 0.76rem;
+  line-height: 1.6;
 }
 
 /* Each band is a two-column grid: a narrow icon gutter and the band content.
