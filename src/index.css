@@ -700,20 +700,24 @@ body::after {
 .why-callout {
   display: flex;
   align-items: flex-start;
-  gap: 11px;
+  /* Same 10px chip→text gap as the interaction and pipeline sections. */
+  gap: 10px;
   padding: 13px 15px;
   border: 1px solid;
   border-radius: 10px;
 }
+/* The icon chip is sized to match the interaction (.interaction-icon) and
+   pipeline (.tree-band-icon) chips — one 26×26 / radius-7 chip across every
+   icon-led section so the three read as a consistent family. */
 .why-icon {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid;
-  border-radius: 8px;
+  border-radius: 7px;
 }
 .why-body { min-width: 0; }
 .why-role {
@@ -1036,7 +1040,10 @@ button.object-tag:hover {
   display: grid;
   grid-template-columns: 26px 1fr;
   grid-template-rows: auto auto;
-  column-gap: 12px;
+  /* 10px matches the interaction-row icon→text gap, so the band head/body text
+     column lands at the same 36px (26px chip + 10px) the interaction sentences
+     use — the two icon-led sections share one left edge for both chip and text. */
+  column-gap: 10px;
   padding-bottom: 14px;
 }
 .tree-band:not(.is-last)::before {
