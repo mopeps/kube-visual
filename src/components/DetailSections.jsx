@@ -52,7 +52,7 @@ function PrimitiveInline({ primitive, color, onSelectComponent, selfId }) {
   )
 }
 
-// The "everything else" body of the inspector: tag chips, OpenShift context,
+// The "everything else" body of the inspector: tag chips,
 // the legacy type-keyed kernel/OS primitives section, the merged "why it exists"
 // callout + interaction rows, and copy-able shell commands. Rendered below the
 // pipeline tree inside AncestryModal.
@@ -161,28 +161,6 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
             onSelectComponent={onSelectComponent}
             selfId={componentId}
           />
-        </div>
-      )}
-
-      {component.logicalContext && (
-        <div className="detail-section">
-          <h4>OpenShift Context</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ fontSize: '0.72rem', color: 'var(--tx-muted)' }}>
-              Project:&nbsp;
-              <span style={{ color, fontFamily: 'monospace' }}>
-                {component.logicalContext.openShiftProject}
-              </span>
-            </div>
-            {component.logicalContext.associatedObject && (
-              <div style={{ fontSize: '0.72rem', color: 'var(--tx-muted)' }}>
-                Object:&nbsp;
-                <span style={{ color, fontFamily: 'monospace' }}>
-                  {component.logicalContext.associatedObject}
-                </span>
-              </div>
-            )}
-          </div>
         </div>
       )}
 
