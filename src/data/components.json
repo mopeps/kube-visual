@@ -5,6 +5,8 @@
     "typePrefix": "Client",
     "layer": "External",
     "role": "CLIENT",
+    "runtimeForm": "n/a (off-cluster)",
+    "linuxPrimitive": "TCP socket (libc)",
     "problemSolved": "A browser, app, or external API consumer from outside the cluster — the origin of every inbound request the hosted cluster must serve.",
     "interactions": [
       "Sends HTTPS requests to the cluster's public Route hostname resolved by external DNS.",
@@ -20,6 +22,8 @@
     "typePrefix": "Pod",
     "layer": "HyperShift Management",
     "role": "OPERATOR",
+    "runtimeForm": "Deployment · hypershift",
+    "linuxPrimitive": "Pod → Go binary + controller-runtime",
     "problemSolved": "The single control-plane factory: it turns every HostedCluster request into a running, hosted control plane.",
     "interactions": [
       "Runs as one cluster-wide singleton Deployment in the management cluster's 'hypershift' namespace — it manages every HostedCluster, not one instance per guest.",
@@ -39,6 +43,8 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource · clusters ns",
+    "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "The one object an admin writes to ask OpenShift for a whole guest control plane.",
     "interactions": [
       "Authored by the platform admin and stored in the management API Server.",
@@ -57,6 +63,8 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource · clusters ns",
+    "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "The only knob for guest workers — declaring one scales the hosted cluster's worker nodes up or down.",
     "interactions": [
       "Authored by the platform admin alongside the HostedCluster, stored in the management API Server.",
@@ -77,6 +85,8 @@
     "typePrefix": "Pod",
     "layer": "Management Control Plane",
     "role": "OPERATOR",
+    "runtimeForm": "Deployment · <hcp-namespace>",
+    "linuxPrimitive": "Pod → CVO binary",
     "problemSolved": "Keeps the guest cluster pinned at its intended OpenShift version — nothing else owns guest upgrades.",
     "interactions": [
       "Reads the ClusterVersion CR to determine target version.",
@@ -95,6 +105,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "OPERATOR",
+    "runtimeForm": "Deployment · <hcp-namespace>",
+    "linuxPrimitive": "Pod → CPO binary + controller-runtime",
     "problemSolved": "The per-guest operator that actually builds this hosted cluster's control-plane components into existence.",
     "interactions": [
       "Reconciles the HostedControlPlane CR created by the HyperShift Operator.",
@@ -114,6 +126,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "CONTROLLER",
+    "runtimeForm": "Deployment · <hcp-namespace>",
+    "linuxPrimitive": "Pod → cluster-api controller-manager",
     "problemSolved": "Drives the generic machine lifecycle that ultimately provisions guest worker nodes.",
     "interactions": [
       "Reconciles Cluster API Machine/MachineSet/MachineDeployment objects in the HCP namespace.",
@@ -132,6 +146,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "CONTROLLER",
+    "runtimeForm": "Deployment · <hcp-namespace>",
+    "linuxPrimitive": "Pod → capk controller-manager",
     "problemSolved": "Bridges generic Cluster API machines to real KubeVirt VMs that become guest worker nodes.",
     "interactions": [
       "Watches KubevirtMachine objects produced by the CAPI manager.",
@@ -150,6 +166,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "API SERVER",
+    "runtimeForm": "Deployment · <hcp-namespace>",
+    "linuxPrimitive": "Pod → kube-apiserver binary",
     "problemSolved": "The front door to the guest cluster — every kubectl/oc command and controller talks to it.",
     "interactions": [
       "Exposes the guest cluster's API on a dedicated Service port.",
@@ -169,6 +187,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "AUTH SERVER",
+    "runtimeForm": "Deployment · <hcp-namespace>",
+    "linuxPrimitive": "Pod → oauth-server binary",
     "problemSolved": "Issues the tokens that authenticate users to the guest cluster.",
     "interactions": [
       "Validates identity provider credentials and issues OAuth tokens.",
@@ -187,6 +207,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "CONTROLLER",
+    "runtimeForm": "Deployment · <hcp-namespace>",
+    "linuxPrimitive": "Pod → kube-controller-manager binary",
     "problemSolved": "Runs the core Kubernetes control loops that keep the guest cluster reconciled to desired state.",
     "interactions": [
       "Watches the Guest API Server for resource events.",
@@ -205,6 +227,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "SCHEDULER",
+    "runtimeForm": "Deployment · <hcp-namespace>",
+    "linuxPrimitive": "Pod → kube-scheduler binary",
     "problemSolved": "Decides which guest worker node each pending guest Pod runs on.",
     "interactions": [
       "Watches Guest API Server for pending Pods.",
@@ -222,6 +246,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "KEY-VALUE STORE",
+    "runtimeForm": "StatefulSet · <hcp-namespace>",
+    "linuxPrimitive": "StatefulSet Pod → etcd binary + Raft log",
     "problemSolved": "The guest cluster's source of truth — it persists every object the guest API server serves.",
     "interactions": [
       "Receives reads and writes exclusively from the Guest API Server.",
@@ -241,6 +267,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "INGRESS PROXY",
+    "runtimeForm": "Deployment · hypershift-sharedingress",
+    "linuxPrimitive": "Pod → HAProxy process (SNI routing)",
     "problemSolved": "The single TLS front door that SNI-routes inbound API traffic to the right guest's control plane.",
     "interactions": [
       "Fronts the guest control-plane endpoints (kube-apiserver :6443, oauth-openshift, konnectivity, ignition-server) and routes inbound TLS to them by SNI / hostname.",
@@ -260,6 +288,8 @@
     "typePrefix": "Service",
     "layer": "Guest Control Plane",
     "role": "LOAD BALANCER",
+    "runtimeForm": "Service (LoadBalancer) · hypershift-sharedingress",
+    "linuxPrimitive": "MetalLB L2 VIP (ARP/NDP) → OVN LB flows",
     "problemSolved": "Gives the hosted clusters' control-plane endpoints one stable external IP to dial.",
     "interactions": [
       "Selects the Shared Ingress Proxy Pods and publishes their endpoints behind one external control-plane VIP.",
@@ -279,6 +309,8 @@
     "typePrefix": "Service",
     "layer": "Guest Control Plane",
     "role": "LOAD BALANCER",
+    "runtimeForm": "Service (LoadBalancer) · <hcp-namespace>",
+    "linuxPrimitive": "MetalLB L2 VIP (ARP/NDP) → virt-launcher endpoints",
     "problemSolved": "The bare-metal entry point that carries the guest's *.apps application traffic into the worker VMs.",
     "interactions": [
       "Created and reconciled by the kubevirt cloud provider (Cloud Controller Manager) to mirror the guest cluster's router-default LoadBalancer Service.",
@@ -298,6 +330,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "NETWORK CONTROL",
+    "runtimeForm": "Deployment · openshift-ovn-kubernetes",
+    "linuxPrimitive": "Pod → ovnkube-master + OVN NB DB",
     "problemSolved": "Translates the guest cluster's Services and NetworkPolicies into the logical network OVN enforces.",
     "interactions": [
       "Watches the Guest API Server for Pod, Service, and NetworkPolicy events.",
@@ -317,6 +351,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "CONTROLLER",
+    "runtimeForm": "Deployment · <hcp-namespace>",
+    "linuxPrimitive": "Pod → CCM binary + cloud API calls",
     "problemSolved": "The guest cluster's bridge to infrastructure — it realises LoadBalancers and node addresses that have no cloud behind them.",
     "interactions": [
       "Watches Node objects in the guest cluster for ProviderID fields.",
@@ -334,6 +370,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "TUNNEL",
+    "runtimeForm": "Deployment · <hcp-namespace>",
+    "linuxPrimitive": "Pod → konnectivity-server + GRPC tunnel",
     "problemSolved": "Lets the guest API server reach node kubelets (exec, logs, port-forward) across a network it can't route to directly.",
     "interactions": [
       "Maintains persistent tunnels from the bare metal cluster to Konnectivity Agents on each guest worker node.",
@@ -351,6 +389,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "BOOTSTRAP",
+    "runtimeForm": "Deployment · <hcp-namespace>",
+    "linuxPrimitive": "Pod → Ignition HTTP server",
     "problemSolved": "Hands each booting worker node the config it needs to join the guest cluster — enabling zero-touch provisioning.",
     "interactions": [
       "Provides a TLS-secured endpoint serving node-specific Ignition configs.",
@@ -368,6 +408,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Worker Node",
     "role": "MONITORING",
+    "runtimeForm": "Deployment · openshift-monitoring (in VM)",
+    "linuxPrimitive": "Pod → Prometheus + Thanos (in VM)",
     "problemSolved": "Collects the guest cluster's metrics and alerts — on the guest's own nodes, like any OpenShift cluster.",
     "interactions": [
       "Scrapes metrics endpoints on guest cluster Pods and nodes from within the guest cluster.",
@@ -386,6 +428,8 @@
     "typePrefix": "systemd",
     "layer": "Bare Metal Master Node",
     "role": "NODE AGENT",
+    "runtimeForm": "systemd unit · bare metal master node",
+    "linuxPrimitive": "systemd → kubelet binary + CRI gRPC",
     "problemSolved": "The agent that runs the management cluster's own control plane (as static pods) on the bare-metal master.",
     "interactions": [
       "Watches /etc/kubernetes/manifests and runs the management control plane (kube-apiserver, etcd, scheduler, controller-manager) as Static Pods.",
@@ -404,6 +448,8 @@
     "typePrefix": "systemd",
     "layer": "Bare Metal Master Node",
     "role": "CONTAINER RUNTIME",
+    "runtimeForm": "systemd unit · bare metal master node",
+    "linuxPrimitive": "systemd → crio + runc/crun OCI",
     "problemSolved": "Runs the actual containers for the master's static pods and the guest control-plane pods scheduled here.",
     "interactions": [
       "Receives gRPC CRI calls from the master kubelet.",
@@ -422,6 +468,8 @@
     "typePrefix": "systemd",
     "layer": "Bare Metal Master Node",
     "role": "VIRTUAL SWITCH",
+    "runtimeForm": "systemd unit · bare metal master node",
+    "linuxPrimitive": "systemd → ovs-vswitchd + OpenFlow",
     "problemSolved": "The host switch every control-plane Pod and the overlay uplink plug into on the master node.",
     "interactions": [
       "Manages the br-int OVS bridge and its port configuration on the master node.",
@@ -440,6 +488,8 @@
     "typePrefix": "Pod",
     "layer": "Bare Metal Master Node",
     "role": "NODE NETWORKING",
+    "runtimeForm": "DaemonSet · openshift-ovn-kubernetes",
+    "linuxPrimitive": "Pod → OVN controller + CNI plugin",
     "problemSolved": "Wires control-plane Pods into the cluster network and pushes OVN flows to the master's switch.",
     "interactions": [
       "Runs the OVN controller that translates Southbound DB entries into OpenFlow rules on the master's br-int.",
@@ -458,6 +508,8 @@
     "typePrefix": "Static Pod",
     "layer": "Bare Metal Master Node",
     "role": "API SERVER",
+    "runtimeForm": "Static Pod · openshift-kube-apiserver",
+    "linuxPrimitive": "Static Pod → kube-apiserver binary",
     "problemSolved": "The management cluster's own API — what the HyperShift Operator and every guest control-plane controller talk to.",
     "interactions": [
       "Started directly by the master kubelet from a manifest in /etc/kubernetes/manifests, before any scheduler exists.",
@@ -477,6 +529,8 @@
     "typePrefix": "Static Pod",
     "layer": "Bare Metal Master Node",
     "role": "KEY-VALUE STORE",
+    "runtimeForm": "Static Pod · openshift-etcd",
+    "linuxPrimitive": "Static Pod → etcd binary + Raft log",
     "problemSolved": "Where infrastructure intent lives: HostedCluster, NodePool and every guest control-plane definition are records here, not processes.",
     "interactions": [
       "Receives reads and writes exclusively from the Management Kube API Server on the same node.",
@@ -497,6 +551,8 @@
     "typePrefix": "Static Pod",
     "layer": "Bare Metal Master Node",
     "role": "CONTROLLER",
+    "runtimeForm": "Static Pod · openshift-kube-controller-manager",
+    "linuxPrimitive": "Static Pod → kube-controller-manager binary",
     "problemSolved": "Runs the control loops that keep the management cluster — including the guest control-plane Deployments — at desired state.",
     "interactions": [
       "Watches the Management Kube API Server for resource events.",
@@ -515,6 +571,8 @@
     "typePrefix": "Static Pod",
     "layer": "Bare Metal Master Node",
     "role": "SCHEDULER",
+    "runtimeForm": "Static Pod · openshift-kube-scheduler",
+    "linuxPrimitive": "Static Pod → kube-scheduler binary",
     "problemSolved": "Places management-cluster Pods — guest control-plane and KubeVirt launcher Pods — onto bare-metal nodes.",
     "interactions": [
       "Watches the Management Kube API Server for Pods with no node assignment.",
@@ -533,6 +591,8 @@
     "typePrefix": "systemd",
     "layer": "Bare Metal Worker Node",
     "role": "NODE AGENT",
+    "runtimeForm": "systemd unit · bare metal worker node",
+    "linuxPrimitive": "systemd → kubelet binary + CRI gRPC",
     "problemSolved": "The agent that runs Pods on the bare-metal worker — including the KubeVirt launcher that hosts a guest VM.",
     "interactions": [
       "Polls the Bare Metal API Server for PodSpecs assigned to this node.",
@@ -551,6 +611,8 @@
     "typePrefix": "systemd",
     "layer": "Bare Metal Worker Node",
     "role": "CONTAINER RUNTIME",
+    "runtimeForm": "systemd unit · bare metal worker node",
+    "linuxPrimitive": "systemd → crio + runc/crun OCI",
     "problemSolved": "Runs the host-side containers, including the launcher container that wraps a guest virtual machine.",
     "interactions": [
       "Receives gRPC CRI calls from the host Kubelet.",
@@ -569,6 +631,8 @@
     "typePrefix": "systemd",
     "layer": "Bare Metal Worker Node",
     "role": "VIRTUAL SWITCH",
+    "runtimeForm": "systemd unit · bare metal worker node",
+    "linuxPrimitive": "systemd → ovs-vswitchd + OpenFlow",
     "problemSolved": "The host switch that joins Pod veths, the overlay uplink, and the KubeVirt VM tap into one bridge.",
     "interactions": [
       "Manages the br-int OVS bridge and its port configuration.",
@@ -588,6 +652,8 @@
     "typePrefix": "Pod",
     "layer": "Bare Metal Worker Node",
     "role": "NODE NETWORKING",
+    "runtimeForm": "DaemonSet · openshift-ovn-kubernetes",
+    "linuxPrimitive": "Pod → OVN controller + CNI plugin",
     "problemSolved": "Wires worker-node Pods into the network and syncs OVN flows to the host switch.",
     "interactions": [
       "Runs the OVN controller that translates Southbound DB entries to OpenFlow rules.",
@@ -606,6 +672,8 @@
     "typePrefix": "Pod",
     "layer": "Bare Metal Worker Node",
     "role": "VIRT AGENT",
+    "runtimeForm": "DaemonSet · openshift-cnv",
+    "linuxPrimitive": "Pod → virt-handler + libvirt/VMI lifecycle",
     "problemSolved": "The node agent that actually turns a VirtualMachineInstance into a running VM.",
     "interactions": [
       "Watches the management API Server for VirtualMachineInstances assigned to this node.",
@@ -625,6 +693,8 @@
     "typePrefix": "Pod",
     "layer": "KubeVirt",
     "role": "VM WRAPPER",
+    "runtimeForm": "Pod (virt-launcher) · <hcp-namespace>",
+    "linuxPrimitive": "Pod → qemu-kvm process + tap0 NIC",
     "problemSolved": "The Pod that wraps one VM, so KubeVirt can manage a qemu-kvm guest like any other Kubernetes workload.",
     "interactions": [
       "Spawns and supervises the qemu-kvm process for the Guest Worker Node VM.",
@@ -647,6 +717,8 @@
       "associatedObject": "KubeVirt Launcher Pod"
     },
     "role": "WORKER NODE",
+    "runtimeForm": "VirtualMachineInstance · <hcp-namespace>",
+    "linuxPrimitive": "KVM VM → RHCOS guest OS + virtio-net",
     "problemSolved": "A full RHCOS VM that acts as a guest cluster worker node — where application Pods actually run.",
     "interactions": [
       "Registers with the Guest API Server as a standard Kubernetes Node.",
@@ -666,6 +738,8 @@
     "typePrefix": "systemd",
     "layer": "Guest Worker Node",
     "role": "NODE AGENT",
+    "runtimeForm": "systemd unit · guest worker node (in VM)",
+    "linuxPrimitive": "systemd → kubelet binary (in VM)",
     "problemSolved": "The node agent inside the worker VM that pulls and runs the guest cluster's workload Pods.",
     "interactions": [
       "Maintains an outbound watch on the exposed Guest API Server endpoint — the kubelet pulls its workload; the API Server does not push to it through Konnectivity.",
@@ -683,6 +757,8 @@
     "typePrefix": "systemd",
     "layer": "Guest Worker Node",
     "role": "CONTAINER RUNTIME",
+    "runtimeForm": "systemd unit · guest worker node (in VM)",
+    "linuxPrimitive": "systemd → crio + runc/crun (in VM)",
     "problemSolved": "Runs the actual workload containers inside the guest worker VM.",
     "interactions": [
       "Receives gRPC CRI calls from the guest Kubelet.",
@@ -701,6 +777,8 @@
     "typePrefix": "systemd",
     "layer": "Guest Worker Node",
     "role": "VIRTUAL SWITCH",
+    "runtimeForm": "systemd unit · guest worker node (in VM)",
+    "linuxPrimitive": "systemd → ovs-vswitchd (in VM)",
     "problemSolved": "The in-VM switch that all guest workload Pods plug into.",
     "interactions": [
       "Manages the in-VM br-int OVS bridge for guest Pod networking.",
@@ -718,6 +796,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Worker Node",
     "role": "NODE NETWORKING",
+    "runtimeForm": "DaemonSet · openshift-ovn-kubernetes (in VM)",
+    "linuxPrimitive": "Pod → OVN controller (in VM)",
     "problemSolved": "Wires guest workload Pods into the network and syncs OVN flows inside the VM.",
     "interactions": [
       "Runs the OVN controller that programs guest OVS flows.",
@@ -735,6 +815,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Worker Node",
     "role": "TUNNEL",
+    "runtimeForm": "DaemonSet · kube-system (in VM)",
+    "linuxPrimitive": "Pod → konnectivity-agent + gRPC tunnel",
     "problemSolved": "The node-side tunnel that lets the guest API server reach this node's kubelet for exec, logs, and port-forward.",
     "interactions": [
       "Opens a persistent TLS connection to the Konnectivity Server in the bare metal cluster.",
@@ -752,6 +834,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Worker Node",
     "role": "DNS",
+    "runtimeForm": "DaemonSet · openshift-dns (in VM)",
+    "linuxPrimitive": "Pod → CoreDNS binary (in VM)",
     "problemSolved": "Resolves cluster service names for Pods on this node, with local caching to cut lookup latency.",
     "interactions": [
       "Configured as the cluster DNS server for all containers via the kubelet's clusterDNS setting.",
@@ -769,6 +853,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Worker Node",
     "role": "INGRESS ROUTER",
+    "runtimeForm": "Deployment · openshift-ingress (in VM)",
+    "linuxPrimitive": "Pod → HAProxy (in VM)",
     "problemSolved": "The guest cluster's own front door for application (*.apps) traffic — separate from the control-plane proxy.",
     "interactions": [
       "Watches Route objects in the guest cluster via the Guest API Server.",
@@ -787,6 +873,8 @@
     "typePrefix": "Service",
     "layer": "Guest Workload",
     "role": "LOAD BALANCER",
+    "runtimeForm": "Service (LoadBalancer) · openshift-ingress (in VM)",
+    "linuxPrimitive": "router-default LB → kubevirt CCM mirror → OVN LB flows",
     "problemSolved": "The guest-side LoadBalancer that fronts the in-VM ingress router for *.apps traffic.",
     "interactions": [
       "Selects the guest Ingress Router Pods and exposes them behind the router-default external IP.",
@@ -809,6 +897,8 @@
       "associatedObject": "Deployment/frontend"
     },
     "role": "WORKLOAD",
+    "runtimeForm": "Deployment · e-commerce-prod (in VM)",
+    "linuxPrimitive": "Pod → app binary + network namespace",
     "problemSolved": "The user-facing application — the terminal destination of the whole external traffic flow.",
     "interactions": [
       "Listens on a private Pod IP address within the guest cluster network.",
@@ -860,6 +950,8 @@
       "associatedObject": "Deployment/frontend"
     },
     "role": "SERVICE",
+    "runtimeForm": "Service (ClusterIP) · e-commerce-prod (in VM)",
+    "linuxPrimitive": "Virtual ClusterIP → OVN LB flows (DNAT)",
     "problemSolved": "Gives the front-end Pods one stable virtual IP so clients never chase churning Pod addresses.",
     "interactions": [
       "Selects the frontend Pods by label and tracks their ready endpoints via the EndpointSlice controller.",
@@ -882,6 +974,8 @@
       "associatedObject": "Deployment/backend"
     },
     "role": "WORKLOAD",
+    "runtimeForm": "Deployment · e-commerce-prod (in VM)",
+    "linuxPrimitive": "Pod → app binary + network namespace",
     "problemSolved": "The application's data and API tier, called east-west by the front end.",
     "interactions": [
       "Fronted by the Back-End ClusterIP Service, which the Front-End Workload consumes for east-west API calls.",
@@ -932,6 +1026,8 @@
       "associatedObject": "Deployment/backend"
     },
     "role": "SERVICE",
+    "runtimeForm": "Service (ClusterIP) · e-commerce-prod (in VM)",
+    "linuxPrimitive": "Virtual ClusterIP → OVN LB flows (DNAT)",
     "problemSolved": "Gives the back-end Pods a stable virtual IP so back-end scaling and rollouts stay invisible to the front end.",
     "interactions": [
       "Selects the backend Pods by label and publishes their ready endpoints.",
@@ -954,6 +1050,8 @@
       "associatedObject": "Deployment/backend"
     },
     "role": "NETWORK POLICY",
+    "runtimeForm": "NetworkPolicy · e-commerce-prod (in VM)",
+    "linuxPrimitive": "OVN ACL + address set → OVS allow/drop flows",
     "problemSolved": "Locks down east-west traffic: only the front end may reach the back end, everything else is denied.",
     "interactions": [
       "Selects the Back-End Workload Pods via podSelector and gates their ingress to the Front-End Pods' address set on the backend port.",
@@ -972,6 +1070,8 @@
     "displayName": "Linux Network Namespace (netns)",
     "layer": "Linux Kernel Primitives",
     "role": "KERNEL PRIMITIVE",
+    "runtimeForm": "Linux network namespace · per-Pod (in VM)",
+    "linuxPrimitive": "unshare(CLONE_NEWNET) in VM kernel",
     "problemSolved": "Gives each workload Pod its own private network — IP, routes, and firewall — isolated from every other Pod.",
     "interactions": [
       "Attaches to a guest-side veth pair managed by the OVN-Kubernetes Guest Node DaemonSet.",
@@ -987,6 +1087,8 @@
     "displayName": "Control Groups (cgroups v2)",
     "layer": "Linux Kernel Primitives",
     "role": "KERNEL PRIMITIVE",
+    "runtimeForm": "cgroup v2 slice · per-Pod (in VM)",
+    "linuxPrimitive": "/sys/fs/cgroup/... in VM kernel",
     "problemSolved": "Caps each container's CPU, memory, and I/O so one runaway Pod can't starve the node.",
     "interactions": [
       "Hierarchy created by guest CRI-O/runc when the container starts inside the VM.",
@@ -1004,6 +1106,8 @@
     "displayName": "Container Process (PID 1)",
     "layer": "Linux Kernel Primitives",
     "role": "KERNEL PRIMITIVE",
+    "runtimeForm": "Linux process · PID 1 in netns (in VM)",
+    "linuxPrimitive": "execve() under PID 1 in VM netns",
     "problemSolved": "The application process itself (PID 1) — the leaf where the entire HCP ownership chain finally runs.",
     "interactions": [
       "Runs inside the intersection of a Network Namespace, cgroup slice, and PID namespace — all inside the Guest VM.",
@@ -1022,6 +1126,8 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource · <hcp-namespace>",
+    "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "The per-guest control-plane spec the Control Plane Operator reconciles into real Deployments.",
     "interactions": [
       "Created by the HyperShift Operator from the HostedCluster, in the guest's HCP namespace on the management API Server.",
@@ -1040,6 +1146,8 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource (cluster.x-k8s.io) · <hcp-namespace>",
+    "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "The root of the machine ownership tree that ultimately provisions this hosted cluster's worker VMs.",
     "interactions": [
       "Authored by the HyperShift Operator's NodePool controller in the HCP namespace.",
@@ -1057,6 +1165,8 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource (cluster.x-k8s.io) · <hcp-namespace>",
+    "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "Manages rolling upgrades of the guest worker pool, the way a Deployment does for Pods.",
     "interactions": [
       "Rendered by the HyperShift NodePool controller from the NodePool's replica count and release.",
@@ -1074,6 +1184,8 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource (cluster.x-k8s.io) · <hcp-namespace>",
+    "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "Guarantees a stable count of identical guest worker Machines, like a ReplicaSet for nodes.",
     "interactions": [
       "Owned by the MachineDeployment, which sets its replica count during rollouts.",
@@ -1091,6 +1203,8 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource (cluster.x-k8s.io) · <hcp-namespace>",
+    "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "The provider-agnostic intent for a single guest worker node.",
     "interactions": [
       "Created by its owning MachineSet to represent one desired guest worker node.",
@@ -1108,6 +1222,8 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource (infra.cluster.x-k8s.io) · <hcp-namespace>",
+    "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "The KubeVirt-specific half of a Machine that turns generic node intent into a real VM.",
     "interactions": [
       "Created alongside each Machine as its infrastructure reference.",
@@ -1125,6 +1241,8 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource (kubevirt.io) · <hcp-namespace>",
+    "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "The desired-state record of a guest worker VM that KubeVirt runs as a live VirtualMachineInstance.",
     "interactions": [
       "Created by the CAPI Provider (KubeVirt) from a KubevirtMachine.",
@@ -1143,6 +1261,8 @@
     "typePrefix": "Custom Resource",
     "layer": "Guest Cluster State",
     "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource (config.openshift.io) · guest cluster",
+    "linuxPrimitive": "etcd record (guest etcd)",
     "problemSolved": "Declares the OpenShift version the guest cluster should be running.",
     "interactions": [
       "Read by the Cluster Version Operator to determine the guest cluster's target release.",
@@ -1160,6 +1280,8 @@
     "typePrefix": "Custom Resource",
     "layer": "Guest Cluster State",
     "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource (config.openshift.io) · guest cluster",
+    "linuxPrimitive": "etcd record (guest etcd)",
     "problemSolved": "Each guest operator's health report — and the gate that blocks upgrades when something is degraded.",
     "interactions": [
       "Written by each guest second-level operator to publish its Available / Progressing / Degraded state.",
@@ -1181,6 +1303,8 @@
       "associatedObject": "Front-End Service"
     },
     "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource (route.openshift.io) · e-commerce-prod",
+    "linuxPrimitive": "etcd record (guest etcd)",
     "problemSolved": "Declares the public hostname and TLS policy that exposes a guest Service to the outside world.",
     "interactions": [
       "Authored by the app owner to publish the Front-End Service under a public hostname.",
@@ -1203,6 +1327,8 @@
       "associatedObject": "Deployment/frontend, Deployment/backend"
     },
     "role": "INTENT RECORD",
+    "runtimeForm": "Deployment (apps/v1) · e-commerce-prod",
+    "linuxPrimitive": "etcd record (guest etcd)",
     "problemSolved": "Declares the desired replicas and Pod template for each app tier — the source the workload Pods are reconciled from.",
     "interactions": [
       "Authored by the app owner to declare the desired replicas and container image for each tier.",
@@ -1224,6 +1350,8 @@
       "associatedObject": "Deployment/frontend, Deployment/backend"
     },
     "role": "INTENT RECORD",
+    "runtimeForm": "ReplicaSet (apps/v1) · e-commerce-prod",
+    "linuxPrimitive": "etcd record (guest etcd)",
     "problemSolved": "Guarantees the workload Pods stay at their desired count, recreating any that are lost.",
     "interactions": [
       "Created and owned by a Deployment, which sets its replica count during rollouts.",
@@ -1245,6 +1373,8 @@
       "associatedObject": "Front-End / Back-End Workload"
     },
     "role": "INTENT RECORD",
+    "runtimeForm": "Secret (core/v1) · e-commerce-prod",
+    "linuxPrimitive": "etcd record (guest etcd, encrypted at rest)",
     "problemSolved": "Holds the app's sensitive config so credentials live outside the container image.",
     "interactions": [
       "Referenced by the workload Pod specs as volume mounts or environment variables.",
@@ -1266,6 +1396,8 @@
       "associatedObject": "Front-End / Back-End Workload"
     },
     "role": "INTENT RECORD",
+    "runtimeForm": "ConfigMap (core/v1) · e-commerce-prod",
+    "linuxPrimitive": "etcd record (guest etcd)",
     "problemSolved": "Holds the app's non-sensitive config, decoupling settings from the container image.",
     "interactions": [
       "Referenced by the workload Pod specs as mounted volumes or envFrom sources.",
@@ -1287,6 +1419,8 @@
       "associatedObject": "Front-End / Back-End Workload"
     },
     "role": "INTENT RECORD",
+    "runtimeForm": "PersistentVolumeClaim (core/v1) · e-commerce-prod",
+    "linuxPrimitive": "etcd record (guest etcd)",
     "problemSolved": "A workload's request for storage — bound to a volume and mounted into its Pod.",
     "interactions": [
       "Authored alongside the workload to request a size and storage class.",
@@ -1304,6 +1438,8 @@
     "typePrefix": "API Object",
     "layer": "Guest Workload",
     "role": "INTENT RECORD",
+    "runtimeForm": "PersistentVolume (core/v1) · cluster-scoped",
+    "linuxPrimitive": "etcd record (guest etcd)",
     "problemSolved": "The actual storage asset a claim binds to, surfacing as a block device inside the guest VM.",
     "interactions": [
       "Provisioned (dynamically by a CSI driver, or statically by an admin) to satisfy a PVC.",
@@ -1325,6 +1461,8 @@
       "associatedObject": "Front-End / Back-End Service"
     },
     "role": "INTENT RECORD",
+    "runtimeForm": "EndpointSlice (discovery.k8s.io) · e-commerce-prod",
+    "linuxPrimitive": "etcd record (guest etcd)",
     "problemSolved": "The live list of ready Pod IPs behind a Service — what OVN reads to load-balance a ClusterIP to a real Pod.",
     "interactions": [
       "Maintained by the guest EndpointSlice controller as Pods behind a Service become ready or unready.",

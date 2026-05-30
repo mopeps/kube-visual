@@ -40,7 +40,7 @@ src/
   App.jsx                    # shell: header + zone legend, trace selector, tabs, modals
   index.css                  # design tokens, .zone, .node, .hop, .ancestry-modal, .pipeline-tree
   data/
-    components.json          # one entry per componentId (incl. typePrefix, logicalContext)
+    components.json          # one entry per componentId (incl. typePrefix, runtimeForm, linuxPrimitive, logicalContext)
     events.json              # ordered step lists (source → target hops)
     zones.js                 # recursive ZONES tree, COMPONENT_COLOR / _ZONE / _BADGES
     primitives.js            # kernel/OS/virt primitives keyed by typePrefix
@@ -60,7 +60,6 @@ src/
     OverviewTab.jsx          # recursively renders ZONES tree + ArrowOverlay
     PacketFlowTab.jsx        # expandable hop list for active event
     HopInspector.jsx         # bottom-docked single-hop reader (Overview tab)
-    ObjectMapTab.jsx         # flat table mapping component → kind → linux primitive
     AncestryModal.jsx        # node detail sheet (React portal); Esc / tap-outside closes
     DetailSections.jsx       # tags, context, primitives, interactions, commands
     PipelineTree.jsx         # the Manifest → Kernel ASCII-style tree

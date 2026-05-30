@@ -50,12 +50,13 @@ flow.
   step badge; numbered connectors are drawn between them; the Step-by-Step tab
   populates with the hop list, and a bottom-docked hop inspector reads out the
   selected hop on the Overview tab.
-- **Switch tabs** to see the same components from three angles:
+- **Switch tabs** to see the same components from two angles:
   1. **Architecture Overview** — the zoned diagram.
   2. **Step-by-Step Packet Flow** — the active event's hops as an expandable
      vertical list.
-  3. **K8s Object Map** — a flat table mapping every component to its layer
-     and underlying Linux primitive.
+- **Click any node** to open its detail sheet, where the Manifest → Kernel
+  pipeline shows that object's K8s runtime form and the Linux primitive it
+  bottoms out in.
 
 ## Non-goals
 
