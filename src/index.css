@@ -245,6 +245,18 @@ body::after {
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* Shared typePrefix glyph (TypeIcon.jsx). Sits inline before a label and tracks
+   the surrounding text colour/size. Bumped a touch above 1em so the thin lines
+   stay legible next to small uppercase prefixes. */
+.type-icon {
+  display: inline-block;
+  width: 1.25em;
+  height: 1.25em;
+  vertical-align: -0.22em;
+  margin-right: 4px;
+  opacity: 0.9;
+}
+
 .node-step-badge {
   position: absolute;
   top: -8px;
@@ -872,6 +884,12 @@ button.object-tag:hover {
   font-weight: 600;
   color: var(--tx-bright);
 }
+.hop-inspector-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
 .hop-inspector-arrow { color: var(--tx-dim); }
 .hop-inspector-controls {
   display: flex;
@@ -1115,6 +1133,12 @@ button.object-tag:hover {
   vertical-align: top;
 }
 .object-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
+.object-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.object-type-icon { flex: 0 0 auto; opacity: 0.85; }
 
 /* ── Utility ───────────────────────────────────────────────────────── */
 .shimmer {
