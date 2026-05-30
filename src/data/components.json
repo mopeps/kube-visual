@@ -673,7 +673,7 @@
     "layer": "Bare Metal Worker Node",
     "role": "VIRT AGENT",
     "runtimeForm": "DaemonSet · openshift-cnv",
-    "linuxPrimitive": "Pod → virt-handler + libvirt/VMI lifecycle",
+    "linuxPrimitive": "Pod → virt-handler binary",
     "problemSolved": "The node agent that actually boots a VirtualMachineInstance into a running VM on its node.",
     "interactions": [
       "Watches the management API Server for VirtualMachineInstances assigned to this node.",
