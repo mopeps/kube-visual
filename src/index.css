@@ -1397,38 +1397,6 @@ button.object-tag:hover {
   .ancestry-drag-handle { display: block; }
 }
 
-/* ── Object map table ──────────────────────────────────────────────── */
-.object-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.72rem;
-}
-.object-table th {
-  padding: 12px 14px;
-  text-align: left;
-  font-size: 0.6rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--tx-muted);
-  border-bottom: 1px solid var(--border-w);
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.025);
-}
-.object-table td {
-  padding: 11px 14px;
-  border-bottom: 1px solid var(--border-d);
-  line-height: 1.55;
-  color: var(--tx);
-  vertical-align: top;
-}
-.object-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
-.object-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.object-type-icon { flex: 0 0 auto; opacity: 0.85; }
-
 /* ── Utility ───────────────────────────────────────────────────────── */
 .shimmer {
   position: relative;

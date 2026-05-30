@@ -261,15 +261,17 @@ Adding a component touches several places — keep them in sync:
 1. **`src/data/components.json`** — new entry with `componentId`, `displayName`, `layer`,
    `typePrefix` (e.g. `Pod`, `Static Pod`, `systemd`, `VirtualMachineInstance`, `Service`,
    `NetworkPolicy`),
-   `role` (short upper-case kind tag), `problemSolved` (one concise "why it
+   `role` (short upper-case kind tag), `runtimeForm` (the concrete K8s kind + namespace,
+   e.g. `Deployment · hypershift`), `linuxPrimitive` (the per-instance Linux realisation,
+   e.g. `Pod → Go binary + controller-runtime`), `problemSolved` (one concise "why it
    exists" sentence), `interactions[]`, `explorationCommands[]`. Add `logicalContext`
-   (`openShiftProject` + `associatedObject`) for workload pods and VMIs.
+   (`openShiftProject` + `associatedObject`) for workload pods and VMIs. `runtimeForm` and
+   `linuxPrimitive` are folded into the component's Manifest → Kernel pipeline by
+   `pipeline-model.js`.
 2. **`src/data/zones.js`** — add a node (with `id`, `title`, `typePrefix`, `badges`) to
    the correct zone in the recursive `ZONES` tree. `COMPONENT_COLOR` / `COMPONENT_ZONE`
    derive automatically from the tree.
-3. **`src/components/ObjectMapTab.jsx`** — add KIND / PRIMITIVE mappings if the
-   component should surface in that table.
-4. **`src/data/events.json`** — reference the new `componentId` in any flow steps that
+3. **`src/data/events.json`** — reference the new `componentId` in any flow steps that
    should highlight it and draw connectors to/from it.
 
 The `componentId` must be unique: `ArrowOverlay` locates nodes via

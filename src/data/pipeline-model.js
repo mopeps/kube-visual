@@ -246,14 +246,79 @@ function customResourceBands(component) {
   }]
 }
 
-// Returns { bands } for the component, or { bands: [] } when no meaningful
-// pipeline applies (e.g. the external client or bare kernel-primitive nodes).
+// Find the Linux-primitive band, creating (and appending) an empty one if the
+// builder produced none — Custom Resources, for instance, bottom out in an etcd
+// record rather than a process, so they get no kernel band on their own.
+function ensureKernelBand(bands) {
+  let band = bands.find(b => b.layerId === 'linux-primitive')
+  if (!band) {
+    band = { layerId: 'linux-primitive', groups: [{ nodes: [] }] }
+    bands.push(band)
+  }
+  if (!band.groups.length) band.groups.push({ nodes: [] })
+  return band
+}
+
+// Fold a component's authored runtime form + Linux primitive (from
+// components.json) into a rich builder's bands:
+//   • runtimeForm  → subhead of the Runtime Object band (the concrete K8s form),
+//                    or the kernel band for host systemd services, which have no
+//                    Runtime Object band by design.
+//   • linuxPrimitive → lead row of the kernel band, ahead of the generic
+//                    type-derived rows, since it is the per-instance realisation
+//                    (e.g. a Service is a MetalLB VIP, not a generic Pod netns).
+function withForms(component, bands) {
+  const { typePrefix: t, runtimeForm, linuxPrimitive } = component
+  if (runtimeForm) {
+    if (t === 'systemd') {
+      ensureKernelBand(bands).groups[0].subhead = runtimeForm
+    } else {
+      const host =
+        bands.find(b => b.layerId === 'api-boundary') ||
+        bands.find(b => b.layerId === 'logical-intent')
+      if (host) host.groups[0].subhead = runtimeForm
+    }
+  }
+  if (linuxPrimitive) {
+    ensureKernelBand(bands).groups[0].nodes.unshift({ label: linuxPrimitive })
+  }
+  return bands
+}
+
+// Components with no kubelet/CRI translation step — Services, workload API
+// objects, NetworkPolicies, bare kernel primitives, the off-cluster client —
+// still have a K8s runtime form and/or a Linux realisation worth showing, so
+// they get a minimal pipeline built straight from those two fields.
+function simpleBands(component) {
+  const { runtimeForm, linuxPrimitive, displayName, layer } = component
+  const bands = []
+  // A bare kernel primitive IS the realisation — collapse to one kernel band
+  // whose row names the form and reveals the underlying syscall/mechanism.
+  if (layer === 'Linux Kernel Primitives') {
+    bands.push({
+      layerId: 'linux-primitive',
+      groups: [{ nodes: [{ label: runtimeForm || displayName, note: linuxPrimitive || undefined }] }],
+    })
+    return bands
+  }
+  if (runtimeForm && runtimeForm !== 'n/a (off-cluster)') {
+    bands.push({ layerId: 'api-boundary', groups: [{ nodes: [{ label: runtimeForm }] }] })
+  }
+  if (linuxPrimitive) {
+    bands.push({ layerId: 'linux-primitive', groups: [{ nodes: [{ label: linuxPrimitive }] }] })
+  }
+  return bands
+}
+
+// Returns { bands } for the component. Rich builders (Pod, systemd, VMI, CR) are
+// enriched with the authored runtime form + Linux primitive; everything else
+// falls back to a minimal pipeline built from those same two fields.
 export function buildPipeline(component) {
   if (!component) return { bands: [] }
   const t = component.typePrefix
-  if (t === 'Pod' || t === 'Static Pod') return { bands: podBands(component) }
-  if (t === 'systemd') return { bands: systemdBands(component) }
-  if (t === 'VirtualMachineInstance') return { bands: vmiBands(component) }
-  if (t === 'Custom Resource') return { bands: customResourceBands(component) }
-  return { bands: [] }
+  if (t === 'Pod' || t === 'Static Pod') return { bands: withForms(component, podBands(component)) }
+  if (t === 'systemd') return { bands: withForms(component, systemdBands(component)) }
+  if (t === 'VirtualMachineInstance') return { bands: withForms(component, vmiBands(component)) }
+  if (t === 'Custom Resource') return { bands: withForms(component, customResourceBands(component)) }
+  return { bands: simpleBands(component) }
 }

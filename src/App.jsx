@@ -4,7 +4,6 @@ import useMediaQuery from './hooks/useMediaQuery'
 import Tabs from './components/Tabs'
 import OverviewTab from './components/OverviewTab'
 import PacketFlowTab from './components/PacketFlowTab'
-import ObjectMapTab from './components/ObjectMapTab'
 import AncestryModal from './components/AncestryModal'
 import HopInspector from './components/HopInspector'
 import SwipeViews from './components/SwipeViews'
@@ -12,7 +11,6 @@ import SwipeViews from './components/SwipeViews'
 const TABS = [
   { id: 'overview',   label: 'Architecture Overview' },
   { id: 'packetflow', label: 'Step-by-Step Packet Flow' },
-  { id: 'objects',    label: 'K8s Object Map' },
 ]
 
 const DOCK_KEY = 'kv-dock-open'
@@ -82,12 +80,9 @@ export default function App() {
       onClearEvent={clearEvent}
     />
   )
-  const objectsPanel = <ObjectMapTab />
-
   const panelFor = (id) => {
-    if (id === 'overview') return overviewPanel
     if (id === 'packetflow') return packetPanel
-    return objectsPanel
+    return overviewPanel
   }
 
   return (
