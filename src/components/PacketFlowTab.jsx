@@ -170,11 +170,19 @@ export default function PacketFlowTab({
         onSelectEvent={onSelectEvent}
         onClearEvent={onClearEvent}
       />
-      <div className="mb-5">
-        <div className="font-display text-[1.35rem] font-semibold mb-1">
-          {activeEvent.eventName}
+      <div className="mb-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="font-display text-[1.05rem] font-semibold leading-tight">
+            {activeEvent.eventName}
+          </div>
+          <span
+            className="text-[0.66rem] whitespace-nowrap"
+            style={{ color: 'var(--tx-muted)' }}
+          >
+            {activeEvent.steps.length} hop{activeEvent.steps.length === 1 ? '' : 's'}
+          </span>
         </div>
-        <p className="text-[0.78rem]" style={{ color: 'var(--tx-muted)' }}>
+        <p className="text-[0.74rem] mt-0.5 leading-snug" style={{ color: 'var(--tx-muted)' }}>
           {activeEvent.description}
         </p>
       </div>
