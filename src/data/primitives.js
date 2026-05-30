@@ -160,7 +160,7 @@ export const PRIMITIVES_BY_TYPE = {
         interactions: [
           'Activated when QEMU opens /dev/vhost-net and passes the tap file descriptor to the kernel.',
           'The kernel vhost thread moves packets between the virtio ring and the tap0 device without QEMU involvement.',
-          'tap0 connects into the host OVS br-int bridge, placing the VM inside the same OVN overlay as host Pods.',
+          'With KubeVirt\'s default masquerade binding tap0 sits on a pod-local bridge (k6t-eth0) with NAT; the launcher Pod\'s eth0 veth is what plugs into the host OVS br-int bridge, placing the VM inside the same OVN overlay as host Pods.',
         ],
         commands: [
           '# Confirm vhost-net module is loaded\nlsmod | grep vhost',

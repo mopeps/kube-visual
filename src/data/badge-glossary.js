@@ -52,7 +52,7 @@ export const BADGE_GLOSSARY = {
   'QEMU/KVM':
     'QEMU is the machine emulator; KVM is the Linux kernel\'s built-in hypervisor. Together they run the guest worker node as a full VM with near-native CPU performance via hardware virtualisation extensions.',
   'tap0':
-    'A virtual network tap device inside the KubeVirt launcher container. One end connects to QEMU\'s virtual NIC; the other plugs into the OVS br-int bridge, bridging guest and host networking.',
+    'A virtual network tap device inside the KubeVirt launcher container that backs the guest\'s virtio NIC. With KubeVirt\'s default masquerade binding it attaches to a pod-local bridge (k6t-eth0) with NAT — it is the launcher Pod\'s own eth0 veth that actually plugs into the host OVS br-int bridge, so the VM rides the same OVN overlay as host Pods.',
   'virtio-net':
     'Para-virtualised network driver used by the guest VM\'s kernel. Much lower overhead than emulated hardware because the guest and host cooperate directly through a shared ring buffer, bypassing device emulation.',
   'e-commerce-prod':

@@ -394,7 +394,7 @@
     "problemSolved": "Hands each booting worker node the config it needs to join the guest cluster — enabling zero-touch provisioning.",
     "interactions": [
       "Provides a TLS-secured endpoint serving node-specific Ignition configs.",
-      "Injects kubelet bootstrap certificates and static Pod manifests.",
+      "Injects the kubelet bootstrap credentials and the machine config (systemd units, kubelet config, pull secrets, certificates) the node applies on first boot.",
       "Called once per node boot; after that, the node's kubelet manages its own certs."
     ],
     "explorationCommands": [
@@ -698,7 +698,7 @@
     "problemSolved": "The Pod that wraps one VM, so KubeVirt can manage a qemu-kvm guest like any other Kubernetes workload.",
     "interactions": [
       "Spawns and supervises the qemu-kvm process for the Guest Worker Node VM.",
-      "Creates a tap interface (tap0) and connects it to the host OVS bridge via a macvtap or bridge port.",
+      "Creates a tap interface (tap0) backing the guest's virtio NIC; under KubeVirt's default masquerade binding it sits on a pod-local bridge (k6t-eth0) with NAT, while the launcher Pod's own eth0 veth is what attaches to the host OVS bridge.",
       "Exposes virtio device interfaces (virtio-net, virtio-blk) to the guest OS."
     ],
     "explorationCommands": [
@@ -1379,7 +1379,7 @@
     "interactions": [
       "Referenced by the workload Pod specs as volume mounts or environment variables.",
       "Projected by the guest kubelet into the Pod as an in-memory tmpfs mount, not a disk file.",
-      "Stored encrypted-at-rest in the guest etcd; access is gated by RBAC on the Secret resource."
+      "Persisted in the guest etcd — encrypted at rest, since HyperShift enables etcd Secret encryption by default (in vanilla Kubernetes this is opt-in); access is gated by RBAC on the Secret resource."
     ],
     "explorationCommands": [
       "# List Secrets in the namespace\noc get secret -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
