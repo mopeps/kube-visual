@@ -1138,32 +1138,42 @@ button.object-tag:hover {
   border-left-color: color-mix(in srgb, var(--row-color, var(--band-color)) 25%, transparent);
 }
 
-/* The note + deeper detail revealed when a row is expanded. */
+/* The note + deeper detail revealed when a row is expanded. Styled to read as
+   prose — like the why-callout / interaction rows — rather than a dark code
+   block: no filled background, just a soft accent rail threading it to its row,
+   with text at the same size/colour the interaction sentences use. */
 .tree-reveal {
-  margin: 2px 0 5px 2px;
-  padding: 6px 10px;
+  margin: 2px 0 6px 2px;
+  padding: 2px 0 3px 12px;
   border-left: 2px solid var(--border-w);
-  border-left-color: color-mix(in srgb, var(--row-color, var(--band-color)) 45%, transparent);
-  background: rgba(0, 0, 0, 0.22);
-  border-radius: 0 6px 6px 0;
+  border-left-color: color-mix(in srgb, var(--row-color, var(--band-color)) 40%, transparent);
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
 }
 .tree-note {
-  color: var(--tx-muted);
-  font-size: 0.66rem;
+  color: var(--tx);
+  font-size: 0.74rem;
+  line-height: 1.55;
   overflow-wrap: anywhere;
 }
 .tree-detail-bullet {
-  font-size: 0.64rem;
+  display: flex;
+  gap: 7px;
+  font-size: 0.72rem;
+  line-height: 1.55;
   color: var(--tx-muted);
   overflow-wrap: anywhere;
+}
+.tree-detail-marker {
+  flex: 0 0 auto;
+  line-height: 1.55;
 }
 .tree-detail-kv {
   display: flex;
   gap: 8px;
-  font-size: 0.64rem;
+  font-size: 0.72rem;
+  line-height: 1.55;
   overflow-wrap: anywhere;
 }
 .tree-detail-k {
@@ -1178,8 +1188,9 @@ button.object-tag:hover {
   overflow-wrap: anywhere;
 }
 .tree-detail-line {
-  font-size: 0.64rem;
-  color: var(--tx-dim);
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: var(--tx-muted);
   overflow-wrap: anywhere;
 }
 

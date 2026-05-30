@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PIPELINE_LAYER_BY_ID } from '../data/pipeline-layers'
 import ExploreCommands from './ExploreCommands'
+import ObjectText from './ObjectText'
 
 // Monochrome line glyphs for the pipeline bands. Each is a single-stroke SVG
 // drawn with `currentColor`, so it inherits the band head's accent color, and
@@ -42,19 +43,33 @@ function BandIcon({ name }) {
   )
 }
 
-function RowDetail({ detail, color }) {
+// Prose helper: object references in the revealed detail are lifted into the
+// same inline chips used by the why-callout and interaction rows, so the same
+// nodes are navigable wherever they're named.
+function Prose({ text, onSelectComponent, selfId }) {
+  return <ObjectText text={text} onSelectComponent={onSelectComponent} selfId={selfId} />
+}
+
+function RowDetail({ detail, color, onSelectComponent, selfId }) {
   return (
     <>
       {detail.lines?.map((l, i) => (
-        <div key={`l${i}`} className="tree-detail-line">{l}</div>
+        <div key={`l${i}`} className="tree-detail-line">
+          <Prose text={l} onSelectComponent={onSelectComponent} selfId={selfId} />
+        </div>
       ))}
       {detail.bullets?.map((b, i) => (
-        <div key={`b${i}`} className="tree-detail-bullet">• {b}</div>
+        <div key={`b${i}`} className="tree-detail-bullet">
+          <span className="tree-detail-marker" style={{ color }} aria-hidden="true">•</span>
+          <span><Prose text={b} onSelectComponent={onSelectComponent} selfId={selfId} /></span>
+        </div>
       ))}
       {detail.kv?.map((p, i) => (
         <div key={`k${i}`} className="tree-detail-kv">
           <span className="tree-detail-k">{p.k}</span>
-          <span className="tree-detail-v">{p.v}</span>
+          <span className="tree-detail-v">
+            <Prose text={p.v} onSelectComponent={onSelectComponent} selfId={selfId} />
+          </span>
         </div>
       ))}
       {detail.commands?.length > 0 && (
@@ -70,7 +85,7 @@ function RowDetail({ detail, color }) {
 // detail are hidden until the row is expanded, so the resting state is just a
 // clean list of labels. Child nodes render indented beneath, threaded by a soft
 // accent rail rather than ASCII gutter glyphs.
-function Node({ node, bandColor }) {
+function Node({ node, bandColor, onSelectComponent, selfId }) {
   const [open, setOpen] = useState(false)
   const color = node.color || bandColor
   const kids = node.children || []
@@ -95,21 +110,29 @@ function Node({ node, bandColor }) {
 
       {hasExtra && open && (
         <div className="tree-reveal" style={{ '--row-color': color }}>
-          {node.note && <div className="tree-note">{node.note}</div>}
-          {node.detail && <RowDetail detail={node.detail} color={color} />}
+          {node.note && (
+            <div className="tree-note">
+              <Prose text={node.note} onSelectComponent={onSelectComponent} selfId={selfId} />
+            </div>
+          )}
+          {node.detail && (
+            <RowDetail detail={node.detail} color={color} onSelectComponent={onSelectComponent} selfId={selfId} />
+          )}
         </div>
       )}
 
       {kids.length > 0 && (
         <div className="tree-children" style={{ '--row-color': color }}>
-          {kids.map((k, i) => <Node key={i} node={k} bandColor={bandColor} />)}
+          {kids.map((k, i) => (
+            <Node key={i} node={k} bandColor={bandColor} onSelectComponent={onSelectComponent} selfId={selfId} />
+          ))}
         </div>
       )}
     </div>
   )
 }
 
-function Band({ layerId, groups, last }) {
+function Band({ layerId, groups, last, onSelectComponent, selfId }) {
   const layer = PIPELINE_LAYER_BY_ID[layerId]
   const color = `var(${layer.colorVar})`
   return (
@@ -120,7 +143,9 @@ function Band({ layerId, groups, last }) {
         {groups.map((g, gi) => (
           <div className="tree-group" key={gi}>
             {g.subhead && <div className="tree-subhead" style={{ color }}>{g.subhead}</div>}
-            {g.nodes.map((n, i) => <Node key={i} node={n} bandColor={color} />)}
+            {g.nodes.map((n, i) => (
+              <Node key={i} node={n} bandColor={color} onSelectComponent={onSelectComponent} selfId={selfId} />
+            ))}
           </div>
         ))}
       </div>
@@ -129,12 +154,21 @@ function Band({ layerId, groups, last }) {
 }
 
 // Pure renderer for a pre-built band model (see data/pipeline-model.js).
-export default function PipelineTree({ bands }) {
+// `onSelectComponent` / `selfId` are threaded down so object references inside a
+// row's revealed detail become the same navigable chips the rest of the modal uses.
+export default function PipelineTree({ bands, onSelectComponent, selfId }) {
   if (!bands?.length) return null
   return (
     <div className="pipeline-tree">
       {bands.map((b, i) => (
-        <Band key={`${b.layerId}-${i}`} layerId={b.layerId} groups={b.groups} last={i === bands.length - 1} />
+        <Band
+          key={`${b.layerId}-${i}`}
+          layerId={b.layerId}
+          groups={b.groups}
+          last={i === bands.length - 1}
+          onSelectComponent={onSelectComponent}
+          selfId={selfId}
+        />
       ))}
     </div>
   )
