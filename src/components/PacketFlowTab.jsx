@@ -1,19 +1,20 @@
 import { useState } from 'react'
 import componentsData from '../data/components.json'
+import events from '../data/events.json'
 import { COMPONENT_COLOR } from '../data/zones'
 
 function findComponent(id) {
   return componentsData.find(c => c.componentId === id)
 }
 
-function Hop({ step, isOpen, onToggle, isFinal }) {
+function Hop({ step, isOpen, isSelected, onToggle, isFinal }) {
   const target = findComponent(step.targetComponentId)
   const source = findComponent(step.sourceComponentId)
   const color = COMPONENT_COLOR[step.targetComponentId] || 'var(--k-cyan)'
   const sourceColor = COMPONENT_COLOR[step.sourceComponentId] || color
 
   return (
-    <div className="hop" onClick={onToggle}>
+    <div className={`hop ${isSelected ? 'is-selected' : ''}`} onClick={onToggle}>
       <div className="hop-num-col">
         <div
           className="hop-num"
@@ -32,7 +33,10 @@ function Hop({ step, isOpen, onToggle, isFinal }) {
           />
         )}
       </div>
-      <div className="hop-body" style={{ borderColor: `${color}40` }}>
+      <div
+        className="hop-body"
+        style={{ borderColor: isSelected ? color : `${color}40` }}
+      >
         <h3>
           <span className="packet-dot" />
           <span>
@@ -71,22 +75,81 @@ function Hop({ step, isOpen, onToggle, isFinal }) {
   )
 }
 
-export default function PacketFlowTab({ activeEvent }) {
+// Shown when no trace is selected: a gallery of every available flow so the tab
+// is never empty. Picking one promotes it to the active trace.
+function EventGallery({ onSelectEvent }) {
+  return (
+    <div>
+      <div className="mb-5">
+        <div className="font-display text-[1.35rem] font-semibold mb-1">
+          Choose a trace flow
+        </div>
+        <p className="text-[0.78rem]" style={{ color: 'var(--tx-muted)' }}>
+          Pick a flow to step through every hop from external client to PID&nbsp;1.
+        </p>
+      </div>
+      <div className="event-gallery">
+        {events.map(e => (
+          <button
+            key={e.eventId}
+            type="button"
+            className="event-card"
+            onClick={() => onSelectEvent(e)}
+          >
+            <div className="event-card-title">{e.eventName}</div>
+            <p className="event-card-desc">{e.description}</p>
+            <div className="event-card-meta">
+              {e.steps.length} hop{e.steps.length === 1 ? '' : 's'} →
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Always-available switcher: jump straight to any other flow, or clear back to
+// the gallery. This carries the trace-picking that used to live in the header
+// dropdown, so the tab is self-sufficient.
+function FlowSwitcher({ activeEvent, onSelectEvent, onClearEvent }) {
+  return (
+    <div className="flow-switcher">
+      <span className="flow-switcher-label">Trace flow</span>
+      {events.map(e => (
+        <button
+          key={e.eventId}
+          type="button"
+          className={`event-pill ${activeEvent?.eventId === e.eventId ? 'is-active' : ''}`}
+          onClick={() => onSelectEvent(e)}
+          title={e.description}
+        >
+          {e.eventName}
+        </button>
+      ))}
+      {onClearEvent && (
+        <button
+          type="button"
+          className="event-pill flow-switcher-clear"
+          onClick={onClearEvent}
+        >
+          × Clear
+        </button>
+      )}
+    </div>
+  )
+}
+
+export default function PacketFlowTab({
+  activeEvent,
+  onSelectEvent,
+  onClearEvent,
+  activeStep,
+  onSelectStep,
+}) {
   const [open, setOpen] = useState(new Set())
 
   if (!activeEvent) {
-    return (
-      <div
-        className="border border-border-w rounded-lg p-10 text-center"
-        style={{ background: 'rgba(0,0,0,0.2)' }}
-      >
-        <div className="font-display text-[1.2rem] mb-2">No trace selected</div>
-        <p className="text-[0.75rem]" style={{ color: 'var(--tx-muted)' }}>
-          Pick a flow from the trace selector above to step through every hop
-          from external client to PID&nbsp;1.
-        </p>
-      </div>
-    )
+    return <EventGallery onSelectEvent={onSelectEvent} />
   }
 
   const toggle = (n) => {
@@ -96,10 +159,17 @@ export default function PacketFlowTab({ activeEvent }) {
       else next.add(n)
       return next
     })
+    // In docked mode this also highlights the matching arrow in the overview.
+    onSelectStep?.(n)
   }
 
   return (
     <div>
+      <FlowSwitcher
+        activeEvent={activeEvent}
+        onSelectEvent={onSelectEvent}
+        onClearEvent={onClearEvent}
+      />
       <div className="mb-5">
         <div className="font-display text-[1.35rem] font-semibold mb-1">
           {activeEvent.eventName}
@@ -114,6 +184,7 @@ export default function PacketFlowTab({ activeEvent }) {
             key={step.step}
             step={step}
             isOpen={open.has(step.step)}
+            isSelected={activeStep === step.step}
             onToggle={() => toggle(step.step)}
             isFinal={i === activeEvent.steps.length - 1}
           />
