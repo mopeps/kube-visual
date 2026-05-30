@@ -423,11 +423,163 @@ body::after {
 }
 
 /* ── Tabs ──────────────────────────────────────────────────────────── */
+/* Tab strip + (wide-desktop) dock toggle share one bottom border. */
+.tabs-row {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-w);
+}
+.tabs-row .tabs {
+  flex: 1;
+  border-bottom: none;
+}
 .tabs {
   display: flex;
   gap: 4px;
   border-bottom: 1px solid var(--border-w);
   overflow-x: auto;
+}
+
+/* Wide-desktop toggle that docks the packet flow beside the overview. */
+.dock-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--tx-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: color 0.18s, border-color 0.18s;
+}
+.dock-toggle:hover { color: var(--tx-bright); }
+.dock-toggle.is-active {
+  color: var(--k-cyan);
+  border-bottom-color: var(--k-cyan);
+}
+
+/* ── Wide-desktop dock layout ──────────────────────────────────────── */
+.dock-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+.dock-main { flex: 1; }
+.dock-panel {
+  flex: 0 0 400px;
+  width: 400px;
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-w);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.dock-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-w);
+  background: var(--panel);
+}
+.dock-panel-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--tx-muted);
+}
+.dock-panel-close {
+  background: none;
+  border: none;
+  color: var(--tx-dim);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.dock-panel-close:hover {
+  color: var(--tx-bright);
+  background: rgba(255, 255, 255, 0.06);
+}
+.dock-panel-body {
+  padding: 16px 14px;
+  overflow-y: auto;
+}
+
+/* ── Swipe pager (touch / small screens) ───────────────────────────── */
+.swipe-viewport {
+  overflow: hidden;
+  /* We own the horizontal axis; the browser keeps native vertical scroll. */
+  touch-action: pan-y;
+}
+.swipe-track {
+  display: flex;
+  align-items: flex-start;
+  will-change: transform;
+}
+.swipe-pane {
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 0;
+}
+/* Let wide code blocks scroll horizontally without arming the pager. */
+.swipe-viewport pre.code-block { touch-action: pan-x; }
+
+/* ── Event gallery (packet-flow empty state) ───────────────────────── */
+.event-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.event-card {
+  text-align: left;
+  padding: 16px;
+  border: 1px solid var(--border-w);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s, transform 0.18s;
+}
+.event-card:hover {
+  border-color: var(--k-cyan);
+  background: rgba(255, 255, 255, 0.03);
+  transform: translateY(-2px);
+}
+.event-card-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--tx-bright);
+  margin-bottom: 6px;
+}
+.event-card-desc {
+  font-size: 0.72rem;
+  color: var(--tx-muted);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.event-card-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--k-cyan);
 }
 .tab-btn {
   background: none;
@@ -541,6 +693,8 @@ body::after {
   transition: background 0.2s, border-color 0.2s;
 }
 .hop:hover .hop-body { background: rgba(255, 255, 255, 0.03); }
+/* The hop whose arrow is highlighted in the overview (docked mode). */
+.hop.is-selected .hop-body { background: rgba(255, 255, 255, 0.05); }
 
 .hop-body h3 {
   font-family: 'Syne', sans-serif;
