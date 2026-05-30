@@ -130,7 +130,7 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent 
       </button>
       {treeOpen && (
         <div style={{ marginTop: 12 }}>
-          <PipelineTree bands={bands} />
+          <PipelineTree bands={bands} onSelectComponent={onSelectComponent} selfId={componentId} />
         </div>
       )}
     </div>
