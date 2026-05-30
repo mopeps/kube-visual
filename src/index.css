@@ -783,7 +783,10 @@ body::after {
   margin-bottom: 0;
   position: static;
 }
-.interaction-row::before { content: none; }
+/* Override the shared `.detail-section li::before` arrow marker (specificity
+   0,1,2): the interaction rows lead with their own kind-icon chip, so the '→'
+   bullet is redundant. Scoped through `.interaction-list` to win specificity. */
+.interaction-list .interaction-row::before { content: none; }
 
 /* Icon chip — square, rounded, tinted with the kind accent. */
 .interaction-icon {
