@@ -731,7 +731,10 @@ body::after {
   border-radius: 999px;
   margin-bottom: 7px;
 }
-.why-text {
+/* Scoped through .why-body so the font-size/line-height win over the shared
+   `.detail-section p` rule (0,1,1) — unscoped, the callout sentence would be
+   forced down to the body 0.76rem/1.7 instead of its intended 0.84rem/1.55. */
+.why-body .why-text {
   margin: 0;
   font-size: 0.84rem;
   line-height: 1.55;
