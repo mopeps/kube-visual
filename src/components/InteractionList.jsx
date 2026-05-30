@@ -68,11 +68,15 @@ function KindIcon({ name }) {
   }
 }
 
-// The detail-modal "Interactions" section. Each free-text interaction is
-// classified (see interaction-kinds.js) into a relationship kind, then rendered
-// as a row whose leading icon + accent colour convey direction/type at a glance
-// while the full sentence is preserved. A compact legend above the rows ties
-// the icons to their meaning so the visual language is self-explanatory.
+// The detail-modal relationship rows. Each free-text interaction is classified
+// (see interaction-kinds.js) into a relationship kind, then rendered as a row
+// whose leading icon + accent colour convey direction/type at a glance while
+// the full sentence is preserved. A compact legend above the rows ties the
+// icons to their meaning so the visual language is self-explanatory.
+//
+// Headingless by design: it renders directly beneath the "why it exists"
+// callout inside one merged section (see DetailSections), so the rows read as a
+// continuation of that point rather than a separately-titled block.
 export default function InteractionList({ interactions, onSelectComponent, selfId }) {
   const rows = interactions.map((text) => classifyInteraction(text))
 
@@ -82,9 +86,7 @@ export default function InteractionList({ interactions, onSelectComponent, selfI
   const presentKinds = order.filter((k) => rows.some((r) => r.kind === k))
 
   return (
-    <div className="detail-section">
-      <h4>Interactions</h4>
-
+    <div className="interaction-block">
       {presentKinds.length > 1 && (
         <div className="interaction-legend">
           {presentKinds.map((k) => {

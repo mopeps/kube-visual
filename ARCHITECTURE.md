@@ -206,7 +206,8 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
     "openShiftProject": "e-commerce-prod",
     "associatedObject": "Front-End Workload Instance"
   },
-  "problemSolved": "Provides network virtualization and isolation inside the Guest RHCOS VM.",
+  "role": "KERNEL PRIMITIVE",
+  "problemSolved": "Gives each workload Pod its own private network — IP, routes, and firewall — isolated from every other Pod.",
   "interactions": [
     "Attaches to a guest-side veth pair managed by the OVN-Kubernetes Guest Node DaemonSet.",
     "Provisioned and configured by the CRI-O runtime via CNI instructions."
@@ -260,7 +261,8 @@ Adding a component touches several places — keep them in sync:
 1. **`src/data/components.json`** — new entry with `componentId`, `displayName`, `layer`,
    `typePrefix` (e.g. `Pod`, `Static Pod`, `systemd`, `VirtualMachineInstance`, `Service`,
    `NetworkPolicy`),
-   `problemSolved`, `interactions[]`, `explorationCommands[]`. Add `logicalContext`
+   `role` (short upper-case kind tag), `problemSolved` (one concise "why it
+   exists" sentence), `interactions[]`, `explorationCommands[]`. Add `logicalContext`
    (`openShiftProject` + `associatedObject`) for workload pods and VMIs.
 2. **`src/data/zones.js`** — add a node (with `id`, `title`, `typePrefix`, `badges`) to
    the correct zone in the recursive `ZONES` tree. `COMPONENT_COLOR` / `COMPONENT_ZONE`
