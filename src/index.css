@@ -544,14 +544,14 @@ body::after {
 /* ── Event gallery (packet-flow empty state) ───────────────────────── */
 .event-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
 }
 .event-card {
   text-align: left;
-  padding: 16px;
+  padding: 10px 12px;
   border: 1px solid var(--border-w);
-  border-radius: 10px;
+  border-radius: 8px;
   background: rgba(0, 0, 0, 0.25);
   cursor: pointer;
   transition: border-color 0.18s, background 0.18s, transform 0.18s;
@@ -563,20 +563,25 @@ body::after {
 }
 .event-card-title {
   font-family: 'Syne', sans-serif;
-  font-size: 0.92rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--tx-bright);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 .event-card-desc {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--tx-muted);
-  line-height: 1.5;
-  margin-bottom: 10px;
+  line-height: 1.45;
+  margin-bottom: 8px;
+  /* Keep cards uniform and dense — collapse the long trace blurbs. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .event-card-meta {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--k-cyan);

@@ -80,11 +80,11 @@ function Hop({ step, isOpen, isSelected, onToggle, isFinal }) {
 function EventGallery({ onSelectEvent }) {
   return (
     <div>
-      <div className="mb-5">
-        <div className="font-display text-[1.35rem] font-semibold mb-1">
+      <div className="mb-3">
+        <div className="font-display text-[1.1rem] font-semibold mb-0.5">
           Choose a trace flow
         </div>
-        <p className="text-[0.78rem]" style={{ color: 'var(--tx-muted)' }}>
+        <p className="text-[0.72rem]" style={{ color: 'var(--tx-muted)' }}>
           Pick a flow to step through every hop from external client to PID&nbsp;1.
         </p>
       </div>
