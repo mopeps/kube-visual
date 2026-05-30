@@ -24,7 +24,7 @@ export const PIPELINE_LAYERS = [
     label: 'Runtime Object',
     colorVar: '--k-sky',
     icon: 'cube',
-    blurb: 'The concrete, named instance the engine actually runs — a Pod, a VirtualMachineInstance, or an on-disk .service unit. Distinct from band 1 not by being an API object (the controllers above are too) but by being the single thing handed to a supervisor.',
+    blurb: 'The concrete, named instance the engine actually runs — a Pod or a VirtualMachineInstance handed to a supervisor. Distinct from band 1 not by being an API object (the controllers above are too) but by being the single thing handed to a supervisor. (Host systemd services skip this band: their unit, cgroup slice, and process are all Linux primitives PID 1 supervises directly.)',
   },
   {
     id: 'translation-engine',
