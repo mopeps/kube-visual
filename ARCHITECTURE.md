@@ -269,7 +269,7 @@ Adding a component touches several places — keep them in sync:
 
 1. **`src/data/components.json`** — new entry with `componentId`, `displayName`, `layer`,
    `typePrefix` (e.g. `Pod`, `Static Pod`, `systemd`, `VirtualMachineInstance`, `Service`,
-   `NetworkPolicy`),
+   `NWPOLICY`),
    `role` (short upper-case kind tag), `runtimeForm` (the concrete K8s kind + namespace,
    e.g. `Deployment · hypershift`), `linuxPrimitive` (the per-instance Linux realisation,
    e.g. `Pod → Go binary + controller-runtime`), `problemSolved` (one concise "why it
