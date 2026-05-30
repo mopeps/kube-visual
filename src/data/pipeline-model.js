@@ -138,7 +138,7 @@ function podBands(component) {
   const groups = []
   if (kernelRealization) {
     groups.push({
-      subhead: '🧬 Isolation Boundaries',
+      subhead: 'Isolation Boundaries',
       nodes: [
         kernelRealization.cgroupPath && {
           label: `[cgroup v2] ${kernelRealization.cgroupPath}`,
@@ -157,7 +157,7 @@ function podBands(component) {
   }
   if (cr.length) {
     groups.push({
-      subhead: '📁 File Footprint',
+      subhead: 'File Footprint',
       nodes: cr.map(r => ({
         label: `${r.linuxPrimitive} ${r.hostPath}`,
         note: r.apiObject,

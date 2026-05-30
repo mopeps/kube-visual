@@ -36,24 +36,9 @@ function BandIcon({ name }) {
   )
 }
 
-// Compose the monospace gutter for a node: one cell per ancestor (spine or gap)
-// plus this node's branch glyph. Produces a true ASCII tree.
-function gutter(ancestorsLast, isLast) {
-  let s = ''
-  for (const last of ancestorsLast) s += last ? '   ' : '│  '
-  return s + (isLast ? '└─ ' : '├─ ')
-}
-
-// Flatten a node spec tree (DFS) into ordered rows carrying their gutter prefix.
-function flatten(node, ancestorsLast, isLast, out) {
-  out.push({ node, prefix: gutter(ancestorsLast, isLast) })
-  const kids = node.children || []
-  kids.forEach((k, i) => flatten(k, [...ancestorsLast, isLast], i === kids.length - 1, out))
-}
-
 function RowDetail({ detail, color }) {
   return (
-    <div className="tree-detail">
+    <>
       {detail.lines?.map((l, i) => (
         <div key={`l${i}`} className="tree-detail-line">{l}</div>
       ))}
@@ -71,32 +56,49 @@ function RowDetail({ detail, color }) {
           <ExploreCommands commands={detail.commands} color={color} />
         </div>
       )}
-    </div>
+    </>
   )
 }
 
-function Row({ row, bandColor }) {
+// A single node row. The label is always shown; the one-line note and any deeper
+// detail are hidden until the row is expanded, so the resting state is just a
+// clean list of labels. Child nodes render indented beneath, threaded by a soft
+// accent rail rather than ASCII gutter glyphs.
+function Node({ node, bandColor }) {
   const [open, setOpen] = useState(false)
-  const { node, prefix } = row
   const color = node.color || bandColor
-  const hasDetail = !!node.detail
+  const kids = node.children || []
+  // A row is expandable when it carries a note or deeper detail to reveal.
+  const hasExtra = !!node.note || !!node.detail
+
   return (
-    <div className="tree-row">
-      <span className="tree-gutter">{prefix}</span>
-      <div className="tree-body">
-        <button
-          type="button"
-          className="tree-row-head"
-          onClick={hasDetail ? () => setOpen(o => !o) : undefined}
-          aria-expanded={hasDetail ? open : undefined}
-          style={{ color, cursor: hasDetail ? 'pointer' : 'default' }}
-        >
-          <span className="tree-label">{node.label}</span>
-          {hasDetail && <span className="tree-toggle">{open ? '⊟' : '⊕'}</span>}
-        </button>
-        {node.note && <div className="tree-note">{'➔'} {node.note}</div>}
-        {hasDetail && open && <RowDetail detail={node.detail} color={color} />}
-      </div>
+    <div className="tree-node">
+      <button
+        type="button"
+        className="tree-row-head"
+        onClick={hasExtra ? () => setOpen(o => !o) : undefined}
+        aria-expanded={hasExtra ? open : undefined}
+        data-expandable={hasExtra ? '' : undefined}
+        style={{ color, cursor: hasExtra ? 'pointer' : 'default' }}
+      >
+        {hasExtra && (
+          <span className={`tree-caret${open ? ' is-open' : ''}`} aria-hidden="true">▸</span>
+        )}
+        <span className="tree-label">{node.label}</span>
+      </button>
+
+      {hasExtra && open && (
+        <div className="tree-reveal" style={{ '--row-color': color }}>
+          {node.note && <div className="tree-note">{node.note}</div>}
+          {node.detail && <RowDetail detail={node.detail} color={color} />}
+        </div>
+      )}
+
+      {kids.length > 0 && (
+        <div className="tree-children" style={{ '--row-color': color }}>
+          {kids.map((k, i) => <Node key={i} node={k} bandColor={bandColor} />)}
+        </div>
+      )}
     </div>
   )
 }
@@ -105,23 +107,17 @@ function Band({ layerId, groups, last }) {
   const layer = PIPELINE_LAYER_BY_ID[layerId]
   const color = `var(${layer.colorVar})`
   return (
-    <div className="tree-band">
-      <div className="tree-band-head" style={{ color }}>
-        <span className="tree-band-num" style={{ borderColor: color }}>{layer.order}</span>
-        <span className="tree-band-icon" aria-hidden="true"><BandIcon name={layer.icon} /></span>
-        <span className="tree-band-title">{layer.label}</span>
-      </div>
-      {groups.map((g, gi) => {
-        const rows = []
-        g.nodes.forEach((n, i) => flatten(n, [], i === g.nodes.length - 1, rows))
-        return (
+    <div className={`tree-band${last ? ' is-last' : ''}`} style={{ '--band-color': color }}>
+      <div className="tree-band-icon" aria-hidden="true"><BandIcon name={layer.icon} /></div>
+      <div className="tree-band-head" style={{ color }}>{layer.label}</div>
+      <div className="tree-band-body">
+        {groups.map((g, gi) => (
           <div className="tree-group" key={gi}>
             {g.subhead && <div className="tree-subhead" style={{ color }}>{g.subhead}</div>}
-            {rows.map((r, i) => <Row key={i} row={r} bandColor={color} />)}
+            {g.nodes.map((n, i) => <Node key={i} node={n} bandColor={color} />)}
           </div>
-        )
-      })}
-      {!last && <div className="tree-connector" style={{ color }}>{'▼'}</div>}
+        ))}
+      </div>
     </div>
   )
 }
