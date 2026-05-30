@@ -9,7 +9,7 @@ This document defines the structural specifications, component hierarchies, and 
 ## 1. UI Structural Nomenclature & Multitier Canvas Layout
 ### Layout & Sizing Rules
  * **Nomenclature:** Use Context / Zone for macro physical/virtual infrastructure layers and Container / Instance for platform runtime isolation boundaries.
- * **Prefix System:** Each card carries its exact system / API object classification in square brackets ([Static Pod], [systemd], [Service], [NetworkPolicy], [VirtualMachineInstance], …) — **with one deliberate exception: the plain `[Pod]` prefix is omitted.** Pods are by far the most common card, so `[Pod]` is treated as the implicit default and hidden to cut visual noise; every *non-Pod* type is still labeled explicitly. (See `NodeCard.jsx`, which suppresses the prefix only when `typePrefix === 'Pod'`.)
+ * **Prefix System:** Each card carries its exact system / API object classification in square brackets ([Static Pod], [systemd], [Service], [NWPOLICY], [VirtualMachineInstance], …) — **with one deliberate exception: the plain `[Pod]` prefix is omitted.** Pods are by far the most common card, so `[Pod]` is treated as the implicit default and hidden to cut visual noise; every *non-Pod* type is still labeled explicitly. (See `NodeCard.jsx`, which suppresses the prefix only when `typePrefix === 'Pod'`.)
  * **Mobile-First Footprint:** Minimize individual block dimensions. The UI layout tree components must compress cleanly so that **at least two instances sit side-by-side** without clipping content strings when viewed on compact mobile display widths.
 ### Component Nesting Structure
 The workspace viewport canvas must render this exact structural hierarchy:
@@ -107,7 +107,7 @@ The workspace viewport canvas must render this exact structural hierarchy:
                     ├── [Service · ClusterIP] Front-End Workload Service
                     ├── [Pod] Back-End Workload Instance
                     ├── [Service · ClusterIP] Back-End Workload Service
-                    └── [NetworkPolicy] E-Commerce Network Policy (front-end → back-end ingress)
+                    └── [NWPOLICY] E-Commerce Network Policy (front-end → back-end ingress)
 
 ```
 
@@ -134,7 +134,8 @@ store, or a trace-only zone).
    external VIP advertised over ARP/NDP. A `NetworkPolicy` is likewise declarative, but OVN
    compiles it into address sets + ACLs in the Northbound DB that become allow/drop
    OpenFlow rules enforced on `br-int`. That data-plane footprint earns each one a card on
-   the canvas, next to the Pods it routes to or guards: `[Service]`, `[NetworkPolicy]`.
+   the canvas, next to the Pods it routes to or guards: `[Service]`, `[NWPOLICY]` (the
+   compact card prefix for the `NetworkPolicy` kind).
 
 This reinforces the **Default State** rule in §2: desired-state records that have *no*
 data-plane realization (the HCP and Cluster API Custom Resources, plus the guest cluster's
