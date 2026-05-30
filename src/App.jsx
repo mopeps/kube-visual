@@ -14,17 +14,24 @@ const TABS = [
   { id: 'objects',    label: 'K8s Object Map' },
 ]
 
-// Zone accents in stack order — the key that lets a first-time viewer decode
-// the cool-to-green gradient that descends the topology, plus the reserved
-// packet-red trace accent.
-const LEGEND = [
+// The descending zone gradient (cyan → green), in top-to-bottom stack order —
+// the key that lets a first-time viewer decode the canvas accents.
+const ZONE_LEGEND = [
   { label: 'External Client', color: 'var(--k-cyan)' },
   { label: 'Bare Metal Cluster', color: 'var(--k-blue)' },
   { label: 'Guest Control Plane', color: 'var(--k-sky)' },
   { label: 'KubeVirt Launcher', color: 'var(--k-teal)' },
   { label: 'Guest Worker VM', color: 'var(--k-green)' },
-  { label: 'Active Trace', color: 'var(--packet)' },
 ]
+
+function LegendItem({ label, color }) {
+  return (
+    <span className="legend-item">
+      <span className="legend-dot" style={{ background: color, color }} />
+      {label}
+    </span>
+  )
+}
 
 function Header() {
   return (
@@ -39,13 +46,17 @@ function Header() {
         An OpenShift Hosted Control Plane, traced from external client down to
         Linux kernel primitives.
       </p>
-      <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 mt-5">
-        {LEGEND.map((item) => (
-          <span key={item.label} className="legend-item">
-            <span className="legend-dot" style={{ background: item.color, color: item.color }} />
-            {item.label}
-          </span>
+      <div className="flex flex-wrap justify-center items-center gap-x-5 gap-y-2 mt-5">
+        {ZONE_LEGEND.map((item) => (
+          <LegendItem key={item.label} {...item} />
         ))}
+        {/* The trace accent is not a zone — set it apart with a divider. */}
+        <span
+          aria-hidden="true"
+          className="hidden sm:inline-block"
+          style={{ width: 1, height: 12, background: 'var(--border-w)' }}
+        />
+        <LegendItem label="Active Trace" color="var(--packet)" />
       </div>
     </header>
   )

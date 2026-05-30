@@ -15,8 +15,10 @@
 
   --tx-bright: #ffffff;
   --tx:        rgba(255, 255, 255, 0.85);
-  --tx-muted:  rgba(255, 255, 255, 0.55);
-  --tx-dim:    rgba(255, 255, 255, 0.35);
+  /* Bumped from 0.55 / 0.35: at the old alphas the small dim labels fell below
+     the WCAG AA 4.5:1 contrast floor against the #070b14 surface. */
+  --tx-muted:  rgba(255, 255, 255, 0.62);
+  --tx-dim:    rgba(255, 255, 255, 0.48);
 
   --border-w:  rgba(255, 255, 255, 0.10);
   --border-d:  rgba(255, 255, 255, 0.05);

@@ -11,12 +11,20 @@ function buildPath(srcEl, tgtEl, canvasEl) {
   const tx = tr.left + tr.width / 2 - canvasRect.left
   const ty = tr.top + tr.height / 2 - canvasRect.top
 
-  // S-curve cubic bezier: depart horizontally from source, arrive horizontally at target
+  // S-curve cubic bezier whose control points follow the flow's dominant axis.
+  // The zones stack top-to-bottom, so most hops are vertical: bias the handles
+  // along Y there (depart/arrive vertically) for a smooth descent. For the rare
+  // horizontal-dominant hop, bias along X instead.
   const dx = tx - sx
-  const cx1 = sx + dx * 0.5
-  const cy1 = sy
-  const cx2 = tx - dx * 0.5
-  const cy2 = ty
+  const dy = ty - sy
+  let cx1, cy1, cx2, cy2
+  if (Math.abs(dy) >= Math.abs(dx)) {
+    cx1 = sx;            cy1 = sy + dy * 0.5
+    cx2 = tx;            cy2 = ty - dy * 0.5
+  } else {
+    cx1 = sx + dx * 0.5; cy1 = sy
+    cx2 = tx - dx * 0.5; cy2 = ty
+  }
 
   const midX = (sx + tx) / 2
   const midY = (sy + ty) / 2

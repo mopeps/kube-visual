@@ -20,8 +20,8 @@ export default {
         // Text
         'tx-bright': '#ffffff',
         'tx':        'rgba(255,255,255,0.85)',
-        'tx-muted':  'rgba(255,255,255,0.55)',
-        'tx-dim':    'rgba(255,255,255,0.35)',
+        'tx-muted':  'rgba(255,255,255,0.62)',
+        'tx-dim':    'rgba(255,255,255,0.48)',
 
         // Zone accents — top-to-bottom gradient through the stack
         'k-cyan':   '#00e5ff',   // External client
