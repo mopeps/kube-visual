@@ -14,43 +14,12 @@ const TABS = [
   { id: 'objects',    label: 'K8s Object Map' },
 ]
 
-// The descending zone gradient (cyan → green), in top-to-bottom stack order —
-// the key that lets a first-time viewer decode the canvas accents.
-const ZONE_LEGEND = [
-  { label: 'External Client', color: 'var(--k-cyan)' },
-  { label: 'Bare Metal Cluster', color: 'var(--k-blue)' },
-  { label: 'Guest Control Plane', color: 'var(--k-sky)' },
-  { label: 'KubeVirt Launcher', color: 'var(--k-teal)' },
-  { label: 'Guest Worker VM', color: 'var(--k-green)' },
-]
-
-function LegendItem({ label, color }) {
-  return (
-    <span className="legend-item">
-      <span className="legend-dot" style={{ background: color, color }} />
-      {label}
-    </span>
-  )
-}
-
 function Header() {
   return (
     <header className="text-center mb-8">
       <h1 className="font-display title-gradient text-[clamp(1.9rem,4vw,3.2rem)] font-extrabold tracking-tight leading-tight">
         kube-weird-visualizer
       </h1>
-      <div className="flex flex-wrap justify-center items-center gap-x-5 gap-y-2 mt-5">
-        {ZONE_LEGEND.map((item) => (
-          <LegendItem key={item.label} {...item} />
-        ))}
-        {/* The trace accent is not a zone — set it apart with a divider. */}
-        <span
-          aria-hidden="true"
-          className="hidden sm:inline-block"
-          style={{ width: 1, height: 12, background: 'var(--border-w)' }}
-        />
-        <LegendItem label="Active Trace" color="var(--packet)" />
-      </div>
     </header>
   )
 }
