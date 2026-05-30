@@ -212,7 +212,6 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
     "Attaches to a guest-side veth pair managed by the OVN-Kubernetes Guest Node DaemonSet.",
     "Provisioned and configured by the CRI-O runtime via CNI instructions."
   ],
-  "role": "KERNEL PRIMITIVE",
   "explorationCommands": [
     "crictl inspect <container_id> | grep pid",
     "nsenter -t <PID> -n ip addr show"
