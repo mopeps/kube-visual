@@ -259,11 +259,43 @@ function ensureKernelBand(bands) {
   return band
 }
 
+// Find the Logical Intent band, creating (and prepending) an empty one if the
+// builder produced none — a controller-managed Pod with no hand-authored
+// ancestry has no intent band of its own, so its workload controller (the
+// mover below) needs a home at the top of the descent.
+function ensureIntentBand(bands) {
+  let band = bands.find(b => b.layerId === 'logical-intent')
+  if (!band) {
+    band = { layerId: 'logical-intent', groups: [{ nodes: [] }] }
+    bands.unshift(band)
+  }
+  if (!band.groups.length) band.groups.push({ nodes: [] })
+  return band
+}
+
+// Workload-controller kinds are declarative desired state, so they belong in the
+// Logical Intent band — not the Runtime Object band, which names the single
+// supervised instance handed to a node. (A Static Pod / virt-launcher Pod / VMI
+// form, by contrast, *is* that runtime object, so those stay on api-boundary.)
+const CONTROLLER_KIND = /^(Deployment|DaemonSet|StatefulSet|ReplicaSet|Job|CronJob)\b/
+
+// One-line note for a relocated controller row, matching the voice of the
+// hand-authored ancestry rows in podBands.
+function controllerNote(form) {
+  if (/^DaemonSet/.test(form)) return 'runs one replica per eligible node'
+  if (/^StatefulSet/.test(form)) return 'ordered, stable-identity replicas'
+  if (/^ReplicaSet/.test(form)) return 'stamps out unique pod-hash replicas'
+  return 'defines replicas, strategy & pod template' // Deployment / other
+}
+
 // Fold a component's authored runtime form + Linux primitive (from
 // components.json) into a rich builder's bands:
 //   • runtimeForm  → subhead of the Runtime Object band (the concrete K8s form),
 //                    or the kernel band for host systemd services, which have no
-//                    Runtime Object band by design.
+//                    Runtime Object band by design. A workload-controller form
+//                    (Deployment/DaemonSet/StatefulSet/…) is declarative intent,
+//                    not a runtime object, so it moves up to the Logical Intent
+//                    band instead (see CONTROLLER_KIND).
 //   • linuxPrimitive → lead row of the kernel band, ahead of the generic
 //                    type-derived rows, since it is the per-instance realisation
 //                    (e.g. a Service is a MetalLB VIP, not a generic Pod netns).
@@ -272,6 +304,11 @@ function withForms(component, bands) {
   if (runtimeForm) {
     if (t === 'systemd') {
       ensureKernelBand(bands).groups[0].subhead = runtimeForm
+    } else if (CONTROLLER_KIND.test(runtimeForm)) {
+      ensureIntentBand(bands).groups[0].nodes.push({
+        label: runtimeForm,
+        note: controllerNote(runtimeForm),
+      })
     } else {
       const host =
         bands.find(b => b.layerId === 'api-boundary') ||
