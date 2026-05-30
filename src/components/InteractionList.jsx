@@ -48,6 +48,14 @@ function KindIcon({ name }) {
           <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4" />
         </svg>
       )
+    case 'spark':
+      // two plus-marks (one large, one small) — bringing new things into being
+      return (
+        <svg {...common}>
+          <path d="M6.5 2.2v6.6M3.2 5.5h6.6" />
+          <path d="M11.8 9.4v4M9.8 11.4h4" />
+        </svg>
+      )
     case 'note':
     default:
       return (
@@ -70,7 +78,7 @@ export default function InteractionList({ interactions, onSelectComponent, selfI
 
   // Only legend-list the kinds actually present in this component's rows, in a
   // stable order, so the key never advertises an icon the user can't see below.
-  const order = ['inbound', 'outbound', 'observe', 'manage', 'note']
+  const order = ['inbound', 'outbound', 'observe', 'create', 'manage', 'note']
   const presentKinds = order.filter((k) => rows.some((r) => r.kind === k))
 
   return (
