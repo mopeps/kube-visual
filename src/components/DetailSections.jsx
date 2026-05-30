@@ -77,9 +77,8 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
 
   return (
     <>
-      {/* The heart of the modal: one concise "why it exists" point (role badge +
-          single sentence) flowing straight into the relationship rows. No
-          explicit headings — the callout and the icon rows are self-evident. */}
+      {/* One concise "why it exists" point (role badge + single sentence). No
+          explicit heading — the callout is self-evident. */}
       <div className="detail-section">
         <div className="why-callout" style={{ borderColor: `${color}59`, background: `${color}12` }}>
           <span className="why-icon" style={{ color, borderColor: `${color}59`, background: `${color}1f` }} aria-hidden="true">
@@ -100,14 +99,6 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
             </p>
           </div>
         </div>
-
-        {component.interactions?.length > 0 && (
-          <InteractionList
-            interactions={component.interactions}
-            onSelectComponent={onSelectComponent}
-            selfId={componentId}
-          />
-        )}
       </div>
 
       {badges.length > 0 && (
@@ -161,6 +152,16 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
               {explanation}
             </div>
           )}
+        </div>
+      )}
+
+      {component.interactions?.length > 0 && (
+        <div className="detail-section">
+          <InteractionList
+            interactions={component.interactions}
+            onSelectComponent={onSelectComponent}
+            selfId={componentId}
+          />
         </div>
       )}
 
