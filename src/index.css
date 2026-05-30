@@ -771,8 +771,12 @@ body::after {
 }
 
 /* Each interaction is a row: kind icon + emphasised verb + sentence. The list
-   resets the shared .detail-section ul/li styling (no padding, no → marker). */
-.interaction-list {
+   resets the shared .detail-section ul/li styling (no left indent, no → marker,
+   no per-item margin). These resets are scoped through an ancestor class so they
+   out-specify `.detail-section ul` / `.detail-section li` (0,1,1) — otherwise the
+   18px list indent leaks back in and pushes the icon chips right of the pipeline
+   band icons they're meant to left-align with. */
+.detail-section .interaction-list {
   list-style: none;
   padding-left: 0;
   margin: 0;
@@ -780,7 +784,7 @@ body::after {
   flex-direction: column;
   gap: 9px;
 }
-.interaction-row {
+.interaction-list .interaction-row {
   display: flex;
   align-items: flex-start;
   gap: 10px;
