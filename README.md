@@ -1,4 +1,4 @@
-# kube-visual
+# kube-weird-visualizer
 
 https://mopeps.github.io/kube-visual/
 

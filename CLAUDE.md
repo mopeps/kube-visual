@@ -1,4 +1,4 @@
-# kube-visual
+# kube-weird-visualizer
 
 Frontend-only React app that visualises an OpenShift **Hosted Control Plane (HCP)**
 cluster as a nested stack of **zones** and traces event-driven flows down to Linux

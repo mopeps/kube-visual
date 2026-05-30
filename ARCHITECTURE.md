@@ -1,11 +1,11 @@
-# kube-visual — Architecture Specification
+# kube-weird-visualizer — Architecture Specification
 
-> **This is the source-of-truth spec for what kube-visual should be.** It defines the
+> **This is the source-of-truth spec for what kube-weird-visualizer should be.** It defines the
 > target topology, component hierarchy, interaction model, and data schemas. When the
 > app and this document disagree, treat this document as the intent and bring the app
 > back in line with it (or update this doc deliberately if the intent itself changed).
 
-This document defines the structural specifications, component hierarchies, and data models for **kube-visual** — an interactive, frontend-only web-based architectural map of OpenShift Hosted Control Planes (HCP).
+This document defines the structural specifications, component hierarchies, and data models for **kube-weird-visualizer** — an interactive, frontend-only web-based architectural map of OpenShift Hosted Control Planes (HCP).
 ## 1. UI Structural Nomenclature & Multitier Canvas Layout
 ### Layout & Sizing Rules
  * **Nomenclature:** Use Context / Zone for macro physical/virtual infrastructure layers and Container / Instance for platform runtime isolation boundaries.

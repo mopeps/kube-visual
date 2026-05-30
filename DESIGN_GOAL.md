@@ -1,4 +1,4 @@
-# kube-visual · Design Goal
+# kube-weird-visualizer · Design Goal
 
 ## Intent
 

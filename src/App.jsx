@@ -30,7 +30,7 @@ function Header() {
   return (
     <header className="text-center mb-8">
       <h1 className="font-display title-gradient text-[clamp(1.9rem,4vw,3.2rem)] font-extrabold tracking-tight leading-tight">
-        kube-visual
+        kube-weird-visualizer
       </h1>
       <p
         className="mt-2 text-[0.78rem] tracking-wide"
