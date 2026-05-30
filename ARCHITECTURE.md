@@ -9,7 +9,7 @@ This document defines the structural specifications, component hierarchies, and 
 ## 1. UI Structural Nomenclature & Multitier Canvas Layout
 ### Layout & Sizing Rules
  * **Nomenclature:** Use Context / Zone for macro physical/virtual infrastructure layers and Container / Instance for platform runtime isolation boundaries.
- * **Prefix System:** Every line on the canvas must explicitly start with its exact system or API object classification in square brackets ([Pod], [Static Pod], [systemd Service]).
+ * **Prefix System:** Each card carries its exact system / API object classification in square brackets ([Static Pod], [systemd], [Service], [NetworkPolicy], [VirtualMachineInstance], …) — **with one deliberate exception: the plain `[Pod]` prefix is omitted.** Pods are by far the most common card, so `[Pod]` is treated as the implicit default and hidden to cut visual noise; every *non-Pod* type is still labeled explicitly. (See `NodeCard.jsx`, which suppresses the prefix only when `typePrefix === 'Pod'`.)
  * **Mobile-First Footprint:** Minimize individual block dimensions. The UI layout tree components must compress cleanly so that **at least two instances sit side-by-side** without clipping content strings when viewed on compact mobile display widths.
 ### Component Nesting Structure
 The workspace viewport canvas must render this exact structural hierarchy:

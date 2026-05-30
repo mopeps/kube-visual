@@ -28,10 +28,11 @@ flow.
 
 1. **Zones are full-width horizontal rows.** Each zone has a thin vertical
    label on the left (rotated text) and a content area on the right.
-2. **Inside each zone, nodes flow with `flex-wrap`.** A node has
-   `min-width: 160px; max-width: 280px` so a narrow window gives one column,
-   a wide window gives three or four columns — the boxes reflow naturally
-   to fill available width.
+2. **Inside each zone, nodes flow with `flex-wrap`.** On desktop a node is a
+   fixed `width: 128px`, so a wide zone packs several compact cards per row and
+   a narrow one wraps them naturally. Under 640px the cards switch to a fluid
+   two-up grid (`flex: 1 1 calc(50% - 4px)`) so at least two always sit
+   side-by-side without clipping (see `.node` in `src/index.css`).
 3. **Trace connectors are a numbered SVG overlay** drawn between the involved
    nodes when an event is active — not arrow rows wedged between zones. Each
    connector carries a clickable step badge (`①`, `②`, …); the overlay measures
