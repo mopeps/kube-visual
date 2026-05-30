@@ -943,10 +943,11 @@ button.object-tag:hover {
   line-height: 1.55;
   color: var(--tx-muted);
 }
-/* ── Manifest → Kernel blueprint tree ──────────────────────────────── */
-/* Dense, monospace ASCII-style tree. One line per node; the short note sits
-   dimmed beneath, and deeper detail unfolds on click. No card boxes.
-   The whole tree lives behind a collapsed-by-default section toggle. */
+/* ── Manifest → Kernel pipeline ─────────────────────────────────────── */
+/* A clean stack of accent bands threaded by a single vertical spine. Each row
+   shows only its label at rest; its one-line note and any deeper detail unfold
+   on click. No ASCII gutters, no order numbers, no card boxes.
+   The whole pipeline lives behind a collapsed-by-default section toggle. */
 .tree-section-toggle {
   display: flex;
   align-items: center;
@@ -969,96 +970,130 @@ button.object-tag:hover {
 .pipeline-tree {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.72rem;
-  line-height: 1.45;
+  line-height: 1.5;
 }
-.tree-band { margin-bottom: 2px; }
-.tree-band-head {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-family: 'Syne', sans-serif;
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  margin: 8px 0 4px;
+
+/* Each band is a two-column grid: a narrow icon gutter and the band content.
+   The icons are threaded by a single vertical spine (the ::before line) — this
+   is the only "descent" cue, replacing the old order numbers and ▼ connectors. */
+.tree-band {
+  position: relative;
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  padding-bottom: 14px;
 }
-.tree-band-num {
+.tree-band:not(.is-last)::before {
+  content: '';
+  position: absolute;
+  left: 12.5px;
+  top: 28px;
+  bottom: -1px;
+  width: 1px;
+  background: var(--band-color, var(--border-w));
+  opacity: 0.3;
+}
+.tree-band-icon {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  z-index: 1;
+  width: 26px;
+  height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 1px solid currentColor;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.58rem;
-  flex: 0 0 auto;
+  font-size: 0.82rem;
+  color: var(--band-color);
+  border: 1px solid var(--border-w);
+  border-color: color-mix(in srgb, var(--band-color) 45%, transparent);
+  background: rgba(0, 0, 0, 0.25);
+  background: color-mix(in srgb, var(--band-color) 10%, rgba(0, 0, 0, 0.25));
+  border-radius: 7px;
 }
-.tree-band-icon { display: inline-flex; align-items: center; font-size: 0.9rem; }
-.tree-band-title { line-height: 1; }
-
-.tree-group { margin-bottom: 2px; }
-.tree-subhead {
-  font-size: 0.62rem;
-  letter-spacing: 0.04em;
-  opacity: 0.85;
-  margin: 4px 0 1px;
-  padding-left: 3px;
-}
-
-.tree-row {
+.tree-band-head {
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  min-height: 26px;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
-.tree-gutter {
-  white-space: pre;
-  color: var(--tx-dim);
-  flex: 0 0 auto;
-  user-select: none;
+.tree-band-body {
+  grid-column: 2;
+  grid-row: 2;
+  padding-top: 5px;
 }
-.tree-body {
-  min-width: 0;
-  flex: 1 1 auto;
-  padding-bottom: 1px;
+
+.tree-group { margin-top: 6px; }
+.tree-group:first-child { margin-top: 0; }
+.tree-subhead {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin: 2px 0;
 }
+
 .tree-row-head {
-  display: inline-flex;
+  display: flex;
   align-items: baseline;
   gap: 6px;
+  width: 100%;
   background: none;
   border: none;
-  padding: 0;
+  padding: 2px 0;
   font: inherit;
   text-align: left;
+  border-radius: 4px;
 }
+.tree-caret {
+  flex: 0 0 auto;
+  width: 0.7em;
+  font-size: 0.62rem;
+  line-height: 1;
+  color: var(--tx-dim);
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+.tree-caret.is-open { transform: rotate(90deg); }
+.tree-row-head[data-expandable]:hover .tree-caret { color: currentColor; }
+.tree-row-head[data-expandable]:hover .tree-label { color: var(--tx-bright); }
 .tree-label {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-.tree-row-head:hover .tree-label,
-.tree-row-head[aria-expanded] .tree-label { text-decoration: none; }
-.tree-row-head[aria-expanded]:hover .tree-label { opacity: 0.85; }
-.tree-toggle {
-  font-size: 0.66rem;
-  color: var(--tx-muted);
-  flex: 0 0 auto;
+
+/* Child nodes (e.g. a Pod's consumed resources) indent under their parent,
+   threaded by a soft accent rail instead of ASCII branch glyphs. */
+.tree-children {
+  margin: 1px 0 2px 8px;
+  padding-left: 13px;
+  border-left: 1px solid var(--border-w);
+  border-left-color: color-mix(in srgb, var(--row-color, var(--band-color)) 25%, transparent);
+}
+
+/* The note + deeper detail revealed when a row is expanded. */
+.tree-reveal {
+  margin: 2px 0 5px 2px;
+  padding: 6px 10px;
+  border-left: 2px solid var(--border-w);
+  border-left-color: color-mix(in srgb, var(--row-color, var(--band-color)) 45%, transparent);
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 0 6px 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 .tree-note {
   color: var(--tx-muted);
-  font-size: 0.64rem;
-  opacity: 0.9;
+  font-size: 0.66rem;
   overflow-wrap: anywhere;
-}
-.tree-detail {
-  margin: 3px 0 5px;
-  padding: 6px 9px;
-  border-left: 2px solid var(--border-w);
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 0 5px 5px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 .tree-detail-bullet {
   font-size: 0.64rem;
@@ -1086,12 +1121,6 @@ button.object-tag:hover {
   font-size: 0.64rem;
   color: var(--tx-dim);
   overflow-wrap: anywhere;
-}
-.tree-connector {
-  font-size: 0.6rem;
-  line-height: 1;
-  padding: 2px 0 1px 3px;
-  opacity: 0.55;
 }
 
 @media (max-width: 640px) {
