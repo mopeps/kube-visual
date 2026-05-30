@@ -583,7 +583,7 @@ export const ZONES = [
                   {
                     id: 'netpol-ecommerce',
                     title: 'E-Commerce Network Policy',
-                    typePrefix: 'NWpolicy',
+                    typePrefix: 'NWPOLICY',
                     badges: [
                       { label: 'frontend → backend', color: 'var(--k-green)' },
                       { label: 'OVN ACL', color: 'var(--k-green)' },
@@ -659,7 +659,7 @@ const OVERVIEW_NODE_TYPES = new Set([
   'Static Pod',
   'VirtualMachineInstance',
   'Service', // Networking / Service abstractions (ClusterIP, LoadBalancer)
-  'NWpolicy', // Policy abstractions realized as OVN ACLs / OpenFlow rules
+  'NWPOLICY', // Policy abstractions realized as OVN ACLs / OpenFlow rules
 ])
 
 function assertOverviewWhitelist(zones) {
