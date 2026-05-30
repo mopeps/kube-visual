@@ -31,7 +31,7 @@ export const PIPELINE_LAYERS = [
     order: 3,
     label: 'Translation Engine',
     colorVar: '--k-amber',
-    icon: 'gear',
+    icon: 'engine',
     blurb: 'Host systemd services — Kubelet, CRI-O, OVN/OVS — that translate API objects into running processes and wiring.',
   },
   {
