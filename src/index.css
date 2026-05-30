@@ -1056,13 +1056,13 @@ button.object-tag:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Sized + tinted to match the detail-modal interaction icon chips
-     (.interaction-icon): an airy accent square (8% fill, 33% border) holding a
-     ~15px line glyph, rather than the darker/heavier band chip it used to be. */
+  /* Glyph sized + stroked to match the detail-modal interaction icons: a ~15px
+     line glyph in an accent-bordered square. No background fill — the chip is a
+     bare outline so nothing sits tinted behind the glyph. */
   font-size: 0.94rem;
   color: var(--band-color);
   border: 1px solid color-mix(in srgb, var(--band-color) 33%, transparent);
-  background: color-mix(in srgb, var(--band-color) 8%, transparent);
+  background: transparent;
   border-radius: 7px;
 }
 .tree-band-head {
