@@ -897,8 +897,6 @@
       "associatedObject": "Deployment/frontend"
     },
     "role": "WORKLOAD",
-    "runtimeForm": "Deployment · e-commerce-prod (in VM)",
-    "linuxPrimitive": "Pod → app binary + network namespace",
     "problemSolved": "The user-facing application — the terminal destination of the whole external traffic flow.",
     "interactions": [
       "Listens on a private Pod IP address within the guest cluster network.",
@@ -974,8 +972,6 @@
       "associatedObject": "Deployment/backend"
     },
     "role": "WORKLOAD",
-    "runtimeForm": "Deployment · e-commerce-prod (in VM)",
-    "linuxPrimitive": "Pod → app binary + network namespace",
     "problemSolved": "The application's data and API tier, called east-west by the front end.",
     "interactions": [
       "Fronted by the Back-End ClusterIP Service, which the Front-End Workload consumes for east-west API calls.",
