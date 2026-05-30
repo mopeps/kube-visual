@@ -17,8 +17,8 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent 
   // While true the modal animates (snapping back / sliding off); while false it
   // tracks the gesture 1:1 with no transition.
   const [snapping, setSnapping] = useState(false)
-  // Whether the Manifest → Kernel pipeline section is expanded (collapsed by default).
-  const [treeOpen, setTreeOpen] = useState(false)
+  // Whether the Manifest → Kernel pipeline section is expanded (open by default).
+  const [treeOpen, setTreeOpen] = useState(true)
   const modalRef = useRef(null)
   // Drag gesture bookkeeping: startY, whether the modal was at the top when the
   // touch began, and the decided mode (null = undecided, 'drag', or 'scroll').
@@ -29,7 +29,7 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent 
     if (!componentId) return
     setOffset(0)
     setSnapping(false)
-    setTreeOpen(false)
+    setTreeOpen(true)
     drag.current = { startY: 0, atTop: false, mode: 'scroll' }
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
