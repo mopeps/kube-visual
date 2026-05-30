@@ -103,7 +103,6 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
 
       {badges.length > 0 && (
         <div className="detail-section">
-          <h4>Tags</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: explanation ? 12 : 0 }}>
             {badges.map((b) => {
               const isOpen = expandedBadge === b.label
