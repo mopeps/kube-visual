@@ -31,7 +31,7 @@
   --k-sky:    #38bdf8;   /* Guest control plane namespace (lighter blue) */
   --k-teal:   #14b8a6;   /* KubeVirt launcher container (blue → green) */
   --k-green:  #22c55e;   /* Guest worker node · VirtualMachineInstance */
-  --k-purple: #7c3aed;
+  --k-purple: #8b5cf6;   /* Brightened to violet-500, matching the 500-level accents */
   --k-amber:  #f59e0b;
   --k-orange: #f97316;
   --packet:   #ff4d6d;
@@ -731,7 +731,10 @@ body::after {
   border-radius: 999px;
   margin-bottom: 7px;
 }
-.why-text {
+/* Scoped through .why-body so the font-size/line-height win over the shared
+   `.detail-section p` rule (0,1,1) — unscoped, the callout sentence would be
+   forced down to the body 0.76rem/1.7 instead of its intended 0.84rem/1.55. */
+.why-body .why-text {
   margin: 0;
   font-size: 0.84rem;
   line-height: 1.55;
@@ -771,8 +774,12 @@ body::after {
 }
 
 /* Each interaction is a row: kind icon + emphasised verb + sentence. The list
-   resets the shared .detail-section ul/li styling (no padding, no → marker). */
-.interaction-list {
+   resets the shared .detail-section ul/li styling (no left indent, no → marker,
+   no per-item margin). These resets are scoped through an ancestor class so they
+   out-specify `.detail-section ul` / `.detail-section li` (0,1,1) — otherwise the
+   18px list indent leaks back in and pushes the icon chips right of the pipeline
+   band icons they're meant to left-align with. */
+.detail-section .interaction-list {
   list-style: none;
   padding-left: 0;
   margin: 0;
@@ -780,7 +787,7 @@ body::after {
   flex-direction: column;
   gap: 9px;
 }
-.interaction-row {
+.interaction-list .interaction-row {
   display: flex;
   align-items: flex-start;
   gap: 10px;
