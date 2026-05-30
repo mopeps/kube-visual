@@ -1,6 +1,6 @@
 // Recognizes OpenShift / Kubernetes object references inside free-text prose
-// (the detail-modal Interactions and Problem-solved sections) and turns them
-// into inline tag chips instead of leaving them as flat text. This way the
+// (the detail-modal "why it exists" callout and the interaction rows) and turns
+// them into inline tag chips instead of leaving them as flat text. This way the
 // objects a component talks about are cleanly highlighted — and when an object
 // is itself a node on the topology, its chip becomes a shortcut that opens that
 // node's modal.

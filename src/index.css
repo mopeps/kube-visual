@@ -692,7 +692,58 @@ body::after {
   opacity: 0.6;
 }
 
-/* ── Interactions section (relationship rows) ──────────────────────── */
+/* ── "Why it exists" callout ────────────────────────────────────────── */
+/* The single concise point that opens the merged why/interactions section.
+   Accent-tinted card: a key icon + a short role badge + one sentence. It is
+   deliberately heading-less — the visual treatment alone marks it as the
+   essential "why this object is needed" takeaway. */
+.why-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 13px 15px;
+  border: 1px solid;
+  border-radius: 10px;
+}
+.why-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid;
+  border-radius: 8px;
+}
+.why-body { min-width: 0; }
+.why-role {
+  display: inline-block;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border: 1px solid;
+  border-radius: 999px;
+  margin-bottom: 7px;
+}
+.why-text {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  font-weight: 500;
+  color: var(--tx);
+}
+
+/* ── Interactions (relationship rows) ──────────────────────────────── */
+/* Rendered headingless directly under the why-callout, as a continuation of
+   the same point. The divider + spacing separate the rows from the callout
+   without a textual "Interactions" label. */
+.interaction-block {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-w);
+}
 /* Compact key tying each icon to its relationship meaning. */
 .interaction-legend {
   display: flex;

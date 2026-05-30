@@ -6,6 +6,19 @@ import ExploreCommands from './ExploreCommands'
 import InteractionList from './InteractionList'
 import ObjectText from './ObjectText'
 
+// Single accent icon (a key) that fronts the "why it exists" callout — it
+// telegraphs "this is the essential reason" without needing a text heading.
+function WhyIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="5.5" cy="5.5" r="3.2" />
+      <path d="M7.8 7.8 13 13" />
+      <path d="M11 11l1.6-1.6M12.4 12.4 14 10.8" />
+    </svg>
+  )
+}
+
 function PrimitiveInline({ primitive, color, onSelectComponent, selfId }) {
   return (
     <div
@@ -40,9 +53,9 @@ function PrimitiveInline({ primitive, color, onSelectComponent, selfId }) {
 }
 
 // The "everything else" body of the inspector: tag chips, OpenShift context,
-// the legacy type-keyed kernel/OS primitives section, problem-solved prose,
-// interactions, and copy-able shell commands. Rendered below the pipeline tree
-// inside AncestryModal.
+// the legacy type-keyed kernel/OS primitives section, the merged "why it exists"
+// callout + interaction rows, and copy-able shell commands. Rendered below the
+// pipeline tree inside AncestryModal.
 //
 // `suppressLegacyPrimitives` hides the PRIMITIVES_BY_TYPE section for components
 // whose kernel primitives are already shown in the modal's pipeline tree
@@ -184,24 +197,38 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
         </div>
       )}
 
+      {/* The heart of the modal: one concise "why it exists" point (role badge +
+          single sentence) flowing straight into the relationship rows. No
+          explicit headings — the callout and the icon rows are self-evident. */}
       <div className="detail-section">
-        <h4>Problem solved</h4>
-        <p>
-          <ObjectText
-            text={component.problemSolved}
+        <div className="why-callout" style={{ borderColor: `${color}59`, background: `${color}12` }}>
+          <span className="why-icon" style={{ color, borderColor: `${color}59`, background: `${color}1f` }} aria-hidden="true">
+            <WhyIcon />
+          </span>
+          <div className="why-body">
+            {component.role && (
+              <span className="why-role" style={{ color, borderColor: `${color}66`, background: `${color}1a` }}>
+                {component.role}
+              </span>
+            )}
+            <p className="why-text">
+              <ObjectText
+                text={component.problemSolved}
+                onSelectComponent={onSelectComponent}
+                selfId={componentId}
+              />
+            </p>
+          </div>
+        </div>
+
+        {component.interactions?.length > 0 && (
+          <InteractionList
+            interactions={component.interactions}
             onSelectComponent={onSelectComponent}
             selfId={componentId}
           />
-        </p>
+        )}
       </div>
-
-      {component.interactions?.length > 0 && (
-        <InteractionList
-          interactions={component.interactions}
-          onSelectComponent={onSelectComponent}
-          selfId={componentId}
-        />
-      )}
 
       {component.explorationCommands?.length > 0 && (
         <div className="detail-section">
