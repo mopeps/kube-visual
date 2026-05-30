@@ -39,13 +39,6 @@ function Header() {
       <h1 className="font-display title-gradient text-[clamp(1.9rem,4vw,3.2rem)] font-extrabold tracking-tight leading-tight">
         kube-weird-visualizer
       </h1>
-      <p
-        className="mt-2 text-[0.78rem] tracking-wide"
-        style={{ color: 'var(--tx-muted)' }}
-      >
-        An OpenShift Hosted Control Plane, traced from external client down to
-        Linux kernel primitives.
-      </p>
       <div className="flex flex-wrap justify-center items-center gap-x-5 gap-y-2 mt-5">
         {ZONE_LEGEND.map((item) => (
           <LegendItem key={item.label} {...item} />
