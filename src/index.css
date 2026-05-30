@@ -31,7 +31,7 @@
   --k-sky:    #38bdf8;   /* Guest control plane namespace (lighter blue) */
   --k-teal:   #14b8a6;   /* KubeVirt launcher container (blue → green) */
   --k-green:  #22c55e;   /* Guest worker node · VirtualMachineInstance */
-  --k-purple: #7c3aed;
+  --k-purple: #8b5cf6;   /* Brightened to violet-500, matching the 500-level accents */
   --k-amber:  #f59e0b;
   --k-orange: #f97316;
   --packet:   #ff4d6d;
