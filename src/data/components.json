@@ -10,7 +10,7 @@
     "problemSolved": "A browser, app, or external API consumer from outside the cluster — the origin of every inbound request the hosted cluster must serve.",
     "interactions": [
       "Sends HTTPS requests to the cluster's public Route hostname resolved by external DNS.",
-      "TLS is terminated at the Shared Ingress Proxy running in the Bare Metal Cluster."
+      "For control-plane / API traffic the Shared Ingress Proxy only SNI-routes the TLS connection (passthrough) and TLS terminates at the guest kube-apiserver; for *.apps application traffic TLS is terminated by the guest cluster's own Ingress Router."
     ],
     "explorationCommands": [
       "# Simulate a request from outside the cluster\ncurl -v https://<route-hostname>/api/endpoint"
@@ -294,7 +294,7 @@
     "interactions": [
       "Selects the Shared Ingress Proxy Pods and publishes their endpoints behind one external control-plane VIP.",
       "MetalLB (L2 mode) advertises the VIP via gratuitous ARP/NDP from a single elected speaker node.",
-      "kube-proxy / OVN program load-balancer rules that DNAT the VIP to a healthy proxy Pod.",
+      "OVN-Kubernetes programs load-balancer flows that DNAT the VIP to a healthy proxy Pod (OVN-K replaces kube-proxy, so there is no kube-proxy in this datapath).",
       "Application (*.apps wildcard Route) traffic does not use this VIP — it enters via the Apps Ingress LoadBalancer instead."
     ],
     "explorationCommands": [
@@ -331,7 +331,7 @@
     "layer": "Guest Control Plane",
     "role": "NETWORK CONTROL",
     "runtimeForm": "Deployment · openshift-ovn-kubernetes",
-    "linuxPrimitive": "Pod → ovnkube-master + OVN NB DB",
+    "linuxPrimitive": "Pod → ovnkube-control-plane + OVN NB DB",
     "problemSolved": "Translates the guest cluster's Services and NetworkPolicies into the logical network OVN enforces.",
     "interactions": [
       "Watches the Guest API Server for Pod, Service, and NetworkPolicy events.",
@@ -340,7 +340,7 @@
       "Runs as a Pod in the management cluster, programming the OVN Northbound DB for the guest."
     ],
     "explorationCommands": [
-      "# View OVN master logs\noc logs -n openshift-ovn-kubernetes daemonset/ovnkube-master --tail=50",
+      "# View OVN control-plane logs\noc logs -n openshift-ovn-kubernetes deployment/ovnkube-control-plane --tail=50",
       "# Inspect logical switches\novn-nbctl show",
       "# Check OVN southbound flows\novn-sbctl lflow-list | head -30"
     ]
@@ -394,7 +394,7 @@
     "problemSolved": "Hands each booting worker node the config it needs to join the guest cluster — enabling zero-touch provisioning.",
     "interactions": [
       "Provides a TLS-secured endpoint serving node-specific Ignition configs.",
-      "Injects kubelet bootstrap certificates and static Pod manifests.",
+      "Injects the kubelet bootstrap credentials and the machine config (systemd units, kubelet config, pull secrets, certificates) the node applies on first boot.",
       "Called once per node boot; after that, the node's kubelet manages its own certs."
     ],
     "explorationCommands": [
@@ -408,8 +408,8 @@
     "typePrefix": "Pod",
     "layer": "Guest Worker Node",
     "role": "MONITORING",
-    "runtimeForm": "Deployment · openshift-monitoring (in VM)",
-    "linuxPrimitive": "Pod → Prometheus + Thanos (in VM)",
+    "runtimeForm": "StatefulSet · openshift-monitoring (in VM)",
+    "linuxPrimitive": "StatefulSet Pod → Prometheus + Thanos (in VM)",
     "problemSolved": "Collects the guest cluster's metrics and alerts — on the guest's own nodes, like any OpenShift cluster.",
     "interactions": [
       "Scrapes metrics endpoints on guest cluster Pods and nodes from within the guest cluster.",
@@ -674,10 +674,10 @@
     "role": "VIRT AGENT",
     "runtimeForm": "DaemonSet · openshift-cnv",
     "linuxPrimitive": "Pod → virt-handler + libvirt/VMI lifecycle",
-    "problemSolved": "The node agent that actually turns a VirtualMachineInstance into a running VM.",
+    "problemSolved": "The node agent that actually boots a VirtualMachineInstance into a running VM on its node.",
     "interactions": [
       "Watches the management API Server for VirtualMachineInstances assigned to this node.",
-      "Creates and manages the virt-launcher Pod that wraps each qemu-kvm process.",
+      "Signals the virt-launcher Pod (created by virt-controller) to define and boot its qemu-kvm domain via libvirt, then manages that VM's lifecycle on the node.",
       "Reports VMI phase and node-level virtualization health back to the API Server.",
       "Runs as a DaemonSet Pod on every bare-metal node that can host VMs."
     ],
@@ -698,7 +698,7 @@
     "problemSolved": "The Pod that wraps one VM, so KubeVirt can manage a qemu-kvm guest like any other Kubernetes workload.",
     "interactions": [
       "Spawns and supervises the qemu-kvm process for the Guest Worker Node VM.",
-      "Creates a tap interface (tap0) and connects it to the host OVS bridge via a macvtap or bridge port.",
+      "Creates a tap interface (tap0) backing the guest's virtio NIC; under KubeVirt's default masquerade binding it sits on a pod-local bridge (k6t-eth0) with NAT, while the launcher Pod's own eth0 veth is what attaches to the host OVS bridge.",
       "Exposes virtio device interfaces (virtio-net, virtio-blk) to the guest OS."
     ],
     "explorationCommands": [
@@ -1379,7 +1379,7 @@
     "interactions": [
       "Referenced by the workload Pod specs as volume mounts or environment variables.",
       "Projected by the guest kubelet into the Pod as an in-memory tmpfs mount, not a disk file.",
-      "Stored encrypted-at-rest in the guest etcd; access is gated by RBAC on the Secret resource."
+      "Persisted in the guest etcd — encrypted at rest, since HyperShift enables etcd Secret encryption by default (in vanilla Kubernetes this is opt-in); access is gated by RBAC on the Secret resource."
     ],
     "explorationCommands": [
       "# List Secrets in the namespace\noc get secret -n e-commerce-prod --kubeconfig <guest-kubeconfig>",

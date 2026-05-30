@@ -9,7 +9,7 @@ This document defines the structural specifications, component hierarchies, and 
 ## 1. UI Structural Nomenclature & Multitier Canvas Layout
 ### Layout & Sizing Rules
  * **Nomenclature:** Use Context / Zone for macro physical/virtual infrastructure layers and Container / Instance for platform runtime isolation boundaries.
- * **Prefix System:** Each card carries its exact system / API object classification in square brackets ([Static Pod], [systemd], [Service], [NetworkPolicy], [VirtualMachineInstance], …) — **with one deliberate exception: the plain `[Pod]` prefix is omitted.** Pods are by far the most common card, so `[Pod]` is treated as the implicit default and hidden to cut visual noise; every *non-Pod* type is still labeled explicitly. (See `NodeCard.jsx`, which suppresses the prefix only when `typePrefix === 'Pod'`.)
+ * **Prefix System:** Each card carries its exact system / API object classification in square brackets ([Static Pod], [systemd], [Service], [NWPOLICY], [VirtualMachineInstance], …) — **with one deliberate exception: the plain `[Pod]` prefix is omitted.** Pods are by far the most common card, so `[Pod]` is treated as the implicit default and hidden to cut visual noise; every *non-Pod* type is still labeled explicitly. (See `NodeCard.jsx`, which suppresses the prefix only when `typePrefix === 'Pod'`.)
  * **Mobile-First Footprint:** Minimize individual block dimensions. The UI layout tree components must compress cleanly so that **at least two instances sit side-by-side** without clipping content strings when viewed on compact mobile display widths.
 ### Component Nesting Structure
 The workspace viewport canvas must render this exact structural hierarchy:
@@ -107,7 +107,7 @@ The workspace viewport canvas must render this exact structural hierarchy:
                     ├── [Service · ClusterIP] Front-End Workload Service
                     ├── [Pod] Back-End Workload Instance
                     ├── [Service · ClusterIP] Back-End Workload Service
-                    └── [NetworkPolicy] E-Commerce Network Policy (front-end → back-end ingress)
+                    └── [NWPOLICY] E-Commerce Network Policy (front-end → back-end ingress)
 
 ```
 
@@ -134,7 +134,8 @@ store, or a trace-only zone).
    external VIP advertised over ARP/NDP. A `NetworkPolicy` is likewise declarative, but OVN
    compiles it into address sets + ACLs in the Northbound DB that become allow/drop
    OpenFlow rules enforced on `br-int`. That data-plane footprint earns each one a card on
-   the canvas, next to the Pods it routes to or guards: `[Service]`, `[NetworkPolicy]`.
+   the canvas, next to the Pods it routes to or guards: `[Service]`, `[NWPOLICY]` (the
+   compact card prefix for the `NetworkPolicy` kind).
 
 This reinforces the **Default State** rule in §2: desired-state records that have *no*
 data-plane realization (the HCP and Cluster API Custom Resources, plus the guest cluster's
@@ -153,6 +154,12 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    namespace — one instance manages *every* HostedCluster. It is **not** a
    per-guest pod inside the guest control-plane namespace. The per-HCP owner is
    the **Control Plane Operator (CPO)**, which lives in the guest namespace.
+
+   *Aside on KubeVirt agents:* `virt-controller` (cluster-level) **creates** the
+   `virt-launcher` Pod for each VMI; `virt-handler` is the per-node DaemonSet that,
+   once that Pod is running on its node, signals the in-Pod `libvirt`/`virt-launcher`
+   to boot the qemu-kvm domain. virt-handler drives the VM boot/lifecycle *on the
+   node* — it does not create the Pod.
 2. **Guest etcd is a StatefulSet Pod**, not a static pod. Static pods only exist
    on kubelet-managed nodes (`/etc/kubernetes/manifests`); only the *management*
    cluster's own API server/etcd/scheduler/controller-manager are static pods.
@@ -167,9 +174,11 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
 5. **Worker nodes come from NodePools → Cluster API → CAPK.** The HyperShift
    Operator's NodePool controller renders a NodePool into Cluster API objects;
    `cluster-api-provider-kubevirt` (CAPK) creates a KubeVirt `VirtualMachine`,
-   and `virt-handler` on a bare metal worker launches the `virt-launcher` Pod
-   that boots the RHCOS VMI. The Ignition Server only *serves boot config* — it
-   does not create nodes.
+   KubeVirt's `virt-controller` creates the `virt-launcher` Pod for the resulting
+   VMI, and `virt-handler` (the per-node agent) on a bare metal worker then signals
+   that Pod's `libvirt`/`virt-launcher` to boot the RHCOS VMI. (virt-handler drives
+   the VM boot *on the node*; it does not create the Pod.) The Ignition Server only
+   *serves boot config* — it does not create nodes.
 6. **Guest cluster operators (DNS, ingress, monitoring) run on guest worker
    nodes** (inside the VMs), not in the control-plane namespace.
 7. **Two separate north-south ingress paths — do not conflate them.** The
@@ -260,7 +269,7 @@ Adding a component touches several places — keep them in sync:
 
 1. **`src/data/components.json`** — new entry with `componentId`, `displayName`, `layer`,
    `typePrefix` (e.g. `Pod`, `Static Pod`, `systemd`, `VirtualMachineInstance`, `Service`,
-   `NetworkPolicy`),
+   `NWPOLICY`),
    `role` (short upper-case kind tag), `runtimeForm` (the concrete K8s kind + namespace,
    e.g. `Deployment · hypershift`), `linuxPrimitive` (the per-instance Linux realisation,
    e.g. `Pod → Go binary + controller-runtime`), `problemSolved` (one concise "why it
