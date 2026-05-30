@@ -112,6 +112,30 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent 
   const { bands } = buildPipeline(component)
   const hasTree = bands.length > 0
 
+  // The Manifest → Kernel pipeline is passed into DetailSections as a slot so it
+  // can be positioned (after Tags, before Explore) within the section ordering.
+  const pipelineSection = hasTree ? (
+    <div className="detail-section">
+      <button
+        type="button"
+        className="tree-section-toggle"
+        onClick={() => setTreeOpen(o => !o)}
+        aria-expanded={treeOpen}
+        style={{ color }}
+      >
+        <span className="tree-section-caret">{treeOpen ? '▾' : '▸'}</span>
+        <h4 style={{ margin: 0, border: 'none', padding: 0, color: 'var(--tx-muted)' }}>
+          Manifest → Kernel Pipeline
+        </h4>
+      </button>
+      {treeOpen && (
+        <div style={{ marginTop: 12 }}>
+          <PipelineTree bands={bands} />
+        </div>
+      )}
+    </div>
+  ) : null
+
   return createPortal(
     <div
       className="ancestry-overlay animate-fade-in"
@@ -152,33 +176,12 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent 
           </span>
         </div>
 
-        {hasTree && (
-          <div className="detail-section">
-            <button
-              type="button"
-              className="tree-section-toggle"
-              onClick={() => setTreeOpen(o => !o)}
-              aria-expanded={treeOpen}
-              style={{ color }}
-            >
-              <span className="tree-section-caret">{treeOpen ? '▾' : '▸'}</span>
-              <h4 style={{ margin: 0, border: 'none', padding: 0, color: 'var(--tx-muted)' }}>
-                Manifest → Kernel Pipeline
-              </h4>
-            </button>
-            {treeOpen && (
-              <div style={{ marginTop: 12 }}>
-                <PipelineTree bands={bands} />
-              </div>
-            )}
-          </div>
-        )}
-
         <DetailSections
           component={component}
           color={color}
           suppressLegacyPrimitives={hasTree}
           onSelectComponent={onSelectComponent}
+          pipelineSection={pipelineSection}
         />
 
         <div

@@ -60,7 +60,7 @@ function PrimitiveInline({ primitive, color, onSelectComponent, selfId }) {
 // `suppressLegacyPrimitives` hides the PRIMITIVES_BY_TYPE section for components
 // whose kernel primitives are already shown in the modal's pipeline tree
 // (Layer 4), so the same information isn't presented twice.
-export default function DetailSections({ component, color, suppressLegacyPrimitives = false, onSelectComponent }) {
+export default function DetailSections({ component, color, suppressLegacyPrimitives = false, onSelectComponent, pipelineSection = null }) {
   const [expandedPrimitive, setExpandedPrimitive] = useState(null)
   const [expandedBadge, setExpandedBadge] = useState(null)
 
@@ -77,9 +77,32 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
 
   return (
     <>
+      {/* One concise "why it exists" point (role badge + single sentence). No
+          explicit heading — the callout is self-evident. */}
+      <div className="detail-section">
+        <div className="why-callout" style={{ borderColor: `${color}59`, background: `${color}12` }}>
+          <span className="why-icon" style={{ color, borderColor: `${color}59`, background: `${color}1f` }} aria-hidden="true">
+            <WhyIcon />
+          </span>
+          <div className="why-body">
+            {component.role && (
+              <span className="why-role" style={{ color, borderColor: `${color}66`, background: `${color}1a` }}>
+                {component.role}
+              </span>
+            )}
+            <p className="why-text">
+              <ObjectText
+                text={component.problemSolved}
+                onSelectComponent={onSelectComponent}
+                selfId={componentId}
+              />
+            </p>
+          </div>
+        </div>
+      </div>
+
       {badges.length > 0 && (
         <div className="detail-section">
-          <h4>Tags</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: explanation ? 12 : 0 }}>
             {badges.map((b) => {
               const isOpen = expandedBadge === b.label
@@ -128,6 +151,16 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
               {explanation}
             </div>
           )}
+        </div>
+      )}
+
+      {component.interactions?.length > 0 && (
+        <div className="detail-section">
+          <InteractionList
+            interactions={component.interactions}
+            onSelectComponent={onSelectComponent}
+            selfId={componentId}
+          />
         </div>
       )}
 
@@ -197,38 +230,7 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
         </div>
       )}
 
-      {/* The heart of the modal: one concise "why it exists" point (role badge +
-          single sentence) flowing straight into the relationship rows. No
-          explicit headings — the callout and the icon rows are self-evident. */}
-      <div className="detail-section">
-        <div className="why-callout" style={{ borderColor: `${color}59`, background: `${color}12` }}>
-          <span className="why-icon" style={{ color, borderColor: `${color}59`, background: `${color}1f` }} aria-hidden="true">
-            <WhyIcon />
-          </span>
-          <div className="why-body">
-            {component.role && (
-              <span className="why-role" style={{ color, borderColor: `${color}66`, background: `${color}1a` }}>
-                {component.role}
-              </span>
-            )}
-            <p className="why-text">
-              <ObjectText
-                text={component.problemSolved}
-                onSelectComponent={onSelectComponent}
-                selfId={componentId}
-              />
-            </p>
-          </div>
-        </div>
-
-        {component.interactions?.length > 0 && (
-          <InteractionList
-            interactions={component.interactions}
-            onSelectComponent={onSelectComponent}
-            selfId={componentId}
-          />
-        )}
-      </div>
+      {pipelineSection}
 
       {component.explorationCommands?.length > 0 && (
         <div className="detail-section">
