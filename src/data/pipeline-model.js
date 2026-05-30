@@ -287,8 +287,8 @@ function withForms(component, bands) {
 
 // Components with no kubelet/CRI translation step — Services, workload API
 // objects, NetworkPolicies, bare kernel primitives, the off-cluster client —
-// still have a K8s runtime form and/or a Linux realisation worth showing, so
-// they get a minimal pipeline built straight from those two fields.
+// still have a K8s form and/or a Linux realisation worth showing, so they get a
+// minimal pipeline built straight from those two fields.
 function simpleBands(component) {
   const { runtimeForm, linuxPrimitive, displayName, layer } = component
   const bands = []
@@ -301,8 +301,16 @@ function simpleBands(component) {
     })
     return bands
   }
+  // Everything else reaching here — Services, NetworkPolicies, and the workload
+  // API Objects (Deployment/ReplicaSet/Secret/ConfigMap/PVC/PV/EndpointSlice) —
+  // is a *declarative manifest*, not a Runtime Object. Band 2 (Runtime Object)
+  // is reserved for the single concrete instance handed to a supervisor (a Pod
+  // or VMI); a Service has no supervised process, it is desired state reconciled
+  // by a controller. So its K8s form is Logical Intent (band 1), and its descent
+  // skips straight to the kernel datapath (OVN LB flows / ACLs / an etcd record),
+  // mirroring how host systemd services skip the Runtime Object band too.
   if (runtimeForm && runtimeForm !== 'n/a (off-cluster)') {
-    bands.push({ layerId: 'api-boundary', groups: [{ nodes: [{ label: runtimeForm }] }] })
+    bands.push({ layerId: 'logical-intent', groups: [{ nodes: [{ label: runtimeForm }] }] })
   }
   if (linuxPrimitive) {
     bands.push({ layerId: 'linux-primitive', groups: [{ nodes: [{ label: linuxPrimitive }] }] })
