@@ -29,10 +29,16 @@ export const INTERACTION_KINDS = {
     // arrow leaving a wall — this component acts on / pushes to others
     icon: 'out',
   },
+  create: {
+    label: 'Creates',
+    accent: 'var(--k-orange)',
+    // spark — brings a new object/process into existence (create / spawn / run)
+    icon: 'spark',
+  },
   manage: {
     label: 'Manages',
     accent: 'var(--k-purple)',
-    // gear — lifecycle / create / own relationship
+    // gear — ongoing lifecycle / configuration / upkeep of something that exists
     icon: 'gear',
   },
   note: {
@@ -65,10 +71,7 @@ const VERB_KIND = {
   called: 'inbound',
   backed: 'inbound',
   required: 'inbound', requires: 'inbound',
-  authored: 'inbound',
-  provisioned: 'inbound', provisions: 'inbound',
   configured: 'inbound',
-  started: 'inbound',
   handles: 'inbound', handle: 'inbound',
   terminates: 'inbound', terminated: 'inbound',
   accepts: 'inbound',
@@ -93,15 +96,27 @@ const VERB_KIND = {
   opens: 'outbound', open: 'outbound',
   applies: 'outbound', apply: 'outbound',
   pushes: 'outbound', push: 'outbound',
-  registers: 'outbound', register: 'outbound',
   injects: 'outbound', inject: 'outbound',
 
-  // manage — lifecycle / ownership / creation
+  // create — brings a new object/process into existence (vs. manage, which is
+  // upkeep of something that already exists)
+  creates: 'create', create: 'create', created: 'create',
+  spawns: 'create', spawn: 'create', spawned: 'create',
+  provisions: 'create', provision: 'create', provisioned: 'create',
+  runs: 'create', run: 'create',
+  scales: 'create', scaling: 'create', scale: 'create',
+  starts: 'create', start: 'create', started: 'create',
+  authored: 'create', authors: 'create', author: 'create',
+  registers: 'create', register: 'create', registered: 'create',
+  owns: 'create', own: 'create', owned: 'create',
+  renders: 'create', render: 'create', rendered: 'create',
+  realises: 'create', realise: 'create', realised: 'create',
+  realizes: 'create', realize: 'create', realized: 'create',
+  triggers: 'create', trigger: 'create', triggered: 'create',
+  instantiates: 'create', instantiate: 'create',
+
+  // manage — ongoing lifecycle / configuration / upkeep of an existing object
   manages: 'manage', manage: 'manage',
-  creates: 'manage', create: 'manage',
-  runs: 'manage', run: 'manage',
-  spawns: 'manage', spawn: 'manage',
-  scales: 'manage', scaling: 'manage', scale: 'manage',
   sets: 'manage', set: 'manage',
   wires: 'manage', wire: 'manage',
   exposes: 'manage', expose: 'manage',
@@ -109,6 +124,7 @@ const VERB_KIND = {
   integrates: 'manage', integrate: 'manage',
   enforced: 'manage', enforces: 'manage',
   maintains: 'manage', maintain: 'manage',
+  updates: 'manage', updated: 'manage', update: 'manage',
 }
 
 // Pull the leading verb token off a sentence: first run of letters/hyphens.

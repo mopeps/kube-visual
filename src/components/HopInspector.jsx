@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import componentsData from '../data/components.json'
 import { COMPONENT_COLOR } from '../data/zones'
+import TypeIcon from './TypeIcon'
 
 function findComponent(id) {
   return componentsData.find(c => c.componentId === id)
@@ -45,9 +46,15 @@ export default function HopInspector({ activeEvent, activeStep, onSelectStep, on
       <div className="hop-inspector-bar">
         <span className="hop-inspector-num" style={{ color }}>{step.step}</span>
         <div className="hop-inspector-route">
-          <span>{source?.displayName || step.sourceComponentId}</span>
+          <span className="hop-inspector-node">
+            <TypeIcon typePrefix={source?.typePrefix} className="type-icon" title={source?.typePrefix} />
+            {source?.displayName || step.sourceComponentId}
+          </span>
           <span className="hop-inspector-arrow">→</span>
-          <span style={{ color }}>{target?.displayName || step.targetComponentId}</span>
+          <span className="hop-inspector-node" style={{ color }}>
+            <TypeIcon typePrefix={target?.typePrefix} className="type-icon" title={target?.typePrefix} />
+            {target?.displayName || step.targetComponentId}
+          </span>
         </div>
         <div className="hop-inspector-controls">
           <span className="hop-inspector-count">

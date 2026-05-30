@@ -1,5 +1,6 @@
 import componentsData from '../data/components.json'
 import { COMPONENT_COLOR, COMPONENT_ZONE } from '../data/zones'
+import TypeIcon from './TypeIcon'
 
 const KIND = {
   'external-client':                 'n/a (off-cluster)',
@@ -185,7 +186,13 @@ export default function ObjectMapTab() {
               return (
                 <tr key={c.componentId}>
                   <td>
-                    <span style={{ color, fontWeight: 600 }}>
+                    <span className="object-name" style={{ color, fontWeight: 600 }}>
+                      <TypeIcon
+                        typePrefix={c.typePrefix}
+                        size="0.95em"
+                        title={c.typePrefix}
+                        className="object-type-icon"
+                      />
                       {c.typePrefix && (
                         <span style={{ opacity: 0.55, fontWeight: 400, fontSize: '0.7em', marginRight: 4 }}>
                           [{c.typePrefix}]

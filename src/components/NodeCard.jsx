@@ -1,3 +1,5 @@
+import TypeIcon from './TypeIcon'
+
 export default function NodeCard({
   id,
   title,
@@ -37,6 +39,7 @@ export default function NodeCard({
       )}
       {typePrefix && typePrefix !== 'Pod' && (
         <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>
+          <TypeIcon typePrefix={typePrefix} className="type-icon" />
           [{typePrefix}]
         </span>
       )}
