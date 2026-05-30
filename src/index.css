@@ -1056,12 +1056,15 @@ button.object-tag:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.82rem;
+  /* Glyph sized + stroked to match the detail-modal interaction icons: a line
+     glyph in an accent-bordered square. The 24-unit viewBox carries more padding
+     than the interaction icons' 16-unit box, so 1.2rem is needed for the drawn
+     glyph to read at the same size. No background fill — the chip is a bare
+     outline so nothing sits tinted behind the glyph. */
+  font-size: 1.2rem;
   color: var(--band-color);
-  border: 1px solid var(--border-w);
-  border-color: color-mix(in srgb, var(--band-color) 45%, transparent);
-  background: rgba(0, 0, 0, 0.25);
-  background: color-mix(in srgb, var(--band-color) 10%, rgba(0, 0, 0, 0.25));
+  border: 1px solid color-mix(in srgb, var(--band-color) 33%, transparent);
+  background: transparent;
   border-radius: 7px;
 }
 .tree-band-head {

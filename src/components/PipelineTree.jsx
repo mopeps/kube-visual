@@ -4,17 +4,20 @@ import ExploreCommands from './ExploreCommands'
 
 // Monochrome line glyphs for the pipeline bands. Each is a single-stroke SVG
 // drawn with `currentColor`, so it inherits the band head's accent color, and
-// sized at 1em so it tracks `.tree-band-icon`'s font-size. Keyed by the layer's
-// `icon` id in pipeline-layers.js.
+// sized at 1em so it tracks `.tree-band-icon`'s font-size. The stroke weight is
+// tuned to match the detail-modal interaction icons (.interaction-icon) once the
+// 24-unit viewBox is scaled down to ~15px. Keyed by the layer's `icon` id in
+// pipeline-layers.js.
 const BAND_GLYPHS = {
   // Logical Intent — a manifest/document with text lines and a folded corner.
   document: <><path d="M6 2.8h7l5 5v13.4H6z" /><path d="M13 2.8v5h5" /><path d="M9 12h6M9 15h6M9 9h3" /></>,
   // Runtime Object — an isometric cube / packaged object.
   cube: <><path d="M12 2.5 4 7v10l8 4.5 8-4.5V7z" /><path d="m4 7 8 4.5L20 7" /><path d="M12 11.5V21" /></>,
-  // Translation Engine — a gear (machinery). Drawn in the same minimal
-  // single-stroke style as the detail-modal interaction icons: a center circle
-  // with eight short radial spokes, rather than the busier Lucide cog outline.
-  gear: <><circle cx="12" cy="12" r="3.6" /><path d="M12 2.25v3M12 18.75v3M2.25 12h3M18.75 12h3M5.1 5.1l2.1 2.1M16.8 16.8l2.1 2.1M18.9 5.1l-2.1 2.1M7.2 16.8l-2.1 2.1" /></>,
+  // Translation Engine — an electric motor: a body block with a central rotor,
+  // an output shaft, and two mounting feet. Reads as the machinery that does the
+  // work of turning API objects into running processes, more literally than a
+  // bare gear did.
+  engine: <><rect x="4" y="6.5" width="11" height="10" rx="2" /><circle cx="9.5" cy="11.5" r="2.6" /><path d="M15 11.5h4" /><path d="M6.5 16.5v2M12.5 16.5v2" /></>,
   // Linux Kernel Primitives — a microchip / CPU with pins.
   chip: <><rect x="7" y="7" width="10" height="10" rx="1" /><rect x="10.5" y="10.5" width="3" height="3" /><path d="M10 7V4M14 7V4M10 20v-3M14 20v-3M7 10H4M7 14H4M20 10h-3M20 14h-3" /></>,
 }
@@ -29,7 +32,7 @@ function BandIcon({ name }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.6"
+      strokeWidth="2.2"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
