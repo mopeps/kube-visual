@@ -328,7 +328,7 @@ export const ZONES = [
                 typePrefix: 'Pod',
                 badges: [
                   { label: 'HAProxy', color: 'var(--k-sky)' },
-                  { label: 'Route CR', color: 'var(--k-sky)' },
+                  { label: 'SNI routing', color: 'var(--k-sky)' },
                 ],
               },
               // MetalLB L2 LoadBalancer VIP fronting the shared ingress proxy.

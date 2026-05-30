@@ -48,7 +48,7 @@ export const PRIMITIVES_BY_TYPE = {
           'The application binary running as PID 1 inside the container\'s PID namespace. It is the terminal point of the entire HCP ownership chain — from the external client request down through every networking and runtime layer.',
         interactions: [
           'Runs at the intersection of its own network namespace, cgroup slice, and PID namespace.',
-          'Receives inbound socket connections on the Pod\'s private ClusterIP.',
+          'Receives inbound socket connections on the Pod\'s private Pod IP (a ClusterIP is a Service VIP, not the Pod\'s own address).',
           'stdout/stderr are captured by the container runtime and forwarded to oc logs.',
         ],
         commands: [

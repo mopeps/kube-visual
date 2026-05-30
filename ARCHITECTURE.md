@@ -153,6 +153,12 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    namespace — one instance manages *every* HostedCluster. It is **not** a
    per-guest pod inside the guest control-plane namespace. The per-HCP owner is
    the **Control Plane Operator (CPO)**, which lives in the guest namespace.
+
+   *Aside on KubeVirt agents:* `virt-controller` (cluster-level) **creates** the
+   `virt-launcher` Pod for each VMI; `virt-handler` is the per-node DaemonSet that,
+   once that Pod is running on its node, signals the in-Pod `libvirt`/`virt-launcher`
+   to boot the qemu-kvm domain. virt-handler drives the VM boot/lifecycle *on the
+   node* — it does not create the Pod.
 2. **Guest etcd is a StatefulSet Pod**, not a static pod. Static pods only exist
    on kubelet-managed nodes (`/etc/kubernetes/manifests`); only the *management*
    cluster's own API server/etcd/scheduler/controller-manager are static pods.
@@ -167,9 +173,11 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
 5. **Worker nodes come from NodePools → Cluster API → CAPK.** The HyperShift
    Operator's NodePool controller renders a NodePool into Cluster API objects;
    `cluster-api-provider-kubevirt` (CAPK) creates a KubeVirt `VirtualMachine`,
-   and `virt-handler` on a bare metal worker launches the `virt-launcher` Pod
-   that boots the RHCOS VMI. The Ignition Server only *serves boot config* — it
-   does not create nodes.
+   KubeVirt's `virt-controller` creates the `virt-launcher` Pod for the resulting
+   VMI, and `virt-handler` (the per-node agent) on a bare metal worker then signals
+   that Pod's `libvirt`/`virt-launcher` to boot the RHCOS VMI. (virt-handler drives
+   the VM boot *on the node*; it does not create the Pod.) The Ignition Server only
+   *serves boot config* — it does not create nodes.
 6. **Guest cluster operators (DNS, ingress, monitoring) run on guest worker
    nodes** (inside the VMs), not in the control-plane namespace.
 7. **Two separate north-south ingress paths — do not conflate them.** The

@@ -2,7 +2,7 @@
 // Keys must match badge label strings exactly (case-sensitive).
 export const BADGE_GLOSSARY = {
   'HTTPS :443':
-    'Port 443 is the standard HTTPS port. All external traffic arrives here encrypted; the Shared Ingress Proxy terminates the TLS session before forwarding to backend services.',
+    'Port 443 is the standard HTTPS port. All external traffic arrives here encrypted. For control-plane / API traffic the Shared Ingress Proxy reads only the TLS SNI and passes the connection through (TLS terminates at the guest kube-apiserver, which needs the client cert for mTLS auth); for *.apps application traffic TLS is terminated by the guest cluster\'s own Ingress Router.',
   'TLS 1.3':
     'Transport Layer Security 1.3 — the current standard for encrypting data in transit. Provides forward secrecy and faster 1-RTT handshakes compared to TLS 1.2.',
   'ClusterVersion CR':
@@ -25,6 +25,8 @@ export const BADGE_GLOSSARY = {
     'High-Availability Proxy — the load-balancer engine inside OpenShift\'s Ingress Router. It reads Route CRs and dynamically updates its backends to route HTTP/HTTPS traffic to matching services.',
   'Route CR':
     'OpenShift-specific resource that maps a public hostname to a backend Service. The Ingress Router watches Route objects and programs HAProxy rules so external traffic reaches the right Pod.',
+  'SNI routing':
+    'The Shared Ingress Proxy selects a hosted cluster\'s control-plane backend by reading the TLS Server Name Indication (SNI) hostname and passing the connection through unterminated. Its backends come from each HostedCluster\'s control-plane endpoints (kube-apiserver, OAuth, Konnectivity, Ignition), not from OpenShift Route objects.',
   'Northbound DB':
     'OVN\'s logical network database. Stores high-level constructs (logical switches, routers, load balancers, ACLs). ovn-controller on each node translates these into low-level OpenFlow rules on the OVS bridge.',
   'Cloud API':

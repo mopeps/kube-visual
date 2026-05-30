@@ -198,7 +198,7 @@
         "step": 6,
         "sourceComponentId": "capk-provider",
         "targetComponentId": "kubevirt-launcher",
-        "description": "CAPK creates a VirtualMachine object; KubeVirt's virt-handler on a bare metal worker node launches the virt-launcher Pod, which starts the qemu-kvm process and boots the RHCOS VirtualMachineInstance."
+        "description": "CAPK creates a VirtualMachine object; KubeVirt's virt-controller creates the virt-launcher Pod for it, and virt-handler on the bare metal worker node then signals that Pod to start the qemu-kvm process and boot the RHCOS VirtualMachineInstance."
       },
       {
         "step": 7,
