@@ -5,6 +5,7 @@ import { PRIMITIVES_BY_TYPE, SELF_PRIMITIVE_IDS } from '../data/primitives'
 import ExploreCommands from './ExploreCommands'
 import InteractionList from './InteractionList'
 import ObjectText from './ObjectText'
+import DocLinks from './DocLinks'
 
 // Single accent icon (a key) that fronts the "why it exists" callout — it
 // telegraphs "this is the essential reason" without needing a text heading.
@@ -216,6 +217,8 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
           <ExploreCommands commands={component.explorationCommands} color={color} />
         </div>
       )}
+
+      <DocLinks links={component.docLinks} color={color} />
     </>
   )
 }

@@ -35,6 +35,16 @@
       "# Check HyperShift operator status\noc get pods -n hypershift",
       "# List all HostedClusters\noc get hostedcluster -A",
       "# View a HostedCluster spec\noc get hostedcluster <name> -n <namespace> -o yaml"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/hosted_control_planes/hosted-control-planes-overview"
+      },
+      {
+        "label": "HyperShift",
+        "url": "https://hypershift-docs.netlify.app/"
+      }
     ]
   },
   {
@@ -55,6 +65,16 @@
     "explorationCommands": [
       "# List HostedClusters\noc get hostedcluster -A",
       "# Inspect a HostedCluster's conditions\noc get hostedcluster <name> -n clusters -o jsonpath='{.status.conditions}'"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/hosted_control_planes/hosted-control-planes-overview"
+      },
+      {
+        "label": "HyperShift",
+        "url": "https://hypershift-docs.netlify.app/"
+      }
     ]
   },
   {
@@ -77,6 +97,16 @@
       "# List NodePools for a hosted cluster\noc get nodepool -n clusters",
       "# Scale a NodePool\noc scale nodepool <name> -n clusters --replicas=3",
       "# Inspect NodePool status\noc get nodepool <name> -n clusters -o yaml"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/hosted_control_planes/hosted-control-planes-overview"
+      },
+      {
+        "label": "HyperShift",
+        "url": "https://hypershift-docs.netlify.app/"
+      }
     ]
   },
   {
@@ -97,6 +127,12 @@
       "# View cluster version and upgrade status\noc get clusterversion",
       "# Check cluster operator conditions\noc get clusteroperators",
       "# View CVO logs\noc logs -n <hcp-namespace> deployment/cluster-version-operator --tail=50"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/updating_clusters/understanding-openshift-updates-1"
+      }
     ]
   },
   {
@@ -118,6 +154,16 @@
       "# Check the control-plane-operator pod\noc get pods -n <hcp-namespace> -l app=control-plane-operator",
       "# View CPO logs\noc logs -n <hcp-namespace> deployment/control-plane-operator --tail=50",
       "# Inspect the HostedControlPlane it reconciles\noc get hostedcontrolplane -n <hcp-namespace> -o yaml"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/hosted_control_planes/hosted-control-planes-overview"
+      },
+      {
+        "label": "HyperShift",
+        "url": "https://hypershift-docs.netlify.app/"
+      }
     ]
   },
   {
@@ -138,6 +184,12 @@
       "# Check the CAPI manager pod\noc get pods -n <hcp-namespace> -l control-plane=capi-controller-manager",
       "# List the Machines for this hosted cluster\noc get machines.cluster.x-k8s.io -n <hcp-namespace>",
       "# View MachineDeployment status\noc get machinedeployment -n <hcp-namespace>"
+    ],
+    "docLinks": [
+      {
+        "label": "Cluster API",
+        "url": "https://cluster-api.sigs.k8s.io/"
+      }
     ]
   },
   {
@@ -158,6 +210,16 @@
       "# Check the CAPK provider pod\noc get pods -n <hcp-namespace> -l control-plane=capi-kubevirt-controller-manager",
       "# List the VirtualMachines backing the worker nodes\noc get vm -n <hcp-namespace>",
       "# Inspect a KubevirtMachine\noc get kubevirtmachine -n <hcp-namespace> -o yaml"
+    ],
+    "docLinks": [
+      {
+        "label": "CAPI Provider KubeVirt",
+        "url": "https://github.com/kubernetes-sigs/cluster-api-provider-kubevirt"
+      },
+      {
+        "label": "Cluster API",
+        "url": "https://cluster-api.sigs.k8s.io/"
+      }
     ]
   },
   {
@@ -179,6 +241,16 @@
       "# Get guest API server URL\noc get hostedcluster <name> -n <ns> -o jsonpath='{.status.controlPlaneEndpoint}'",
       "# Check guest API server health\ncurl -k https://<guest-api-endpoint>/healthz",
       "# View API server logs\noc logs -n <hcp-namespace> deployment/kube-apiserver --tail=50"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/overview/components/#kube-apiserver"
+      },
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/architecture/control-plane"
+      }
     ]
   },
   {
@@ -199,6 +271,12 @@
     "explorationCommands": [
       "# View OAuth server logs\noc logs -n <hcp-namespace> deployment/oauth-server --tail=50",
       "# Check OAuth routes on the guest cluster\noc get route oauth-openshift -n openshift-authentication"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/authentication_and_authorization/index"
+      }
     ]
   },
   {
@@ -219,6 +297,12 @@
     "explorationCommands": [
       "# View controller manager logs\noc logs -n <hcp-namespace> deployment/kube-controller-manager --tail=50",
       "# Check controller leases\noc get lease -n kube-system"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/overview/components/#kube-controller-manager"
+      }
     ]
   },
   {
@@ -238,6 +322,12 @@
     "explorationCommands": [
       "# View scheduler logs\noc logs -n <hcp-namespace> deployment/kube-scheduler --tail=50",
       "# Inspect scheduling events for a guest pod\noc describe pod <pod-name> -n <ns> | grep -A5 Events"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/"
+      }
     ]
   },
   {
@@ -259,6 +349,16 @@
       "# Check etcd health\noc exec -n <hcp-namespace> etcd-0 -- etcdctl endpoint health",
       "# List etcd members\noc exec -n <hcp-namespace> etcd-0 -- etcdctl member list",
       "# Confirm etcd is a StatefulSet, not a static pod\noc get statefulset etcd -n <hcp-namespace>"
+    ],
+    "docLinks": [
+      {
+        "label": "etcd",
+        "url": "https://etcd.io/docs/"
+      },
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/overview/components/#etcd"
+      }
     ]
   },
   {
@@ -280,6 +380,16 @@
       "# Check the shared ingress proxy pods\noc get pods -n hypershift-sharedingress",
       "# View the HAProxy SNI routing config\noc exec -n hypershift-sharedingress <proxy-pod> -- cat /etc/haproxy/haproxy.cfg | head -60",
       "# List the per-guest control-plane Services it fronts\noc get svc -n <hcp-namespace> kube-apiserver oauth-openshift konnectivity-server ignition-server"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/hosted_control_planes/hosted-control-planes-overview"
+      },
+      {
+        "label": "HyperShift",
+        "url": "https://hypershift-docs.netlify.app/"
+      }
     ]
   },
   {
@@ -301,6 +411,20 @@
       "# Inspect the LoadBalancer service and its assigned external IP\noc get svc -n hypershift-sharedingress -o wide",
       "# Check which node MetalLB is advertising the VIP from\noc logs -n metallb-system -l component=speaker --tail=50 | grep announcing",
       "# View the MetalLB L2 advertisement / address pool\noc get l2advertisement,ipaddresspool -n metallb-system"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer"
+      },
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ingress_and_load_balancing/load-balancing-with-metallb"
+      },
+      {
+        "label": "MetalLB",
+        "url": "https://metallb.universe.tf/concepts/layer2/"
+      }
     ]
   },
   {
@@ -322,6 +446,20 @@
       "# Find the infra LoadBalancer the kubevirt CCM created for the guest router\noc get svc -n <hcp-namespace> -l kubevirt.io/cluster-name -o wide",
       "# Confirm the matching router-default LB inside the guest cluster\noc get svc router-default -n openshift-ingress -o wide --kubeconfig <guest-kubeconfig>",
       "# See which node MetalLB advertises the VIP from\noc logs -n metallb-system -l component=speaker --tail=50 | grep announcing"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer"
+      },
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ingress_and_load_balancing/load-balancing-with-metallb"
+      },
+      {
+        "label": "MetalLB",
+        "url": "https://metallb.universe.tf/concepts/layer2/"
+      }
     ]
   },
   {
@@ -343,6 +481,12 @@
       "# View OVN control-plane logs\noc logs -n openshift-ovn-kubernetes deployment/ovnkube-control-plane --tail=50",
       "# Inspect logical switches\novn-nbctl show",
       "# Check OVN southbound flows\novn-sbctl lflow-list | head -30"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ovn-kubernetes_network_plugin/about-ovn-kubernetes"
+      }
     ]
   },
   {
@@ -362,6 +506,12 @@
     "explorationCommands": [
       "# Check CCM logs\noc logs -n <hcp-namespace> deployment/cloud-controller-manager --tail=50",
       "# List cloud provider resources\noc get nodes -o wide"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/architecture/cloud-controller/"
+      }
     ]
   },
   {
@@ -381,6 +531,12 @@
     "explorationCommands": [
       "# Check konnectivity server\noc logs -n <hcp-namespace> deployment/konnectivity-server --tail=50",
       "# Verify tunnel health\noc get pods -n <hcp-namespace> -l app=konnectivity-server"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/tasks/extend-kubernetes/setup-konnectivity/"
+      }
     ]
   },
   {
@@ -400,6 +556,16 @@
     "explorationCommands": [
       "# Check ignition server\noc get pods -n <hcp-namespace> -l app=ignition-server",
       "# View ignition config for a node (requires admin certs)\ncurl -k https://<ignition-endpoint>/ignition"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/hosted_control_planes/hosted-control-planes-overview"
+      },
+      {
+        "label": "Ignition",
+        "url": "https://coreos.github.io/ignition/"
+      }
     ]
   },
   {
@@ -420,6 +586,12 @@
     "explorationCommands": [
       "# Check monitoring stack (from the guest cluster)\noc get pods -n openshift-monitoring --kubeconfig <guest-kubeconfig>",
       "# Query Prometheus directly\noc exec -n openshift-monitoring prometheus-k8s-0 --kubeconfig <guest-kubeconfig> -- promtool query instant http://localhost:9090 'up'"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/monitoring/index"
+      }
     ]
   },
   {
@@ -440,6 +612,12 @@
       "# Check kubelet status on the master\nsystemctl status kubelet",
       "# See which static pods the kubelet is running\nls /etc/kubernetes/manifests",
       "# Inspect the master node object\noc get node <baremetal-master> -o wide"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/"
+      }
     ]
   },
   {
@@ -460,6 +638,16 @@
       "# List running containers on the master\ncrictl ps",
       "# Inspect the kube-apiserver static pod container\ncrictl inspect $(crictl ps --name kube-apiserver -q)",
       "# View CRI-O logs\njournalctl -u crio --no-pager | tail -50"
+    ],
+    "docLinks": [
+      {
+        "label": "CRI-O",
+        "url": "https://cri-o.io/"
+      },
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/setup/production-environment/container-runtimes/#cri-o"
+      }
     ]
   },
   {
@@ -480,6 +668,12 @@
       "# Show OVS bridge topology\novs-vsctl show",
       "# Dump OpenFlow rules on br-int\novs-ofctl dump-flows br-int | head -30",
       "# Check OVS service health\nsystemctl status openvswitch"
+    ],
+    "docLinks": [
+      {
+        "label": "Open vSwitch",
+        "url": "https://docs.openvswitch.org/en/latest/"
+      }
     ]
   },
   {
@@ -500,6 +694,12 @@
       "# View OVN node logs\noc logs -n openshift-ovn-kubernetes -l app=ovnkube-node --tail=50",
       "# List OVS flows on this node\novs-ofctl dump-flows br-int",
       "# Check OVN southbound DB entries\novn-sbctl show"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ovn-kubernetes_network_plugin/about-ovn-kubernetes"
+      }
     ]
   },
   {
@@ -521,6 +721,16 @@
       "# Confirm the API server static pod is running on the master\noc get pods -n openshift-kube-apiserver -l apiserver=true -o wide",
       "# Check API server health locally on the node\ncurl -k https://localhost:6443/healthz",
       "# View the static pod manifest\ncat /etc/kubernetes/manifests/kube-apiserver-pod.yaml | head -40"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/"
+      },
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/overview/components/#kube-apiserver"
+      }
     ]
   },
   {
@@ -543,6 +753,16 @@
       "# Check management etcd health\noc exec -n openshift-etcd etcd-<master> -- etcdctl endpoint health",
       "# List etcd members\noc exec -n openshift-etcd etcd-<master> -- etcdctl member list -w table",
       "# View the static pod manifest\ncat /etc/kubernetes/manifests/etcd-pod.yaml | head -40"
+    ],
+    "docLinks": [
+      {
+        "label": "etcd",
+        "url": "https://etcd.io/docs/"
+      },
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/overview/components/#etcd"
+      }
     ]
   },
   {
@@ -563,6 +783,16 @@
       "# Check the controller-manager static pod\noc get pods -n openshift-kube-controller-manager -l kube-controller-manager=true",
       "# View controller leases\noc get lease -n kube-system",
       "# View the static pod manifest\ncat /etc/kubernetes/manifests/kube-controller-manager-pod.yaml | head -40"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/"
+      },
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/overview/components/#kube-controller-manager"
+      }
     ]
   },
   {
@@ -583,6 +813,16 @@
       "# Check the scheduler static pod\noc get pods -n openshift-kube-scheduler -l app=openshift-kube-scheduler",
       "# Inspect scheduling decisions for a control-plane pod\noc describe pod <pod> -n <hcp-namespace> | grep -A5 Events",
       "# View the static pod manifest\ncat /etc/kubernetes/manifests/kube-scheduler-pod.yaml | head -40"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/"
+      },
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/"
+      }
     ]
   },
   {
@@ -603,6 +843,12 @@
       "# Check kubelet status\nsystemctl status kubelet",
       "# View kubelet logs\njournalctl -u kubelet -f --no-pager | tail -50",
       "# Check node conditions\noc describe node <baremetal-worker-node>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/"
+      }
     ]
   },
   {
@@ -623,6 +869,16 @@
       "# List running containers\ncrictl ps",
       "# Inspect the KubeVirt launcher container\ncrictl inspect $(crictl ps --name launcher | awk 'NR>1{print $1}')",
       "# View CRI-O logs\njournalctl -u crio --no-pager | tail -50"
+    ],
+    "docLinks": [
+      {
+        "label": "CRI-O",
+        "url": "https://cri-o.io/"
+      },
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/setup/production-environment/container-runtimes/#cri-o"
+      }
     ]
   },
   {
@@ -644,6 +900,12 @@
       "# Show OVS bridge topology\novs-vsctl show",
       "# Dump OpenFlow rules\novs-ofctl dump-flows br-int | head -30",
       "# Check OVS service health\nsystemctl status openvswitch"
+    ],
+    "docLinks": [
+      {
+        "label": "Open vSwitch",
+        "url": "https://docs.openvswitch.org/en/latest/"
+      }
     ]
   },
   {
@@ -664,6 +926,12 @@
       "# View OVN node logs\noc logs -n openshift-ovn-kubernetes -l app=ovnkube-node --tail=50",
       "# List OVS flows on this node\novs-ofctl dump-flows br-int",
       "# Check OVN SB entries for this node\novn-sbctl show"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ovn-kubernetes_network_plugin/about-ovn-kubernetes"
+      }
     ]
   },
   {
@@ -685,6 +953,12 @@
       "# Find virt-handler on the worker nodes\noc get pods -n openshift-cnv -l kubevirt.io=virt-handler -o wide",
       "# View virt-handler logs for this node\noc logs -n openshift-cnv <virt-handler-pod> --tail=50",
       "# List the VMIs it is managing\noc get vmi -A -o wide"
+    ],
+    "docLinks": [
+      {
+        "label": "KubeVirt",
+        "url": "https://kubevirt.io/user-guide/architecture/"
+      }
     ]
   },
   {
@@ -705,6 +979,12 @@
       "# Find the launcher pod\noc get pods -n <hcp-namespace> -l kubevirt.io=virt-launcher",
       "# Inspect qemu process\noc exec -n <hcp-namespace> <launcher-pod> -- ps aux | grep qemu",
       "# View virtual NIC config\noc exec -n <hcp-namespace> <launcher-pod> -- ip link show tap0"
+    ],
+    "docLinks": [
+      {
+        "label": "KubeVirt",
+        "url": "https://kubevirt.io/user-guide/architecture/"
+      }
     ]
   },
   {
@@ -730,6 +1010,16 @@
       "# SSH into the guest worker node (via virtctl)\nvirtctl ssh core@<vmi-name> -n <hcp-namespace>",
       "# Check node status from guest cluster perspective\noc get nodes --kubeconfig <guest-kubeconfig>",
       "# View qemu-kvm process on host\noc exec -n <hcp-namespace> <launcher-pod> -- ps aux | grep qemu"
+    ],
+    "docLinks": [
+      {
+        "label": "KubeVirt",
+        "url": "https://kubevirt.io/user-guide/"
+      },
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/architecture/nodes/"
+      }
     ]
   },
   {
@@ -749,6 +1039,12 @@
     "explorationCommands": [
       "# Check kubelet inside the VM\nvirtctl ssh core@<vmi> -- systemctl status kubelet",
       "# View guest kubelet logs\nvirtctl ssh core@<vmi> -- journalctl -u kubelet --no-pager | tail -50"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/"
+      }
     ]
   },
   {
@@ -769,6 +1065,16 @@
       "# List containers inside the guest VM\nvirtctl ssh core@<vmi> -- crictl ps",
       "# Inspect a container\nvirtctl ssh core@<vmi> -- crictl inspect <container_id>",
       "# View CRI-O logs in guest\nvirtctl ssh core@<vmi> -- journalctl -u crio --no-pager | tail -50"
+    ],
+    "docLinks": [
+      {
+        "label": "CRI-O",
+        "url": "https://cri-o.io/"
+      },
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/setup/production-environment/container-runtimes/#cri-o"
+      }
     ]
   },
   {
@@ -788,6 +1094,12 @@
     "explorationCommands": [
       "# Show guest OVS topology\nvirtctl ssh core@<vmi> -- ovs-vsctl show",
       "# Dump guest OpenFlow rules\nvirtctl ssh core@<vmi> -- ovs-ofctl dump-flows br-int | head -30"
+    ],
+    "docLinks": [
+      {
+        "label": "Open vSwitch",
+        "url": "https://docs.openvswitch.org/en/latest/"
+      }
     ]
   },
   {
@@ -807,6 +1119,12 @@
     "explorationCommands": [
       "# View OVN guest node logs\nvirtctl ssh core@<vmi> -- oc logs -n openshift-ovn-kubernetes ovnkube-node-<id>",
       "# Check guest OVN southbound DB\nvirtctl ssh core@<vmi> -- ovn-sbctl show"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ovn-kubernetes_network_plugin/about-ovn-kubernetes"
+      }
     ]
   },
   {
@@ -826,6 +1144,12 @@
     "explorationCommands": [
       "# Check konnectivity agent inside VM\nvirtctl ssh core@<vmi> -- oc get pods -n kube-system -l app=konnectivity-agent",
       "# Verify tunnel connectivity\nvirtctl ssh core@<vmi> -- curl -k https://<konnectivity-server>:8091/healthz"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/tasks/extend-kubernetes/setup-konnectivity/"
+      }
     ]
   },
   {
@@ -845,6 +1169,16 @@
     "explorationCommands": [
       "# Check node-level CoreDNS\nvirtctl ssh core@<vmi> -- oc get pods -n openshift-dns -l dns.operator.openshift.io/daemonset-dns=default",
       "# Test DNS from a workload pod\noc exec <pod> -n <ns> -- nslookup kubernetes.default.svc.cluster.local"
+    ],
+    "docLinks": [
+      {
+        "label": "CoreDNS",
+        "url": "https://coredns.io/manual/toc/"
+      },
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/"
+      }
     ]
   },
   {
@@ -865,6 +1199,16 @@
       "# Check guest ingress router\nvirtctl ssh core@<vmi> -- oc get pods -n openshift-ingress",
       "# View guest routes\nvirtctl ssh core@<vmi> -- oc get route -A",
       "# Inspect HAProxy config\nvirtctl ssh core@<vmi> -- oc exec -n openshift-ingress <router-pod> -- cat /var/lib/haproxy/conf/haproxy.config | head -40"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ingress_and_load_balancing/configuring-ingress-cluster-traffic"
+      },
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ingress_and_load_balancing/configuring-routes"
+      }
     ]
   },
   {
@@ -885,6 +1229,16 @@
       "# View the router-default LoadBalancer service and its external IP\noc get svc router-default -n openshift-ingress -o wide --kubeconfig <guest-kubeconfig>",
       "# Confirm MetalLB assigned the address from a pool\noc get ipaddresspool -n metallb-system --kubeconfig <guest-kubeconfig>",
       "# See the speaker announcing the VIP\noc logs -n metallb-system -l component=speaker --tail=50 --kubeconfig <guest-kubeconfig> | grep announcing"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer"
+      },
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ingress_and_load_balancing/load-balancing-with-metallb"
+      }
     ]
   },
   {
@@ -936,7 +1290,13 @@
       "cgroupPath": "/sys/fs/cgroup/kubepods.slice/pod_abc123/",
       "networkNamespace": "netns:[4026532578]",
       "mountNamespace": "Virtual File System Bind Mounts"
-    }
+    },
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/workloads/pods/"
+      }
+    ]
   },
   {
     "componentId": "svc-frontend",
@@ -960,6 +1320,12 @@
       "# Inspect the ClusterIP service\noc get svc frontend -n e-commerce-prod -o wide",
       "# List the endpoints it currently routes to\noc get endpointslices -n e-commerce-prod -l kubernetes.io/service-name=frontend",
       "# Show the OVN load-balancer entry backing the ClusterIP\novn-nbctl lb-list | grep <cluster-ip>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/services-networking/service/"
+      }
     ]
   },
   {
@@ -1010,7 +1376,13 @@
       "cgroupPath": "/sys/fs/cgroup/kubepods.slice/pod_def456/",
       "networkNamespace": "netns:[4026532601]",
       "mountNamespace": "Virtual File System Bind Mounts"
-    }
+    },
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/workloads/pods/"
+      }
+    ]
   },
   {
     "componentId": "svc-backend",
@@ -1034,6 +1406,12 @@
       "# Inspect the ClusterIP service\noc get svc backend -n e-commerce-prod -o wide",
       "# Check the endpoints behind the service\noc get endpoints backend -n e-commerce-prod",
       "# Resolve the service DNS from the frontend pod\noc exec deploy/frontend -n e-commerce-prod -- nslookup backend.e-commerce-prod.svc.cluster.local"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/services-networking/service/"
+      }
     ]
   },
   {
@@ -1059,6 +1437,16 @@
       "# List NetworkPolicies in the namespace\noc get networkpolicy -n e-commerce-prod",
       "# Inspect the policy rules\noc get networkpolicy backend-allow-frontend -n e-commerce-prod -o yaml",
       "# Show the OVN ACLs the policy compiled into\novn-nbctl acl-list <port-group>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/services-networking/network-policies/"
+      },
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ovn-kubernetes_network_plugin/about-ovn-kubernetes"
+      }
     ]
   },
   {
@@ -1076,6 +1464,16 @@
     "explorationCommands": [
       "# Find the target host PID of the container\nvirtctl ssh core@<vmi> -- crictl inspect <container_id> | grep pid",
       "# Enter the isolated network namespace\nvirtctl ssh core@<vmi> -- nsenter -t <PID> -n ip addr show"
+    ],
+    "docLinks": [
+      {
+        "label": "man7: network_namespaces",
+        "url": "https://man7.org/linux/man-pages/man7/network_namespaces.7.html"
+      },
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/cluster-administration/networking/"
+      }
     ]
   },
   {
@@ -1095,6 +1493,16 @@
       "# Find cgroup path for a container\nvirtctl ssh core@<vmi> -- crictl inspect <container_id> | grep cgroupsPath",
       "# View memory limit\nvirtctl ssh core@<vmi> -- cat /sys/fs/cgroup/<cgroup_path>/memory.max",
       "# View CPU quota\nvirtctl ssh core@<vmi> -- cat /sys/fs/cgroup/<cgroup_path>/cpu.max"
+    ],
+    "docLinks": [
+      {
+        "label": "man7: cgroups",
+        "url": "https://man7.org/linux/man-pages/man7/cgroups.7.html"
+      },
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/architecture/cgroups/"
+      }
     ]
   },
   {
@@ -1114,6 +1522,12 @@
       "# Exec into the container\noc exec -it <pod-name> -n <namespace> -- /bin/sh",
       "# View the process tree\noc exec <pod-name> -n <namespace> -- ps aux",
       "# Check listening ports\noc exec <pod-name> -n <namespace> -- ss -tlnp"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/workloads/pods/"
+      }
     ]
   },
   {
@@ -1134,6 +1548,16 @@
     "explorationCommands": [
       "# Inspect the HostedControlPlane\noc get hostedcontrolplane -n <hcp-namespace> -o yaml",
       "# Watch its rollout conditions\noc get hostedcontrolplane -n <hcp-namespace> -o jsonpath='{.items[0].status.conditions}'"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/hosted_control_planes/hosted-control-planes-overview"
+      },
+      {
+        "label": "HyperShift",
+        "url": "https://hypershift-docs.netlify.app/"
+      }
     ]
   },
   {
@@ -1153,6 +1577,12 @@
     "explorationCommands": [
       "# Inspect the CAPI Cluster object\noc get cluster.cluster.x-k8s.io -n <hcp-namespace> -o yaml",
       "# List the Machines it owns\noc get machines.cluster.x-k8s.io -n <hcp-namespace>"
+    ],
+    "docLinks": [
+      {
+        "label": "Cluster API",
+        "url": "https://cluster-api.sigs.k8s.io/"
+      }
     ]
   },
   {
@@ -1172,6 +1602,12 @@
     "explorationCommands": [
       "# Inspect the MachineDeployment\noc get machinedeployment -n <hcp-namespace> -o yaml",
       "# Check its rollout status\noc get machinedeployment -n <hcp-namespace>"
+    ],
+    "docLinks": [
+      {
+        "label": "Cluster API",
+        "url": "https://cluster-api.sigs.k8s.io/"
+      }
     ]
   },
   {
@@ -1191,6 +1627,12 @@
     "explorationCommands": [
       "# Inspect the MachineSet\noc get machineset.cluster.x-k8s.io -n <hcp-namespace> -o yaml",
       "# List the Machines it owns\noc get machines.cluster.x-k8s.io -n <hcp-namespace>"
+    ],
+    "docLinks": [
+      {
+        "label": "Cluster API",
+        "url": "https://cluster-api.sigs.k8s.io/"
+      }
     ]
   },
   {
@@ -1210,6 +1652,12 @@
     "explorationCommands": [
       "# Inspect a Machine\noc get machine.cluster.x-k8s.io -n <hcp-namespace> -o yaml",
       "# See its phase (Provisioning / Running / Deleting)\noc get machines.cluster.x-k8s.io -n <hcp-namespace> -o wide"
+    ],
+    "docLinks": [
+      {
+        "label": "Cluster API",
+        "url": "https://cluster-api.sigs.k8s.io/"
+      }
     ]
   },
   {
@@ -1229,6 +1677,12 @@
     "explorationCommands": [
       "# Inspect a KubevirtMachine\noc get kubevirtmachine -n <hcp-namespace> -o yaml",
       "# Map it to its VirtualMachine\noc get vm -n <hcp-namespace>"
+    ],
+    "docLinks": [
+      {
+        "label": "CAPI Provider KubeVirt",
+        "url": "https://github.com/kubernetes-sigs/cluster-api-provider-kubevirt"
+      }
     ]
   },
   {
@@ -1249,6 +1703,16 @@
     "explorationCommands": [
       "# Inspect the VirtualMachine\noc get vm -n <hcp-namespace> -o yaml",
       "# Confirm the running VMI it produced\noc get vmi -n <hcp-namespace> -o wide"
+    ],
+    "docLinks": [
+      {
+        "label": "KubeVirt",
+        "url": "https://kubevirt.io/user-guide/"
+      },
+      {
+        "label": "KubeVirt VM lifecycle",
+        "url": "https://kubevirt.io/user-guide/user_workloads/lifecycle/"
+      }
     ]
   },
   {
@@ -1268,6 +1732,12 @@
     "explorationCommands": [
       "# View the ClusterVersion and upgrade status\noc get clusterversion --kubeconfig <guest-kubeconfig>",
       "# Inspect available updates\noc adm upgrade --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/updating_clusters/understanding-openshift-updates-1"
+      }
     ]
   },
   {
@@ -1287,6 +1757,12 @@
     "explorationCommands": [
       "# List ClusterOperators and their conditions\noc get clusteroperators --kubeconfig <guest-kubeconfig>",
       "# Inspect one operator's conditions\noc get clusteroperator ingress -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/updating_clusters/understanding-openshift-updates-1"
+      }
     ]
   },
   {
@@ -1311,6 +1787,12 @@
     "explorationCommands": [
       "# List Routes in the namespace\noc get route -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
       "# Inspect a Route's host and TLS\noc get route frontend -n e-commerce-prod -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ingress_and_load_balancing/configuring-routes"
+      }
     ]
   },
   {
@@ -1334,6 +1816,12 @@
     "explorationCommands": [
       "# List Deployments in the namespace\noc get deploy -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
       "# Inspect the front-end Deployment\noc get deploy frontend -n e-commerce-prod -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/workloads/controllers/deployment/"
+      }
     ]
   },
   {
@@ -1357,6 +1845,12 @@
     "explorationCommands": [
       "# List ReplicaSets in the namespace\noc get rs -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
       "# See which Pods a ReplicaSet owns\noc get pods -n e-commerce-prod -l app=frontend -o wide --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/"
+      }
     ]
   },
   {
@@ -1380,6 +1874,12 @@
     "explorationCommands": [
       "# List Secrets in the namespace\noc get secret -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
       "# Decode a Secret value\noc get secret backend-db-credentials -n e-commerce-prod -o jsonpath='{.data.password}' --kubeconfig <guest-kubeconfig> | base64 -d"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/configuration/secret/"
+      }
     ]
   },
   {
@@ -1403,6 +1903,12 @@
     "explorationCommands": [
       "# List ConfigMaps in the namespace\noc get configmap -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
       "# Inspect a ConfigMap's data\noc get configmap frontend-app-config -n e-commerce-prod -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/configuration/configmap/"
+      }
     ]
   },
   {
@@ -1426,6 +1932,12 @@
     "explorationCommands": [
       "# List PVCs in the namespace\noc get pvc -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
       "# See which PV a claim is bound to\noc get pvc pvc-backend-data -n e-commerce-prod -o jsonpath='{.spec.volumeName}' --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims"
+      }
     ]
   },
   {
@@ -1445,6 +1957,12 @@
     "explorationCommands": [
       "# List PersistentVolumes (cluster-scoped)\noc get pv --kubeconfig <guest-kubeconfig>",
       "# Inspect a PV's source and claim binding\noc get pv pv-block-data -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/storage/persistent-volumes/"
+      }
     ]
   },
   {
@@ -1468,6 +1986,12 @@
     "explorationCommands": [
       "# List EndpointSlices for a Service\noc get endpointslices -n e-commerce-prod -l kubernetes.io/service-name=frontend --kubeconfig <guest-kubeconfig>",
       "# Inspect the ready endpoints\noc get endpointslices -n e-commerce-prod -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/"
+      }
     ]
   }
 ]

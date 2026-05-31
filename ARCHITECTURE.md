@@ -224,10 +224,22 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
   "explorationCommands": [
     "crictl inspect <container_id> | grep pid",
     "nsenter -t <PID> -n ip addr show"
+  ],
+  "docLinks": [
+    { "label": "man7: network_namespaces", "url": "https://man7.org/linux/man-pages/man7/network_namespaces.7.html" },
+    { "label": "Kubernetes", "url": "https://kubernetes.io/docs/concepts/cluster-administration/networking/" }
   ]
 }
 
 ```
+`docLinks` (optional) is an ordered list of `{ label, url }` links to the
+**official documentation for that specific component**, rendered as an "Official
+Docs" chip row at the bottom of the inspector (after `explorationCommands`) by
+`DocLinks.jsx`. Include the OpenShift and/or Kubernetes page when either applies,
+plus the upstream project's own docs where that is the authoritative source
+(e.g. `KubeVirt`, `MetalLB`, `etcd`, `CRI-O`, `Cluster API`); for pure Linux
+kernel primitives the relevant `man7` page is the authoritative source. `label`
+names the doc source so a component can carry several.
 ### Event Workflow Schema (events.json)
 Note the two distinct ingress flows (modeling invariant #7): `api-ingress-traffic`
 (control-plane / API, terminating at the Guest API Server, shown below) and
@@ -275,7 +287,8 @@ Adding a component touches several places — keep them in sync:
    e.g. `Go binary + controller-runtime` — name the realisation only; do **not** prefix it
    with the supervisor (`Pod →`, `systemd →`, …), which the band structure already conveys),
    `problemSolved` (one concise "why it exists" sentence), `interactions[]`,
-   `explorationCommands[]`. Add `logicalContext`
+   `explorationCommands[]`, and `docLinks[]` (official-docs links — see the
+   metadata schema above). Add `logicalContext`
    (`openShiftProject` + `associatedObject`) for workload pods and VMIs. `runtimeForm` and
    `linuxPrimitive` are folded into the component's Manifest → Kernel pipeline by
    `pipeline-model.js`. For Pods and systemd services `linuxPrimitive` is folded into the

@@ -66,6 +66,7 @@ src/
     InteractionList.jsx      # classified interaction rows
     ObjectText.jsx           # prose with inline object-reference chips
     ExploreCommands.jsx      # copyable shell-command blocks
+    DocLinks.jsx             # "Official Docs" chip row (per-component docLinks)
 ```
 
 ## Critical Gotchas
