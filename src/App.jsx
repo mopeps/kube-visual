@@ -7,6 +7,7 @@ import PacketFlowTab from './components/PacketFlowTab'
 import AncestryModal from './components/AncestryModal'
 import HopInspector from './components/HopInspector'
 import SwipeViews from './components/SwipeViews'
+import { scrollIntoUpperThird } from './lib/scroll'
 
 const TABS = [
   { id: 'overview',   label: 'Architecture Overview' },
@@ -137,11 +138,9 @@ export default function App() {
     lastTraceRef.current = activeEvent.eventId
     if (!focusId) return
     const raf = requestAnimationFrame(() => {
-      const el = document.getElementById(focusId)
-      if (!el) return
-      const rect = el.getBoundingClientRect()
-      const upper = window.innerHeight * 0.33
-      window.scrollBy({ top: rect.top - upper, behavior: 'smooth' })
+      // Works whether the overview scrolls the window (desktop) or its own pane
+      // (the compact swipe pager).
+      scrollIntoUpperThird(document.getElementById(focusId))
     })
     return () => cancelAnimationFrame(raf)
   }, [activeStep, activeEvent, tab])
@@ -175,7 +174,7 @@ export default function App() {
   return (
     <div className="relative">
       <div
-        className="px-3 sm:px-8 py-10 mx-auto"
+        className={`mx-auto ${isCompact ? 'app-shell--compact' : 'px-3 sm:px-8 py-10'}`}
         style={{ maxWidth: 1500 }}
       >
         <Header />
@@ -197,8 +196,10 @@ export default function App() {
         </div>
 
         {isCompact ? (
-          // Touch / small screens: swipe horizontally between tabs.
-          <div className="pt-6">
+          // Touch / small screens: swipe horizontally between tabs. The host
+          // fills the rest of the fixed-height shell so each pane can scroll on
+          // its own.
+          <div className="swipe-host pt-4">
             <SwipeViews
               index={activeIndex}
               count={visibleTabs.length}

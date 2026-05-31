@@ -599,20 +599,48 @@ body::after {
 }
 
 /* ── Swipe pager (touch / small screens) ───────────────────────────── */
+/* In compact mode the app is a fixed-height column (`.app-shell--compact`): the
+   header + tab strip stay put and the pager fills the rest. Each pane is its own
+   vertical scroll container, so tabs scroll independently and a swipe previews
+   the neighbour at its own scroll position — no shared window scroll, no jump. */
+.app-shell--compact {
+  display: flex;
+  flex-direction: column;
+  height: 100svh;
+  padding: 16px 12px 8px;
+  overflow: hidden;
+}
+/* Trim the big shared header/footer margins so the pager gets the height. */
+.app-shell--compact > header { margin-bottom: 12px; }
+.app-shell--compact > p { margin-top: 10px; }
+.swipe-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 .swipe-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
   /* We own the horizontal axis; the browser keeps native vertical scroll. */
   touch-action: pan-y;
 }
 .swipe-track {
   display: flex;
-  align-items: flex-start;
+  height: 100%;
   will-change: transform;
 }
 .swipe-pane {
   flex: 0 0 100%;
   width: 100%;
   min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* A little room to scroll past the last object. */
+  padding-bottom: 4rem;
 }
 /* Let wide code blocks scroll horizontally without arming the pager. */
 .swipe-viewport pre.code-block { touch-action: pan-x; }
