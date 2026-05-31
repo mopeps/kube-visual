@@ -4,6 +4,7 @@ import Zone from './Zone'
 import NodeCard from './NodeCard'
 import IntentStoreCard from './IntentStoreCard'
 import ArrowOverlay from './ArrowOverlay'
+import { scrollIntoUpperThird } from '../lib/scroll'
 
 // Map componentId → step number it first appears in the active event.
 function buildStepNumMap(activeEvent) {
@@ -50,11 +51,7 @@ export default function OverviewTab({
     let raf2
     const raf1 = requestAnimationFrame(() => {
       raf2 = requestAnimationFrame(() => {
-        const el = document.getElementById(highlightId)
-        if (!el) return
-        const rect = el.getBoundingClientRect()
-        const upper = window.innerHeight * 0.33
-        window.scrollBy({ top: rect.top - upper, behavior: 'smooth' })
+        scrollIntoUpperThird(document.getElementById(highlightId))
       })
     })
     const clear = setTimeout(() => onClearHighlight?.(), 2600)
@@ -134,27 +131,35 @@ export default function OverviewTab({
   }
 
   return (
-    <div
-      ref={canvasRef}
-      className="border border-border-w rounded-lg overflow-visible overview-canvas"
-      style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
-    >
-      {visibleZones.flatMap(zone =>
-        zone.hideWrapper
-          ? [
-              // Wrapper hidden: surface its own nodes and child zones directly
-              // so neither is silently dropped.
-              ...(zone.nodes ?? []).map(node => renderNode(node, zone)),
-              ...(zone.zones ?? []).map(child => renderZone(child)),
-            ]
-          : [renderZone(zone)]
-      )}
-      <ArrowOverlay
-        activeEvent={activeEvent}
-        canvasRef={canvasRef}
-        activeStep={activeStep}
-        onSelectStep={onSelectStep}
-      />
-    </div>
+    <>
+      <div
+        ref={canvasRef}
+        className="border border-border-w rounded-lg overflow-visible overview-canvas"
+        style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
+      >
+        {visibleZones.flatMap(zone =>
+          zone.hideWrapper
+            ? [
+                // Wrapper hidden: surface its own nodes and child zones directly
+                // so neither is silently dropped.
+                ...(zone.nodes ?? []).map(node => renderNode(node, zone)),
+                ...(zone.zones ?? []).map(child => renderZone(child)),
+              ]
+            : [renderZone(zone)]
+        )}
+        <ArrowOverlay
+          activeEvent={activeEvent}
+          canvasRef={canvasRef}
+          activeStep={activeStep}
+          onSelectStep={onSelectStep}
+        />
+      </div>
+      {/* Tail spacer: a little room to scroll past the last object, growing by
+          the hop inspector's height (published as --hop-inset) when it's open so
+          the bottom objects can always be scrolled clear of that fixed panel.
+          Extends whichever scroller owns the overview — the window on desktop,
+          the pane in the compact swipe pager. */}
+      <div aria-hidden style={{ height: 'calc(2rem + var(--hop-inset, 0px))' }} />
+    </>
   )
 }

@@ -28,24 +28,25 @@ export default function HopInspector({ activeEvent, activeStep, onSelectStep, on
   }, [activeEvent, activeStep])
 
   // The inspector is fixed to the bottom of the viewport, so at max scroll the
-  // page's last objects stay pinned behind it. Mirror the peek-mode fix: pad the
-  // page bottom by the inspector's height (it varies with the description / step)
-  // so every overview object can be scrolled clear of the panel. A ResizeObserver
-  // keeps the padding in step as the panel grows or shrinks between hops.
+  // overview's last objects stay pinned behind it. Publish the inspector's height
+  // (it varies with the description / step) as the --hop-inset CSS variable; the
+  // overview's tail spacer reserves that much extra room so every object can be
+  // scrolled clear of the panel. A variable (rather than padding a fixed
+  // scroller) lets it work for both the window scroll and the compact pane
+  // scroll. A ResizeObserver keeps it in step as the panel grows or shrinks.
   useEffect(() => {
     const el = panelRef.current
     if (!el) return
-    const body = document.body
-    const prev = body.style.paddingBottom
+    const root = document.documentElement
     const apply = () => {
-      body.style.paddingBottom = `${Math.round(el.offsetHeight) + 24}px`
+      root.style.setProperty('--hop-inset', `${Math.round(el.offsetHeight) + 24}px`)
     }
     apply()
     const ro = new ResizeObserver(apply)
     ro.observe(el)
     return () => {
       ro.disconnect()
-      body.style.paddingBottom = prev
+      root.style.removeProperty('--hop-inset')
     }
   }, [activeEvent, activeStep])
 

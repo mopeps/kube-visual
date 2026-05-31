@@ -67,10 +67,12 @@ export default function ArrowOverlay({ activeEvent, canvasRef, activeStep, onSel
     if (!canvas) return
     const ro = new ResizeObserver(() => measure())
     ro.observe(canvas)
-    window.addEventListener('scroll', measure, { passive: true })
+    // Capture phase so we also catch an inner scroll container (the compact
+    // swipe pane), whose scroll events don't bubble to the window.
+    window.addEventListener('scroll', measure, { passive: true, capture: true })
     return () => {
       ro.disconnect()
-      window.removeEventListener('scroll', measure)
+      window.removeEventListener('scroll', measure, { capture: true })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeEvent])
