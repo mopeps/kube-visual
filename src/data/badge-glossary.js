@@ -63,4 +63,27 @@ export const BADGE_GLOSSARY = {
     'HTTP port exposed by the back-end workload container. Typically reachable only via cluster-internal Service DNS from the front-end Pod.',
   'Tunnel':
     'Persistent gRPC tunnel maintained by the Konnectivity Agent. Allows the bare metal cluster API server to initiate connections to Pods and exec/port-forward endpoints inside the guest VM network.',
+  'LoadBalancer':
+    'Service type that asks the platform for an externally-reachable IP and spreads traffic across the Service\'s backend Pods. There is no cloud here, so MetalLB hands out the IP and advertises it on the local network.',
+  'ClusterIP':
+    'Default Service type — a stable virtual IP reachable only inside the cluster. OVN load-balancer flows DNAT it to one of the backing Pods, giving callers a single address that survives Pod churn.',
+  'MetalLB L2':
+    'Bare-metal load-balancer running in Layer-2 mode: it assigns LoadBalancer Services an external IP and advertises ownership of it via ARP/NDP on the local segment, standing in for a cloud load balancer.',
+  'StatefulSet':
+    'Workload controller for Pods that need a stable identity and their own storage — ordered names and per-Pod PersistentVolumes. Used here so each etcd member keeps its own data across restarts.',
+  'RHCOS':
+    'Red Hat Enterprise Linux CoreOS — the immutable, container-optimised OS the guest worker node VM boots. Updates ship as whole-image swaps driven by Ignition, not in-place package upgrades.',
+  'OVN ACL':
+    'Access-control rule in OVN\'s logical database. A NetworkPolicy compiles into ACLs that br-int enforces as allow/drop OpenFlow rules evaluated on every packet.',
+}
+
+// A badge label that is an apiGroup / apiVersion provenance stamp
+// ("hypershift.openshift.io", "core/v1", "cluster.x-k8s.io", "apps/v1") rather
+// than a concept or a vital stat. These are lowercase dotted/slashed
+// identifiers with no spaces — distinct from concept badges ("gRPC", "TLS 1.3")
+// and config stats ("e-commerce-prod", "router-default"), which carry capitals,
+// spaces, or no dot/slash. The detail modal lifts these out of the badge row
+// into a quiet metadata line instead of a clickable chip.
+export function isApiGroupStamp(label) {
+  return /^[a-z0-9][a-z0-9./-]*[./][a-z0-9][a-z0-9./-]*$/.test(label)
 }

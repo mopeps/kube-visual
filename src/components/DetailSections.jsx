@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { COMPONENT_BADGES } from '../data/zones'
-import { BADGE_GLOSSARY } from '../data/badge-glossary'
+import { BADGE_GLOSSARY, isApiGroupStamp } from '../data/badge-glossary'
 import { PRIMITIVES_BY_TYPE, SELF_PRIMITIVE_IDS } from '../data/primitives'
 import ExploreCommands from './ExploreCommands'
 import InteractionList from './InteractionList'
@@ -66,7 +66,14 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
   const [expandedBadge, setExpandedBadge] = useState(null)
 
   const componentId = component.componentId
-  const badges = COMPONENT_BADGES[componentId] || []
+  const allBadges = COMPONENT_BADGES[componentId] || []
+  // Split the badge row into its three real jobs:
+  //   • apiGroup/version stamps  → a quiet metadata line (provenance, not a chip)
+  //   • everything else          → the badge row (concepts + vital stats)
+  // A concept badge (has a glossary entry) is clickable; a stat badge is a
+  // static label. Keeping them visually distinct means a click never dead-ends.
+  const apiStamps = allBadges.filter((b) => isApiGroupStamp(b.label))
+  const badges = allBadges.filter((b) => !isApiGroupStamp(b.label))
   const explanation = expandedBadge ? BADGE_GLOSSARY[expandedBadge] : null
 
   const primitiveSet =
@@ -102,35 +109,48 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
         </div>
       </div>
 
-      {badges.length > 0 && (
+      {(badges.length > 0 || apiStamps.length > 0) && (
         <div className="detail-section">
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: explanation ? 12 : 0 }}>
             {badges.map((b) => {
               const isOpen = expandedBadge === b.label
               const hasExplanation = !!BADGE_GLOSSARY[b.label]
+              // Concept badge → clickable chip (solid border, hover glow, opens a
+              // definition). Stat badge → static label (no border, no hover) so
+              // its lack of a click affordance is honest at a glance.
+              if (!hasExplanation) {
+                return (
+                  <span
+                    key={b.label}
+                    className="node-badge node-badge--static"
+                    style={{ color: b.color }}
+                  >
+                    {b.label}
+                  </span>
+                )
+              }
               return (
                 <button
                   key={b.label}
                   onClick={() => setExpandedBadge(isOpen ? null : b.label)}
-                  className="node-badge"
+                  className="node-badge node-badge--concept"
                   style={{
                     color: isOpen ? 'var(--bg)' : b.color,
                     borderColor: isOpen ? b.color : `${b.color}66`,
                     background: isOpen ? b.color : `${b.color}1a`,
                     fontSize: '0.62rem',
                     padding: '4px 10px',
-                    cursor: hasExplanation ? 'pointer' : 'default',
+                    cursor: 'pointer',
                     fontFamily: 'inherit',
                     transition: 'background 0.15s, color 0.15s',
-                    opacity: hasExplanation ? 1 : 0.6,
                   }}
                   onMouseEnter={e => {
-                    if (hasExplanation && !isOpen) e.currentTarget.style.background = `${b.color}35`
+                    if (!isOpen) e.currentTarget.style.background = `${b.color}35`
                   }}
                   onMouseLeave={e => {
                     if (!isOpen) e.currentTarget.style.background = `${b.color}1a`
                   }}
-                  title={hasExplanation ? 'Click for explanation' : undefined}
+                  title="Click for explanation"
                 >
                   {b.label}
                 </button>
@@ -150,6 +170,17 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
               }}
             >
               {explanation}
+            </div>
+          )}
+          {apiStamps.length > 0 && (
+            <div className="badge-apigroups">
+              <span className="badge-apigroups-key">API</span>
+              {apiStamps.map((b, i) => (
+                <span key={b.label}>
+                  {i > 0 && <span className="badge-apigroups-sep"> · </span>}
+                  <span className="badge-apigroups-val">{b.label}</span>
+                </span>
+              ))}
             </div>
           )}
         </div>
