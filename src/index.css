@@ -1344,6 +1344,28 @@ button.object-tag:hover {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+/* Structural-kind chip on expandable rows — a monochrome pill that inherits the
+   row's accent (via currentColor) so it tints with the band rather than adding a
+   second colour system. A fixed min-width keeps the chips in a tidy left column
+   for at-a-glance scanning, mirroring the Interactions section's leading icons. */
+.tree-kind-chip {
+  flex: 0 0 auto;
+  align-self: center;
+  min-width: 3.4em;
+  text-align: center;
+  font-size: 0.58rem;
+  font-weight: 600;
+  line-height: 1.55;
+  letter-spacing: 0.03em;
+  padding: 0 0.45em;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: 1px solid color-mix(in srgb, currentColor 42%, transparent);
+  background: color-mix(in srgb, currentColor 13%, transparent);
+}
+.tree-row-head[data-expandable]:hover .tree-kind-chip {
+  background: color-mix(in srgb, currentColor 22%, transparent);
+}
 
 /* Child nodes (e.g. a Pod's consumed resources) indent under their parent,
    threaded by a soft accent rail instead of ASCII branch glyphs. */

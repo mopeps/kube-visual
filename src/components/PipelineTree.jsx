@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { PIPELINE_LAYER_BY_ID } from '../data/pipeline-layers'
+import { rowKind } from '../data/pipeline-kinds'
 import ExploreCommands from './ExploreCommands'
 import ObjectText from './ObjectText'
 
@@ -91,6 +92,10 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
   const kids = node.children || []
   // A row is expandable when it carries a note or deeper detail to reveal.
   const hasExtra = !!node.note || !!node.detail
+  // Structural-kind chip, shown only on the expandable rows (the "extended
+  // information" rows that sit closed by default), to telegraph what kind of
+  // thing the row is the same way the Interactions section telegraphs verbs.
+  const kind = hasExtra ? rowKind(node.label) : null
 
   return (
     <div className="tree-node">
@@ -105,6 +110,7 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
         {hasExtra && (
           <span className={`tree-caret${open ? ' is-open' : ''}`} aria-hidden="true">▸</span>
         )}
+        {kind && <span className="tree-kind-chip">{kind}</span>}
         <span className="tree-label">{node.label}</span>
       </button>
 
