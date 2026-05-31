@@ -92,9 +92,9 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
   const kids = node.children || []
   // A row is expandable when it carries a note or deeper detail to reveal.
   const hasExtra = !!node.note || !!node.detail
-  // Structural-kind chip, shown only on the expandable rows (the "extended
-  // information" rows that sit closed by default), to telegraph what kind of
-  // thing the row is the same way the Interactions section telegraphs verbs.
+  // Structural-kind chip — a one-word "what kind of thing this is" tag (Record,
+  // Map, VIP, Process …) that leads the *revealed description*, not the row label,
+  // the same way the Interactions section tags each description line.
   const kind = hasExtra ? rowKind(node.label) : null
 
   return (
@@ -110,15 +110,15 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
         {hasExtra && (
           <span className={`tree-caret${open ? ' is-open' : ''}`} aria-hidden="true">▸</span>
         )}
-        {kind && <span className="tree-kind-chip">{kind}</span>}
         <span className="tree-label">{node.label}</span>
       </button>
 
       {hasExtra && open && (
         <div className="tree-reveal" style={{ '--row-color': color }}>
-          {node.note && (
+          {(kind || node.note) && (
             <div className="tree-note">
-              <Prose text={node.note} onSelectComponent={onSelectComponent} selfId={selfId} />
+              {kind && <span className="tree-kind-chip">{kind}</span>}
+              {node.note && <Prose text={node.note} onSelectComponent={onSelectComponent} selfId={selfId} />}
             </div>
           )}
           {node.detail && (
