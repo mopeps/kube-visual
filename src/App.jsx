@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import useEventState from './hooks/useEventState'
 import useMediaQuery from './hooks/useMediaQuery'
 import Tabs from './components/Tabs'
@@ -37,6 +37,7 @@ export default function App() {
     selectComponent,
     clearComponent,
     selectStep,
+    focusStep,
     clearStep,
   } = useEventState()
 
@@ -64,6 +65,48 @@ export default function App() {
   // Keep the active index valid for the swipe pager / tab strip.
   const activeIndex = Math.max(0, visibleTabs.findIndex(t => t.id === tab))
 
+  // Jump from a hop in the event tab straight to its object on the overview:
+  // focus the hop (so the arrow + hop inspector light up) and surface the
+  // overview. The auto-scroll effect below then brings the object into view.
+  const jumpToStep = (n) => {
+    focusStep(n)
+    setTab('overview')
+  }
+
+  // Follow the trace on the overview: whenever the inspected hop changes (or an
+  // event is freshly selected) and the overview is showing, scroll the object
+  // the packet is currently on into the upper third of the viewport — keeping
+  // the source above it visible so you keep your bearings along the flow.
+  const lastTraceRef = useRef(null)
+  useEffect(() => {
+    if (tab !== 'overview' || !activeEvent) {
+      if (!activeEvent) lastTraceRef.current = null
+      return
+    }
+    const step = activeStep != null
+      ? activeEvent.steps.find(s => s.step === activeStep)
+      : null
+    // With a hop focused, follow its target (where the packet now is). With no
+    // hop focused, only park at the start when the event was *just* selected —
+    // so dismissing the hop inspector doesn't yank the page back to the top.
+    let focusId
+    if (step) {
+      focusId = step.targetComponentId
+    } else if (lastTraceRef.current !== activeEvent.eventId) {
+      focusId = activeEvent.steps[0]?.sourceComponentId
+    }
+    lastTraceRef.current = activeEvent.eventId
+    if (!focusId) return
+    const raf = requestAnimationFrame(() => {
+      const el = document.getElementById(focusId)
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const upper = window.innerHeight * 0.33
+      window.scrollBy({ top: rect.top - upper, behavior: 'smooth' })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [activeStep, activeEvent, tab])
+
   const overviewPanel = (
     <OverviewTab
       activeEvent={activeEvent}
@@ -78,6 +121,9 @@ export default function App() {
       activeEvent={activeEvent}
       onSelectEvent={selectEvent}
       onClearEvent={clearEvent}
+      activeStep={activeStep}
+      onSelectStep={selectStep}
+      onJumpToStep={jumpToStep}
     />
   )
   const panelFor = (id) => {
@@ -141,6 +187,8 @@ export default function App() {
                   onClearEvent={clearEvent}
                   activeStep={activeStep}
                   onSelectStep={selectStep}
+                  onJumpToStep={jumpToStep}
+                  followSelected
                 />
               </div>
             </aside>

@@ -749,21 +749,43 @@ body::after {
   line-height: 1.65;
 }
 
-.packet-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--packet);
-  animation: pulse-dot 1.2s ease-in-out infinite;
-  margin-right: 4px;
-  vertical-align: middle;
-  flex-shrink: 0;
+/* The hop title doubles as the "reveal in overview" affordance: clicking the
+   object name jumps to it on the architecture canvas. Styled as inline text
+   (not a button) so it reads naturally; the ↗ glyph hints it's a jump. */
+.hop-link {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
 }
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.4; transform: scale(0.7); }
+.hop-link .hop-link-src { color: var(--tx-bright); }
+.hop-link .hop-link-go {
+  margin-left: 6px;
+  font-size: 0.78em;
+  opacity: 0;
+  transition: opacity 0.18s;
 }
+.hop-link:hover .hop-link-go { opacity: 1; }
+.hop-link:hover .hop-link-src,
+.hop-link:hover .hop-link-tgt { text-decoration: underline; }
+
+/* Wordless expand/collapse hint, shown only when a hop has exploration
+   commands. Rotates to point up when its detail is open. */
+.hop-chevron {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  line-height: 1;
+  color: var(--tx-dim);
+  transition: transform 0.18s, color 0.18s;
+}
+.hop-chevron.is-open { transform: rotate(180deg); }
+.hop:hover .hop-chevron { color: var(--tx-muted); }
 
 .hop-detail {
   display: none;

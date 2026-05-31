@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import componentsData from '../data/components.json'
 import events from '../data/events.json'
 import { COMPONENT_COLOR } from '../data/zones'
@@ -7,14 +7,14 @@ function findComponent(id) {
   return componentsData.find(c => c.componentId === id)
 }
 
-function Hop({ step, isOpen, isSelected, onToggle, isFinal }) {
+function Hop({ step, isOpen, isSelected, onToggle, onJump, isFinal }) {
   const target = findComponent(step.targetComponentId)
   const source = findComponent(step.sourceComponentId)
   const color = COMPONENT_COLOR[step.targetComponentId] || 'var(--k-cyan)'
   const sourceColor = COMPONENT_COLOR[step.sourceComponentId] || color
 
   return (
-    <div className={`hop ${isSelected ? 'is-selected' : ''}`} onClick={onToggle}>
+    <div className={`hop ${isSelected ? 'is-selected' : ''}`} data-step={step.step} onClick={onToggle}>
       <div className="hop-num-col">
         <div
           className="hop-num"
@@ -38,12 +38,25 @@ function Hop({ step, isOpen, isSelected, onToggle, isFinal }) {
         style={{ borderColor: isSelected ? color : `${color}40` }}
       >
         <h3>
-          <span className="packet-dot" />
-          <span>
-            {source?.displayName || step.sourceComponentId}
-            <span style={{ color: 'var(--tx-dim)', margin: '0 8px' }}>→</span>
-            <span style={{ color }}>{target?.displayName || step.targetComponentId}</span>
-          </span>
+          {onJump ? (
+            <button
+              type="button"
+              className="hop-link"
+              onClick={(e) => { e.stopPropagation(); onJump(step.step) }}
+              title="Reveal this object in the architecture overview"
+            >
+              <span className="hop-link-src">{source?.displayName || step.sourceComponentId}</span>
+              <span style={{ color: 'var(--tx-dim)', margin: '0 8px' }}>→</span>
+              <span className="hop-link-tgt" style={{ color }}>{target?.displayName || step.targetComponentId}</span>
+              <span className="hop-link-go" aria-hidden style={{ color }}>↗</span>
+            </button>
+          ) : (
+            <span>
+              {source?.displayName || step.sourceComponentId}
+              <span style={{ color: 'var(--tx-dim)', margin: '0 8px' }}>→</span>
+              <span style={{ color }}>{target?.displayName || step.targetComponentId}</span>
+            </span>
+          )}
         </h3>
         <div className="hop-meta">
           <span style={{ color: sourceColor }}>{source?.layer || ''}</span>
@@ -52,24 +65,21 @@ function Hop({ step, isOpen, isSelected, onToggle, isFinal }) {
         </div>
         <p>{step.description}</p>
         {target?.explorationCommands?.length > 0 && (
-          <div className={`hop-detail ${isOpen ? 'is-open' : ''}`}>
-            <div
-              className="text-[0.6rem] uppercase tracking-[0.14em] mb-2"
-              style={{ color: 'var(--tx-muted)' }}
-            >
-              Explore the target ({target.displayName})
+          <>
+            <div className={`hop-detail ${isOpen ? 'is-open' : ''}`}>
+              <div
+                className="text-[0.6rem] uppercase tracking-[0.14em] mb-2"
+                style={{ color: 'var(--tx-muted)' }}
+              >
+                Explore the target ({target.displayName})
+              </div>
+              {target.explorationCommands.map((cmd, i) => (
+                <pre key={i} className="code-block mb-2">{cmd}</pre>
+              ))}
             </div>
-            {target.explorationCommands.map((cmd, i) => (
-              <pre key={i} className="code-block mb-2">{cmd}</pre>
-            ))}
-          </div>
+            <span className={`hop-chevron ${isOpen ? 'is-open' : ''}`} aria-hidden>⌄</span>
+          </>
         )}
-        <div
-          className="text-[0.6rem] mt-3"
-          style={{ color: 'var(--tx-dim)' }}
-        >
-          {isOpen ? '▾ click to collapse' : '▸ click to inspect target'}
-        </div>
       </div>
     </div>
   )
@@ -145,8 +155,20 @@ export default function PacketFlowTab({
   onClearEvent,
   activeStep,
   onSelectStep,
+  onJumpToStep,
+  followSelected = false,
 }) {
   const [open, setOpen] = useState(new Set())
+  const listRef = useRef(null)
+
+  // When the flow is docked beside the overview, the inspected hop is driven
+  // from over there (arrow badges / hop inspector). Keep the matching hop card
+  // scrolled into view so the event list follows along with the overview.
+  useEffect(() => {
+    if (!followSelected || activeStep == null || !listRef.current) return
+    const el = listRef.current.querySelector(`[data-step="${activeStep}"]`)
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [followSelected, activeStep])
 
   if (!activeEvent) {
     return <EventGallery onSelectEvent={onSelectEvent} />
@@ -186,7 +208,7 @@ export default function PacketFlowTab({
           {activeEvent.description}
         </p>
       </div>
-      <div>
+      <div ref={listRef}>
         {activeEvent.steps.map((step, i) => (
           <Hop
             key={step.step}
@@ -194,6 +216,7 @@ export default function PacketFlowTab({
             isOpen={open.has(step.step)}
             isSelected={activeStep === step.step}
             onToggle={() => toggle(step.step)}
+            onJump={onJumpToStep}
             isFinal={i === activeEvent.steps.length - 1}
           />
         ))}
