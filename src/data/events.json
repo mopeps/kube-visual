@@ -80,15 +80,15 @@
       {
         "step": 9,
         "sourceComponentId": "svc-frontend",
-        "targetComponentId": "frontend-workload-pod",
-        "description": "OVN load-balancer flows DNAT the ClusterIP to a ready Front-End Workload Pod endpoint. The application process accepts the connection and returns a response."
+        "targetComponentId": "frontend-application-pod",
+        "description": "OVN load-balancer flows DNAT the ClusterIP to a ready Front-End Application Pod endpoint. The application process accepts the connection and returns a response."
       }
     ]
   },
   {
     "eventId": "pod-spawning",
     "eventName": "Guest Pod Lifecycle (Spawn)",
-    "description": "Tracing how a new workload Pod is scheduled and started in the guest cluster: from a kubectl apply hitting the Guest API Server through scheduling, kubelet notification, and CRI-O container creation inside the Guest VM.",
+    "description": "Tracing how a new application Pod is scheduled and started in the guest cluster: from a kubectl apply hitting the Guest API Server through scheduling, kubelet notification, and CRI-O container creation inside the Guest VM.",
     "steps": [
       {
         "step": 1,
@@ -112,7 +112,7 @@
         "step": 4,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "kubelet-guest",
-        "description": "The guest kubelet maintains its own outbound watch on the Guest API Server (via the exposed apiserver endpoint) and observes the newly bound Pod assigned to its node. The kubelet pulls its workload — the API Server never pushes to it, and this path does not use the Konnectivity tunnel (that tunnel only carries API-Server-initiated traffic such as exec/logs/port-forward)."
+        "description": "The guest kubelet maintains its own outbound watch on the Guest API Server (via the exposed apiserver endpoint) and observes the newly bound Pod assigned to its node. The kubelet pulls its application — the API Server never pushes to it, and this path does not use the Konnectivity tunnel (that tunnel only carries API-Server-initiated traffic such as exec/logs/port-forward)."
       },
       {
         "step": 5,
@@ -123,19 +123,19 @@
       {
         "step": 6,
         "sourceComponentId": "crio-guest",
-        "targetComponentId": "frontend-workload-pod",
-        "description": "Guest CRI-O starts the container via runc. The workload process becomes PID 1 inside its namespaces, registers with the guest network, and the Pod transitions to Running status."
+        "targetComponentId": "frontend-application-pod",
+        "description": "Guest CRI-O starts the container via runc. The application process becomes PID 1 inside its namespaces, registers with the guest network, and the Pod transitions to Running status."
       }
     ]
   },
   {
     "eventId": "east-west-service-traffic",
     "eventName": "East-West Service Traffic (Front-End → Back-End)",
-    "description": "Tracing an in-cluster call from the Front-End Workload to the Back-End Workload through the Back-End ClusterIP Service: name resolution to a virtual IP, OVN load-balancer DNAT on the guest OVS fabric, a NetworkPolicy ACL check, and delivery to a backing Pod — no ingress, no traffic leaving the VM.",
+    "description": "Tracing an in-cluster call from the Front-End Application to the Back-End Application through the Back-End ClusterIP Service: name resolution to a virtual IP, OVN load-balancer DNAT on the guest OVS fabric, a NetworkPolicy ACL check, and delivery to a backing Pod — no ingress, no traffic leaving the VM.",
     "steps": [
       {
         "step": 1,
-        "sourceComponentId": "frontend-workload-pod",
+        "sourceComponentId": "frontend-application-pod",
         "targetComponentId": "svc-backend",
         "description": "The Front-End resolves backend.e-commerce-prod.svc.cluster.local to the Back-End Service's ClusterIP and opens a connection to that stable virtual IP rather than to a specific backend Pod."
       },
@@ -154,8 +154,8 @@
       {
         "step": 4,
         "sourceComponentId": "netpol-ecommerce",
-        "targetComponentId": "backend-workload-pod",
-        "description": "With the policy allowing the flow, OVS DNATs the destination from the ClusterIP to the chosen Back-End Workload Pod IP and delivers the packet over its veth pair. The backend process accepts the connection and returns its response."
+        "targetComponentId": "backend-application-pod",
+        "description": "With the policy allowing the flow, OVS DNATs the destination from the ClusterIP to the chosen Back-End Application Pod IP and delivers the packet over its veth pair. The backend process accepts the connection and returns its response."
       }
     ]
   },
@@ -210,7 +210,7 @@
         "step": 8,
         "sourceComponentId": "konnectivity-agent",
         "targetComponentId": "kubelet-guest",
-        "description": "Inside the VM the Konnectivity Agent dials out to the Konnectivity Server, and the guest kubelet registers the node with the Guest API Server. The worker goes Ready and the hosted cluster can schedule workloads."
+        "description": "Inside the VM the Konnectivity Agent dials out to the Konnectivity Server, and the guest kubelet registers the node with the Guest API Server. The worker goes Ready and the hosted cluster can schedule applications."
       }
     ]
   },
@@ -327,7 +327,7 @@
   {
     "eventId": "oc-exec-konnectivity",
     "eventName": "oc exec into a Pod (Konnectivity)",
-    "description": "Tracing an 'oc exec' from a developer to a process inside a guest workload Pod. Because the Guest API Server cannot route to the node network directly, the call rides the API-Server-initiated Konnectivity tunnel down to the node's kubelet and CRI-O.",
+    "description": "Tracing an 'oc exec' from a developer to a process inside a guest application Pod. Because the Guest API Server cannot route to the node network directly, the call rides the API-Server-initiated Konnectivity tunnel down to the node's kubelet and CRI-O.",
     "steps": [
       {
         "step": 1,
@@ -362,7 +362,7 @@
       {
         "step": 6,
         "sourceComponentId": "crio-guest",
-        "targetComponentId": "frontend-workload-pod",
+        "targetComponentId": "frontend-application-pod",
         "description": "CRI-O enters the container's namespaces and runs the command; stdout/stderr stream back up the same tunnel to the developer's terminal."
       }
     ]
@@ -370,11 +370,11 @@
   {
     "eventId": "in-cluster-dns",
     "eventName": "In-Cluster DNS Resolution",
-    "description": "Tracing how a workload Pod turns a Service name into a ClusterIP: the Pod's stub resolver queries the node-local CoreDNS, which answers from the guest cluster's Service records before the caller opens the real connection.",
+    "description": "Tracing how a application Pod turns a Service name into a ClusterIP: the Pod's stub resolver queries the node-local CoreDNS, which answers from the guest cluster's Service records before the caller opens the real connection.",
     "steps": [
       {
         "step": 1,
-        "sourceComponentId": "frontend-workload-pod",
+        "sourceComponentId": "frontend-application-pod",
         "targetComponentId": "coredns-node",
         "description": "The Front-End looks up 'backend.e-commerce-prod.svc.cluster.local'. Its /etc/resolv.conf points at the cluster DNS, so the query goes to the node-local CoreDNS Pod."
       },
@@ -387,12 +387,12 @@
       {
         "step": 3,
         "sourceComponentId": "coredns-node",
-        "targetComponentId": "frontend-workload-pod",
+        "targetComponentId": "frontend-application-pod",
         "description": "CoreDNS returns the Back-End Service's ClusterIP to the caller and caches the record for subsequent lookups."
       },
       {
         "step": 4,
-        "sourceComponentId": "frontend-workload-pod",
+        "sourceComponentId": "frontend-application-pod",
         "targetComponentId": "svc-backend",
         "description": "With the name resolved, the Front-End opens its connection to the Back-End ClusterIP — where the east-west Service flow takes over."
       }

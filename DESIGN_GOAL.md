@@ -18,7 +18,7 @@ governs everything else:
 3. **Immediate depth, zero clutter.** The full nested topology is visible at a
    glance — scan once, see where every piece lives — but the idle canvas stays
    quiet: components dimmed, no floating connectors, no intent-only records
-   crowding the real workloads. Depth is *present*, not *noisy*; detail is
+   crowding the real applications. Depth is *present*, not *noisy*; detail is
    summoned on demand, never dumped up front.
 4. **Progressive disclosure to the metal.** Every interaction drills *down toward
    the kernel*, never sideways into more abstraction. Detail modals expose the

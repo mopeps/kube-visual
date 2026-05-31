@@ -64,7 +64,7 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │           │      // The guest cluster's own API records — no overview card:
   │           │      ├── [Custom Resource] ClusterVersion / ClusterOperator
   │           │      ├── [Custom Resource] Route
-  │           │      ├── [API Object] Deployment / ReplicaSet (e-commerce workloads)
+  │           │      ├── [API Object] Deployment / ReplicaSet (e-commerce applications)
   │           │      ├── [API Object] Secret / ConfigMap
   │           │      ├── [API Object] PersistentVolumeClaim / PersistentVolume
   │           │      └── [API Object] EndpointSlice
@@ -102,11 +102,11 @@ The workspace viewport canvas must render this exact structural hierarchy:
                     ├── [Service · LoadBalancer] Ingress Router VIP (MetalLB L2)
                     ├── [Pod] Cluster Monitoring Instance (openshift-monitoring)
                     │
-                    │   // Workload Instances (+ their ClusterIP Services) inside the VM
-                    ├── [Pod] Front-End Workload Instance
-                    ├── [Service · ClusterIP] Front-End Workload Service
-                    ├── [Pod] Back-End Workload Instance
-                    ├── [Service · ClusterIP] Back-End Workload Service
+                    │   // Application Instances (+ their ClusterIP Services) inside the VM
+                    ├── [Pod] Front-End Application Instance
+                    ├── [Service · ClusterIP] Front-End Application Service
+                    ├── [Pod] Back-End Application Instance
+                    ├── [Service · ClusterIP] Back-End Application Service
                     └── [NWPOLICY] E-Commerce Network Policy (front-end → back-end ingress)
 
 ```
@@ -125,10 +125,10 @@ store, or a trace-only zone).
 2. **The Active Enforcers (`systemd` Services)** — binary systems executing
    continuous loop cycles directly on a host OS or guest OS instance: `Kubelet`, `CRI-O`,
    `Open vSwitch`, `virt-handler`.
-3. **The Concrete Workload / Data Plane Instances** — discrete compute packages running
+3. **The Concrete Application / Data Plane Instances** — discrete compute packages running
    processes: `Pods`, `Static Pods`, `VirtualMachineInstances`.
 4. **The Networking / Policy Abstractions** — Kubernetes `Service` and `NetworkPolicy`
-   objects that front or guard the workloads above. Unlike pure-intent records, these have
+   objects that front or guard the applications above. Unlike pure-intent records, these have
    a *concrete data-plane realization*: a `ClusterIP` is a virtual IP backed by OVN
    load-balancer flows (DNAT), and a `LoadBalancer` (here, **MetalLB in L2 mode**) is an
    external VIP advertised over ARP/NDP. A `NetworkPolicy` is likewise declarative, but OVN
@@ -139,7 +139,7 @@ store, or a trace-only zone).
 
 This reinforces the **Default State** rule in §2: desired-state records that have *no*
 data-plane realization (the HCP and Cluster API Custom Resources, plus the guest cluster's
-own `ClusterVersion`/`ClusterOperator`, `Route`, workload `Deployment`/`ReplicaSet`,
+own `ClusterVersion`/`ClusterOperator`, `Route`, application `Deployment`/`ReplicaSet`,
 `Secret`/`ConfigMap`/`PVC`/`PV`, and `EndpointSlice`s), raw Linux kernel primitives (netns,
 cgroups, host PIDs), and Project/Namespace boundaries are *not* instances, enforcers, or
 realized Service/policy abstractions, so they never appear as cards on the first overview —
@@ -199,11 +199,11 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
  * **Default State:** All topology components are visible but set to a dimmed idle opacity state. Do not render raw Linux kernel primitives (netns, cgroups, host PIDs) or Project/Namespace boundaries on the main view.
  * **Event Selection Integration:** Selecting an infrastructure workflow parses events.json, transitions participating objects to full opacity, and dynamically overlays ordered, numbered, directional connecting vectors (①, ②, ③) showing execution paths. Vector lines must auto-recalculate paths on window resize.
  * **Interactive Modal System:** Clicking any structural component container opens a mobile-friendly overlay pop-up modal serving progressive metadata disclosures:
-   * **Workload Pods:** Expose logical OpenShift Project metadata, isolated Linux Network Namespace (netns), host-side veth pair IDs, and cgroups slice boundaries.
+   * **Application Pods:** Expose logical OpenShift Project metadata, isolated Linux Network Namespace (netns), host-side veth pair IDs, and cgroups slice boundaries.
    * **systemd Services:** Reveal corresponding host service unit configuration paths and tracking metrics.
    * **VirtualMachineInstance:** Expose the host qemu-kvm process execution details, host-side virtual network tap configuration (tap0), and master cgroup runtime boundaries.
    * **Guest Controller Manager:** Reveal internal control loops (NodeLifecycleController, EndpointController, etc.) running inside the binary.
- * **Etcd Intent Stores (expandable nodes):** Both etcd nodes double as homes for the API objects they persist — desired-state records, **not** Linux processes, so they are deliberately not rendered as sibling cards next to real Pods. **Management Etcd** holds the HCP control-plane intent and the worker-provisioning chain (`HostedCluster`, `HostedControlPlane`, `NodePool`, and the Cluster API → KubeVirt objects: `Cluster`, `MachineDeployment`, `MachineSet`, `Machine`, `KubevirtMachine`, `VirtualMachine`). **Guest Etcd** holds the guest cluster's own records that have no data-plane card (`ClusterVersion`, `ClusterOperator`, `Route`, the workload `Deployment`/`ReplicaSet`, their `Secret`/`ConfigMap`/`PersistentVolumeClaim`/`PersistentVolume`, and the `EndpointSlice`s behind its Services). Realized Services and the NetworkPolicy keep their own cards; only pure records live inside the store. Clicking an etcd node enlarges it in place to reveal these objects. Inside the expanded store: clicking the **title** (ⓘ) opens etcd's own detail popup; clicking an **object** opens that record's popup; clicking the empty body, the ▴ chevron, outside the card, or pressing **Esc** collapses it. A node declares this behavior via an `intentObjects` array in `zones.js`.
+ * **Etcd Intent Stores (expandable nodes):** Both etcd nodes double as homes for the API objects they persist — desired-state records, **not** Linux processes, so they are deliberately not rendered as sibling cards next to real Pods. **Management Etcd** holds the HCP control-plane intent and the worker-provisioning chain (`HostedCluster`, `HostedControlPlane`, `NodePool`, and the Cluster API → KubeVirt objects: `Cluster`, `MachineDeployment`, `MachineSet`, `Machine`, `KubevirtMachine`, `VirtualMachine`). **Guest Etcd** holds the guest cluster's own records that have no data-plane card (`ClusterVersion`, `ClusterOperator`, `Route`, the application `Deployment`/`ReplicaSet`, their `Secret`/`ConfigMap`/`PersistentVolumeClaim`/`PersistentVolume`, and the `EndpointSlice`s behind its Services). Realized Services and the NetworkPolicy keep their own cards; only pure records live inside the store. Clicking an etcd node enlarges it in place to reveal these objects. Inside the expanded store: clicking the **title** (ⓘ) opens etcd's own detail popup; clicking an **object** opens that record's popup; clicking the empty body, the ▴ chevron, outside the card, or pressing **Esc** collapses it. A node declares this behavior via an `intentObjects` array in `zones.js`.
 ## 3. Reference Data Schemas
 ### Metadata Schema (components.json)
 ```json
@@ -213,10 +213,10 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
   "layer": "Linux Kernel Primitives",
   "logicalContext": {
     "openShiftProject": "e-commerce-prod",
-    "associatedObject": "Front-End Workload Instance"
+    "associatedObject": "Front-End Application Instance"
   },
   "role": "KERNEL PRIMITIVE",
-  "problemSolved": "Gives each workload Pod its own private network — IP, routes, and firewall — isolated from every other Pod.",
+  "problemSolved": "Gives each application Pod its own private network — IP, routes, and firewall — isolated from every other Pod.",
   "interactions": [
     "Attaches to a guest-side veth pair managed by the OVN-Kubernetes Guest Node DaemonSet.",
     "Provisioned and configured by the CRI-O runtime via CNI instructions."
@@ -289,7 +289,7 @@ Adding a component touches several places — keep them in sync:
    `problemSolved` (one concise "why it exists" sentence), `interactions[]`,
    `explorationCommands[]`, and `docLinks[]` (official-docs links — see the
    metadata schema above). Add `logicalContext`
-   (`openShiftProject` + `associatedObject`) for workload pods and VMIs. `runtimeForm` and
+   (`openShiftProject` + `associatedObject`) for application pods and VMIs. `runtimeForm` and
    `linuxPrimitive` are folded into the component's Manifest → Kernel pipeline by
    `pipeline-model.js`. For Pods and systemd services `linuxPrimitive` is folded into the
    process row of the kernel band (`PID 1 · Process` → `PID 1 · <realisation>`); other types

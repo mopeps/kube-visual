@@ -56,11 +56,11 @@ export const BADGE_GLOSSARY = {
   'virtio-net':
     'Para-virtualised network driver used by the guest VM\'s kernel. Much lower overhead than emulated hardware because the guest and host cooperate directly through a shared ring buffer, bypassing device emulation.',
   'e-commerce-prod':
-    'The Kubernetes namespace where the sample front-end and back-end workload Pods run. Namespaces provide resource isolation, RBAC boundaries, and NetworkPolicy scoping.',
+    'The Kubernetes namespace where the sample front-end and back-end application Pods run. Namespaces provide resource isolation, RBAC boundaries, and NetworkPolicy scoping.',
   ':8080':
-    'HTTP port exposed by the front-end workload container. The Ingress Router forwards external HTTP/HTTPS traffic to this port after matching the incoming hostname against the Route CR.',
+    'HTTP port exposed by the front-end application container. The Ingress Router forwards external HTTP/HTTPS traffic to this port after matching the incoming hostname against the Route CR.',
   ':3000':
-    'HTTP port exposed by the back-end workload container. Typically reachable only via cluster-internal Service DNS from the front-end Pod.',
+    'HTTP port exposed by the back-end application container. Typically reachable only via cluster-internal Service DNS from the front-end Pod.',
   'Tunnel':
     'Persistent gRPC tunnel maintained by the Konnectivity Agent. Allows the bare metal cluster API server to initiate connections to Pods and exec/port-forward endpoints inside the guest VM network.',
   'LoadBalancer':
@@ -70,7 +70,7 @@ export const BADGE_GLOSSARY = {
   'MetalLB L2':
     'Bare-metal load-balancer running in Layer-2 mode: it assigns LoadBalancer Services an external IP and advertises ownership of it via ARP/NDP on the local segment, standing in for a cloud load balancer.',
   'StatefulSet':
-    'Workload controller for Pods that need a stable identity and their own storage — ordered names and per-Pod PersistentVolumes. Used here so each etcd member keeps its own data across restarts.',
+    'Application controller for Pods that need a stable identity and their own storage — ordered names and per-Pod PersistentVolumes. Used here so each etcd member keeps its own data across restarts.',
   'RHCOS':
     'Red Hat Enterprise Linux CoreOS — the immutable, container-optimised OS the guest worker node VM boots. Updates ship as whole-image swaps driven by Ignition, not in-place package upgrades.',
   'OVN ACL':
