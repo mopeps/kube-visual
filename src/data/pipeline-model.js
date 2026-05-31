@@ -37,6 +37,7 @@ function primitiveNodes(typePrefix) {
   const set = PRIMITIVES_BY_TYPE[typePrefix]
   if (!set) return null
   return set.items.map(it => ({
+    id: it.id,
     label: it.label,
     note: shortNote(it.description),
     detail: {
@@ -296,9 +297,19 @@ function controllerNote(form) {
 //                    (Deployment/DaemonSet/StatefulSet/…) is declarative intent,
 //                    not a runtime object, so it moves up to the Logical Intent
 //                    band instead (see CONTROLLER_KIND).
-//   • linuxPrimitive → lead row of the kernel band, ahead of the generic
-//                    type-derived rows, since it is the per-instance realisation
-//                    (e.g. a Service is a MetalLB VIP, not a generic Pod netns).
+//   • linuxPrimitive → the per-instance realisation. For a type whose primitive
+//                    set already has a process row (a Pod's PID-1 process, a
+//                    systemd service's process), we fold the realisation into
+//                    *that* row — "PID 1 · Process" becomes "PID 1 · CVO binary" —
+//                    rather than stacking a near-duplicate lead row above it.
+//                    Everything else (VMI guest OS, a CR's etcd record, a Service
+//                    VIP) keeps it as the kernel band's lead row, since there is no
+//                    process row that means the same thing.
+const FOLD_PROCESS_ID = {
+  Pod: 'container-process',
+  'Static Pod': 'container-process',
+  systemd: 'service-process',
+}
 function withForms(component, bands) {
   const { typePrefix: t, runtimeForm, linuxPrimitive } = component
   if (runtimeForm) {
@@ -317,7 +328,24 @@ function withForms(component, bands) {
     }
   }
   if (linuxPrimitive) {
-    ensureKernelBand(bands).groups[0].nodes.unshift({ label: linuxPrimitive })
+    const foldId = FOLD_PROCESS_ID[t]
+    let folded = false
+    if (foldId) {
+      const band = bands.find(b => b.layerId === 'linux-primitive')
+      for (const g of band?.groups || []) {
+        const proc = g.nodes.find(n => n.id === foldId)
+        if (proc) {
+          // Keep the row's primitive prefix ("PID 1", "systemd Process") and
+          // swap its generic tail for the concrete realisation.
+          proc.label = `${proc.label.split(' · ')[0]} · ${linuxPrimitive}`
+          folded = true
+          break
+        }
+      }
+    }
+    if (!folded) {
+      ensureKernelBand(bands).groups[0].nodes.unshift({ label: linuxPrimitive })
+    }
   }
   return bands
 }
