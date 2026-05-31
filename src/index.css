@@ -927,13 +927,13 @@ body::after {
 
 .detail-type {
   font-size: 0.62rem;
-  color: var(--tx-muted);
+  color: var(--tx-dim);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   margin-bottom: 22px;
   display: inline-block;
   padding: 3px 8px;
-  border: 1px solid currentColor;
+  border: 1px solid var(--border-w);
   border-radius: 3px;
 }
 
