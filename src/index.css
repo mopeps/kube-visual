@@ -245,6 +245,36 @@ body::after {
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* Detail-modal badge variants. Concept badges (a glossary definition opens on
+   click) keep the filled, bordered, hoverable chip look. Stat badges have no
+   definition, so they read as a flat label — no border, no background, no
+   pointer — making the absence of a click affordance honest. */
+.node-badge--static {
+  border: none;
+  background: none;
+  padding: 4px 2px;
+  cursor: default;
+  opacity: 0.75;
+}
+
+/* apiGroup / apiVersion provenance, lifted out of the badge row into a quiet
+   metadata line — reference data, not a concept to learn or a chip to click. */
+.badge-apigroups {
+  margin-top: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  line-height: 1.6;
+  color: var(--tx-dim);
+}
+.badge-apigroups-key {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-right: 8px;
+  opacity: 0.8;
+}
+.badge-apigroups-val { color: var(--tx-muted); }
+.badge-apigroups-sep { color: var(--tx-dim); }
+
 /* Shared typePrefix glyph (TypeIcon.jsx). Sits inline before a label and tracks
    the surrounding text colour/size. Bumped a touch above 1em so the thin lines
    stay legible next to small uppercase prefixes. */

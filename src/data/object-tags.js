@@ -5,12 +5,27 @@
 // is itself a node on the topology, its chip becomes a shortcut that opens that
 // node's modal.
 //
-// Two kinds of entry:
-//   • `componentId` — the object IS a node in the topology. Its chip is
-//     navigable (clicking it opens that component) and picks up the node's
-//     zone accent colour.
-//   • `kind` — a real API object that isn't drawn on the canvas (a Route, a
-//     Machine, a Secret…). Its chip is a muted, non-clickable highlight.
+// Every entry falls into one of THREE categories (the section banners below):
+//   1. `componentId` → a TOPOLOGY CARD. The object is a box on the overview;
+//      its chip is navigable and picks up the node's zone accent colour.
+//   2. `componentId` → an ETCD INTENT-STORE RECORD. The object is a CR / API
+//      object that has no overview card but is persisted inside an etcd node
+//      (mgmt-etcd / guest-etcd); its chip opens that record's detail. Same
+//      navigable behaviour as a card — "componentId" just means "openable".
+//   3. `kind` → an OBJECT FAMILY with no single backing object (Cluster API).
+//      Its chip is a muted, non-clickable highlight only.
+//
+// CONVENTION — this app models ONE concrete scenario, so every kind that has a
+// representative object in it (a Secret, a Route, a NetworkPolicy, a Machine…)
+// resolves to that one object: category 1 or 2, navigable. We accept that a
+// deliberately generic mention then still links to that representative record —
+// in a single-scenario model that record IS the example, so the link is a
+// feature, not a lie. Category 3 is reserved for names that are an object
+// *family* with no single resource to open (Cluster API), not for "this kind is
+// sometimes used generically."
+//
+// A reference to the component whose modal is already open is rendered as plain
+// text (see ObjectText.jsx), not a chip — never tag a node inside its own modal.
 //
 // Matching is intentionally CASE-SENSITIVE. API object names are proper nouns
 // and appear capitalised when used as object references ("Watches Route
@@ -83,7 +98,10 @@ const ENTRIES = [
     aliases: ['Back-End Workload Pod', 'Back-End Workload', 'Back-End Pod', 'backend Pod'],
   },
   { componentId: 'svc-backend', aliases: ['Back-End ClusterIP Service', 'Back-End Service'] },
-  { componentId: 'netpol-ecommerce', aliases: ['E-Commerce Network Policy'] },
+  {
+    componentId: 'netpol-ecommerce',
+    aliases: ['E-Commerce Network Policy', 'NetworkPolicy', 'Network Policy', 'Network Policies'],
+  },
 
   // ── API objects that live inside an etcd intent store (no overview card) ──
   // These resolve to the records persisted in the Management / Guest Etcd
@@ -106,9 +124,10 @@ const ENTRIES = [
   { componentId: 'replicaset-workload', aliases: ['ReplicaSet'] },
 
   // ── Highlight-only: kinds with no single backing object ────────────────
+  // "Cluster API" is a whole project / object family (Cluster, Machine,
+  // MachineSet, MachineDeployment…), not one resource, so it has nothing single
+  // to open — unlike the concrete CRs above, which each resolve to one record.
   { kind: 'Cluster API', aliases: ['Cluster API'] },
-  { kind: 'NetworkPolicy', aliases: ['NetworkPolicy', 'Network Policy', 'Network Policies'] },
-  { kind: 'CRD', aliases: ['CRD'] },
 ]
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

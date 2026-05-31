@@ -19,7 +19,14 @@ export default function ObjectText({ text, onSelectComponent, selfId }) {
       {tokens.map((t, i) => {
         if (t.type === 'text') return <Fragment key={i}>{t.value}</Fragment>
 
-        const navigable = !!(t.componentId && t.componentId !== selfId && onSelectComponent)
+        // A reference to the component whose modal is already open adds nothing
+        // — the title already names it, and it can't navigate to itself. Render
+        // it as plain prose rather than a dead, non-navigable chip.
+        if (t.componentId && t.componentId === selfId) {
+          return <Fragment key={i}>{t.value}</Fragment>
+        }
+
+        const navigable = !!(t.componentId && onSelectComponent)
         const color = t.componentId
           ? COMPONENT_COLOR[t.componentId] || 'var(--k-cyan)'
           : 'var(--tx-muted)'
