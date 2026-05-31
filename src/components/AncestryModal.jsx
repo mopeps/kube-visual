@@ -95,13 +95,24 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
   // behind it (at max scroll they stay pinned under the sheet). Extend the
   // scroll range by padding the page bottom with the sheet height (plus a small
   // gap) so every overview object can be brought above the sheet and clicked.
+  //
+  // This is split in two so the padding is set up/torn down once per peek
+  // session but its *value* is only written when the sheet is settled — never
+  // mid-drag. Mutating the document height on every pointermove reflows the
+  // page and lurches its scroll position, which on touch fires `pointercancel`
+  // on the grip's captured pointer and aborts the resize. Freezing the padding
+  // during an active drag keeps the document height stable so the grip resizes
+  // smoothly.
   useEffect(() => {
     if (!componentId || !peek) return
     const body = document.body
     const prev = body.style.paddingBottom
-    body.style.paddingBottom = `${Math.round(sheetHeight) + 24}px`
     return () => { body.style.paddingBottom = prev }
-  }, [componentId, peek, sheetHeight])
+  }, [componentId, peek])
+  useEffect(() => {
+    if (!componentId || !peek || resizing) return
+    document.body.style.paddingBottom = `${Math.round(sheetHeight) + 24}px`
+  }, [componentId, peek, resizing, sheetHeight])
 
   // ── Grip resize ──────────────────────────────────────────────────────
   // The grip is the top bar. Drag it to set the sheet height: the sheet is
