@@ -38,7 +38,6 @@ function Hop({ step, isOpen, isSelected, onToggle, onJump, isFinal }) {
         style={{ borderColor: isSelected ? color : `${color}40` }}
       >
         <h3>
-          <span className="packet-dot" />
           {onJump ? (
             <button
               type="button"
@@ -66,24 +65,21 @@ function Hop({ step, isOpen, isSelected, onToggle, onJump, isFinal }) {
         </div>
         <p>{step.description}</p>
         {target?.explorationCommands?.length > 0 && (
-          <div className={`hop-detail ${isOpen ? 'is-open' : ''}`}>
-            <div
-              className="text-[0.6rem] uppercase tracking-[0.14em] mb-2"
-              style={{ color: 'var(--tx-muted)' }}
-            >
-              Explore the target ({target.displayName})
+          <>
+            <div className={`hop-detail ${isOpen ? 'is-open' : ''}`}>
+              <div
+                className="text-[0.6rem] uppercase tracking-[0.14em] mb-2"
+                style={{ color: 'var(--tx-muted)' }}
+              >
+                Explore the target ({target.displayName})
+              </div>
+              {target.explorationCommands.map((cmd, i) => (
+                <pre key={i} className="code-block mb-2">{cmd}</pre>
+              ))}
             </div>
-            {target.explorationCommands.map((cmd, i) => (
-              <pre key={i} className="code-block mb-2">{cmd}</pre>
-            ))}
-          </div>
+            <span className={`hop-chevron ${isOpen ? 'is-open' : ''}`} aria-hidden>⌄</span>
+          </>
         )}
-        <div
-          className="text-[0.6rem] mt-3"
-          style={{ color: 'var(--tx-dim)' }}
-        >
-          {isOpen ? '▾ click to collapse' : '▸ click to inspect target'}
-        </div>
       </div>
     </div>
   )

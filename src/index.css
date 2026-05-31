@@ -774,21 +774,18 @@ body::after {
 .hop-link:hover .hop-link-src,
 .hop-link:hover .hop-link-tgt { text-decoration: underline; }
 
-.packet-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--packet);
-  animation: pulse-dot 1.2s ease-in-out infinite;
-  margin-right: 4px;
-  vertical-align: middle;
-  flex-shrink: 0;
+/* Wordless expand/collapse hint, shown only when a hop has exploration
+   commands. Rotates to point up when its detail is open. */
+.hop-chevron {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  line-height: 1;
+  color: var(--tx-dim);
+  transition: transform 0.18s, color 0.18s;
 }
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.4; transform: scale(0.7); }
-}
+.hop-chevron.is-open { transform: rotate(180deg); }
+.hop:hover .hop-chevron { color: var(--tx-muted); }
 
 .hop-detail {
   display: none;
