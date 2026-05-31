@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import useEventState from './hooks/useEventState'
 import useMediaQuery from './hooks/useMediaQuery'
 import Tabs from './components/Tabs'
@@ -68,10 +68,34 @@ export default function App() {
   // Keep the active index valid for the swipe pager / tab strip.
   const activeIndex = Math.max(0, visibleTabs.findIndex(t => t.id === tab))
 
+  // Per-tab scroll memory. The whole page shares one (window) scroll offset, so
+  // without this a tab inherits wherever the previous one was scrolled to —
+  // reading as a "synchronized" scroll across tabs. We stash the outgoing tab's
+  // scrollY on every plain tab switch and restore the incoming tab's own offset
+  // after it paints, so each tab scrolls independently. Programmatic jumps
+  // (jumpToStep / revealInOverview) deliberately bypass this so their own
+  // scroll-to-target wins.
+  const scrollPositions = useRef({})
+  const restoreTabRef = useRef(null)
+
+  const changeTab = (next) => {
+    if (next === tab) return
+    scrollPositions.current[tab] = window.scrollY
+    restoreTabRef.current = next
+    setTab(next)
+  }
+
+  useLayoutEffect(() => {
+    if (restoreTabRef.current !== tab) return
+    restoreTabRef.current = null
+    window.scrollTo(0, scrollPositions.current[tab] ?? 0)
+  }, [tab])
+
   // Jump from a hop in the event tab straight to its object on the overview:
   // focus the hop (so the arrow + hop inspector light up) and surface the
   // overview. The auto-scroll effect below then brings the object into view.
   const jumpToStep = (n) => {
+    scrollPositions.current[tab] = window.scrollY
     focusStep(n)
     setTab('overview')
   }
@@ -79,6 +103,7 @@ export default function App() {
   // From a detail popup's location badge: close the popup, surface the overview,
   // and spotlight the component there (OverviewTab scrolls to and pulses it).
   const revealInOverview = (id) => {
+    scrollPositions.current[tab] = window.scrollY
     clearComponent()
     setTab('overview')
     revealComponent(id)
@@ -153,7 +178,7 @@ export default function App() {
         <Header />
 
         <div className="tabs-row">
-          <Tabs tabs={visibleTabs} active={tab} onSelect={setTab} />
+          <Tabs tabs={visibleTabs} active={tab} onSelect={changeTab} />
           {isWide && (
             <button
               type="button"
@@ -174,7 +199,7 @@ export default function App() {
             <SwipeViews
               index={activeIndex}
               count={visibleTabs.length}
-              onIndexChange={(i) => setTab(visibleTabs[i].id)}
+              onIndexChange={(i) => changeTab(visibleTabs[i].id)}
             >
               {visibleTabs.map(t => panelFor(t.id))}
             </SwipeViews>
