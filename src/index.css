@@ -1288,14 +1288,17 @@ button.object-tag:hover {
   background: transparent;
   border-radius: 7px;
 }
+/* Band headings (e.g. "Logical Intent") conform to the Interactions section's
+   keyword type — the shared body font, uppercase + letter-spaced — rather than
+   the Syne display face, so the pipeline reads in the same voice. The accent
+   colour and heavier 700 weight keep each band's identity and heading rank. */
 .tree-band-head {
   grid-column: 2;
   grid-row: 1;
   display: flex;
   align-items: center;
   min-height: 26px;
-  font-family: 'Syne', sans-serif;
-  font-size: 0.66rem;
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -1308,12 +1311,14 @@ button.object-tag:hover {
 
 .tree-group { margin-top: 6px; }
 .tree-group:first-child { margin-top: 0; }
+/* In-band subheadings match the Interactions legend keyword exactly
+   (.interaction-legend-item): 0.58rem, 0.1em tracking, uppercase, 600, 0.85. */
 .tree-subhead {
   font-size: 0.58rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  opacity: 0.75;
+  opacity: 0.85;
   margin: 2px 0;
 }
 
@@ -1344,25 +1349,24 @@ button.object-tag:hover {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-/* Action chip leading a row's revealed description — an icon + verb pill that
+/* Action keyword leading a row's revealed description — an icon + label that
    tags what the pipeline does at this step (Stored / Mounted / Routed / Runs …).
-   Colour-coded per action via an inline accent on `color`, so currentColor tints
-   the icon, border and fill together. Sits inline before the note text, the same
-   chip-then-text rhythm the Interactions rows use. */
+   Styled to read exactly like the Interactions legend keywords (.interaction-
+   legend-item): a flat, uppercase, letter-spaced accent label with a leading
+   icon — no pill — so the two sections share one keyword language. Colour-coded
+   per action via an inline accent on `color`, which tints the icon and text. */
 .tree-kind-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.3em;
+  gap: 5px;
   vertical-align: baseline;
-  margin-right: 0.5em;
+  margin-right: 0.6em;
   font-size: 0.58rem;
   font-weight: 600;
-  letter-spacing: 0.03em;
-  padding: 0.08em 0.5em 0.08em 0.42em;
-  border-radius: 999px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.85;
   white-space: nowrap;
-  border: 1px solid color-mix(in srgb, currentColor 42%, transparent);
-  background: color-mix(in srgb, currentColor 13%, transparent);
 }
 .tree-kind-chip-icon {
   display: inline-flex;
@@ -1391,10 +1395,12 @@ button.object-tag:hover {
   flex-direction: column;
   gap: 5px;
 }
+/* Revealed note text matches the interaction sentence (.interaction-text):
+   same 0.76rem / 1.6 body size and rhythm. */
 .tree-note {
   color: var(--tx);
-  font-size: 0.74rem;
-  line-height: 1.55;
+  font-size: 0.76rem;
+  line-height: 1.6;
   overflow-wrap: anywhere;
 }
 .tree-detail-bullet {
