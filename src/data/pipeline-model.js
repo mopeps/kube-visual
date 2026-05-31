@@ -34,48 +34,51 @@ function primitiveNote(p) {
 
 // One-line note for a `linuxPrimitive` realisation row that has no process detail
 // of its own (a Service VIP, a NetworkPolicy's ACLs, a CR's etcd record, the VMI
-// guest, the off-cluster client). The note must earn its place: say what the thing
-// is *for* or what it actually does, not paraphrase the label's jargon back at the
-// reader. Matched most-specific first; an unrecognised value returns undefined so
-// the row stays bare rather than gaining a hollow note.
+// guest, the off-cluster client). Philosophy: name the concrete mechanism — the
+// etcd record, the controller that acts on it, the actual datapath/kernel effect —
+// in one tight clause. Grounded, never a paraphrase of the label. Matched
+// most-specific first; an unrecognised value returns undefined so the row stays
+// bare rather than gaining a hollow note.
 function realisationNote(lp) {
   if (!lp) return undefined
   if (/encrypted at rest/i.test(lp))
-    return 'Stored state, not a process — encrypted, so a stolen disk leaks nothing.'
+    return 'An etcd key, not a process — encrypted at rest so a stolen disk reveals nothing.'
   if (/etcd record/i.test(lp))
-    return 'Stored desired state, not a process — controllers reconcile it into reality.'
+    return 'Not a process — a key in etcd that controllers watch and reconcile into reality.'
   if (/router-default LB/i.test(lp))
-    return "The guest can't fulfil its own LB, so KubeVirt borrows the host cluster's."
+    return "The guest can't provision an LB, so KubeVirt's CCM mirrors the Service onto the host to fulfil it."
   if (/MetalLB.*virt-launcher/i.test(lp))
-    return 'Bare-metal VIP fronting the Pods that host the guest VMs.'
+    return 'A VIP MetalLB claims via ARP, DNATed by OVN to the virt-launcher Pods hosting the guest VMs.'
   if (/MetalLB/i.test(lp))
-    return 'A bare-metal stand-in for a cloud LB — claims an external IP on the LAN.'
+    return 'A VIP MetalLB claims via ARP on the LAN — a bare-metal substitute for a cloud LB.'
   if (/OVN ACL/i.test(lp))
-    return 'Where a NetworkPolicy stops being intent and actually drops packets.'
+    return 'Where NetworkPolicy intent becomes enforcement — OVS permits or drops each packet here.'
   if (/ClusterIP/i.test(lp))
-    return 'A fixed address for Pods with shifting IPs — owns no NIC; the kernel rewrites it.'
+    return 'A virtual IP no interface owns; OVN flows DNAT it to a live Pod, masking their shifting IPs.'
   if (/guest OS|RHCOS guest/i.test(lp))
-    return "Where the guest node's workloads actually run — a full OS inside the VM."
+    return "RHCOS booted inside the VM — where the guest node's kubelet and workloads actually run."
   if (/TCP socket/i.test(lp))
-    return 'Where the whole flow starts — a plain client socket, off-cluster.'
+    return "An off-cluster client's libc socket — where the whole request flow begins."
   return undefined
 }
 
 // One-line note for a bare `logical-intent` manifest row (the declarative K8s
-// object an API Object / Service / NetworkPolicy reduces to). Keyed off the kind
-// word that leads `runtimeForm`, so it reads in the same voice as controllerNote.
+// object an API Object / Service / NetworkPolicy reduces to). Same philosophy as
+// realisationNote: each is a desired-state record in etcd, so name the record, the
+// controller/kubelet that acts on it, and the concrete effect. Keyed off the kind
+// word that leads `runtimeForm`.
 function manifestNote(form) {
   if (!form) return undefined
-  if (/^Deployment/.test(form)) return 'Desired replica count & Pod template; reconciled into ReplicaSets.'
-  if (/^ReplicaSet/.test(form)) return 'Keeps a fixed number of identical Pods running.'
-  if (/^ConfigMap/.test(form)) return 'Non-secret config the kubelet injects as files or env vars.'
-  if (/^Secret/.test(form)) return 'Sensitive data, mounted into the Pod as an in-memory tmpfs file.'
-  if (/^PersistentVolumeClaim/.test(form)) return "A Pod's request for storage, bound to a PersistentVolume."
-  if (/^PersistentVolume/.test(form)) return 'Provisioned storage that a PVC binds to.'
-  if (/^EndpointSlice/.test(form)) return 'The live list of ready Pod IPs behind a Service.'
-  if (/^Service \(LoadBalancer\)/.test(form)) return 'Asks for an external IP; a controller provisions the actual LB.'
-  if (/^Service/.test(form)) return 'A stable IP & DNS name fronting the Pods it selects.'
-  if (/^NetworkPolicy/.test(form)) return 'Which traffic is allowed to or from the selected Pods.'
+  if (/^Deployment/.test(form)) return 'Desired Pod template & replica count in etcd; its controller rolls them out via ReplicaSets.'
+  if (/^ReplicaSet/.test(form)) return 'Holds the desired replica count in etcd; its controller adds or deletes Pods until actual matches.'
+  if (/^ConfigMap/.test(form)) return 'Non-secret config in etcd; the kubelet projects it into the Pod as files or env vars.'
+  if (/^Secret/.test(form)) return 'Sensitive data in etcd; the kubelet mounts it into the Pod as an in-memory tmpfs file.'
+  if (/^PersistentVolumeClaim/.test(form)) return 'A storage request in etcd; once bound to a PersistentVolume the kubelet mounts it.'
+  if (/^PersistentVolume/.test(form)) return 'A cluster-scoped etcd object mapping a PVC to real backing storage.'
+  if (/^EndpointSlice/.test(form)) return "A Service's live ready Pod IPs in etcd, written by the endpoint controller to steer traffic."
+  if (/^Service \(LoadBalancer\)/.test(form)) return 'Declares an external entry point; a controller provisions the LB and writes its IP back.'
+  if (/^Service/.test(form)) return 'Allocates a stable virtual IP in etcd; the datapath DNATs it to the selected Pods.'
+  if (/^NetworkPolicy/.test(form)) return 'Declares allowed traffic for the selected Pods; OVN compiles it into datapath ACLs.'
   return undefined
 }
 
