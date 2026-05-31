@@ -1067,12 +1067,14 @@ button.object-tag:hover {
   inset: 0;
   z-index: 1000;
   display: flex;
-  align-items: flex-start;
+  /* Bottom-anchored so the grip can resize the sheet from its top edge: the
+     bottom stays put while the top edge follows the drag. */
+  align-items: flex-end;
   justify-content: center;
   padding: 5vh 16px;
   background: rgba(3, 6, 14, 0.72);
   backdrop-filter: blur(4px);
-  overflow-y: auto;
+  overflow: hidden;
   overscroll-behavior: contain;
 }
 .ancestry-modal {
@@ -1080,22 +1082,45 @@ button.object-tag:hover {
   width: 100%;
   max-width: 780px;
   max-height: 90vh;
-  overflow-y: auto;
+  /* The modal is a flex column whose body scrolls — the modal itself does not,
+     so the grip and close button stay fixed while content scrolls beneath. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   overscroll-behavior: contain;
   background: var(--bg-2);
   border: 1px solid var(--border-w);
   border-radius: 14px;
-  padding: 26px 28px 32px;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
 }
-.ancestry-drag-handle {
-  width: 40px;
+.ancestry-modal-body {
+  flex: 1 1 auto;
+  min-height: 0; /* allow the flex child to shrink so it can scroll */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 28px 32px;
+}
+/* Top bar: grab it to resize the sheet, double-click to reset to default. */
+.ancestry-grip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  cursor: ns-resize;
+  touch-action: none; /* let the pointer drag the grip instead of scrolling */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.ancestry-grip-bar {
+  width: 44px;
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.2);
-  margin: 0 auto 18px;
-  display: none; /* shown on mobile only */
+  background: rgba(255, 255, 255, 0.22);
+  transition: background 0.18s;
 }
+.ancestry-grip:hover .ancestry-grip-bar { background: rgba(255, 255, 255, 0.42); }
+.detail-close { z-index: 3; }
 
 /* ── Hop inspector ─────────────────────────────────────────────────────
    A compact, non-modal panel docked at the bottom of the viewport. It does
@@ -1446,7 +1471,7 @@ button.object-tag:hover {
 }
 
 @media (max-width: 640px) {
-  /* The modal itself is the scroll container on mobile (not the overlay), so the
+  /* Full-bleed bottom sheet. The body is the scroll container, so the
      swipe-to-dismiss "at top" check reads the right scroll position. */
   .ancestry-overlay { padding: 0; overflow: hidden; }
   .ancestry-modal {
@@ -1454,9 +1479,10 @@ button.object-tag:hover {
     height: 100%;
     max-height: 100dvh;
     border-radius: 16px 16px 0 0;
-    padding: 18px 16px calc(28px + env(safe-area-inset-bottom));
   }
-  .ancestry-drag-handle { display: block; }
+  .ancestry-modal-body {
+    padding: 4px 16px calc(28px + env(safe-area-inset-bottom));
+  }
 }
 
 /* ── Utility ───────────────────────────────────────────────────────── */

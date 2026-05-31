@@ -11,6 +11,15 @@ import DetailSections from './DetailSections'
 const DRAG_DISMISS_PX = 130
 const DRAG_SLOP_PX = 8
 
+// Resize-via-grip thresholds. The sheet is bottom-anchored, so dragging the top
+// grip down shrinks it and dragging it up grows it. Released below
+// DISMISS_SHEET_PX it closes; otherwise it never settles smaller than
+// MIN_SHEET_PX. The last chosen height is remembered for the session so the
+// sheet reopens at the size the user fixed it to.
+const MIN_SHEET_PX = 220
+const DISMISS_SHEET_PX = 120
+let lastSheetHeight = null
+
 export default function AncestryModal({ componentId, onClose, onSelectComponent }) {
   // Distance the modal is currently pushed down by a touch drag.
   const [offset, setOffset] = useState(0)
@@ -19,12 +28,22 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent 
   const [snapping, setSnapping] = useState(false)
   // Whether the Manifest → Kernel pipeline section is expanded (open by default).
   const [treeOpen, setTreeOpen] = useState(true)
+  // Explicit sheet height in px set by dragging the grip; null = default (auto,
+  // capped at max-height). Seeded from the last size the user fixed it to.
+  const [sheetHeight, setSheetHeight] = useState(lastSheetHeight)
+  // True while the grip is being dragged, so height tracks the pointer 1:1.
+  const [resizing, setResizing] = useState(false)
   const modalRef = useRef(null)
-  // Drag gesture bookkeeping: startY, whether the modal was at the top when the
-  // touch began, and the decided mode (null = undecided, 'drag', or 'scroll').
+  const bodyRef = useRef(null)
+  // Body swipe-dismiss bookkeeping: startY, whether the body was at the top when
+  // the touch began, and the decided mode (null = undecided, 'drag', 'scroll').
   const drag = useRef({ startY: 0, atTop: false, mode: 'scroll' })
+  // Grip resize bookkeeping: whether a resize is active and the modal's bottom
+  // edge captured at grab time (kept fixed so the top edge follows the pointer).
+  const resize = useRef({ active: false, bottom: 0 })
 
-  // Esc to close + reset transient state whenever a new component opens.
+  // Esc to close + reset transient gesture state whenever a new component opens.
+  // Sheet height is intentionally NOT reset — the size the user picked sticks.
   useEffect(() => {
     if (!componentId) return
     setOffset(0)
@@ -62,14 +81,51 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent 
     }
   }, [componentId])
 
-  // Touch-drag to dismiss — deliberate gesture only, so fast scrolling never
-  // closes the sheet by accident. It engages only when ALL hold:
-  //   • the modal was already scrolled to the very top when the touch began,
+  // ── Grip resize ──────────────────────────────────────────────────────
+  // The grip is the top bar. Drag it to set the sheet height: the sheet is
+  // bottom-anchored, so its bottom edge stays put (captured at grab time) and
+  // the top edge tracks the pointer. Pointer capture routes move/up back to the
+  // grip even if the cursor leaves it. Works for mouse and touch alike.
+  const onGripPointerDown = (e) => {
+    if (!modalRef.current) return
+    e.preventDefault()
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    resize.current = { active: true, bottom: modalRef.current.getBoundingClientRect().bottom }
+    setResizing(true)
+    setOffset(0)
+  }
+  const onGripPointerMove = (e) => {
+    if (!resize.current.active) return
+    const max = window.innerHeight * 0.92
+    const next = Math.max(0, Math.min(resize.current.bottom - e.clientY, max))
+    setSheetHeight(next)
+  }
+  const onGripPointerUp = () => {
+    if (!resize.current.active) return
+    resize.current.active = false
+    setResizing(false)
+    setSheetHeight((h) => {
+      if (h != null && h < DISMISS_SHEET_PX) { onClose(); return h }
+      const settled = h == null ? null : Math.max(h, MIN_SHEET_PX)
+      lastSheetHeight = settled
+      return settled
+    })
+  }
+  // Double-click / -tap the grip to clear the fixed size and return to default.
+  const onGripDoubleClick = () => {
+    lastSheetHeight = null
+    setSheetHeight(null)
+  }
+
+  // ── Body swipe-to-dismiss (touch) ──────────────────────────────────────
+  // A deliberate downward swipe over the content dismisses the sheet, so fast
+  // scrolling never closes it by accident. It engages only when ALL hold:
+  //   • the body was already scrolled to the very top when the touch began,
   //   • the first finger movement past the slop is downward (not an up-scroll),
   //   • the content does not scroll during the gesture, and
   //   • the total downward drag passes DRAG_DISMISS_PX.
   const onTouchStart = (e) => {
-    const atTop = !modalRef.current || modalRef.current.scrollTop <= 0
+    const atTop = !bodyRef.current || bodyRef.current.scrollTop <= 0
     drag.current = { startY: e.touches[0].clientY, atTop, mode: null }
     setSnapping(false)
   }
@@ -84,7 +140,7 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent 
     }
     if (st.mode !== 'drag') return
     // If the content scrolled after we started dragging, the user is scrolling.
-    if (modalRef.current && modalRef.current.scrollTop > 0) {
+    if (bodyRef.current && bodyRef.current.scrollTop > 0) {
       st.mode = 'scroll'
       setOffset(0)
       return
@@ -136,6 +192,12 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent 
     </div>
   ) : null
 
+  const transition = resizing
+    ? 'none'
+    : snapping
+      ? 'transform 0.3s ease'
+      : 'height 0.18s ease'
+
   return createPortal(
     <div
       className="ancestry-overlay animate-fade-in"
@@ -147,49 +209,62 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent 
         role="dialog"
         aria-modal="true"
         aria-label={component.displayName}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onTouchCancel={onTouchEnd}
-        style={
-          offset > 0 || snapping
-            ? {
-                transform: `translateY(${offset}px)`,
-                transition: snapping ? 'transform 0.3s ease' : 'none',
-              }
-            : undefined
-        }
+        style={{
+          height: sheetHeight != null ? `${sheetHeight}px` : undefined,
+          transform: offset > 0 ? `translateY(${offset}px)` : undefined,
+          transition,
+        }}
       >
-        <div className="ancestry-drag-handle" />
+        <div
+          className="ancestry-grip"
+          role="separator"
+          aria-label="Drag to resize · double-click to reset"
+          onPointerDown={onGripPointerDown}
+          onPointerMove={onGripPointerMove}
+          onPointerUp={onGripPointerUp}
+          onPointerCancel={onGripPointerUp}
+          onDoubleClick={onGripDoubleClick}
+        >
+          <span className="ancestry-grip-bar" />
+        </div>
         <button className="detail-close" onClick={onClose} aria-label="Close (Esc)">✕</button>
 
-        <div className="detail-title" style={{ color }}>
-          {component.typePrefix && (
-            <span className="detail-type-prefix">[{component.typePrefix}]&nbsp;</span>
-          )}
-          {component.displayName}
-        </div>
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 22 }}>
-          <span className="detail-type" style={{ color, marginBottom: 0 }}>
-            {zone?.label || component.layer}
-          </span>
-        </div>
-
-        <DetailSections
-          component={component}
-          color={color}
-          suppressLegacyPrimitives={hasTree}
-          onSelectComponent={onSelectComponent}
-          pipelineSection={pipelineSection}
-        />
-
         <div
-          className="text-[0.6rem] mt-6 pt-4 border-t"
-          style={{ color: 'var(--tx-dim)', borderColor: 'var(--border-d)' }}
+          ref={bodyRef}
+          className="ancestry-modal-body"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchEnd}
         >
-          Press <span style={{ color: 'var(--tx-muted)' }}>Esc</span> or tap outside to close · id:&nbsp;
-          <span style={{ color: 'var(--tx-muted)' }}>{component.componentId}</span>
+          <div className="detail-title" style={{ color }}>
+            {component.typePrefix && (
+              <span className="detail-type-prefix">[{component.typePrefix}]&nbsp;</span>
+            )}
+            {component.displayName}
+          </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 22 }}>
+            <span className="detail-type" style={{ color, marginBottom: 0 }}>
+              {zone?.label || component.layer}
+            </span>
+          </div>
+
+          <DetailSections
+            component={component}
+            color={color}
+            suppressLegacyPrimitives={hasTree}
+            onSelectComponent={onSelectComponent}
+            pipelineSection={pipelineSection}
+          />
+
+          <div
+            className="text-[0.6rem] mt-6 pt-4 border-t"
+            style={{ color: 'var(--tx-dim)', borderColor: 'var(--border-d)' }}
+          >
+            Press <span style={{ color: 'var(--tx-muted)' }}>Esc</span> or tap outside to close · id:&nbsp;
+            <span style={{ color: 'var(--tx-muted)' }}>{component.componentId}</span>
+          </div>
         </div>
       </div>
     </div>,
