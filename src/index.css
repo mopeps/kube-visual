@@ -1174,6 +1174,20 @@ button.object-tag:hover {
   backdrop-filter: blur(4px);
   overflow: hidden;
   overscroll-behavior: contain;
+  transition: background 0.18s ease, backdrop-filter 0.18s ease;
+}
+/* Peek mode (sheet resized to an explicit, reduced height): the overlay drops
+   its dimming/blur and lets pointer events fall through so the overview behind
+   stays visible and scrollable. The sheet itself re-captures pointer events and
+   gains an upward shadow to sit above the live page. */
+.ancestry-overlay.is-peek {
+  background: transparent;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+.ancestry-overlay.is-peek .ancestry-modal {
+  pointer-events: auto;
+  box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.55);
 }
 .ancestry-modal {
   position: relative;
