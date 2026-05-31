@@ -1344,6 +1344,24 @@ button.object-tag:hover {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+/* Structural-kind chip leading a row's revealed description — a monochrome pill
+   that inherits the row's accent (via currentColor) so it tints with the band
+   rather than adding a second colour system. Sits inline before the note text,
+   the same chip-then-text rhythm the Interactions rows use. */
+.tree-kind-chip {
+  display: inline-block;
+  vertical-align: baseline;
+  margin-right: 0.5em;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 0.04em 0.5em;
+  border-radius: 999px;
+  white-space: nowrap;
+  color: var(--row-color, currentColor);
+  border: 1px solid color-mix(in srgb, var(--row-color, currentColor) 42%, transparent);
+  background: color-mix(in srgb, var(--row-color, currentColor) 13%, transparent);
+}
 
 /* Child nodes (e.g. a Pod's consumed resources) indent under their parent,
    threaded by a soft accent rail instead of ASCII branch glyphs. */

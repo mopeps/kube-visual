@@ -32,11 +32,62 @@ function primitiveNote(p) {
   return 'host-backed mount'
 }
 
+// One-line note for a `linuxPrimitive` realisation row that has no process detail
+// of its own (a Service VIP, a NetworkPolicy's ACLs, a CR's etcd record, the VMI
+// guest, the off-cluster client). Philosophy: name the concrete mechanism — the
+// etcd record, the controller that acts on it, the actual datapath/kernel effect —
+// in one tight clause. Grounded, never a paraphrase of the label. Matched
+// most-specific first; an unrecognised value returns undefined so the row stays
+// bare rather than gaining a hollow note.
+function realisationNote(lp) {
+  if (!lp) return undefined
+  if (/encrypted at rest/i.test(lp))
+    return 'An etcd key, not a process — encrypted at rest so a stolen disk reveals nothing.'
+  if (/etcd record/i.test(lp))
+    return 'Not a process — a key in etcd that controllers watch and reconcile into reality.'
+  if (/router-default LB/i.test(lp))
+    return "The guest can't provision an LB, so KubeVirt's CCM mirrors the Service onto the host to fulfil it."
+  if (/MetalLB.*virt-launcher/i.test(lp))
+    return 'A VIP MetalLB claims via ARP, DNATed by OVN to the virt-launcher Pods hosting the guest VMs.'
+  if (/MetalLB/i.test(lp))
+    return 'A VIP MetalLB claims via ARP on the LAN — a bare-metal substitute for a cloud LB.'
+  if (/OVN ACL/i.test(lp))
+    return 'Where NetworkPolicy intent becomes enforcement — OVS permits or drops each packet here.'
+  if (/ClusterIP/i.test(lp))
+    return 'A virtual IP no interface owns; OVN flows DNAT it to a live Pod, masking their shifting IPs.'
+  if (/guest OS|RHCOS guest/i.test(lp))
+    return "RHCOS booted inside the VM — where the guest node's kubelet and workloads actually run."
+  if (/TCP socket/i.test(lp))
+    return "An off-cluster client's libc socket — where the whole request flow begins."
+  return undefined
+}
+
+// One-line note for a bare `logical-intent` manifest row (the declarative K8s
+// object an API Object / Service / NetworkPolicy reduces to). Same philosophy as
+// realisationNote: each is a desired-state record in etcd, so name the record, the
+// controller/kubelet that acts on it, and the concrete effect. Keyed off the kind
+// word that leads `runtimeForm`.
+function manifestNote(form) {
+  if (!form) return undefined
+  if (/^Deployment/.test(form)) return 'Desired Pod template & replica count in etcd; its controller rolls them out via ReplicaSets.'
+  if (/^ReplicaSet/.test(form)) return 'Holds the desired replica count in etcd; its controller adds or deletes Pods until actual matches.'
+  if (/^ConfigMap/.test(form)) return 'A key/value map of non-secret config in etcd; the kubelet projects it into the Pod as files or env vars.'
+  if (/^Secret/.test(form)) return 'A key/value map of sensitive data in etcd; the kubelet mounts it into the Pod as an in-memory tmpfs file.'
+  if (/^PersistentVolumeClaim/.test(form)) return 'A storage request in etcd; once bound to a PersistentVolume the kubelet mounts it.'
+  if (/^PersistentVolume/.test(form)) return 'A cluster-scoped volume in etcd that a PVC binds to, backed by real storage.'
+  if (/^EndpointSlice/.test(form)) return "A list of a Service's live, ready Pod IPs in etcd, written by the EndpointSlice controller to steer traffic."
+  if (/^Service \(LoadBalancer\)/.test(form)) return 'Declares an external entry point; a controller provisions the LB and writes its IP back.'
+  if (/^Service/.test(form)) return 'Allocates a stable virtual IP in etcd; the datapath DNATs it to the selected Pods.'
+  if (/^NetworkPolicy/.test(form)) return 'Declares allowed traffic for the selected Pods; OVN compiles it into datapath ACLs.'
+  return undefined
+}
+
 // Map PRIMITIVES_BY_TYPE items → tree rows (label + short note, full detail on expand).
 function primitiveNodes(typePrefix) {
   const set = PRIMITIVES_BY_TYPE[typePrefix]
   if (!set) return null
   return set.items.map(it => ({
+    id: it.id,
     label: it.label,
     note: shortNote(it.description),
     detail: {
@@ -296,9 +347,19 @@ function controllerNote(form) {
 //                    (Deployment/DaemonSet/StatefulSet/…) is declarative intent,
 //                    not a runtime object, so it moves up to the Logical Intent
 //                    band instead (see CONTROLLER_KIND).
-//   • linuxPrimitive → lead row of the kernel band, ahead of the generic
-//                    type-derived rows, since it is the per-instance realisation
-//                    (e.g. a Service is a MetalLB VIP, not a generic Pod netns).
+//   • linuxPrimitive → the per-instance realisation. For a type whose primitive
+//                    set already has a process row (a Pod's PID-1 process, a
+//                    systemd service's process), we fold the realisation into
+//                    *that* row — "PID 1 · Process" becomes "PID 1 · CVO binary" —
+//                    rather than stacking a near-duplicate lead row above it.
+//                    Everything else (VMI guest OS, a CR's etcd record, a Service
+//                    VIP) keeps it as the kernel band's lead row, since there is no
+//                    process row that means the same thing.
+const FOLD_PROCESS_ID = {
+  Pod: 'container-process',
+  'Static Pod': 'container-process',
+  systemd: 'service-process',
+}
 function withForms(component, bands) {
   const { typePrefix: t, runtimeForm, linuxPrimitive } = component
   if (runtimeForm) {
@@ -317,7 +378,27 @@ function withForms(component, bands) {
     }
   }
   if (linuxPrimitive) {
-    ensureKernelBand(bands).groups[0].nodes.unshift({ label: linuxPrimitive })
+    const foldId = FOLD_PROCESS_ID[t]
+    let folded = false
+    if (foldId) {
+      const band = bands.find(b => b.layerId === 'linux-primitive')
+      for (const g of band?.groups || []) {
+        const proc = g.nodes.find(n => n.id === foldId)
+        if (proc) {
+          // Keep the row's primitive prefix ("PID 1", "systemd Process") and
+          // swap its generic tail for the concrete realisation.
+          proc.label = `${proc.label.split(' · ')[0]} · ${linuxPrimitive}`
+          folded = true
+          break
+        }
+      }
+    }
+    if (!folded) {
+      ensureKernelBand(bands).groups[0].nodes.unshift({
+        label: linuxPrimitive,
+        note: realisationNote(linuxPrimitive),
+      })
+    }
   }
   return bands
 }
@@ -347,10 +428,16 @@ function simpleBands(component) {
   // skips straight to the kernel datapath (OVN LB flows / ACLs / an etcd record),
   // mirroring how host systemd services skip the Runtime Object band too.
   if (runtimeForm && runtimeForm !== 'n/a (off-cluster)') {
-    bands.push({ layerId: 'logical-intent', groups: [{ nodes: [{ label: runtimeForm }] }] })
+    bands.push({
+      layerId: 'logical-intent',
+      groups: [{ nodes: [{ label: runtimeForm, note: manifestNote(runtimeForm) }] }],
+    })
   }
   if (linuxPrimitive) {
-    bands.push({ layerId: 'linux-primitive', groups: [{ nodes: [{ label: linuxPrimitive }] }] })
+    bands.push({
+      layerId: 'linux-primitive',
+      groups: [{ nodes: [{ label: linuxPrimitive, note: realisationNote(linuxPrimitive) }] }],
+    })
   }
   return bands
 }

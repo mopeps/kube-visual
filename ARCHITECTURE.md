@@ -272,11 +272,15 @@ Adding a component touches several places — keep them in sync:
    `NWPOLICY`),
    `role` (short upper-case kind tag), `runtimeForm` (the concrete K8s kind + namespace,
    e.g. `Deployment · hypershift`), `linuxPrimitive` (the per-instance Linux realisation,
-   e.g. `Pod → Go binary + controller-runtime`), `problemSolved` (one concise "why it
-   exists" sentence), `interactions[]`, `explorationCommands[]`. Add `logicalContext`
+   e.g. `Go binary + controller-runtime` — name the realisation only; do **not** prefix it
+   with the supervisor (`Pod →`, `systemd →`, …), which the band structure already conveys),
+   `problemSolved` (one concise "why it exists" sentence), `interactions[]`,
+   `explorationCommands[]`. Add `logicalContext`
    (`openShiftProject` + `associatedObject`) for workload pods and VMIs. `runtimeForm` and
    `linuxPrimitive` are folded into the component's Manifest → Kernel pipeline by
-   `pipeline-model.js`.
+   `pipeline-model.js`. For Pods and systemd services `linuxPrimitive` is folded into the
+   process row of the kernel band (`PID 1 · Process` → `PID 1 · <realisation>`); other types
+   show it as the kernel band's lead row.
 2. **`src/data/zones.js`** — add a node (with `id`, `title`, `typePrefix`, `badges`) to
    the correct zone in the recursive `ZONES` tree. `COMPONENT_COLOR` / `COMPONENT_ZONE`
    derive automatically from the tree.
