@@ -24,9 +24,9 @@ const TYPE_GLYPH_KEY = {
 // glyph id → SVG body (24×24 viewBox, stroke = currentColor, 1.6 weight — same
 // drawing conventions as the pipeline BandIcon and interaction KindIcon).
 const TYPE_GLYPHS = {
-  // Pod — the classic Kubernetes hexagon (a single packaged workload).
+  // Pod — the classic Kubernetes hexagon (a single packaged application).
   pod: <path d="M12 3 20 7.5v9L12 21 4 16.5v-9z" />,
-  // Static Pod — a boxed workload pinned to the node (kubelet-managed from disk,
+  // Static Pod — a boxed application pinned to the node (kubelet-managed from disk,
   // not the API server): a container box with a thumbtack pushed into the top.
   'static-pod': (
     <>

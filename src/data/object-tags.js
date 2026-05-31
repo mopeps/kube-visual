@@ -89,13 +89,13 @@ const ENTRIES = [
   },
   { componentId: 'svc-ingress-lb-guest', aliases: ['Ingress LoadBalancer'] },
   {
-    componentId: 'frontend-workload-pod',
-    aliases: ['Front-End Workload Pod', 'Front-End Workload Instance', 'Front-End Workload', 'Front-End Pod', 'frontend Pod'],
+    componentId: 'frontend-application-pod',
+    aliases: ['Front-End Application Pod', 'Front-End Application Instance', 'Front-End Application', 'Front-End Pod', 'frontend Pod'],
   },
   { componentId: 'svc-frontend', aliases: ['Front-End Service'] },
   {
-    componentId: 'backend-workload-pod',
-    aliases: ['Back-End Workload Pod', 'Back-End Workload', 'Back-End Pod', 'backend Pod'],
+    componentId: 'backend-application-pod',
+    aliases: ['Back-End Application Pod', 'Back-End Application', 'Back-End Pod', 'backend Pod'],
   },
   { componentId: 'svc-backend', aliases: ['Back-End ClusterIP Service', 'Back-End Service'] },
   {
@@ -117,11 +117,11 @@ const ENTRIES = [
   { componentId: 'guest-worker-node-vm', aliases: ['VirtualMachineInstance', 'VMI'] },
   { componentId: 'kubevirt-vm-cr', aliases: ['VirtualMachine'] },
   { componentId: 'endpointslice', aliases: ['EndpointSlice', 'Endpoint slice'] },
-  { componentId: 'secret-workload', aliases: ['Secret'] },
-  { componentId: 'configmap-workload', aliases: ['ConfigMap'] },
-  { componentId: 'pvc-workload', aliases: ['PersistentVolumeClaim'] },
-  { componentId: 'pv-workload', aliases: ['PersistentVolume'] },
-  { componentId: 'replicaset-workload', aliases: ['ReplicaSet'] },
+  { componentId: 'secret-application', aliases: ['Secret'] },
+  { componentId: 'configmap-application', aliases: ['ConfigMap'] },
+  { componentId: 'pvc-application', aliases: ['PersistentVolumeClaim'] },
+  { componentId: 'pv-application', aliases: ['PersistentVolume'] },
+  { componentId: 'replicaset-application', aliases: ['ReplicaSet'] },
 
   // ── Highlight-only: kinds with no single backing object ────────────────
   // "Cluster API" is a whole project / object family (Cluster, Machine,

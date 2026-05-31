@@ -581,7 +581,7 @@
       "Scrapes metrics endpoints on guest cluster Pods and nodes from within the guest cluster.",
       "Stores time-series data in a Thanos-backed Prometheus instance running on guest nodes.",
       "Exposes metrics via the guest cluster's OpenShift monitoring console.",
-      "Runs as workloads on the guest worker nodes (inside the VMs), not in the management control-plane namespace."
+      "Runs as applications on the guest worker nodes (inside the VMs), not in the management control-plane namespace."
     ],
     "explorationCommands": [
       "# Check monitoring stack (from the guest cluster)\noc get pods -n openshift-monitoring --kubeconfig <guest-kubeconfig>",
@@ -714,7 +714,7 @@
     "interactions": [
       "Started directly by the master kubelet from a manifest in /etc/kubernetes/manifests, before any scheduler exists.",
       "Persists all management cluster state to the Management Etcd Static Pod on the same node.",
-      "Serves the HyperShift Operator, CVO, and every controller that reconciles guest control-plane workloads.",
+      "Serves the HyperShift Operator, CVO, and every controller that reconciles guest control-plane applications.",
       "Runs as a static pod on the master, distinct from each guest's own API server which runs as a regular Pod in its HCP namespace."
     ],
     "explorationCommands": [
@@ -969,7 +969,7 @@
     "role": "VM WRAPPER",
     "runtimeForm": "Pod (virt-launcher) · <hcp-namespace>",
     "linuxPrimitive": "qemu-kvm process + tap0 NIC",
-    "problemSolved": "The Pod that wraps one VM, so KubeVirt can manage a qemu-kvm guest like any other Kubernetes workload.",
+    "problemSolved": "The Pod that wraps one VM, so KubeVirt can manage a qemu-kvm guest like any other Kubernetes application.",
     "interactions": [
       "Spawns and supervises the qemu-kvm process for the Guest Worker Node VM.",
       "Creates a tap interface (tap0) backing the guest's virtio NIC; under KubeVirt's default masquerade binding it sits on a pod-local bridge (k6t-eth0) with NAT, while the launcher Pod's own eth0 veth is what attaches to the host OVS bridge.",
@@ -1030,10 +1030,10 @@
     "role": "NODE AGENT",
     "runtimeForm": "systemd unit · guest worker node (in VM)",
     "linuxPrimitive": "kubelet binary (in VM)",
-    "problemSolved": "The node agent inside the worker VM that pulls and runs the guest cluster's workload Pods.",
+    "problemSolved": "The node agent inside the worker VM that pulls and runs the guest cluster's application Pods.",
     "interactions": [
-      "Maintains an outbound watch on the exposed Guest API Server endpoint — the kubelet pulls its workload; the API Server does not push to it through Konnectivity.",
-      "Calls guest CRI-O to manage container lifecycle for workload Pods.",
+      "Maintains an outbound watch on the exposed Guest API Server endpoint — the kubelet pulls its application; the API Server does not push to it through Konnectivity.",
+      "Calls guest CRI-O to manage container lifecycle for application Pods.",
       "Reports node resource usage and Pod status back to the Guest API Server."
     ],
     "explorationCommands": [
@@ -1055,11 +1055,11 @@
     "role": "CONTAINER RUNTIME",
     "runtimeForm": "systemd unit · guest worker node (in VM)",
     "linuxPrimitive": "crio + runc/crun (in VM)",
-    "problemSolved": "Runs the actual workload containers inside the guest worker VM.",
+    "problemSolved": "Runs the actual application containers inside the guest worker VM.",
     "interactions": [
       "Receives gRPC CRI calls from the guest Kubelet.",
       "Invokes the CNI plugin to connect containers to the guest OVS bridge.",
-      "Sets up cgroup v2 hierarchies for workload Pod resource isolation."
+      "Sets up cgroup v2 hierarchies for application Pod resource isolation."
     ],
     "explorationCommands": [
       "# List containers inside the guest VM\nvirtctl ssh core@<vmi> -- crictl ps",
@@ -1085,7 +1085,7 @@
     "role": "VIRTUAL SWITCH",
     "runtimeForm": "systemd unit · guest worker node (in VM)",
     "linuxPrimitive": "ovs-vswitchd (in VM)",
-    "problemSolved": "The in-VM switch that all guest workload Pods plug into.",
+    "problemSolved": "The in-VM switch that all guest application Pods plug into.",
     "interactions": [
       "Manages the in-VM br-int OVS bridge for guest Pod networking.",
       "Receives OpenFlow rules from the guest OVN-Kubernetes node DaemonSet.",
@@ -1110,10 +1110,10 @@
     "role": "NODE NETWORKING",
     "runtimeForm": "DaemonSet · openshift-ovn-kubernetes (in VM)",
     "linuxPrimitive": "OVN controller (in VM)",
-    "problemSolved": "Wires guest workload Pods into the network and syncs OVN flows inside the VM.",
+    "problemSolved": "Wires guest application Pods into the network and syncs OVN flows inside the VM.",
     "interactions": [
       "Runs the OVN controller that programs guest OVS flows.",
-      "Invokes CNI to create veth pairs for workload Pods inside the VM.",
+      "Invokes CNI to create veth pairs for application Pods inside the VM.",
       "Maintains Geneve tunnel configuration for cross-node (cross-VM) traffic."
     ],
     "explorationCommands": [
@@ -1164,11 +1164,11 @@
     "interactions": [
       "Configured as the cluster DNS server for all containers via the kubelet's clusterDNS setting.",
       "Answers cluster-local queries (*.svc.cluster.local) from the guest cluster's own Service/Endpoint records and forwards external names to the upstream resolvers configured on the node.",
-      "Caches resolved records to reduce lookup latency for busy workloads."
+      "Caches resolved records to reduce lookup latency for busy applications."
     ],
     "explorationCommands": [
       "# Check node-level CoreDNS\nvirtctl ssh core@<vmi> -- oc get pods -n openshift-dns -l dns.operator.openshift.io/daemonset-dns=default",
-      "# Test DNS from a workload pod\noc exec <pod> -n <ns> -- nslookup kubernetes.default.svc.cluster.local"
+      "# Test DNS from a application pod\noc exec <pod> -n <ns> -- nslookup kubernetes.default.svc.cluster.local"
     ],
     "docLinks": [
       {
@@ -1215,7 +1215,7 @@
     "componentId": "svc-ingress-lb-guest",
     "displayName": "Ingress LoadBalancer",
     "typePrefix": "Service",
-    "layer": "Guest Workload",
+    "layer": "Guest Application",
     "role": "LOAD BALANCER",
     "runtimeForm": "Service (LoadBalancer) · openshift-ingress (in VM)",
     "linuxPrimitive": "router-default LB → kubevirt CCM mirror → OVN LB flows",
@@ -1242,23 +1242,23 @@
     ]
   },
   {
-    "componentId": "frontend-workload-pod",
-    "displayName": "Front-End Workload",
+    "componentId": "frontend-application-pod",
+    "displayName": "Front-End Application",
     "typePrefix": "Pod",
-    "layer": "Guest Workload",
+    "layer": "Guest Application",
     "logicalContext": {
       "openShiftProject": "e-commerce-prod",
       "associatedObject": "Deployment/frontend"
     },
-    "role": "WORKLOAD",
+    "role": "APPLICATION",
     "problemSolved": "The user-facing application — the terminal destination of the whole external traffic flow.",
     "interactions": [
       "Listens on a private Pod IP address within the guest cluster network.",
       "Receives traffic from the Guest Ingress Router via the in-VM OVS bridge.",
-      "May call the Back-End Workload Pod via east-west Service traffic within the guest cluster."
+      "May call the Back-End Application Pod via east-west Service traffic within the guest cluster."
     ],
     "explorationCommands": [
-      "# Check workload pods\noc get pods -n e-commerce-prod -l app=frontend",
+      "# Check application pods\noc get pods -n e-commerce-prod -l app=frontend",
       "# View app logs\noc logs -n e-commerce-prod deploy/frontend --tail=50",
       "# Exec into the container\noc exec -it deploy/frontend -n e-commerce-prod -- /bin/sh",
       "# Check listening ports\noc exec deploy/frontend -n e-commerce-prod -- ss -tlnp"
@@ -1302,7 +1302,7 @@
     "componentId": "svc-frontend",
     "displayName": "Front-End Service",
     "typePrefix": "Service",
-    "layer": "Guest Workload",
+    "layer": "Guest Application",
     "logicalContext": {
       "openShiftProject": "e-commerce-prod",
       "associatedObject": "Deployment/frontend"
@@ -1329,18 +1329,18 @@
     ]
   },
   {
-    "componentId": "backend-workload-pod",
-    "displayName": "Back-End Workload",
+    "componentId": "backend-application-pod",
+    "displayName": "Back-End Application",
     "typePrefix": "Pod",
-    "layer": "Guest Workload",
+    "layer": "Guest Application",
     "logicalContext": {
       "openShiftProject": "e-commerce-prod",
       "associatedObject": "Deployment/backend"
     },
-    "role": "WORKLOAD",
+    "role": "APPLICATION",
     "problemSolved": "The application's data and API tier, called east-west by the front end.",
     "interactions": [
-      "Fronted by the Back-End ClusterIP Service, which the Front-End Workload consumes for east-west API calls.",
+      "Fronted by the Back-End ClusterIP Service, which the Front-End Application consumes for east-west API calls.",
       "Connects to persistent storage and external databases.",
       "Communicates over the in-VM guest OVS bridge via the OVN virtual fabric."
     ],
@@ -1388,7 +1388,7 @@
     "componentId": "svc-backend",
     "displayName": "Back-End Service",
     "typePrefix": "Service",
-    "layer": "Guest Workload",
+    "layer": "Guest Application",
     "logicalContext": {
       "openShiftProject": "e-commerce-prod",
       "associatedObject": "Deployment/backend"
@@ -1399,7 +1399,7 @@
     "problemSolved": "Gives the back-end Pods a stable virtual IP so back-end scaling and rollouts stay invisible to the front end.",
     "interactions": [
       "Selects the backend Pods by label and publishes their ready endpoints.",
-      "Consumed east-west by the Front-End Workload via the Service DNS name (backend.e-commerce-prod.svc).",
+      "Consumed east-west by the Front-End Application via the Service DNS name (backend.e-commerce-prod.svc).",
       "The ClusterIP is realized as OVN load-balancer flows that DNAT to a backing Pod IP on the guest OVS fabric."
     ],
     "explorationCommands": [
@@ -1418,7 +1418,7 @@
     "componentId": "netpol-ecommerce",
     "displayName": "E-Commerce Network Policy",
     "typePrefix": "NWPOLICY",
-    "layer": "Guest Workload",
+    "layer": "Guest Application",
     "logicalContext": {
       "openShiftProject": "e-commerce-prod",
       "associatedObject": "Deployment/backend"
@@ -1428,7 +1428,7 @@
     "linuxPrimitive": "OVN ACL + address set → OVS allow/drop flows",
     "problemSolved": "Locks down east-west traffic: only the front end may reach the back end, everything else is denied.",
     "interactions": [
-      "Selects the Back-End Workload Pods via podSelector and gates their ingress to the Front-End Pods' address set on the backend port.",
+      "Selects the Back-End Application Pods via podSelector and gates their ingress to the Front-End Pods' address set on the backend port.",
       "Watched by the OVN-Kubernetes Master, which translates it into ACLs and address sets in the OVN Northbound DB.",
       "Enforced in the data plane as allow/drop OpenFlow rules on the guest Open vSwitch br-int — non-matching traffic is dropped before it reaches the backend veth.",
       "Unlike a plain config object it has a real datapath — OVN-Kubernetes compiles it into ACLs enforced as allow/drop flows on the guest br-int, which earns it a card on the canvas."
@@ -1456,7 +1456,7 @@
     "role": "KERNEL PRIMITIVE",
     "runtimeForm": "Linux network namespace · per-Pod (in VM)",
     "linuxPrimitive": "unshare(CLONE_NEWNET) in VM kernel",
-    "problemSolved": "Gives each workload Pod its own private network — IP, routes, and firewall — isolated from every other Pod.",
+    "problemSolved": "Gives each application Pod its own private network — IP, routes, and firewall — isolated from every other Pod.",
     "interactions": [
       "Attaches to a guest-side veth pair managed by the OVN-Kubernetes Guest Node DaemonSet.",
       "Provisioned and configured by the guest CRI-O runtime via CNI instructions."
@@ -1769,7 +1769,7 @@
     "componentId": "route-cr",
     "displayName": "Route",
     "typePrefix": "Custom Resource",
-    "layer": "Guest Workload",
+    "layer": "Guest Application",
     "logicalContext": {
       "openShiftProject": "e-commerce-prod",
       "associatedObject": "Front-End Service"
@@ -1796,10 +1796,10 @@
     ]
   },
   {
-    "componentId": "deployment-workload",
+    "componentId": "deployment-application",
     "displayName": "Deployment",
     "typePrefix": "API Object",
-    "layer": "Guest Workload",
+    "layer": "Guest Application",
     "logicalContext": {
       "openShiftProject": "e-commerce-prod",
       "associatedObject": "Deployment/frontend, Deployment/backend"
@@ -1807,7 +1807,7 @@
     "role": "INTENT RECORD",
     "runtimeForm": "Deployment (apps/v1) · e-commerce-prod",
     "linuxPrimitive": "etcd record (guest etcd)",
-    "problemSolved": "Declares the desired replicas and Pod template for each app tier — the source the workload Pods are reconciled from.",
+    "problemSolved": "Declares the desired replicas and Pod template for each app tier — the source the application Pods are reconciled from.",
     "interactions": [
       "Authored by the app owner to declare the desired replicas and container image for each tier.",
       "Reconciled by the guest Deployment controller into a ReplicaSet on every spec change.",
@@ -1825,10 +1825,10 @@
     ]
   },
   {
-    "componentId": "replicaset-workload",
+    "componentId": "replicaset-application",
     "displayName": "ReplicaSet",
     "typePrefix": "API Object",
-    "layer": "Guest Workload",
+    "layer": "Guest Application",
     "logicalContext": {
       "openShiftProject": "e-commerce-prod",
       "associatedObject": "Deployment/frontend, Deployment/backend"
@@ -1836,11 +1836,11 @@
     "role": "INTENT RECORD",
     "runtimeForm": "ReplicaSet (apps/v1) · e-commerce-prod",
     "linuxPrimitive": "etcd record (guest etcd)",
-    "problemSolved": "Guarantees the workload Pods stay at their desired count, recreating any that are lost.",
+    "problemSolved": "Guarantees the application Pods stay at their desired count, recreating any that are lost.",
     "interactions": [
       "Created and owned by a Deployment, which sets its replica count during rollouts.",
       "Reconciled by the guest ReplicaSet controller, which creates or deletes Pods to match desired replicas.",
-      "Owns the workload Pods via ownerReferences so they are garbage-collected with it."
+      "Owns the application Pods via ownerReferences so they are garbage-collected with it."
     ],
     "explorationCommands": [
       "# List ReplicaSets in the namespace\noc get rs -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
@@ -1854,20 +1854,20 @@
     ]
   },
   {
-    "componentId": "secret-workload",
+    "componentId": "secret-application",
     "displayName": "Secret",
     "typePrefix": "API Object",
-    "layer": "Guest Workload",
+    "layer": "Guest Application",
     "logicalContext": {
       "openShiftProject": "e-commerce-prod",
-      "associatedObject": "Front-End / Back-End Workload"
+      "associatedObject": "Front-End / Back-End Application"
     },
     "role": "INTENT RECORD",
     "runtimeForm": "Secret (core/v1) · e-commerce-prod",
     "linuxPrimitive": "etcd record (guest etcd, encrypted at rest)",
     "problemSolved": "Holds the app's sensitive config so credentials live outside the container image.",
     "interactions": [
-      "Referenced by the workload Pod specs as volume mounts or environment variables.",
+      "Referenced by the application Pod specs as volume mounts or environment variables.",
       "Projected by the guest kubelet into the Pod as an in-memory tmpfs mount, not a disk file.",
       "Persisted in the guest etcd — encrypted at rest, since HyperShift enables etcd Secret encryption by default (in vanilla Kubernetes this is opt-in); access is gated by RBAC on the Secret resource."
     ],
@@ -1883,20 +1883,20 @@
     ]
   },
   {
-    "componentId": "configmap-workload",
+    "componentId": "configmap-application",
     "displayName": "ConfigMap",
     "typePrefix": "API Object",
-    "layer": "Guest Workload",
+    "layer": "Guest Application",
     "logicalContext": {
       "openShiftProject": "e-commerce-prod",
-      "associatedObject": "Front-End / Back-End Workload"
+      "associatedObject": "Front-End / Back-End Application"
     },
     "role": "INTENT RECORD",
     "runtimeForm": "ConfigMap (core/v1) · e-commerce-prod",
     "linuxPrimitive": "etcd record (guest etcd)",
     "problemSolved": "Holds the app's non-sensitive config, decoupling settings from the container image.",
     "interactions": [
-      "Referenced by the workload Pod specs as mounted volumes or envFrom sources.",
+      "Referenced by the application Pod specs as mounted volumes or envFrom sources.",
       "Projected into the Pod by the guest kubelet as a tmpfs mount at container start.",
       "Updated independently of the image; a rollout or reload picks up the new values."
     ],
@@ -1912,20 +1912,20 @@
     ]
   },
   {
-    "componentId": "pvc-workload",
+    "componentId": "pvc-application",
     "displayName": "PersistentVolumeClaim",
     "typePrefix": "API Object",
-    "layer": "Guest Workload",
+    "layer": "Guest Application",
     "logicalContext": {
       "openShiftProject": "e-commerce-prod",
-      "associatedObject": "Front-End / Back-End Workload"
+      "associatedObject": "Front-End / Back-End Application"
     },
     "role": "INTENT RECORD",
     "runtimeForm": "PersistentVolumeClaim (core/v1) · e-commerce-prod",
     "linuxPrimitive": "etcd record (guest etcd)",
-    "problemSolved": "A workload's request for storage — bound to a volume and mounted into its Pod.",
+    "problemSolved": "A application's request for storage — bound to a volume and mounted into its Pod.",
     "interactions": [
-      "Authored alongside the workload to request a size and storage class.",
+      "Authored alongside the application to request a size and storage class.",
       "Bound by the guest control plane to a matching PersistentVolume.",
       "Triggers the guest kubelet to attach and mount the backing block device into the Pod."
     ],
@@ -1941,10 +1941,10 @@
     ]
   },
   {
-    "componentId": "pv-workload",
+    "componentId": "pv-application",
     "displayName": "PersistentVolume",
     "typePrefix": "API Object",
-    "layer": "Guest Workload",
+    "layer": "Guest Application",
     "role": "INTENT RECORD",
     "runtimeForm": "PersistentVolume (core/v1) · cluster-scoped",
     "linuxPrimitive": "etcd record (guest etcd)",
@@ -1969,7 +1969,7 @@
     "componentId": "endpointslice",
     "displayName": "EndpointSlice",
     "typePrefix": "API Object",
-    "layer": "Guest Workload",
+    "layer": "Guest Application",
     "logicalContext": {
       "openShiftProject": "e-commerce-prod",
       "associatedObject": "Front-End / Back-End Service"

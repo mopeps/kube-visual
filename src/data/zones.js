@@ -255,7 +255,7 @@ export const ZONES = [
                 // Guest Etcd is also an intent store: it persists the guest
                 // cluster's OWN API objects — the records that have no
                 // data-plane card on the overview (ClusterVersion/Operator,
-                // Route, the workload Deployment→ReplicaSet chain, its
+                // Route, the application Deployment→ReplicaSet chain, its
                 // Secrets/ConfigMaps/PVCs/PVs and the EndpointSlices behind its
                 // Services). Realized Services & the NetworkPolicy keep their
                 // own cards; these pure records live in here.
@@ -279,37 +279,37 @@ export const ZONES = [
                     badges: [{ label: 'route.openshift.io', color: 'var(--k-sky)' }],
                   },
                   {
-                    id: 'deployment-workload',
+                    id: 'deployment-application',
                     title: 'Deployment',
                     typePrefix: 'API Object',
                     badges: [{ label: 'apps/v1', color: 'var(--k-sky)' }],
                   },
                   {
-                    id: 'replicaset-workload',
+                    id: 'replicaset-application',
                     title: 'ReplicaSet',
                     typePrefix: 'API Object',
                     badges: [{ label: 'apps/v1', color: 'var(--k-sky)' }],
                   },
                   {
-                    id: 'secret-workload',
+                    id: 'secret-application',
                     title: 'Secret',
                     typePrefix: 'API Object',
                     badges: [{ label: 'core/v1', color: 'var(--k-sky)' }],
                   },
                   {
-                    id: 'configmap-workload',
+                    id: 'configmap-application',
                     title: 'ConfigMap',
                     typePrefix: 'API Object',
                     badges: [{ label: 'core/v1', color: 'var(--k-sky)' }],
                   },
                   {
-                    id: 'pvc-workload',
+                    id: 'pvc-application',
                     title: 'PersistentVolumeClaim',
                     typePrefix: 'API Object',
                     badges: [{ label: 'core/v1', color: 'var(--k-sky)' }],
                   },
                   {
-                    id: 'pv-workload',
+                    id: 'pv-application',
                     title: 'PersistentVolume',
                     typePrefix: 'API Object',
                     badges: [{ label: 'core/v1', color: 'var(--k-sky)' }],
@@ -533,8 +533,8 @@ export const ZONES = [
                     ],
                   },
                   {
-                    id: 'frontend-workload-pod',
-                    title: 'Front-End Workload',
+                    id: 'frontend-application-pod',
+                    title: 'Front-End Application',
                     typePrefix: 'Pod',
                     badges: [
                       { label: 'e-commerce-prod', color: 'var(--k-green)' },
@@ -553,8 +553,8 @@ export const ZONES = [
                     ],
                   },
                   {
-                    id: 'backend-workload-pod',
-                    title: 'Back-End Workload',
+                    id: 'backend-application-pod',
+                    title: 'Back-End Application',
                     typePrefix: 'Pod',
                     badges: [
                       { label: 'e-commerce-prod', color: 'var(--k-green)' },
@@ -578,7 +578,7 @@ export const ZONES = [
                   // declarative object, but it has a concrete data-plane
                   // realization — OVN compiles it into ACLs / allow-drop
                   // OpenFlow rules on the guest br-int — so it earns a card on
-                  // the overview next to the workloads it guards (per the 4th
+                  // the overview next to the applications it guards (per the 4th
                   // category of the First Overview rendering rule, §1).
                   {
                     id: 'netpol-ecommerce',
@@ -648,14 +648,14 @@ export const COMPONENT_BADGES = Object.fromEntries(
 
 // First Overview rendering rule (ARCHITECTURE.md §1) — the primary canvas is a
 // whitelist: a NodeCard may only be a systemd enforcer/service, a concrete
-// workload instance (Pod / Static Pod / VMI), or a networking Service
+// application instance (Pod / Static Pod / VMI), or a networking Service
 // abstraction (ClusterIP / LoadBalancer). Zone boundaries are the zones
 // themselves; pure-intent CRs render *inside* the etcd store, not as cards; and
 // trace-only zones (the external Client) are not part of the default canvas.
 // This dev-only guard flags any future node that drifts outside the rule.
 const OVERVIEW_NODE_TYPES = new Set([
   'systemd', // Active Enforcers — systemd services
-  'Pod', // Concrete workload / data-plane instances
+  'Pod', // Concrete application / data-plane instances
   'Static Pod',
   'VirtualMachineInstance',
   'Service', // Networking / Service abstractions (ClusterIP, LoadBalancer)
@@ -681,7 +681,7 @@ function assertOverviewWhitelist(zones) {
     console.warn(
       '[kube-visual] First Overview rendering-rule violation (ARCHITECTURE.md §1): ' +
         'these nodes are not zone boundaries, systemd enforcers, or concrete ' +
-        'workload instances and must not render on the primary canvas:\n  ' +
+        'application instances and must not render on the primary canvas:\n  ' +
         offenders.join('\n  ')
     )
   }

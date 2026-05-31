@@ -1,11 +1,11 @@
 // Builds the Manifest-to-Kernel band model for any component, so the pipeline
 // tree can render for every object on the overview canvas — not just the two
-// hand-authored workload pods.
+// hand-authored application pods.
 //
 // The kernel/OS/virtualisation rows are derived from the existing
 // PRIMITIVES_BY_TYPE data (keyed by typePrefix), so Pods, Static Pods, systemd
 // services, and VMIs all get a meaningful Linux-primitive layer for free.
-// Workload pods additionally carry hand-authored ancestry / consumedResources /
+// Application pods additionally carry hand-authored ancestry / consumedResources /
 // kernelRealization that enrich the upper bands.
 //
 // A band = { layerId, groups: [{ subhead?, nodes: [...] }] }.
@@ -56,7 +56,7 @@ function realisationNote(lp) {
   if (/ClusterIP/i.test(lp))
     return 'A virtual IP no interface owns; OVN flows DNAT it to a live Pod, masking their shifting IPs.'
   if (/guest OS|RHCOS guest/i.test(lp))
-    return "RHCOS booted inside the VM — where the guest node's kubelet and workloads actually run."
+    return "RHCOS booted inside the VM — where the guest node's kubelet and applications actually run."
   if (/TCP socket/i.test(lp))
     return "An off-cluster client's libc socket — where the whole request flow begins."
   return undefined
@@ -312,7 +312,7 @@ function ensureKernelBand(bands) {
 
 // Find the Logical Intent band, creating (and prepending) an empty one if the
 // builder produced none — a controller-managed Pod with no hand-authored
-// ancestry has no intent band of its own, so its workload controller (the
+// ancestry has no intent band of its own, so its application controller (the
 // mover below) needs a home at the top of the descent.
 function ensureIntentBand(bands) {
   let band = bands.find(b => b.layerId === 'logical-intent')
@@ -324,7 +324,7 @@ function ensureIntentBand(bands) {
   return band
 }
 
-// Workload-controller kinds are declarative desired state, so they belong in the
+// Application-controller kinds are declarative desired state, so they belong in the
 // Logical Intent band — not the Runtime Object band, which names the single
 // supervised instance handed to a node. (A Static Pod / virt-launcher Pod / VMI
 // form, by contrast, *is* that runtime object, so those stay on api-boundary.)
@@ -343,7 +343,7 @@ function controllerNote(form) {
 // components.json) into a rich builder's bands:
 //   • runtimeForm  → subhead of the Runtime Object band (the concrete K8s form),
 //                    or the kernel band for host systemd services, which have no
-//                    Runtime Object band by design. A workload-controller form
+//                    Runtime Object band by design. A application-controller form
 //                    (Deployment/DaemonSet/StatefulSet/…) is declarative intent,
 //                    not a runtime object, so it moves up to the Logical Intent
 //                    band instead (see CONTROLLER_KIND).
@@ -403,7 +403,7 @@ function withForms(component, bands) {
   return bands
 }
 
-// Components with no kubelet/CRI translation step — Services, workload API
+// Components with no kubelet/CRI translation step — Services, application API
 // objects, NetworkPolicies, bare kernel primitives, the off-cluster client —
 // still have a K8s form and/or a Linux realisation worth showing, so they get a
 // minimal pipeline built straight from those two fields.
@@ -419,7 +419,7 @@ function simpleBands(component) {
     })
     return bands
   }
-  // Everything else reaching here — Services, NetworkPolicies, and the workload
+  // Everything else reaching here — Services, NetworkPolicies, and the application
   // API Objects (Deployment/ReplicaSet/Secret/ConfigMap/PVC/PV/EndpointSlice) —
   // is a *declarative manifest*, not a Runtime Object. Band 2 (Runtime Object)
   // is reserved for the single concrete instance handed to a supervisor (a Pod
