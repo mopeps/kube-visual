@@ -81,7 +81,10 @@ export default function App() {
   const changeTab = (next) => {
     if (next === tab) return
     scrollPositions.current[tab] = window.scrollY
-    restoreTabRef.current = next
+    // In compact mode SwipeViews owns scroll memory + restore (it also shifts
+    // the inactive panes so the swipe previews each tab at its own position),
+    // so leave the window scroll to it and skip our restore there.
+    if (!isCompact) restoreTabRef.current = next
     setTab(next)
   }
 
