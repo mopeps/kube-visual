@@ -20,7 +20,7 @@ const MIN_SHEET_PX = 220
 const DISMISS_SHEET_PX = 120
 let lastSheetHeight = null
 
-export default function AncestryModal({ componentId, onClose, onSelectComponent }) {
+export default function AncestryModal({ componentId, onClose, onSelectComponent, onRevealInOverview }) {
   // Distance the modal is currently pushed down by a touch drag.
   const [offset, setOffset] = useState(0)
   // While true the modal animates (snapping back / sliding off); while false it
@@ -164,6 +164,10 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent 
 
   const color = COMPONENT_COLOR[componentId] || 'var(--k-cyan)'
   const zone = COMPONENT_ZONE[componentId]
+  // The location chip can jump to the canvas only when the object actually has
+  // a home on the default overview: it must belong to a known zone that isn't
+  // trace-only (the external Client is hidden unless a trace references it).
+  const locatable = !!onRevealInOverview && !!zone && !zone.traceOnly
 
   const { bands } = buildPipeline(component)
   const hasTree = bands.length > 0
@@ -245,9 +249,30 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent 
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 22 }}>
-            <span className="detail-type" style={{ color, marginBottom: 0 }}>
-              {zone?.label || component.layer}
-            </span>
+            {locatable ? (
+              // The location chip doubles as a "find it on the canvas" jump:
+              // close the sheet, surface the overview, and pulse this object
+              // (and its zone) into view.
+              <button
+                type="button"
+                className="detail-type detail-type--locate"
+                style={{ color, marginBottom: 0 }}
+                onClick={() => onRevealInOverview(componentId)}
+                title="Show in the cluster overview"
+              >
+                <svg className="detail-type-pin" width="11" height="11" viewBox="0 0 16 16"
+                  fill="none" stroke="currentColor" strokeWidth="1.6"
+                  strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M8 1.6c-2.5 0-4.5 2-4.5 4.5C3.5 9.4 8 14.4 8 14.4s4.5-5 4.5-8.3C12.5 3.6 10.5 1.6 8 1.6Z" />
+                  <circle cx="8" cy="6.1" r="1.6" />
+                </svg>
+                {zone.label}
+              </button>
+            ) : (
+              <span className="detail-type" style={{ color, marginBottom: 0 }}>
+                {zone?.label || component.layer}
+              </span>
+            )}
           </div>
 
           <DetailSections

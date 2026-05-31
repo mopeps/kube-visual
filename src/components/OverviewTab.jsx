@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import { ZONES } from '../data/zones'
+import { useEffect, useRef, useState } from 'react'
+import { ZONES, INTENT_OBJECT_STORE } from '../data/zones'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
 import IntentStoreCard from './IntentStoreCard'
@@ -29,11 +29,41 @@ export default function OverviewTab({
   onSelectComponent,
   activeStep,
   onSelectStep,
+  highlightId,
+  onClearHighlight,
 }) {
   const canvasRef = useRef(null)
   const [expandedStoreId, setExpandedStoreId] = useState(null)
   const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
+
+  // Spotlight a component requested from elsewhere (e.g. a detail popup's
+  // location badge): expand its intent store if it lives in one, scroll the
+  // target into the upper third of the viewport, and clear the highlight once
+  // its pulse animation has had time to play.
+  useEffect(() => {
+    if (!highlightId) return
+    const storeId = INTENT_OBJECT_STORE[highlightId]
+    if (storeId) setExpandedStoreId(storeId)
+    // Two frames so the scroll measures the post-expand layout when a store
+    // had to open to reveal the target.
+    let raf2
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        const el = document.getElementById(highlightId)
+        if (!el) return
+        const rect = el.getBoundingClientRect()
+        const upper = window.innerHeight * 0.33
+        window.scrollBy({ top: rect.top - upper, behavior: 'smooth' })
+      })
+    })
+    const clear = setTimeout(() => onClearHighlight?.(), 2600)
+    return () => {
+      cancelAnimationFrame(raf1)
+      if (raf2) cancelAnimationFrame(raf2)
+      clearTimeout(clear)
+    }
+  }, [highlightId, onClearHighlight])
 
   // Trace-only zones (e.g. the external Client) stay hidden until an active
   // trace flow actually references a node inside them.
@@ -43,7 +73,7 @@ export default function OverviewTab({
   )
 
   function renderNode(node, zone) {
-    const isHighlighted = activeComponentIds?.has?.(node.id)
+    const isActive = activeComponentIds?.has?.(node.id)
     // Nodes carrying intent objects (the etcd "intent store") render as an
     // expandable card instead of a plain box.
     if (node.intentObjects) {
@@ -53,8 +83,10 @@ export default function OverviewTab({
           node={node}
           color={zone.color}
           stepNum={stepNums.get(node.id)}
-          isActive={isHighlighted}
-          isDimmed={hasActive && !isHighlighted}
+          isActive={isActive}
+          isDimmed={hasActive && !isActive}
+          isHighlighted={node.id === highlightId}
+          highlightId={highlightId}
           isExpanded={expandedStoreId === node.id}
           onToggle={() => setExpandedStoreId(prev => prev === node.id ? null : node.id)}
           onSelectComponent={onSelectComponent}
@@ -69,8 +101,9 @@ export default function OverviewTab({
         typePrefix={node.typePrefix}
         color={zone.color}
         stepNum={stepNums.get(node.id)}
-        isActive={isHighlighted}
-        isDimmed={hasActive && !isHighlighted}
+        isActive={isActive}
+        isDimmed={hasActive && !isActive}
+        isHighlighted={node.id === highlightId}
         onClick={onSelectComponent}
       />
     )
@@ -89,6 +122,7 @@ export default function OverviewTab({
         componentId={zone.componentId}
         stepNum={zone.componentId ? stepNums.get(zone.componentId) : undefined}
         isActive={zone.componentId ? activeComponentIds?.has?.(zone.componentId) : false}
+        isHighlighted={zone.componentId ? zone.componentId === highlightId : false}
         onClick={onSelectComponent}
       >
         {/* Nodes in this zone */}

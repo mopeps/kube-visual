@@ -32,10 +32,13 @@ export default function App() {
     activeComponentId,
     activeComponentIds,
     activeStep,
+    highlightedId,
     selectEvent,
     clearEvent,
     selectComponent,
     clearComponent,
+    revealComponent,
+    clearHighlight,
     selectStep,
     focusStep,
     clearStep,
@@ -71,6 +74,14 @@ export default function App() {
   const jumpToStep = (n) => {
     focusStep(n)
     setTab('overview')
+  }
+
+  // From a detail popup's location badge: close the popup, surface the overview,
+  // and spotlight the component there (OverviewTab scrolls to and pulses it).
+  const revealInOverview = (id) => {
+    clearComponent()
+    setTab('overview')
+    revealComponent(id)
   }
 
   // Follow the trace on the overview: whenever the inspected hop changes (or an
@@ -114,6 +125,8 @@ export default function App() {
       onSelectComponent={selectComponent}
       activeStep={activeStep}
       onSelectStep={selectStep}
+      highlightId={highlightedId}
+      onClearHighlight={clearHighlight}
     />
   )
   const packetPanel = (
@@ -215,6 +228,7 @@ export default function App() {
         componentId={activeComponentId}
         onClose={clearComponent}
         onSelectComponent={selectComponent}
+        onRevealInOverview={revealInOverview}
       />
 
       {/* Bottom-docked hop inspector — only on the overview tab, and only when
