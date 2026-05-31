@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect, useLayoutEffect } from 'react'
 import useMediaQuery from '../hooks/useMediaQuery'
 
 // Horizontal, finger-tracking pager. The panels live in a flex track; the track
@@ -6,6 +6,15 @@ import useMediaQuery from '../hooks/useMediaQuery'
 // release (committing to the neighbour once the drag passes THRESHOLD of the
 // width). Vertical scrolling is left to the browser via `touch-action: pan-y`,
 // so we only ever own the horizontal axis — no manual scroll-locking needed.
+//
+// Per-pane scroll memory: every pane shares the one window scroll, so without
+// help a tab would inherit wherever its neighbour was scrolled. We keep the
+// window scroll synced to the *active* pane (offset 0) and remember each tab's
+// own scrollY; the inactive panes are shifted vertically by translateY =
+// (activeScroll − savedScroll) so they preview at their own remembered position.
+// On a tab commit we restore the window to the incoming tab's scroll and reset
+// the offsets in the same paint — the outgoing/incoming panes stay visually put
+// across the swap, so the page never jumps.
 //
 // Gestures that begin inside a horizontally-scrollable / interactive element
 // (code blocks, inputs, or anything marked [data-noswipe]) are ignored so the
@@ -16,9 +25,51 @@ const LOCK = 8 // px of travel before we decide the gesture's axis
 export default function SwipeViews({ index, count, onIndexChange, children }) {
   const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const viewportRef = useRef(null)
+  const paneRefs = useRef([])
+  const scrollStore = useRef({})
+  const indexRef = useRef(index)
   const drag = useRef({ active: false, axis: null, startX: 0, startY: 0, dx: 0, width: 0 })
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
+
+  // Position a single inactive pane so it previews at its own remembered
+  // scrollY. translateY = activeScroll − savedScroll maps its saved slice to the
+  // top, given the shared window scroll. The active pane is left untransformed
+  // (it *is* the window scroll) so it never becomes a containing block for its
+  // descendants.
+  function applyOffsets(activeScroll) {
+    paneRefs.current.forEach((el, i) => {
+      if (!el) return
+      el.style.transform =
+        i === indexRef.current
+          ? ''
+          : `translateY(${activeScroll - (scrollStore.current[i] ?? 0)}px)`
+    })
+  }
+
+  // Keep the active tab's saved scroll in step with the window, and slide the
+  // inactive panes so their preview tracks the live scroll. Refs only — no
+  // re-render per scroll event.
+  useEffect(() => {
+    const onScroll = () => {
+      const s = window.scrollY
+      scrollStore.current[indexRef.current] = s
+      applyOffsets(s)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // On a tab change, restore the incoming tab's own scroll and recompute the
+  // offsets for that scroll — both before paint, so the swap is seamless.
+  useLayoutEffect(() => {
+    indexRef.current = index
+    const s = scrollStore.current[index] ?? 0
+    window.scrollTo(0, s)
+    applyOffsets(s)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index])
 
   function excluded(target) {
     return !!(target.closest &&
@@ -39,6 +90,9 @@ export default function SwipeViews({ index, count, onIndexChange, children }) {
       dx: 0,
       width: viewportRef.current?.clientWidth || window.innerWidth,
     }
+    // Make sure the neighbours are parked at their remembered positions before
+    // they can be revealed by the drag.
+    applyOffsets(window.scrollY)
   }
 
   function onTouchMove(e) {
@@ -94,7 +148,12 @@ export default function SwipeViews({ index, count, onIndexChange, children }) {
         }}
       >
         {children.map((child, i) => (
-          <div className="swipe-pane" key={i} aria-hidden={i !== index}>
+          <div
+            className="swipe-pane"
+            key={i}
+            ref={el => { paneRefs.current[i] = el }}
+            aria-hidden={i !== index}
+          >
             {child}
           </div>
         ))}
