@@ -946,11 +946,11 @@ body::after {
   gap: 6px;
   font-family: inherit;
   cursor: pointer;
-  background: color-mix(in srgb, currentColor 12%, transparent);
+  background: transparent;
   transition: background 0.16s ease, box-shadow 0.16s ease;
 }
 .detail-type--locate:hover {
-  background: color-mix(in srgb, currentColor 24%, transparent);
+  background: color-mix(in srgb, currentColor 12%, transparent);
   box-shadow: 0 0 14px color-mix(in srgb, currentColor 35%, transparent);
 }
 .detail-type--locate:focus-visible {
