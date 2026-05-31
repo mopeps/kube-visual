@@ -75,7 +75,7 @@ function manifestNote(form) {
   if (/^Secret/.test(form)) return 'Sensitive data in etcd; the kubelet mounts it into the Pod as an in-memory tmpfs file.'
   if (/^PersistentVolumeClaim/.test(form)) return 'A storage request in etcd; once bound to a PersistentVolume the kubelet mounts it.'
   if (/^PersistentVolume/.test(form)) return 'A cluster-scoped etcd object mapping a PVC to real backing storage.'
-  if (/^EndpointSlice/.test(form)) return "A Service's live ready Pod IPs in etcd, written by the endpoint controller to steer traffic."
+  if (/^EndpointSlice/.test(form)) return "A list of a Service's live, ready Pod IPs in etcd, written by the EndpointSlice controller to steer traffic."
   if (/^Service \(LoadBalancer\)/.test(form)) return 'Declares an external entry point; a controller provisions the LB and writes its IP back.'
   if (/^Service/.test(form)) return 'Allocates a stable virtual IP in etcd; the datapath DNATs it to the selected Pods.'
   if (/^NetworkPolicy/.test(form)) return 'Declares allowed traffic for the selected Pods; OVN compiles it into datapath ACLs.'
