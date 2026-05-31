@@ -42,6 +42,13 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
   // edge captured at grab time (kept fixed so the top edge follows the pointer).
   const resize = useRef({ active: false, bottom: 0 })
 
+  // Once the user fixes an explicit (reduced) height via the grip, the sheet
+  // stops behaving like a full-screen modal and becomes a non-modal "peek"
+  // panel: the backdrop dimming/blur is dropped, pointer events fall through
+  // above the sheet, and the page is no longer scroll-locked — so the
+  // architecture overview behind it stays both visible and scrollable.
+  const peek = sheetHeight != null
+
   // Esc to close + reset transient gesture state whenever a new component opens.
   // Sheet height is intentionally NOT reset — the size the user picked sticks.
   useEffect(() => {
@@ -58,8 +65,10 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
   // Lock the page behind the modal so it can't scroll while open. Pins <body>
   // at its current scroll position and restores it on close so the page doesn't
   // jump. Idempotent restore-from-`prev` keeps StrictMode double-mount safe.
+  // Skipped in peek mode: a resized sheet deliberately leaves the overview
+  // scrollable, so re-running this effect when `peek` flips unlocks the page.
   useEffect(() => {
-    if (!componentId) return
+    if (!componentId || peek) return
     const scrollY = window.scrollY
     const body = document.body
     const prev = {
@@ -79,7 +88,20 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
       body.style.overflow = prev.overflow
       window.scrollTo(0, scrollY)
     }
-  }, [componentId])
+  }, [componentId, peek])
+
+  // In peek mode the bottom-anchored sheet covers the lower slice of the
+  // viewport, so the page's last objects could never be scrolled out from
+  // behind it (at max scroll they stay pinned under the sheet). Extend the
+  // scroll range by padding the page bottom with the sheet height (plus a small
+  // gap) so every overview object can be brought above the sheet and clicked.
+  useEffect(() => {
+    if (!componentId || !peek) return
+    const body = document.body
+    const prev = body.style.paddingBottom
+    body.style.paddingBottom = `${Math.round(sheetHeight) + 24}px`
+    return () => { body.style.paddingBottom = prev }
+  }, [componentId, peek, sheetHeight])
 
   // ── Grip resize ──────────────────────────────────────────────────────
   // The grip is the top bar. Drag it to set the sheet height: the sheet is
@@ -204,7 +226,7 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
 
   return createPortal(
     <div
-      className="ancestry-overlay animate-fade-in"
+      className={`ancestry-overlay animate-fade-in${peek ? ' is-peek' : ''}`}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
