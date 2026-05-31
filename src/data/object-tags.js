@@ -5,12 +5,24 @@
 // is itself a node on the topology, its chip becomes a shortcut that opens that
 // node's modal.
 //
-// Two kinds of entry:
-//   • `componentId` — the object IS a node in the topology. Its chip is
-//     navigable (clicking it opens that component) and picks up the node's
-//     zone accent colour.
-//   • `kind` — a real API object that isn't drawn on the canvas (a Route, a
-//     Machine, a Secret…). Its chip is a muted, non-clickable highlight.
+// Every entry falls into one of THREE categories (the section banners below):
+//   1. `componentId` → a TOPOLOGY CARD. The object is a box on the overview;
+//      its chip is navigable and picks up the node's zone accent colour.
+//   2. `componentId` → an ETCD INTENT-STORE RECORD. The object is a CR / API
+//      object that has no overview card but is persisted inside an etcd node
+//      (mgmt-etcd / guest-etcd); its chip opens that record's detail. Same
+//      navigable behaviour as a card — "componentId" just means "openable".
+//   3. `kind` → a GENERIC KIND with no single backing object (Cluster API,
+//      NetworkPolicy). Its chip is a muted, non-clickable highlight only.
+//
+// CAVEAT — kind vs. instance is matched purely by text, so a generic mention
+// ("a NetworkPolicy is namespace-scoped", "pull Secrets") matches the same
+// alias as a specific one. Aliases that read generically in the prose are kept
+// in category 3 on purpose; only put a kind in category 1/2 when essentially
+// every mention of it refers to the one concrete object in this scenario.
+//
+// A reference to the component whose modal is already open is rendered as plain
+// text (see ObjectText.jsx), not a chip — never tag a node inside its own modal.
 //
 // Matching is intentionally CASE-SENSITIVE. API object names are proper nouns
 // and appear capitalised when used as object references ("Watches Route
@@ -108,7 +120,6 @@ const ENTRIES = [
   // ── Highlight-only: kinds with no single backing object ────────────────
   { kind: 'Cluster API', aliases: ['Cluster API'] },
   { kind: 'NetworkPolicy', aliases: ['NetworkPolicy', 'Network Policy', 'Network Policies'] },
-  { kind: 'CRD', aliases: ['CRD'] },
 ]
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
