@@ -22,6 +22,10 @@ export default function useEventState() {
     setActiveStep(prev => prev === step ? null : step)
   }, [])
 
+  // Unconditionally focus a hop (no toggle) — used when jumping in from the
+  // event tab so the overview always lands on that hop rather than clearing it.
+  const focusStep = useCallback((step) => setActiveStep(step), [])
+
   const clearStep = useCallback(() => setActiveStep(null), [])
 
   const selectComponent = useCallback((id) => {
@@ -47,6 +51,7 @@ export default function useEventState() {
     selectComponent,
     clearComponent,
     selectStep,
+    focusStep,
     clearStep,
   }
 }
