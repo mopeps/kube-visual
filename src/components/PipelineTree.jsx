@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { PIPELINE_LAYER_BY_ID } from '../data/pipeline-layers'
-import { rowKind } from '../data/pipeline-kinds'
+import { classifyRow } from '../data/pipeline-kinds'
 import ExploreCommands from './ExploreCommands'
 import ObjectText from './ObjectText'
 
@@ -42,6 +42,38 @@ function BandIcon({ name }) {
       {glyph}
     </svg>
   )
+}
+
+// Line glyphs for the action chip that leads a revealed description. Drawn in the
+// same style as the interaction-row icons (InteractionList.jsx) and band glyphs: a
+// 16-unit viewBox with round caps/joins and currentColor stroke, so each inherits
+// its action accent. The 2.0 stroke at this 13px render lands at the same ~1.5px
+// effective weight those icons carry (the interaction icons reach it at 15px × 1.6).
+function KindGlyph({ name }) {
+  const c = {
+    width: 13, height: 13, viewBox: '0 0 16 16', fill: 'none',
+    stroke: 'currentColor', strokeWidth: 2.0, strokeLinecap: 'round', strokeLinejoin: 'round',
+  }
+  switch (name) {
+    case 'disk': // store — a database cylinder
+      return <svg {...c}><ellipse cx="8" cy="4" rx="5" ry="2" /><path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4" /><path d="M3 8c0 1.1 2.2 2 5 2s5-.9 5-2" /></svg>
+    case 'loop': // reconcile — two curved arrows chasing a loop
+      return <svg {...c}><path d="M12.5 7a4.5 4.5 0 0 0-8-2.2" /><path d="M3.5 9a4.5 4.5 0 0 0 8 2.2" /><path d="M4 2.5V5h2.5" /><path d="M12 13.5V11H9.5" /></svg>
+    case 'mount': // mount — arrow dropping onto a shelf
+      return <svg {...c}><path d="M8 2v6.5" /><path d="M5.5 6 8 8.5 10.5 6" /><path d="M3 11.5h10" /></svg>
+    case 'route': // route — a node forking out to two paths
+      return <svg {...c}><circle cx="3" cy="8" r="1.2" /><path d="M4.4 8H7.5" /><path d="M7.5 8 11 4.8h1.8" /><path d="M7.5 8 11 11.2h1.8" /></svg>
+    case 'shield': // filter — a guard shield
+      return <svg {...c}><path d="M8 1.8 13 3.6v3.6c0 3.3-2.4 5.2-5 6.6-2.6-1.4-5-3.3-5-6.6V3.6z" /></svg>
+    case 'build': // built — an assembled package/cube
+      return <svg {...c}><path d="M8 1.8 13.5 5 8 8.2 2.5 5z" /><path d="M2.5 5v6L8 14.2 13.5 11V5" /><path d="M8 8.2V14" /></svg>
+    case 'run': // runs — a play triangle
+      return <svg {...c}><path d="M5 3.5 12 8l-7 4.5z" /></svg>
+    case 'isolate': // isolated — four corner brackets enclosing
+      return <svg {...c}><path d="M5.5 2.5H4A1.5 1.5 0 0 0 2.5 4v1.5" /><path d="M10.5 2.5H12A1.5 1.5 0 0 1 13.5 4v1.5" /><path d="M13.5 10.5V12a1.5 1.5 0 0 1-1.5 1.5h-1.5" /><path d="M5.5 13.5H4A1.5 1.5 0 0 1 2.5 12v-1.5" /></svg>
+    default:
+      return null
+  }
 }
 
 // Prose helper: object references in the revealed detail are lifted into the
@@ -92,10 +124,11 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
   const kids = node.children || []
   // A row is expandable when it carries a note or deeper detail to reveal.
   const hasExtra = !!node.note || !!node.detail
-  // Structural-kind chip — a one-word "what kind of thing this is" tag (Record,
-  // Map, VIP, Process …) that leads the *revealed description*, not the row label,
-  // the same way the Interactions section tags each description line.
-  const kind = hasExtra ? rowKind(node.label) : null
+  // Action chip — tags the revealed description by *what the pipeline does* at
+  // this step (Stored, Mounted, Routed, Runs …), colour-coded by accent the way
+  // the Interactions section tags each line by its verb. It complements the row
+  // label (what the thing is) rather than echoing it.
+  const action = hasExtra ? classifyRow(node.label) : null
 
   return (
     <div className="tree-node">
@@ -115,9 +148,14 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
 
       {hasExtra && open && (
         <div className="tree-reveal" style={{ '--row-color': color }}>
-          {(kind || node.note) && (
+          {(action || node.note) && (
             <div className="tree-note">
-              {kind && <span className="tree-kind-chip">{kind}</span>}
+              {action && (
+                <span className="tree-kind-chip" style={{ color: action.accent }}>
+                  <span className="tree-kind-chip-icon" aria-hidden="true"><KindGlyph name={action.icon} /></span>
+                  {action.label}
+                </span>
+              )}
               {node.note && <Prose text={node.note} onSelectComponent={onSelectComponent} selfId={selfId} />}
             </div>
           )}

@@ -1344,23 +1344,29 @@ button.object-tag:hover {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-/* Structural-kind chip leading a row's revealed description — a monochrome pill
-   that inherits the row's accent (via currentColor) so it tints with the band
-   rather than adding a second colour system. Sits inline before the note text,
-   the same chip-then-text rhythm the Interactions rows use. */
+/* Action chip leading a row's revealed description — an icon + verb pill that
+   tags what the pipeline does at this step (Stored / Mounted / Routed / Runs …).
+   Colour-coded per action via an inline accent on `color`, so currentColor tints
+   the icon, border and fill together. Sits inline before the note text, the same
+   chip-then-text rhythm the Interactions rows use. */
 .tree-kind-chip {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
   vertical-align: baseline;
   margin-right: 0.5em;
   font-size: 0.58rem;
   font-weight: 600;
   letter-spacing: 0.03em;
-  padding: 0.04em 0.5em;
+  padding: 0.08em 0.5em 0.08em 0.42em;
   border-radius: 999px;
   white-space: nowrap;
-  color: var(--row-color, currentColor);
-  border: 1px solid color-mix(in srgb, var(--row-color, currentColor) 42%, transparent);
-  background: color-mix(in srgb, var(--row-color, currentColor) 13%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 42%, transparent);
+  background: color-mix(in srgb, currentColor 13%, transparent);
+}
+.tree-kind-chip-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
 }
 
 /* Child nodes (e.g. a Pod's consumed resources) indent under their parent,
