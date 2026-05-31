@@ -39,11 +39,25 @@ function Hop({ step, isOpen, isSelected, onToggle, onJump, isFinal }) {
       >
         <h3>
           <span className="packet-dot" />
-          <span>
-            {source?.displayName || step.sourceComponentId}
-            <span style={{ color: 'var(--tx-dim)', margin: '0 8px' }}>→</span>
-            <span style={{ color }}>{target?.displayName || step.targetComponentId}</span>
-          </span>
+          {onJump ? (
+            <button
+              type="button"
+              className="hop-link"
+              onClick={(e) => { e.stopPropagation(); onJump(step.step) }}
+              title="Reveal this object in the architecture overview"
+            >
+              <span className="hop-link-src">{source?.displayName || step.sourceComponentId}</span>
+              <span style={{ color: 'var(--tx-dim)', margin: '0 8px' }}>→</span>
+              <span className="hop-link-tgt" style={{ color }}>{target?.displayName || step.targetComponentId}</span>
+              <span className="hop-link-go" aria-hidden style={{ color }}>↗</span>
+            </button>
+          ) : (
+            <span>
+              {source?.displayName || step.sourceComponentId}
+              <span style={{ color: 'var(--tx-dim)', margin: '0 8px' }}>→</span>
+              <span style={{ color }}>{target?.displayName || step.targetComponentId}</span>
+            </span>
+          )}
         </h3>
         <div className="hop-meta">
           <span style={{ color: sourceColor }}>{source?.layer || ''}</span>
@@ -64,24 +78,11 @@ function Hop({ step, isOpen, isSelected, onToggle, onJump, isFinal }) {
             ))}
           </div>
         )}
-        <div className="hop-foot">
-          <span
-            className="text-[0.6rem]"
-            style={{ color: 'var(--tx-dim)' }}
-          >
-            {isOpen ? '▾ click to collapse' : '▸ click to inspect target'}
-          </span>
-          {onJump && (
-            <button
-              type="button"
-              className="hop-jump"
-              style={{ color, borderColor: `${color}66` }}
-              onClick={(e) => { e.stopPropagation(); onJump(step.step) }}
-              title={`Reveal ${target?.displayName || step.targetComponentId} in the architecture overview`}
-            >
-              <span aria-hidden>⤢</span> Show in overview
-            </button>
-          )}
+        <div
+          className="text-[0.6rem] mt-3"
+          style={{ color: 'var(--tx-dim)' }}
+        >
+          {isOpen ? '▾ click to collapse' : '▸ click to inspect target'}
         </div>
       </div>
     </div>
