@@ -71,10 +71,10 @@ function manifestNote(form) {
   if (!form) return undefined
   if (/^Deployment/.test(form)) return 'Desired Pod template & replica count in etcd; its controller rolls them out via ReplicaSets.'
   if (/^ReplicaSet/.test(form)) return 'Holds the desired replica count in etcd; its controller adds or deletes Pods until actual matches.'
-  if (/^ConfigMap/.test(form)) return 'Non-secret config in etcd; the kubelet projects it into the Pod as files or env vars.'
-  if (/^Secret/.test(form)) return 'Sensitive data in etcd; the kubelet mounts it into the Pod as an in-memory tmpfs file.'
+  if (/^ConfigMap/.test(form)) return 'A key/value map of non-secret config in etcd; the kubelet projects it into the Pod as files or env vars.'
+  if (/^Secret/.test(form)) return 'A key/value map of sensitive data in etcd; the kubelet mounts it into the Pod as an in-memory tmpfs file.'
   if (/^PersistentVolumeClaim/.test(form)) return 'A storage request in etcd; once bound to a PersistentVolume the kubelet mounts it.'
-  if (/^PersistentVolume/.test(form)) return 'A cluster-scoped etcd object mapping a PVC to real backing storage.'
+  if (/^PersistentVolume/.test(form)) return 'A cluster-scoped volume in etcd that a PVC binds to, backed by real storage.'
   if (/^EndpointSlice/.test(form)) return "A list of a Service's live, ready Pod IPs in etcd, written by the EndpointSlice controller to steer traffic."
   if (/^Service \(LoadBalancer\)/.test(form)) return 'Declares an external entry point; a controller provisions the LB and writes its IP back.'
   if (/^Service/.test(form)) return 'Allocates a stable virtual IP in etcd; the datapath DNATs it to the selected Pods.'
