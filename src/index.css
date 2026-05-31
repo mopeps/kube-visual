@@ -1351,26 +1351,31 @@ button.object-tag:hover {
 }
 /* Action keyword leading a row's revealed description — an icon + label that
    tags what the pipeline does at this step (Stored / Mounted / Routed / Runs …).
-   Styled to read exactly like the Interactions legend keywords (.interaction-
-   legend-item): a flat, uppercase, letter-spaced accent label with a leading
-   icon — no pill — so the two sections share one keyword language. Colour-coded
-   per action via an inline accent on `color`, which tints the icon and text. */
+   Rendered as a pill in the same chip language as the inline object/intent tags
+   (.object-tag): an accent-bordered, faintly-tinted capsule sitting on the text
+   baseline, so every little keyword chip in the app reads as one family. The
+   per-action accent is set inline on `color`; the border + fill derive from it
+   via currentColor, mirroring how .object-tag derives its from --object-tag-color.
+   inline-block (not inline-flex) keeps the chip's baseline on its label so it
+   lines up with the prose that follows it; the icon is nudged to the cap-height. */
 .tree-kind-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+  display: inline-block;
   vertical-align: baseline;
-  margin-right: 0.6em;
-  font-size: 0.58rem;
+  margin-right: 0.5em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.62rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  opacity: 0.85;
   white-space: nowrap;
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+  background: color-mix(in srgb, currentColor 13%, transparent);
 }
 .tree-kind-chip-icon {
   display: inline-flex;
-  flex: 0 0 auto;
+  vertical-align: -0.16em;
+  margin-right: 4px;
 }
 
 /* Child nodes (e.g. a Pod's consumed resources) indent under their parent,
