@@ -90,6 +90,19 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
     }
   }, [componentId, peek])
 
+  // In peek mode the bottom-anchored sheet covers the lower slice of the
+  // viewport, so the page's last objects could never be scrolled out from
+  // behind it (at max scroll they stay pinned under the sheet). Extend the
+  // scroll range by padding the page bottom with the sheet height (plus a small
+  // gap) so every overview object can be brought above the sheet and clicked.
+  useEffect(() => {
+    if (!componentId || !peek) return
+    const body = document.body
+    const prev = body.style.paddingBottom
+    body.style.paddingBottom = `${Math.round(sheetHeight) + 24}px`
+    return () => { body.style.paddingBottom = prev }
+  }, [componentId, peek, sheetHeight])
+
   // ── Grip resize ──────────────────────────────────────────────────────
   // The grip is the top bar. Drag it to set the sheet height: the sheet is
   // bottom-anchored, so its bottom edge stays put (captured at grab time) and
