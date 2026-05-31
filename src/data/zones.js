@@ -646,6 +646,23 @@ export const COMPONENT_BADGES = Object.fromEntries(
   allNodes.map(({ node }) => [node.id, node.badges || []])
 )
 
+// Map intent-object id → the id of the etcd "intent store" node that holds it.
+// Intent objects only render (and gain a DOM id) when their store is expanded,
+// so spotlighting one on the overview means expanding its store first.
+export const INTENT_OBJECT_STORE = (() => {
+  const map = {}
+  const walk = (zones) => {
+    for (const zone of zones) {
+      zone.nodes?.forEach((n) =>
+        n.intentObjects?.forEach((o) => { map[o.id] = n.id })
+      )
+      if (zone.zones) walk(zone.zones)
+    }
+  }
+  walk(ZONES)
+  return map
+})()
+
 // First Overview rendering rule (ARCHITECTURE.md §1) — the primary canvas is a
 // whitelist: a NodeCard may only be a systemd enforcer/service, a concrete
 // application instance (Pod / Static Pod / VMI), or a networking Service

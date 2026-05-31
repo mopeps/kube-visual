@@ -5,6 +5,10 @@ export default function useEventState() {
   const [activeComponentId, setActiveComponentId] = useState(null)
   // Which hop (step number) is currently inspected via the bottom hop panel.
   const [activeStep, setActiveStep] = useState(null)
+  // A component the overview should transiently spotlight (e.g. after the user
+  // clicks the location badge in a detail popup to "find this on the canvas").
+  // Independent of the trace-flow highlight; cleared automatically once shown.
+  const [highlightedId, setHighlightedId] = useState(null)
 
   const selectEvent = useCallback((event) => {
     // Switching/clearing the trace always drops any inspected hop.
@@ -34,6 +38,11 @@ export default function useEventState() {
 
   const clearComponent = useCallback(() => setActiveComponentId(null), [])
 
+  // Spotlight a component on the overview, then forget it (the overview clears
+  // the highlight once it has scrolled to and pulsed the target).
+  const revealComponent = useCallback((id) => setHighlightedId(id), [])
+  const clearHighlight = useCallback(() => setHighlightedId(null), [])
+
   const activeComponentIds = useMemo(
     () => activeEvent
       ? new Set(activeEvent.steps.flatMap(s => [s.sourceComponentId, s.targetComponentId]))
@@ -46,10 +55,13 @@ export default function useEventState() {
     activeComponentId,
     activeComponentIds,
     activeStep,
+    highlightedId,
     selectEvent,
     clearEvent,
     selectComponent,
     clearComponent,
+    revealComponent,
+    clearHighlight,
     selectStep,
     focusStep,
     clearStep,

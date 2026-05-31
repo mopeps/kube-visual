@@ -9,6 +9,7 @@ export default function Zone({
   componentId,
   stepNum,
   isActive = false,
+  isHighlighted = false,
   onClick,
 }) {
   const isTop = depth === 0
@@ -49,7 +50,7 @@ export default function Zone({
             onClick?.(componentId)
           }
         } : undefined}
-        className="zone-label"
+        className={`zone-label ${isHighlighted ? 'is-highlighted' : ''}`}
         style={{
           position: 'relative',
           color,
