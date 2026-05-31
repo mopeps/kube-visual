@@ -32,6 +32,53 @@ function primitiveNote(p) {
   return 'host-backed mount'
 }
 
+// One-line note for a `linuxPrimitive` realisation row that has no process detail
+// of its own (a Service VIP, a NetworkPolicy's ACLs, a CR's etcd record, the VMI
+// guest, the off-cluster client). The note must earn its place: say what the thing
+// is *for* or what it actually does, not paraphrase the label's jargon back at the
+// reader. Matched most-specific first; an unrecognised value returns undefined so
+// the row stays bare rather than gaining a hollow note.
+function realisationNote(lp) {
+  if (!lp) return undefined
+  if (/encrypted at rest/i.test(lp))
+    return 'Stored state, not a process — encrypted, so a stolen disk leaks nothing.'
+  if (/etcd record/i.test(lp))
+    return 'Stored desired state, not a process — controllers reconcile it into reality.'
+  if (/router-default LB/i.test(lp))
+    return "The guest can't fulfil its own LB, so KubeVirt borrows the host cluster's."
+  if (/MetalLB.*virt-launcher/i.test(lp))
+    return 'Bare-metal VIP fronting the Pods that host the guest VMs.'
+  if (/MetalLB/i.test(lp))
+    return 'A bare-metal stand-in for a cloud LB — claims an external IP on the LAN.'
+  if (/OVN ACL/i.test(lp))
+    return 'Where a NetworkPolicy stops being intent and actually drops packets.'
+  if (/ClusterIP/i.test(lp))
+    return 'A fixed address for Pods with shifting IPs — owns no NIC; the kernel rewrites it.'
+  if (/guest OS|RHCOS guest/i.test(lp))
+    return "Where the guest node's workloads actually run — a full OS inside the VM."
+  if (/TCP socket/i.test(lp))
+    return 'Where the whole flow starts — a plain client socket, off-cluster.'
+  return undefined
+}
+
+// One-line note for a bare `logical-intent` manifest row (the declarative K8s
+// object an API Object / Service / NetworkPolicy reduces to). Keyed off the kind
+// word that leads `runtimeForm`, so it reads in the same voice as controllerNote.
+function manifestNote(form) {
+  if (!form) return undefined
+  if (/^Deployment/.test(form)) return 'Desired replica count & Pod template; reconciled into ReplicaSets.'
+  if (/^ReplicaSet/.test(form)) return 'Keeps a fixed number of identical Pods running.'
+  if (/^ConfigMap/.test(form)) return 'Non-secret config the kubelet injects as files or env vars.'
+  if (/^Secret/.test(form)) return 'Sensitive data, mounted into the Pod as an in-memory tmpfs file.'
+  if (/^PersistentVolumeClaim/.test(form)) return "A Pod's request for storage, bound to a PersistentVolume."
+  if (/^PersistentVolume/.test(form)) return 'Provisioned storage that a PVC binds to.'
+  if (/^EndpointSlice/.test(form)) return 'The live list of ready Pod IPs behind a Service.'
+  if (/^Service \(LoadBalancer\)/.test(form)) return 'Asks for an external IP; a controller provisions the actual LB.'
+  if (/^Service/.test(form)) return 'A stable IP & DNS name fronting the Pods it selects.'
+  if (/^NetworkPolicy/.test(form)) return 'Which traffic is allowed to or from the selected Pods.'
+  return undefined
+}
+
 // Map PRIMITIVES_BY_TYPE items → tree rows (label + short note, full detail on expand).
 function primitiveNodes(typePrefix) {
   const set = PRIMITIVES_BY_TYPE[typePrefix]
@@ -344,7 +391,10 @@ function withForms(component, bands) {
       }
     }
     if (!folded) {
-      ensureKernelBand(bands).groups[0].nodes.unshift({ label: linuxPrimitive })
+      ensureKernelBand(bands).groups[0].nodes.unshift({
+        label: linuxPrimitive,
+        note: realisationNote(linuxPrimitive),
+      })
     }
   }
   return bands
@@ -375,10 +425,16 @@ function simpleBands(component) {
   // skips straight to the kernel datapath (OVN LB flows / ACLs / an etcd record),
   // mirroring how host systemd services skip the Runtime Object band too.
   if (runtimeForm && runtimeForm !== 'n/a (off-cluster)') {
-    bands.push({ layerId: 'logical-intent', groups: [{ nodes: [{ label: runtimeForm }] }] })
+    bands.push({
+      layerId: 'logical-intent',
+      groups: [{ nodes: [{ label: runtimeForm, note: manifestNote(runtimeForm) }] }],
+    })
   }
   if (linuxPrimitive) {
-    bands.push({ layerId: 'linux-primitive', groups: [{ nodes: [{ label: linuxPrimitive }] }] })
+    bands.push({
+      layerId: 'linux-primitive',
+      groups: [{ nodes: [{ label: linuxPrimitive, note: realisationNote(linuxPrimitive) }] }],
+    })
   }
   return bands
 }
