@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import componentsData from '../data/components.json'
 import { COMPONENT_COLOR } from '../data/zones'
 import TypeIcon from './TypeIcon'
@@ -12,6 +12,8 @@ function findComponent(id) {
 // stays short — so the architecture view behind it remains visible and you keep
 // your spatial bearings while reading about a single hop.
 export default function HopInspector({ activeEvent, activeStep, onSelectStep, onClose }) {
+  const panelRef = useRef(null)
+
   // Esc closes the inspector, ← / → walk between hops.
   useEffect(() => {
     if (!activeEvent || activeStep == null) return
@@ -23,6 +25,28 @@ export default function HopInspector({ activeEvent, activeStep, onSelectStep, on
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeEvent, activeStep])
+
+  // The inspector is fixed to the bottom of the viewport, so at max scroll the
+  // page's last objects stay pinned behind it. Mirror the peek-mode fix: pad the
+  // page bottom by the inspector's height (it varies with the description / step)
+  // so every overview object can be scrolled clear of the panel. A ResizeObserver
+  // keeps the padding in step as the panel grows or shrinks between hops.
+  useEffect(() => {
+    const el = panelRef.current
+    if (!el) return
+    const body = document.body
+    const prev = body.style.paddingBottom
+    const apply = () => {
+      body.style.paddingBottom = `${Math.round(el.offsetHeight) + 24}px`
+    }
+    apply()
+    const ro = new ResizeObserver(apply)
+    ro.observe(el)
+    return () => {
+      ro.disconnect()
+      body.style.paddingBottom = prev
+    }
   }, [activeEvent, activeStep])
 
   if (!activeEvent || activeStep == null) return null
@@ -42,7 +66,7 @@ export default function HopInspector({ activeEvent, activeStep, onSelectStep, on
   }
 
   return (
-    <div className="hop-inspector animate-fade-in" style={{ '--hop-accent': color }}>
+    <div ref={panelRef} className="hop-inspector animate-fade-in" style={{ '--hop-accent': color }}>
       <div className="hop-inspector-bar">
         <span className="hop-inspector-num" style={{ color }}>{step.step}</span>
         <div className="hop-inspector-route">
