@@ -6,6 +6,11 @@ import IntentStoreCard from './IntentStoreCard'
 import ArrowOverlay from './ArrowOverlay'
 import { scrollIntoUpperThird } from '../lib/scroll'
 
+// How long the reveal spotlight stays lit before it auto-clears. Kept in sync
+// with the `.is-highlighted` pulse in index.css (reveal-pulse-* runs 1.3s × 2),
+// so the highlight clears exactly when the animation finishes.
+const SPOTLIGHT_MS = 1300 * 2
+
 // Map componentId → step number it first appears in the active event.
 function buildStepNumMap(activeEvent) {
   const map = new Map()
@@ -54,7 +59,7 @@ export default function OverviewTab({
         scrollIntoUpperThird(document.getElementById(highlightId))
       })
     })
-    const clear = setTimeout(() => onClearHighlight?.(), 2600)
+    const clear = setTimeout(() => onClearHighlight?.(), SPOTLIGHT_MS)
     return () => {
       cancelAnimationFrame(raf1)
       if (raf2) cancelAnimationFrame(raf2)
@@ -155,11 +160,12 @@ export default function OverviewTab({
         />
       </div>
       {/* Tail spacer: a little room to scroll past the last object, growing by
-          the hop inspector's height (published as --hop-inset) when it's open so
-          the bottom objects can always be scrolled clear of that fixed panel.
+          the height of whichever bottom panel is open — the hop inspector
+          (--hop-inset) or a resized detail sheet in peek mode (--peek-inset) —
+          so the bottom objects can always be scrolled clear of that fixed panel.
           Extends whichever scroller owns the overview — the window on desktop,
           the pane in the compact swipe pager. */}
-      <div aria-hidden style={{ height: 'calc(2rem + var(--hop-inset, 0px))' }} />
+      <div aria-hidden style={{ height: 'calc(2rem + var(--hop-inset, 0px) + var(--peek-inset, 0px))' }} />
     </>
   )
 }

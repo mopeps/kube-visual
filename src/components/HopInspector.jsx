@@ -1,11 +1,7 @@
 import { useEffect, useRef } from 'react'
-import componentsData from '../data/components.json'
+import { findComponent } from '../data/components-index'
 import { COMPONENT_COLOR } from '../data/zones'
 import TypeIcon from './TypeIcon'
-
-function findComponent(id) {
-  return componentsData.find(c => c.componentId === id)
-}
 
 // A compact, NON-modal hop inspector docked at the bottom of the viewport.
 // Unlike AncestryModal it does not dim the page, does not lock scrolling, and

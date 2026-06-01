@@ -98,10 +98,11 @@ const ENTRIES = [
     aliases: ['Back-End Application Pod', 'Back-End Application', 'Back-End Pod', 'backend Pod'],
   },
   { componentId: 'svc-backend', aliases: ['Back-End ClusterIP Service', 'Back-End Service'] },
-  {
-    componentId: 'netpol-ecommerce',
-    aliases: ['E-Commerce Network Policy', 'NetworkPolicy', 'Network Policy', 'Network Policies'],
-  },
+  { componentId: 'netpol-ecommerce', aliases: ['E-Commerce Network Policy'] },
+  // Generic "NetworkPolicy" mentions name the kind, not the one e-commerce
+  // policy node — keep them as a muted, non-clickable chip rather than
+  // mis-linking every generic mention to that specific object.
+  { kind: 'NetworkPolicy', aliases: ['NetworkPolicy', 'Network Policy', 'Network Policies'] },
 
   // ── API objects that live inside an etcd intent store (no overview card) ──
   // These resolve to the records persisted in the Management / Guest Etcd

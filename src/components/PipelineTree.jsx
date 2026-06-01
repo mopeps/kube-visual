@@ -3,6 +3,7 @@ import { PIPELINE_LAYER_BY_ID } from '../data/pipeline-layers'
 import { classifyRow } from '../data/pipeline-kinds'
 import ExploreCommands from './ExploreCommands'
 import ObjectText from './ObjectText'
+import { ManifestChip, ManifestBlock } from './Manifest'
 
 // Monochrome line glyphs for the pipeline bands. Each is a single-stroke SVG
 // drawn with `currentColor`, so it inherits the band head's accent color, and
@@ -76,32 +77,28 @@ function KindGlyph({ name }) {
   }
 }
 
-// Prose helper: object references in the revealed detail are lifted into the
+// Object references in the revealed detail are lifted (via ObjectText) into the
 // same inline chips used by the why-callout and interaction rows, so the same
 // nodes are navigable wherever they're named.
-function Prose({ text, onSelectComponent, selfId }) {
-  return <ObjectText text={text} onSelectComponent={onSelectComponent} selfId={selfId} />
-}
-
 function RowDetail({ detail, color, onSelectComponent, selfId }) {
   return (
     <>
       {detail.lines?.map((l, i) => (
         <div key={`l${i}`} className="tree-detail-line">
-          <Prose text={l} onSelectComponent={onSelectComponent} selfId={selfId} />
+          <ObjectText text={l} onSelectComponent={onSelectComponent} selfId={selfId} />
         </div>
       ))}
       {detail.bullets?.map((b, i) => (
         <div key={`b${i}`} className="tree-detail-bullet">
           <span className="tree-detail-marker" style={{ color }} aria-hidden="true">•</span>
-          <span><Prose text={b} onSelectComponent={onSelectComponent} selfId={selfId} /></span>
+          <span><ObjectText text={b} onSelectComponent={onSelectComponent} selfId={selfId} /></span>
         </div>
       ))}
       {detail.kv?.map((p, i) => (
         <div key={`k${i}`} className="tree-detail-kv">
           <span className="tree-detail-k">{p.k}</span>
           <span className="tree-detail-v">
-            <Prose text={p.v} onSelectComponent={onSelectComponent} selfId={selfId} />
+            <ObjectText text={p.v} onSelectComponent={onSelectComponent} selfId={selfId} />
           </span>
         </div>
       ))}
@@ -120,6 +117,7 @@ function RowDetail({ detail, color, onSelectComponent, selfId }) {
 // accent rail rather than ASCII gutter glyphs.
 function Node({ node, bandColor, onSelectComponent, selfId }) {
   const [open, setOpen] = useState(false)
+  const [manifestOpen, setManifestOpen] = useState(false)
   const color = node.color || bandColor
   const kids = node.children || []
   // A row is expandable when it carries a note or deeper detail to reveal.
@@ -132,19 +130,35 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
 
   return (
     <div className="tree-node">
-      <button
-        type="button"
-        className="tree-row-head"
-        onClick={hasExtra ? () => setOpen(o => !o) : undefined}
-        aria-expanded={hasExtra ? open : undefined}
-        data-expandable={hasExtra ? '' : undefined}
-        style={{ color, cursor: hasExtra ? 'pointer' : 'default' }}
-      >
-        {hasExtra && (
-          <span className={`tree-caret${open ? ' is-open' : ''}`} aria-hidden="true">▸</span>
+      <div className="tree-row-line">
+        <button
+          type="button"
+          className="tree-row-head"
+          onClick={hasExtra ? () => setOpen(o => !o) : undefined}
+          aria-expanded={hasExtra ? open : undefined}
+          data-expandable={hasExtra ? '' : undefined}
+          style={{ color, cursor: hasExtra ? 'pointer' : 'default' }}
+        >
+          {hasExtra && (
+            <span className={`tree-caret${open ? ' is-open' : ''}`} aria-hidden="true">▸</span>
+          )}
+          <span className="tree-label">{node.label}</span>
+        </button>
+        {node.manifest && (
+          <ManifestChip
+            open={manifestOpen}
+            onToggle={() => setManifestOpen(o => !o)}
+            kind={node.manifest.kind}
+            color={color}
+          />
         )}
-        <span className="tree-label">{node.label}</span>
-      </button>
+      </div>
+
+      {node.manifest && manifestOpen && (
+        <div className="tree-reveal" style={{ '--row-color': color }}>
+          <ManifestBlock body={node.manifest.body} kind={node.manifest.kind} color={color} />
+        </div>
+      )}
 
       {hasExtra && open && (
         <div className="tree-reveal" style={{ '--row-color': color }}>
@@ -156,7 +170,7 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
                   {action.label}
                 </span>
               )}
-              {node.note && <Prose text={node.note} onSelectComponent={onSelectComponent} selfId={selfId} />}
+              {node.note && <ObjectText text={node.note} onSelectComponent={onSelectComponent} selfId={selfId} />}
             </div>
           )}
           {node.detail && (

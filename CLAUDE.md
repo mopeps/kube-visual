@@ -44,6 +44,7 @@ src/
     events.json              # ordered step lists (source → target hops)
     zones.js                 # recursive ZONES tree, COMPONENT_COLOR / _ZONE / _BADGES
     primitives.js            # kernel/OS/virt primitives keyed by typePrefix
+    manifests.js             # minimal example manifest (YAML) / systemd unit per componentId
     pipeline-layers.js       # Manifest → Kernel band definitions
     pipeline-model.js        # builds a component's pipeline-tree band model
     interaction-kinds.js     # classifies interaction sentences (icon + accent)
@@ -63,6 +64,7 @@ src/
     AncestryModal.jsx        # node detail sheet (React portal); Esc / tap-outside closes
     DetailSections.jsx       # tags, context, primitives, interactions, commands
     PipelineTree.jsx         # the Manifest → Kernel ASCII-style tree
+    Manifest.jsx             # [MANIFEST]/[UNIT] chip + copyable example-manifest code block
     InteractionList.jsx      # classified interaction rows
     ObjectText.jsx           # prose with inline object-reference chips
     ExploreCommands.jsx      # copyable shell-command blocks
