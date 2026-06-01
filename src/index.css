@@ -196,6 +196,43 @@ body::after {
 }
 .node:hover { transform: translateY(-2px); border-color: var(--tx-bright); }
 
+/* ── Service → target pair ─────────────────────────────────────────────
+   A Service stacked directly above the workload it exposes, occupying a
+   single node slot in the zone's flex-wrap so the two never split apart. The
+   cards fill the slot width; a faint dotted tick joins them. Hovering anywhere
+   in the pair lifts the partner card's border to the zone accent (the #2
+   "spotlight the partner" cue), and the connector brightens with it. */
+.service-pair {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 0 0 auto;
+  width: 128px;
+}
+.service-pair > .node {
+  width: 100%;
+  max-width: none;
+  flex: none;
+}
+.service-pair-link {
+  align-self: center;
+  width: 0;
+  height: 12px;
+  margin: 3px 0;
+  border-left: 1px dotted color-mix(in srgb, var(--node-accent) 45%, transparent);
+  transition: border-color 0.2s ease;
+}
+.service-pair:hover > .node { border-color: var(--node-accent); }
+.service-pair:hover > .service-pair-link { border-left-color: var(--node-accent); }
+
+@media (max-width: 640px) {
+  .service-pair {
+    flex: 1 1 calc(50% - 4px);
+    max-width: calc(50% - 4px);
+    width: auto;
+  }
+}
+
 .node.is-active {
   border-color: var(--packet);
   box-shadow: 0 0 0 2px var(--packet), 0 0 24px rgba(255, 77, 109, 0.35);

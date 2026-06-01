@@ -4,6 +4,7 @@ import Zone from './Zone'
 import NodeCard from './NodeCard'
 import IntentStoreCard from './IntentStoreCard'
 import ControllerManagerCard from './ControllerManagerCard'
+import ServicePair from './ServicePair'
 import ArrowOverlay from './ArrowOverlay'
 import { scrollIntoUpperThird } from '../lib/scroll'
 
@@ -132,6 +133,36 @@ export default function OverviewTab({
     )
   }
 
+  // Render a zone's nodes, collapsing each Service that `exposes` an in-zone
+  // target into a single stacked ServicePair (Service on top, target below). A
+  // target only gets absorbed when its Service lives in the same zone; an
+  // orphaned `exposes` (cross-zone target) falls through to normal rendering.
+  function renderZoneNodes(zone) {
+    const nodes = zone.nodes ?? []
+    const byId = new Map(nodes.map(n => [n.id, n]))
+    const pairedTargets = new Set(
+      nodes.filter(n => n.exposes && byId.has(n.exposes)).map(n => n.exposes)
+    )
+    const out = []
+    for (const node of nodes) {
+      // The target Pod is rendered inside its Service's pair, not standalone.
+      if (pairedTargets.has(node.id)) continue
+      if (node.exposes && byId.has(node.exposes)) {
+        out.push(
+          <ServicePair
+            key={node.id}
+            color={zone.color}
+            service={renderNode(node, zone)}
+            target={renderNode(byId.get(node.exposes), zone)}
+          />
+        )
+        continue
+      }
+      out.push(renderNode(node, zone))
+    }
+    return out
+  }
+
   function renderZone(zone, depth = 0) {
     return (
       <Zone
@@ -148,8 +179,8 @@ export default function OverviewTab({
         isHighlighted={zone.componentId ? zone.componentId === highlightId : false}
         onClick={onSelectComponent}
       >
-        {/* Nodes in this zone */}
-        {zone.nodes?.map(node => renderNode(node, zone))}
+        {/* Nodes in this zone (Service→target pairs stacked together) */}
+        {renderZoneNodes(zone)}
         {/* Child zones */}
         {zone.zones?.map(child => renderZone(child, depth + 1))}
       </Zone>
@@ -168,7 +199,7 @@ export default function OverviewTab({
             ? [
                 // Wrapper hidden: surface its own nodes and child zones directly
                 // so neither is silently dropped.
-                ...(zone.nodes ?? []).map(node => renderNode(node, zone)),
+                ...renderZoneNodes(zone),
                 ...(zone.zones ?? []).map(child => renderZone(child)),
               ]
             : [renderZone(zone)]

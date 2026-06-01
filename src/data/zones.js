@@ -614,6 +614,8 @@ export const ZONES = [
                     id: 'svc-ingress-lb-guest',
                     title: 'Ingress LoadBalancer',
                     typePrefix: 'Service',
+                    // Stacks directly above the Pod it exposes (see ServicePair).
+                    exposes: 'openshift-ingress-router-guest',
                     badges: [
                       { label: 'LoadBalancer', color: 'var(--k-green)' },
                       { label: 'router-default', color: 'var(--k-green)' },
@@ -635,6 +637,7 @@ export const ZONES = [
                     id: 'svc-frontend',
                     title: 'Front-End Service',
                     typePrefix: 'Service',
+                    exposes: 'frontend-application-pod',
                     badges: [
                       { label: 'ClusterIP', color: 'var(--k-green)' },
                       { label: 'e-commerce-prod', color: 'var(--k-green)' },
@@ -655,6 +658,7 @@ export const ZONES = [
                     id: 'svc-backend',
                     title: 'Back-End Service',
                     typePrefix: 'Service',
+                    exposes: 'backend-application-pod',
                     badges: [
                       { label: 'ClusterIP', color: 'var(--k-green)' },
                       { label: 'e-commerce-prod', color: 'var(--k-green)' },
