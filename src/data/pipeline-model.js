@@ -185,37 +185,33 @@ function podBands(component) {
   // 3 · Translation engine — the universal kubelet → CRI-O path.
   bands.push({ layerId: 'translation-engine', groups: [{ nodes: [KUBELET, CRIO] }] })
 
-  // 4 · Linux primitives — hand-authored realisation when present, else by type.
-  const groups = []
+  // 4 · Linux primitives — the canonical Pod kernel set (network namespace,
+  // veth, mount namespace, cgroups, SELinux, and the PID-1 process) is the base
+  // for every Pod, so the descent always bottoms out in the running process.
+  // When the component carries hand-authored kernelRealization, this instance's
+  // concrete identifiers (its cgroup path / netns / mount ns) are appended to
+  // the matching rows; any consumedResources hang beneath as the projected
+  // volume mounts.
+  const base = primitiveNodes('Pod') || []
   if (kernelRealization) {
-    groups.push({
-      nodes: [
-        kernelRealization.cgroupPath && {
-          label: `[cgroup v2] ${kernelRealization.cgroupPath}`,
-          note: 'throttles CPU / RAM limits',
-        },
-        kernelRealization.networkNamespace && {
-          label: `[netns] ${kernelRealization.networkNamespace}`,
-          note: 'isolates network sockets',
-        },
-        kernelRealization.mountNamespace && {
-          label: `[mount ns] ${kernelRealization.mountNamespace}`,
-          note: 'container-private VFS',
-        },
-      ].filter(Boolean),
-    })
+    const enrich = (id, value) => {
+      if (!value) return
+      const row = base.find(n => n.id === id)
+      if (row) row.note = row.note ? `${row.note} · ${value}` : value
+    }
+    enrich('pod-netns', kernelRealization.networkNamespace)
+    enrich('pod-mountns', kernelRealization.mountNamespace)
+    enrich('pod-cgroups', kernelRealization.cgroupPath)
   }
+  const groups = [{ nodes: base }]
   if (cr.length) {
     groups.push({
+      subhead: 'projected volumes',
       nodes: cr.map(r => ({
         label: `${r.linuxPrimitive} ${r.hostPath}`,
         note: r.apiObject,
       })),
     })
-  }
-  if (!groups.length) {
-    const pn = primitiveNodes('Pod')
-    if (pn) groups.push({ nodes: pn })
   }
   bands.push({ layerId: 'linux-primitive', groups })
 

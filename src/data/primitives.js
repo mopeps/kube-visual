@@ -26,6 +26,36 @@ export const PRIMITIVES_BY_TYPE = {
         ],
       },
       {
+        id: 'pod-veth',
+        label: 'veth Pair (eth0)',
+        description:
+          "A virtual Ethernet (veth) pair connecting the Pod to the node network — the Pod's eth0 is one end; its peer lives in the host root netns and is enslaved to the OVS integration bridge br-int, stitching the Pod's private network namespace into the node's OVN datapath. Created by the CNI plugin (OVN-Kubernetes) when the Pod sandbox is set up.",
+        interactions: [
+          'The in-namespace end is eth0 inside the Pod; the host-side peer (ovn-…) is a port on br-int.',
+          'A packet sent on eth0 emerges on the host peer, where OVN OpenFlow rules apply routing, NAT, and ACLs.',
+          'Created once for the Pod sandbox (the pause container) and shared by every container in the Pod.',
+        ],
+        commands: [
+          "# Find the Pod's eth0 and its peer ifindex\nPID=$(crictl inspect <container_id> | jq .info.pid)\nnsenter -t $PID -n ip -d link show eth0",
+          '# Match the host-side veth to its OVS port\nip link | grep <peer_ifindex>\novs-vsctl show | grep -B2 <veth-name>',
+        ],
+      },
+      {
+        id: 'pod-mountns',
+        label: 'Mount Namespace',
+        description:
+          "Gives the container its own view of the filesystem — an overlayfs root built from the image layers, with each volume bind-mounted in: Secrets and ConfigMaps as in-memory tmpfs files, PersistentVolumeClaims as real block-device mounts. Isolated from the host and from other Pods.",
+        interactions: [
+          'CRI-O assembles the overlay rootfs and bind-mounts every projected volume before the container starts.',
+          'Secret / ConfigMap volumes are tmpfs (RAM) so they never touch disk; PVCs are kernel block mounts.',
+          'oc exec enters this namespace to see the container-private filesystem.',
+        ],
+        commands: [
+          '# Enter the mount namespace and list the container mounts\nnsenter -t $PID -m mount',
+          '# Inspect the overlay rootfs path\ncrictl inspect <container_id> | jq .info.runtimeSpec.root.path',
+        ],
+      },
+      {
         id: 'pod-cgroups',
         label: 'cgroups v2',
         description:
@@ -42,11 +72,28 @@ export const PRIMITIVES_BY_TYPE = {
         ],
       },
       {
+        id: 'pod-selinux',
+        label: 'SELinux MCS Label',
+        description:
+          "A unique SELinux Multi-Category Security label per container — e.g. system_u:system_r:container_t:s0:c14,c742 — tagged onto its process and files. The kernel's SELinux LSM only permits access between matching categories, so even a container escape can't read another Pod's files.",
+        interactions: [
+          'CRI-O assigns each container a unique pair of MCS categories (c<NN>,c<MM>) at start.',
+          "The kernel denies any access whose label categories don't match and logs an AVC denial.",
+          "Mounted volumes are relabelled to the container's context so the process can read them.",
+        ],
+        commands: [
+          "# Show the container process's SELinux context\nps -eZ | grep container_t",
+          '# Watch for AVC denials on the host node\nausearch -m avc -ts recent',
+          "# View a Pod's requested SELinux options\noc get pod <pod> -n <ns> -o jsonpath='{.spec.securityContext.seLinuxOptions}'",
+        ],
+      },
+      {
         id: 'container-process',
         label: 'PID 1 · Process',
         description:
           'The application binary running as PID 1 inside the container\'s PID namespace. It is the terminal point of the entire HCP ownership chain — from the external client request down through every networking and runtime layer.',
         interactions: [
+          "Joins the namespaces held open by the Pod's pause (sandbox) container — the pause process itself just holds them and sleeps; this is the container that actually does the work.",
           'Runs at the intersection of its own network namespace, cgroup slice, and PID namespace.',
           'Receives inbound socket connections on the Pod\'s private Pod IP (a ClusterIP is a Service VIP, not the Pod\'s own address).',
           'stdout/stderr are captured by the container runtime and forwarded to oc logs.',
@@ -178,7 +225,7 @@ PRIMITIVES_BY_TYPE['Static Pod'] = PRIMITIVES_BY_TYPE.Pod
 // Convenience: the primitive component IDs that ARE the expandable entries
 // (used to suppress the section on those entries themselves)
 export const SELF_PRIMITIVE_IDS = new Set([
-  'pod-netns', 'pod-cgroups', 'container-process',
+  'pod-netns', 'pod-veth', 'pod-mountns', 'pod-cgroups', 'pod-selinux', 'container-process',
   'systemd-unit', 'cgroup-slice', 'service-process',
   'kvm-vcpu', 'qemu-process', 'vhost-net',
 ])
