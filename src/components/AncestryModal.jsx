@@ -91,27 +91,28 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
   }, [componentId, peek])
 
   // In peek mode the bottom-anchored sheet covers the lower slice of the
-  // viewport, so the page's last objects could never be scrolled out from
-  // behind it (at max scroll they stay pinned under the sheet). Extend the
-  // scroll range by padding the page bottom with the sheet height (plus a small
-  // gap) so every overview object can be brought above the sheet and clicked.
+  // viewport, so the overview's last objects could never be scrolled out from
+  // behind it (at max scroll they stay pinned under the sheet). Publish the
+  // sheet height as the --peek-inset CSS variable; the overview's tail spacer
+  // reserves that much extra room so every object can be scrolled clear of the
+  // sheet and clicked. A variable reserves the room *inside* whichever element
+  // actually scrolls — the window on desktop, the compact swipe pane below
+  // 1024px — where padding <body> would do nothing for the pane.
   //
-  // This is split in two so the padding is set up/torn down once per peek
-  // session but its *value* is only written when the sheet is settled — never
-  // mid-drag. Mutating the document height on every pointermove reflows the
-  // page and lurches its scroll position, which on touch fires `pointercancel`
-  // on the grip's captured pointer and aborts the resize. Freezing the padding
-  // during an active drag keeps the document height stable so the grip resizes
-  // smoothly.
+  // Split in two so the inset is set up/torn down once per peek session but its
+  // *value* is only written when the sheet is settled — never mid-drag.
+  // Reflowing the scroller on every pointermove lurches its scroll position,
+  // which on touch fires `pointercancel` on the grip's captured pointer and
+  // aborts the resize. Freezing it during an active drag keeps the resize
+  // smooth.
   useEffect(() => {
     if (!componentId || !peek) return
-    const body = document.body
-    const prev = body.style.paddingBottom
-    return () => { body.style.paddingBottom = prev }
+    const root = document.documentElement
+    return () => root.style.removeProperty('--peek-inset')
   }, [componentId, peek])
   useEffect(() => {
     if (!componentId || !peek || resizing) return
-    document.body.style.paddingBottom = `${Math.round(sheetHeight) + 24}px`
+    document.documentElement.style.setProperty('--peek-inset', `${Math.round(sheetHeight) + 24}px`)
   }, [componentId, peek, resizing, sheetHeight])
 
   // ── Grip resize ──────────────────────────────────────────────────────
@@ -123,27 +124,36 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
     if (!modalRef.current) return
     e.preventDefault()
     e.currentTarget.setPointerCapture?.(e.pointerId)
-    resize.current = { active: true, bottom: modalRef.current.getBoundingClientRect().bottom }
+    // Resizing docks the sheet flush to the bottom of the viewport (see the
+    // is-peek styles), so its bottom edge sits at innerHeight. Capturing that
+    // — rather than the current floating bottom — lets the grip drag the top
+    // edge all the way to the top of the screen, i.e. to full height.
+    resize.current = { active: true, bottom: window.innerHeight }
     setResizing(true)
     setOffset(0)
   }
   const onGripPointerMove = (e) => {
     if (!resize.current.active) return
-    const max = window.innerHeight * 0.92
+    const max = window.innerHeight
     const next = Math.max(0, Math.min(resize.current.bottom - e.clientY, max))
     setSheetHeight(next)
   }
-  const onGripPointerUp = () => {
+  // `dismissable` is true only for a deliberate pointer release: a spurious
+  // pointercancel (the browser reclaiming the gesture mid-drag) must never
+  // close the sheet — it just settles at the current height, clamped to MIN.
+  const settleResize = (dismissable) => {
     if (!resize.current.active) return
     resize.current.active = false
     setResizing(false)
     setSheetHeight((h) => {
-      if (h != null && h < DISMISS_SHEET_PX) { onClose(); return h }
+      if (dismissable && h != null && h < DISMISS_SHEET_PX) { onClose(); return h }
       const settled = h == null ? null : Math.max(h, MIN_SHEET_PX)
       lastSheetHeight = settled
       return settled
     })
   }
+  const onGripPointerUp = () => settleResize(true)
+  const onGripPointerCancel = () => settleResize(false)
   // Double-click / -tap the grip to clear the fixed size and return to default.
   const onGripDoubleClick = () => {
     lastSheetHeight = null
@@ -237,7 +247,7 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
 
   return createPortal(
     <div
-      className={`ancestry-overlay animate-fade-in${peek ? ' is-peek' : ''}`}
+      className={`ancestry-overlay animate-fade-in${peek ? ' is-peek' : ''}${resizing ? ' is-resizing' : ''}`}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
@@ -259,7 +269,7 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
           onPointerDown={onGripPointerDown}
           onPointerMove={onGripPointerMove}
           onPointerUp={onGripPointerUp}
-          onPointerCancel={onGripPointerUp}
+          onPointerCancel={onGripPointerCancel}
           onDoubleClick={onGripDoubleClick}
         >
           <span className="ancestry-grip-bar" />

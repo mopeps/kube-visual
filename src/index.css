@@ -1194,10 +1194,22 @@ button.object-tag:hover {
 .ancestry-overlay.is-peek {
   background: transparent;
   backdrop-filter: none;
+  /* A resized sheet docks flush to the bottom edge so the grip can drag it all
+     the way up to full height (the floating 5vh inset would otherwise cap it). */
+  padding: 0;
+}
+/* Drop the dimming overlay's pointer events so the live page behind stays
+   interactive — but NOT while resizing. Flipping pointer-events on the overlay
+   ancestor mid-drag can make the browser fire pointercancel on the grip's
+   captured pointer and abort the resize, so we keep it interactive until the
+   grip is released. */
+.ancestry-overlay.is-peek:not(.is-resizing) {
   pointer-events: none;
 }
 .ancestry-overlay.is-peek .ancestry-modal {
   pointer-events: auto;
+  max-height: 100dvh;
+  border-radius: 16px 16px 0 0;
   box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.55);
 }
 .ancestry-modal {
@@ -1229,20 +1241,22 @@ button.object-tag:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 22px;
+  /* Tall, full-width hit area so the resize is easy to grab by touch. */
+  height: 40px;
   cursor: ns-resize;
   touch-action: none; /* let the pointer drag the grip instead of scrolling */
   user-select: none;
   -webkit-user-select: none;
 }
 .ancestry-grip-bar {
-  width: 44px;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.22);
+  width: 56px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.28);
   transition: background 0.18s;
 }
-.ancestry-grip:hover .ancestry-grip-bar { background: rgba(255, 255, 255, 0.42); }
+.ancestry-grip:hover .ancestry-grip-bar,
+.ancestry-grip:active .ancestry-grip-bar { background: rgba(255, 255, 255, 0.5); }
 .detail-close { z-index: 3; }
 
 /* ── Hop inspector ─────────────────────────────────────────────────────
@@ -1257,8 +1271,14 @@ button.object-tag:hover {
   bottom: max(16px, env(safe-area-inset-bottom));
   width: calc(100% - 24px);
   max-width: 640px;
-  max-height: 45vh;
-  overflow-y: auto;
+  /* Fixed size so the navigator holds its shape as you step through hops
+     instead of resizing per hop. It's a flex column: the bar and layers stay
+     pinned and the description scrolls within when a hop runs long. */
+  height: 200px;
+  max-height: 50vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   overscroll-behavior: contain;
   z-index: 100;
   background: color-mix(in srgb, var(--bg-2) 94%, transparent);
@@ -1273,6 +1293,7 @@ button.object-tag:hover {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 0 0 auto;
 }
 .hop-inspector-num {
   display: inline-flex;
@@ -1346,6 +1367,7 @@ button.object-tag:hover {
   align-items: center;
   gap: 6px;
   margin-top: 8px;
+  flex: 0 0 auto;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.62rem;
   text-transform: uppercase;
@@ -1354,6 +1376,10 @@ button.object-tag:hover {
 }
 .hop-inspector-desc {
   margin-top: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   font-size: 0.78rem;
   line-height: 1.55;
   color: var(--tx-muted);

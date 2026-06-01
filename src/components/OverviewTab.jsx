@@ -160,11 +160,12 @@ export default function OverviewTab({
         />
       </div>
       {/* Tail spacer: a little room to scroll past the last object, growing by
-          the hop inspector's height (published as --hop-inset) when it's open so
-          the bottom objects can always be scrolled clear of that fixed panel.
+          the height of whichever bottom panel is open — the hop inspector
+          (--hop-inset) or a resized detail sheet in peek mode (--peek-inset) —
+          so the bottom objects can always be scrolled clear of that fixed panel.
           Extends whichever scroller owns the overview — the window on desktop,
           the pane in the compact swipe pager. */}
-      <div aria-hidden style={{ height: 'calc(2rem + var(--hop-inset, 0px))' }} />
+      <div aria-hidden style={{ height: 'calc(2rem + var(--hop-inset, 0px) + var(--peek-inset, 0px))' }} />
     </>
   )
 }
