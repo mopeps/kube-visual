@@ -66,13 +66,15 @@ export default function IntentStoreCard({
         {stepNum != null && (
           <span className="node-step-badge" title={`Step ${stepNum}`}>{stepNum}</span>
         )}
-        <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>
-          [{node.typePrefix}]
-        </span>
+        {node.typePrefix !== 'Pod' && (
+          <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>
+            [{node.typePrefix}]
+          </span>
+        )}
         <div className="node-title" style={{ color }}>{node.title}</div>
         <div className="intent-store-hint" style={{ color }}>
           <span className="intent-store-chevron">▸</span>
-          {node.intentObjects.length} intent {node.intentObjects.length === 1 ? 'object' : 'objects'}
+          {node.intentObjects.length} {node.intentObjects.length === 1 ? 'object' : 'objects'}
         </div>
       </div>
     )
@@ -100,9 +102,11 @@ export default function IntentStoreCard({
           onClick={(e) => { e.stopPropagation(); onSelectComponent(node.id) }}
           title="Open etcd details"
         >
-          <span className="node-type-prefix" style={{ color: 'var(--tx-muted)', display: 'inline', marginRight: 6 }}>
-            [{node.typePrefix}]
-          </span>
+          {node.typePrefix !== 'Pod' && (
+            <span className="node-type-prefix" style={{ color: 'var(--tx-muted)', display: 'inline', marginRight: 6 }}>
+              [{node.typePrefix}]
+            </span>
+          )}
           {node.title}
           <span className="intent-store-info" aria-hidden="true">ⓘ</span>
         </button>

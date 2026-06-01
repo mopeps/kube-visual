@@ -69,13 +69,15 @@ export default function ControllerManagerCard({
         {stepNum != null && (
           <span className="node-step-badge" title={`Step ${stepNum}`}>{stepNum}</span>
         )}
-        <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>
-          [{node.typePrefix}]
-        </span>
+        {node.typePrefix !== 'Pod' && (
+          <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>
+            [{node.typePrefix}]
+          </span>
+        )}
         <div className="node-title" style={{ color }}>{node.title}</div>
         <div className="intent-store-hint" style={{ color }}>
           <span className="intent-store-chevron">▸</span>
-          {node.controllers.length} control {node.controllers.length === 1 ? 'loop' : 'loops'}
+          {node.controllers.length} {node.controllers.length === 1 ? 'loop' : 'loops'}
         </div>
       </div>
     )
@@ -103,9 +105,11 @@ export default function ControllerManagerCard({
           onClick={(e) => { e.stopPropagation(); onSelectComponent(node.id) }}
           title="Open controller-manager details"
         >
-          <span className="node-type-prefix" style={{ color: 'var(--tx-muted)', display: 'inline', marginRight: 6 }}>
-            [{node.typePrefix}]
-          </span>
+          {node.typePrefix !== 'Pod' && (
+            <span className="node-type-prefix" style={{ color: 'var(--tx-muted)', display: 'inline', marginRight: 6 }}>
+              [{node.typePrefix}]
+            </span>
+          )}
           {node.title}
           <span className="intent-store-info" aria-hidden="true">ⓘ</span>
         </button>
