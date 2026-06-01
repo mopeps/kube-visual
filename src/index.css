@@ -535,6 +535,20 @@ body::after {
   opacity: 0.8;
 }
 
+/* ── Operator set ─────────────────────────────────────────────────────
+   Same expandable layout as the controller set, but the members are real,
+   separate Deployment Pods grouped by their owner (CVO / Control Plane
+   Operator) — not goroutines or records. A solid border + a ◆ marker set the
+   operator chips apart from intent objects (dashed) and controller loops (↻). */
+.operator-pod {
+  border-style: solid;
+}
+.operator-pod-mark {
+  font-size: 0.7rem;
+  margin-right: 5px;
+  opacity: 0.75;
+}
+
 @media (max-width: 640px) {
   /* Two intent objects per row on mobile. Gap is 10px, so each takes half
      the row minus half the gap; min-width:0 lets them shrink past content. */

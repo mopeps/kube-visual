@@ -167,6 +167,587 @@
     ]
   },
   {
+    "componentId": "openshift-apiserver",
+    "displayName": "OpenShift API Server",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "API SERVER",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "openshift-apiserver binary (aggregated API)",
+    "problemSolved": "Serves the OpenShift-specific APIs — Routes, Projects, Images, Templates, BuildConfigs — that layer on top of vanilla Kubernetes.",
+    "interactions": [
+      "Runs as an aggregated API server registered with the Guest API Server via an APIService, so guest clients reach openshift.io groups transparently.",
+      "Deployed into the HCP namespace by the Control Plane Operator, alongside the kube-apiserver it extends.",
+      "Persists its objects through the Guest API Server into the guest cluster's own etcd, not the management etcd."
+    ],
+    "explorationCommands": [
+      "# See the aggregated openshift.io APIServices\noc get apiservices | grep openshift.io",
+      "# View OpenShift API Server logs\noc logs -n <hcp-namespace> deployment/openshift-apiserver --tail=50"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/architecture/control-plane"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/openshift/openshift-apiserver"
+      }
+    ]
+  },
+  {
+    "componentId": "openshift-oauth-apiserver",
+    "displayName": "OpenShift OAuth API Server",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "API SERVER",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "oauth-apiserver binary (aggregated API)",
+    "problemSolved": "Serves the user and OAuth APIs (Users, Groups, OAuthClients, OAuthAccessTokens) that back OpenShift's built-in authentication.",
+    "interactions": [
+      "Runs as an aggregated API server for the user.openshift.io and oauth.openshift.io groups, registered with the Guest API Server.",
+      "Works together with the OAuth Server Pod, which mints the tokens this API server then stores and validates.",
+      "Deployed and reconciled by the Control Plane Operator in the HCP namespace."
+    ],
+    "explorationCommands": [
+      "# Confirm the oauth/user aggregated APIs\noc get apiservices | grep -E 'oauth|user'",
+      "# View OAuth API Server logs\noc logs -n <hcp-namespace> deployment/openshift-oauth-apiserver --tail=50"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/authentication_and_authorization/index"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/openshift/openshift-oauth-apiserver"
+      }
+    ]
+  },
+  {
+    "componentId": "openshift-controller-manager",
+    "displayName": "OpenShift Controller Manager",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "CONTROLLER",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "openshift-controller-manager binary",
+    "problemSolved": "Runs the OpenShift-specific control loops (builds, deploymentconfigs, image streams, ServiceAccount pull secrets) that the upstream kube-controller-manager does not.",
+    "interactions": [
+      "Watches the Guest API Server for OpenShift objects (Builds, ImageStreams, DeploymentConfigs) and reconciles them.",
+      "Populates each namespace's ServiceAccount image-pull and dockercfg secrets.",
+      "Deployed into the HCP namespace by the Control Plane Operator, separate from the kube-controller-manager."
+    ],
+    "explorationCommands": [
+      "# View OpenShift Controller Manager logs\noc logs -n <hcp-namespace> deployment/openshift-controller-manager --tail=50",
+      "# Inspect the operator config it runs from\noc get openshiftcontrollermanager cluster -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/architecture/control-plane"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/openshift/openshift-controller-manager"
+      }
+    ]
+  },
+  {
+    "componentId": "route-controller-manager",
+    "displayName": "Route Controller Manager",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "CONTROLLER",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "route-controller-manager binary",
+    "problemSolved": "Runs the Route and ingress-to-route controllers — split out of the OpenShift controller manager — that turn Routes and Ingresses into router config.",
+    "interactions": [
+      "Watches Route and Ingress objects on the Guest API Server and keeps their status (admitted hosts, ingress conditions) reconciled.",
+      "Generates Routes from Ingress objects so both APIs converge on the same OpenShift router.",
+      "Deployed alongside the OpenShift Controller Manager in the HCP namespace by the Control Plane Operator."
+    ],
+    "explorationCommands": [
+      "# View Route Controller Manager logs\noc logs -n <hcp-namespace> deployment/route-controller-manager --tail=50",
+      "# Check admitted Routes in the guest cluster\noc get route -A --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ingress_and_load_balancing/index"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/openshift/route-controller-manager"
+      }
+    ]
+  },
+  {
+    "componentId": "hosted-cluster-config-operator",
+    "displayName": "Hosted Cluster Config Operator",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "OPERATOR",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "HCCO binary + controller-runtime",
+    "problemSolved": "The bridge between the hosted control plane and the guest cluster — it pushes config into the guest and reports the guest's health back up to the HostedControlPlane.",
+    "interactions": [
+      "Reconciles guest-cluster config (config.openshift.io objects, default RBAC, registry and ingress settings) by writing through the Guest API Server.",
+      "Aggregates guest ClusterOperator/version status and surfaces it on the HostedControlPlane so the HyperShift Operator can report HostedCluster availability.",
+      "Runs per HCP namespace, deployed by the Control Plane Operator — it is the in-cluster half that the management side cannot reach directly."
+    ],
+    "explorationCommands": [
+      "# Check the HCCO pod\noc get pods -n <hcp-namespace> -l app=hosted-cluster-config-operator",
+      "# View HCCO logs\noc logs -n <hcp-namespace> deployment/hosted-cluster-config-operator --tail=50",
+      "# Inspect the guest ClusterOperators it reports on\noc get clusteroperators --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/hosted_control_planes/hosted-control-planes-overview"
+      },
+      {
+        "label": "HyperShift",
+        "url": "https://hypershift-docs.netlify.app/"
+      }
+    ]
+  },
+  {
+    "componentId": "cluster-network-operator",
+    "displayName": "Cluster Network Operator",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "OPERATOR",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "CNO binary + controller-runtime",
+    "problemSolved": "Renders and deploys the guest cluster's entire network stack — OVN-Kubernetes, Multus, and DNS plumbing — from the Network config object.",
+    "interactions": [
+      "Reads the Network CR and renders the OVN-Kubernetes control-plane Deployment and node DaemonSet manifests for the guest.",
+      "Deploys the Multus CNI and its admission controller so Pods can request secondary networks.",
+      "Runs in the HCP namespace (deployed by the Control Plane Operator); the OVN control plane it manages also runs here, while the node components run on guest workers."
+    ],
+    "explorationCommands": [
+      "# View Cluster Network Operator logs\noc logs -n <hcp-namespace> deployment/cluster-network-operator --tail=50",
+      "# Inspect the rendered network config\noc get network.operator cluster -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ovn-kubernetes_network_plugin/about-ovn-kubernetes"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/openshift/cluster-network-operator"
+      }
+    ]
+  },
+  {
+    "componentId": "multus-admission-controller",
+    "displayName": "Multus Admission Controller",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "ADMISSION",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "webhook server binary",
+    "problemSolved": "Guards secondary-network attachments so a Pod can only request a NetworkAttachmentDefinition that actually exists.",
+    "interactions": [
+      "Runs as a validating webhook the Guest API Server calls on Pod and net-attach-def admission.",
+      "Rejects Pods that reference a missing or malformed NetworkAttachmentDefinition before they are scheduled.",
+      "Deployed in the HCP namespace by the Cluster Network Operator as part of the Multus stack."
+    ],
+    "explorationCommands": [
+      "# Check the multus admission controller pods\noc get pods -n <hcp-namespace> -l app=multus-admission-controller",
+      "# List NetworkAttachmentDefinitions in the guest\noc get net-attach-def -A --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/networking/multiple-networks"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/k8snetworkplumbingwg/multus-cni"
+      }
+    ]
+  },
+  {
+    "componentId": "cluster-policy-controller",
+    "displayName": "Cluster Policy Controller",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "CONTROLLER",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "cluster-policy-controller binary",
+    "problemSolved": "Enforces OpenShift's SecurityContextConstraints and resource-quota admission for the guest cluster.",
+    "interactions": [
+      "Runs the SCC admission and namespace resource-quota controllers that vanilla Kubernetes lacks.",
+      "Watches the Guest API Server for Pods and quota objects, admitting or denying them against SCC policy.",
+      "Deployed into the HCP namespace by the Control Plane Operator next to the kube-controller-manager."
+    ],
+    "explorationCommands": [
+      "# View Cluster Policy Controller logs\noc logs -n <hcp-namespace> deployment/cluster-policy-controller --tail=50",
+      "# List SecurityContextConstraints in the guest\noc get scc --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/authentication_and_authorization/managing-pod-security-policies"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/openshift/cluster-policy-controller"
+      }
+    ]
+  },
+  {
+    "componentId": "machine-approver",
+    "displayName": "Machine Approver",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "CONTROLLER",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "machine-approver binary",
+    "problemSolved": "Auto-approves the certificate signing requests that joining guest worker nodes submit, so nodes register without manual intervention.",
+    "interactions": [
+      "Watches the Guest API Server for pending kubelet client and serving CSRs from new nodes.",
+      "Cross-checks each CSR against the expected NodePool machines before approving it.",
+      "Runs in the HCP namespace, deployed by the Control Plane Operator alongside the Cluster API stack that creates the machines."
+    ],
+    "explorationCommands": [
+      "# Watch pending/approved CSRs in the guest\noc get csr --kubeconfig <guest-kubeconfig>",
+      "# View Machine Approver logs\noc logs -n <hcp-namespace> deployment/machine-approver --tail=50"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/hosted_control_planes/hosted-control-planes-overview"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/openshift/cluster-machine-approver"
+      }
+    ]
+  },
+  {
+    "componentId": "cluster-autoscaler",
+    "displayName": "Cluster Autoscaler",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "CONTROLLER",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "cluster-autoscaler binary",
+    "problemSolved": "Grows and shrinks the hosted cluster's worker count automatically based on whether guest Pods can be scheduled.",
+    "interactions": [
+      "Watches the Guest API Server for unschedulable Pods and scales the backing NodePool / MachineDeployment up.",
+      "Scales NodePools back down when nodes sit idle below the utilization threshold.",
+      "Runs in the HCP namespace and acts on the Cluster API objects, which the NodePool controller renders into KubeVirt VMs."
+    ],
+    "explorationCommands": [
+      "# View Cluster Autoscaler logs\noc logs -n <hcp-namespace> deployment/cluster-autoscaler --tail=50",
+      "# Inspect the NodePool autoscaling config\noc get nodepool <name> -n clusters -o jsonpath='{.spec.autoScaling}'"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/hosted_control_planes/hosted-control-planes-overview"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/kubernetes/autoscaler"
+      }
+    ]
+  },
+  {
+    "componentId": "ingress-operator",
+    "displayName": "Ingress Operator",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "OPERATOR",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "ingress-operator binary + controller-runtime",
+    "problemSolved": "Manages the guest cluster's IngressControllers — it deploys and configures the in-VM OpenShift router that serves *.apps Routes.",
+    "interactions": [
+      "Reconciles the default IngressController and creates the router-default Deployment + LoadBalancer Service inside the guest cluster.",
+      "Manages the wildcard *.apps DNS and the router's serving certificates.",
+      "Runs control-plane-side in the HCP namespace (reconciled by the CVO), while the router Pods it manages run on the guest worker nodes."
+    ],
+    "explorationCommands": [
+      "# View Ingress Operator logs\noc logs -n <hcp-namespace> deployment/ingress-operator --tail=50",
+      "# Inspect the default IngressController\noc get ingresscontroller default -n openshift-ingress-operator -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ingress_and_load_balancing/index"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/openshift/cluster-ingress-operator"
+      }
+    ]
+  },
+  {
+    "componentId": "dns-operator",
+    "displayName": "DNS Operator",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "OPERATOR",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "dns-operator binary + controller-runtime",
+    "problemSolved": "Manages the guest cluster's CoreDNS — the dns-default DaemonSet and the cluster DNS Service — from the DNS config object.",
+    "interactions": [
+      "Reconciles the DNS CR and deploys the CoreDNS (dns-default) DaemonSet onto the guest worker nodes.",
+      "Maintains the cluster DNS Service IP that every guest Pod uses as its resolver.",
+      "Runs control-plane-side in the HCP namespace (reconciled by the CVO); the CoreDNS Pods it manages run inside the guest VMs."
+    ],
+    "explorationCommands": [
+      "# View DNS Operator logs\noc logs -n <hcp-namespace> deployment/dns-operator --tail=50",
+      "# Inspect the guest DNS config and CoreDNS pods\noc get dns.operator default -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/networking/dns-operator"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/openshift/cluster-dns-operator"
+      }
+    ]
+  },
+  {
+    "componentId": "cluster-authentication-operator",
+    "displayName": "Authentication Operator",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "OPERATOR",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "authentication-operator binary + controller-runtime",
+    "problemSolved": "Manages the guest cluster's authentication stack — the integrated OAuth server and the Authentication config — wiring identity providers in.",
+    "interactions": [
+      "Reconciles the Authentication and OAuth config objects and keeps the OAuth Server's configuration in sync.",
+      "Publishes the authentication ClusterOperator status the CVO and HCCO watch.",
+      "Runs in the HCP namespace, reconciled by the CVO, coordinating with the OAuth Server and OAuth API Server Pods."
+    ],
+    "explorationCommands": [
+      "# View Authentication Operator logs\noc logs -n <hcp-namespace> deployment/cluster-authentication-operator --tail=50",
+      "# Inspect the guest authentication config\noc get authentication.config cluster -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/authentication_and_authorization/index"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/openshift/cluster-authentication-operator"
+      }
+    ]
+  },
+  {
+    "componentId": "cluster-storage-operator",
+    "displayName": "Storage Operator",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "OPERATOR",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "cluster-storage-operator binary + controller-runtime",
+    "problemSolved": "Installs and manages the platform CSI driver and the default StorageClass so guest workloads can request persistent volumes.",
+    "interactions": [
+      "Deploys the platform CSI driver operator (here the KubeVirt CSI driver) and sets the cluster's default StorageClass.",
+      "Reconciles the Storage config object and reports the storage ClusterOperator status.",
+      "Runs control-plane-side in the HCP namespace (reconciled by the CVO); the CSI node plugins it manages run on guest worker nodes."
+    ],
+    "explorationCommands": [
+      "# View Storage Operator logs\noc logs -n <hcp-namespace> deployment/cluster-storage-operator --tail=50",
+      "# List StorageClasses in the guest cluster\noc get storageclass --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/storage/index"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/openshift/cluster-storage-operator"
+      }
+    ]
+  },
+  {
+    "componentId": "csi-snapshot-controller",
+    "displayName": "CSI Snapshot Controller",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "CONTROLLER",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "csi-snapshot-controller binary",
+    "problemSolved": "Drives the volume-snapshot lifecycle for guest persistent volumes backed by CSI drivers.",
+    "interactions": [
+      "Watches VolumeSnapshot and VolumeSnapshotContent objects on the Guest API Server.",
+      "Coordinates with the platform CSI driver to create, bind, and delete the underlying storage snapshots.",
+      "Deployed in the HCP namespace and managed by the Storage Operator / CVO."
+    ],
+    "explorationCommands": [
+      "# View CSI Snapshot Controller logs\noc logs -n <hcp-namespace> deployment/csi-snapshot-controller --tail=50",
+      "# List VolumeSnapshots in the guest\noc get volumesnapshot -A --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/storage/volume-snapshots/"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/kubernetes-csi/external-snapshotter"
+      }
+    ]
+  },
+  {
+    "componentId": "cluster-image-registry-operator",
+    "displayName": "Image Registry Operator",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "OPERATOR",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "image-registry-operator binary + controller-runtime",
+    "problemSolved": "Manages the guest cluster's internal image registry and its storage backend.",
+    "interactions": [
+      "Reconciles the imageregistry Config object and deploys the registry into the guest cluster when storage is available.",
+      "Wires up the registry's route and the integrated push/pull credentials.",
+      "Runs control-plane-side in the HCP namespace (reconciled by the CVO); the registry Pods it manages run on guest worker nodes."
+    ],
+    "explorationCommands": [
+      "# View Image Registry Operator logs\noc logs -n <hcp-namespace> deployment/cluster-image-registry-operator --tail=50",
+      "# Inspect the registry config\noc get configs.imageregistry cluster -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/registry/index"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/openshift/cluster-image-registry-operator"
+      }
+    ]
+  },
+  {
+    "componentId": "cluster-node-tuning-operator",
+    "displayName": "Node Tuning Operator",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "OPERATOR",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "node-tuning-operator binary + controller-runtime",
+    "problemSolved": "Applies node performance tuning to the guest workers and, in HCP, renders the MachineConfig the Ignition Server serves to booting nodes.",
+    "interactions": [
+      "Reconciles Tuned profiles and deploys the TuneD DaemonSet onto the guest worker nodes.",
+      "Renders node tuning into MachineConfig that the Ignition Server hands to nodes at first boot.",
+      "Runs control-plane-side in the HCP namespace (reconciled by the CVO); the TuneD daemons it manages run inside the guest VMs."
+    ],
+    "explorationCommands": [
+      "# View Node Tuning Operator logs\noc logs -n <hcp-namespace> deployment/cluster-node-tuning-operator --tail=50",
+      "# Inspect Tuned profiles in the guest\noc get tuned -n openshift-cluster-node-tuning-operator --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/scalability_and_performance/using-node-tuning-operator"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/openshift/cluster-node-tuning-operator"
+      }
+    ]
+  },
+  {
+    "componentId": "olm-operator",
+    "displayName": "OLM Operator",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "OPERATOR",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "olm-operator binary",
+    "problemSolved": "The core of Operator Lifecycle Manager — it installs and upgrades operators from their ClusterServiceVersions.",
+    "interactions": [
+      "Watches ClusterServiceVersions and Subscriptions on the Guest API Server and reconciles the operator Deployments they describe.",
+      "Drives operator upgrades by transitioning to the next CSV an InstallPlan approves.",
+      "Runs control-plane-side in the HCP namespace, reconciled by the CVO, paired with the Catalog Operator."
+    ],
+    "explorationCommands": [
+      "# View OLM Operator logs\noc logs -n <hcp-namespace> deployment/olm-operator --tail=50",
+      "# List installed ClusterServiceVersions in the guest\noc get csv -A --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/operators/index"
+      },
+      {
+        "label": "OLM",
+        "url": "https://olm.operatorframework.io/docs/"
+      }
+    ]
+  },
+  {
+    "componentId": "catalog-operator",
+    "displayName": "Catalog Operator",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "OPERATOR",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "catalog-operator binary",
+    "problemSolved": "The other half of OLM — it resolves Subscriptions against CatalogSources and generates the InstallPlans that say what to apply.",
+    "interactions": [
+      "Watches CatalogSources and Subscriptions and computes the dependency-resolved set of resources to install.",
+      "Creates InstallPlans that, once approved, the OLM Operator acts on.",
+      "Runs control-plane-side in the HCP namespace, reconciled by the CVO, paired with the OLM Operator."
+    ],
+    "explorationCommands": [
+      "# View Catalog Operator logs\noc logs -n <hcp-namespace> deployment/catalog-operator --tail=50",
+      "# List CatalogSources and InstallPlans in the guest\noc get catalogsource,installplan -A --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/operators/index"
+      },
+      {
+        "label": "OLM",
+        "url": "https://olm.operatorframework.io/docs/"
+      }
+    ]
+  },
+  {
+    "componentId": "packageserver",
+    "displayName": "Package Server",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "API SERVER",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "package-server binary (aggregated API)",
+    "problemSolved": "Exposes the operator catalog as an API so the console and 'oc' can browse the operators available to install.",
+    "interactions": [
+      "Runs as an aggregated API server for packagemanifests.packages.operators.coreos.com, registered with the Guest API Server.",
+      "Reads the CatalogSources the Catalog Operator manages and serves their contents as PackageManifests.",
+      "Runs control-plane-side in the HCP namespace, reconciled by the CVO as part of the OLM stack."
+    ],
+    "explorationCommands": [
+      "# Confirm the packagemanifests aggregated API\noc get apiservices | grep packages.operators",
+      "# Browse available operator packages in the guest\noc get packagemanifests --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/operators/index"
+      },
+      {
+        "label": "OLM",
+        "url": "https://olm.operatorframework.io/docs/"
+      }
+    ]
+  },
+  {
     "componentId": "capi-manager",
     "displayName": "Cluster API Manager",
     "typePrefix": "Pod",
@@ -591,6 +1172,122 @@
       {
         "label": "OpenShift",
         "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/monitoring/index"
+      }
+    ]
+  },
+  {
+    "componentId": "multus-guest",
+    "displayName": "Multus CNI",
+    "typePrefix": "Pod",
+    "layer": "Guest Worker Node",
+    "role": "NODE NETWORKING",
+    "runtimeForm": "DaemonSet · openshift-multus (in VM)",
+    "linuxPrimitive": "multus binary + CNI delegation (in VM)",
+    "problemSolved": "The meta-CNI on each guest node that lets a Pod attach to more than one network — the primary OVN interface plus any extra NetworkAttachmentDefinitions.",
+    "interactions": [
+      "Invoked by the guest CRI-O as the top-level CNI plugin when a Pod sandbox is created.",
+      "Delegates the primary Pod interface to OVN-Kubernetes, then attaches any secondary networks named in the Pod's NetworkAttachmentDefinitions.",
+      "Only honors net-attach-defs that the control-plane Multus Admission Controller has admitted."
+    ],
+    "explorationCommands": [
+      "# Check Multus pods on the guest nodes\noc get pods -n openshift-multus --kubeconfig <guest-kubeconfig> -o wide",
+      "# Inspect a Pod's attached networks\noc get pod <pod> -o jsonpath='{.metadata.annotations.k8s\\.v1\\.cni\\.cncf\\.io/network-status}' --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/networking/multiple-networks"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/k8snetworkplumbingwg/multus-cni"
+      }
+    ]
+  },
+  {
+    "componentId": "tuned-guest",
+    "displayName": "Node Tuning (TuneD)",
+    "typePrefix": "Pod",
+    "layer": "Guest Worker Node",
+    "role": "NODE TUNING",
+    "runtimeForm": "DaemonSet · openshift-cluster-node-tuning-operator (in VM)",
+    "linuxPrimitive": "TuneD daemon + sysctl / kernel knobs (in VM)",
+    "problemSolved": "Applies the performance profile — sysctls, hugepages, CPU settings — that the Node Tuning Operator renders, on each guest worker node.",
+    "interactions": [
+      "Receives Tuned profiles from the control-plane Node Tuning Operator via the Guest API Server.",
+      "Applies the profile's kernel and sysctl settings directly on the node and reports the active profile back.",
+      "Runs as a DaemonSet inside the guest VMs, the data-plane counterpart of the control-plane Node Tuning Operator."
+    ],
+    "explorationCommands": [
+      "# Check the active TuneD profile in the VM\nvirtctl ssh core@<vmi> -- tuned-adm active",
+      "# List Tuned objects driving the daemon\noc get tuned -n openshift-cluster-node-tuning-operator --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/scalability_and_performance/using-node-tuning-operator"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/openshift/cluster-node-tuning-operator"
+      }
+    ]
+  },
+  {
+    "componentId": "csi-node-guest",
+    "displayName": "CSI Node Driver",
+    "typePrefix": "Pod",
+    "layer": "Guest Worker Node",
+    "role": "STORAGE NODE",
+    "runtimeForm": "DaemonSet · openshift-cluster-csi-drivers (in VM)",
+    "linuxPrimitive": "CSI node plugin + kubelet mounts (in VM)",
+    "problemSolved": "The per-node half of the CSI driver — it stages and mounts persistent volumes into guest Pods when the guest kubelet asks.",
+    "interactions": [
+      "Registers with the guest kubelet over the CSI registration socket so the kubelet can call it for volume mounts.",
+      "Performs NodeStage / NodePublish operations to attach and mount volumes into Pod mount namespaces.",
+      "Here the KubeVirt CSI driver backs guest PersistentVolumes with DataVolumes on the management (infra) cluster."
+    ],
+    "explorationCommands": [
+      "# Check CSI node driver pods in the guest\noc get pods -n openshift-cluster-csi-drivers --kubeconfig <guest-kubeconfig> -o wide",
+      "# List registered CSI drivers\noc get csidrivers --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/storage/index"
+      },
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/storage/volumes/#csi"
+      }
+    ]
+  },
+  {
+    "componentId": "image-registry-guest",
+    "displayName": "Image Registry",
+    "typePrefix": "Pod",
+    "layer": "Guest Worker Node",
+    "role": "REGISTRY",
+    "runtimeForm": "Deployment · openshift-image-registry (in VM)",
+    "linuxPrimitive": "image-registry binary (in VM)",
+    "problemSolved": "The guest cluster's integrated container image registry, where in-cluster builds push images and Pods pull them.",
+    "interactions": [
+      "Deployed and configured by the control-plane Image Registry Operator once guest storage is available.",
+      "Stores image layers on the guest cluster's configured storage backend and serves them over an in-cluster Service.",
+      "Runs as a Pod on the guest worker nodes, distinct from the control-plane operator that manages it."
+    ],
+    "explorationCommands": [
+      "# Check the registry pods in the guest\noc get pods -n openshift-image-registry --kubeconfig <guest-kubeconfig>",
+      "# Log in to the integrated registry\noc registry login --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/registry/index"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/openshift/cluster-image-registry-operator"
       }
     ]
   },
@@ -1995,6 +2692,294 @@
       {
         "label": "Kubernetes",
         "url": "https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/"
+      }
+    ]
+  },
+  {
+    "componentId": "dns-config-cr",
+    "displayName": "DNS (config)",
+    "typePrefix": "Custom Resource",
+    "layer": "Guest Control Plane",
+    "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource · config.openshift.io",
+    "linuxPrimitive": "etcd record (guest API Server)",
+    "problemSolved": "The cluster-wide DNS configuration — base domain and private zones — the DNS Operator reconciles into CoreDNS.",
+    "interactions": [
+      "A singleton named 'cluster' read by the DNS Operator running in the HCP namespace.",
+      "Declares the cluster base domain and any custom upstream resolvers.",
+      "Stored in the guest cluster's own etcd, served through the Guest API Server."
+    ],
+    "explorationCommands": [
+      "# Inspect the DNS config\noc get dns.config cluster -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/networking/dns-operator"
+      }
+    ]
+  },
+  {
+    "componentId": "ingress-config-cr",
+    "displayName": "Ingress (config)",
+    "typePrefix": "Custom Resource",
+    "layer": "Guest Control Plane",
+    "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource · config.openshift.io",
+    "linuxPrimitive": "etcd record (guest API Server)",
+    "problemSolved": "The cluster-wide ingress configuration — chiefly the *.apps wildcard domain — the Ingress Operator reconciles into IngressControllers.",
+    "interactions": [
+      "A singleton named 'cluster' read by the Ingress Operator.",
+      "Sets the apps domain that the guest router serves and that *.apps DNS resolves to.",
+      "Stored in the guest cluster's etcd, served through the Guest API Server."
+    ],
+    "explorationCommands": [
+      "# Inspect the ingress config\noc get ingress.config cluster -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ingress_and_load_balancing/index"
+      }
+    ]
+  },
+  {
+    "componentId": "network-config-cr",
+    "displayName": "Network (config)",
+    "typePrefix": "Custom Resource",
+    "layer": "Guest Control Plane",
+    "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource · config.openshift.io",
+    "linuxPrimitive": "etcd record (guest API Server)",
+    "problemSolved": "The cluster network configuration — pod/service CIDRs and the network plugin — the Cluster Network Operator renders into OVN-Kubernetes.",
+    "interactions": [
+      "A singleton named 'cluster' read by the Cluster Network Operator.",
+      "Declares the cluster network (pod CIDR), service network, and the OVN-Kubernetes plugin.",
+      "Stored in the guest cluster's etcd, served through the Guest API Server."
+    ],
+    "explorationCommands": [
+      "# Inspect the network config\noc get network.config cluster -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ovn-kubernetes_network_plugin/about-ovn-kubernetes"
+      }
+    ]
+  },
+  {
+    "componentId": "authentication-config-cr",
+    "displayName": "Authentication (config)",
+    "typePrefix": "Custom Resource",
+    "layer": "Guest Control Plane",
+    "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource · config.openshift.io",
+    "linuxPrimitive": "etcd record (guest API Server)",
+    "problemSolved": "The cluster authentication configuration — identity providers and token settings — the Authentication Operator reconciles into the OAuth stack.",
+    "interactions": [
+      "A singleton named 'cluster' read by the Authentication Operator.",
+      "Declares the OAuth identity providers and the token issuer configuration.",
+      "Stored in the guest cluster's etcd, served through the Guest API Server."
+    ],
+    "explorationCommands": [
+      "# Inspect the authentication config\noc get authentication.config cluster -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/authentication_and_authorization/index"
+      }
+    ]
+  },
+  {
+    "componentId": "image-config-cr",
+    "displayName": "Image (config)",
+    "typePrefix": "Custom Resource",
+    "layer": "Guest Control Plane",
+    "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource · config.openshift.io",
+    "linuxPrimitive": "etcd record (guest API Server)",
+    "problemSolved": "The cluster image policy — allowed/blocked registries and the integrated registry hostname — that the API server and Image Registry Operator honor.",
+    "interactions": [
+      "A singleton named 'cluster' read by the OpenShift API Server and Image Registry Operator.",
+      "Declares trusted/blocked registries and the internal registry's public hostname.",
+      "Stored in the guest cluster's etcd, served through the Guest API Server."
+    ],
+    "explorationCommands": [
+      "# Inspect the image config\noc get image.config cluster -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/registry/index"
+      }
+    ]
+  },
+  {
+    "componentId": "proxy-config-cr",
+    "displayName": "Proxy (config)",
+    "typePrefix": "Custom Resource",
+    "layer": "Guest Control Plane",
+    "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource · config.openshift.io",
+    "linuxPrimitive": "etcd record (guest API Server)",
+    "problemSolved": "The cluster-wide HTTP/HTTPS proxy configuration that operators and workloads inject so egress traffic flows through the corporate proxy.",
+    "interactions": [
+      "A singleton named 'cluster' read by many operators to populate workload proxy env vars.",
+      "Declares httpProxy, httpsProxy, and noProxy plus the trusted CA bundle.",
+      "Stored in the guest cluster's etcd, served through the Guest API Server."
+    ],
+    "explorationCommands": [
+      "# Inspect the proxy config\noc get proxy.config cluster -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/networking/configuring-cluster-wide-proxy"
+      }
+    ]
+  },
+  {
+    "componentId": "infrastructure-config-cr",
+    "displayName": "Infrastructure (config)",
+    "typePrefix": "Custom Resource",
+    "layer": "Guest Control Plane",
+    "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource · config.openshift.io",
+    "linuxPrimitive": "etcd record (guest API Server)",
+    "problemSolved": "The read-only record of the cluster's platform and topology — here KubeVirt with an external (hosted) control plane — that operators branch on.",
+    "interactions": [
+      "A singleton named 'cluster' populated at install and read by platform-aware operators (CCM, storage, ingress).",
+      "Reports platform type (KubeVirt), control-plane topology (External for HCP), and API endpoints.",
+      "Stored in the guest cluster's etcd, served through the Guest API Server."
+    ],
+    "explorationCommands": [
+      "# Inspect the infrastructure config\noc get infrastructure.config cluster -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/hosted_control_planes/hosted-control-planes-overview"
+      }
+    ]
+  },
+  {
+    "componentId": "subscription-cr",
+    "displayName": "Subscription",
+    "typePrefix": "Custom Resource",
+    "layer": "Guest Control Plane",
+    "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource · operators.coreos.com",
+    "linuxPrimitive": "etcd record (guest API Server)",
+    "problemSolved": "The intent to install and keep an operator updated from a channel — the object an admin creates to subscribe to an operator.",
+    "interactions": [
+      "Authored by an admin and reconciled by the Catalog Operator, which resolves it against a CatalogSource.",
+      "Names the operator package, channel, and approval mode (Automatic/Manual).",
+      "Stored in the guest cluster's etcd, served through the Guest API Server."
+    ],
+    "explorationCommands": [
+      "# List Subscriptions in the guest\noc get subscription -A --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OLM",
+        "url": "https://olm.operatorframework.io/docs/concepts/crds/subscription/"
+      }
+    ]
+  },
+  {
+    "componentId": "csv-cr",
+    "displayName": "ClusterServiceVersion",
+    "typePrefix": "Custom Resource",
+    "layer": "Guest Control Plane",
+    "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource · operators.coreos.com",
+    "linuxPrimitive": "etcd record (guest API Server)",
+    "problemSolved": "The manifest of one operator version — its Deployments, RBAC, and owned CRDs — that the OLM Operator installs.",
+    "interactions": [
+      "Reconciled by the OLM Operator, which stamps out the operator's Deployment and permissions it describes.",
+      "Carries the operator's version, install strategy, and the CRDs it owns and requires.",
+      "Stored in the guest cluster's etcd, served through the Guest API Server."
+    ],
+    "explorationCommands": [
+      "# List installed CSVs in the guest\noc get csv -A --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OLM",
+        "url": "https://olm.operatorframework.io/docs/concepts/crds/clusterserviceversion/"
+      }
+    ]
+  },
+  {
+    "componentId": "catalogsource-cr",
+    "displayName": "CatalogSource",
+    "typePrefix": "Custom Resource",
+    "layer": "Guest Control Plane",
+    "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource · operators.coreos.com",
+    "linuxPrimitive": "etcd record (guest API Server)",
+    "problemSolved": "A reference to an operator catalog — a gRPC registry of available operator packages — that OLM resolves Subscriptions against.",
+    "interactions": [
+      "Reconciled by the Catalog Operator, which runs the catalog's registry Pod and queries it.",
+      "Points at the catalog image and the index of operator packages it serves.",
+      "Stored in the guest cluster's etcd, served through the Guest API Server."
+    ],
+    "explorationCommands": [
+      "# List CatalogSources in the guest\noc get catalogsource -A --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OLM",
+        "url": "https://olm.operatorframework.io/docs/concepts/crds/catalogsource/"
+      }
+    ]
+  },
+  {
+    "componentId": "installplan-cr",
+    "displayName": "InstallPlan",
+    "typePrefix": "Custom Resource",
+    "layer": "Guest Control Plane",
+    "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource · operators.coreos.com",
+    "linuxPrimitive": "etcd record (guest API Server)",
+    "problemSolved": "The calculated set of resources OLM must apply to install or upgrade an operator — the unit an admin approves in Manual mode.",
+    "interactions": [
+      "Generated by the Catalog Operator from a Subscription's resolved dependencies.",
+      "Once approved (auto or manually), the OLM Operator applies the CSV and CRDs it lists.",
+      "Stored in the guest cluster's etcd, served through the Guest API Server."
+    ],
+    "explorationCommands": [
+      "# List InstallPlans and their approval state\noc get installplan -A --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OLM",
+        "url": "https://olm.operatorframework.io/docs/concepts/crds/installplan/"
+      }
+    ]
+  },
+  {
+    "componentId": "operatorgroup-cr",
+    "displayName": "OperatorGroup",
+    "typePrefix": "Custom Resource",
+    "layer": "Guest Control Plane",
+    "role": "INTENT RECORD",
+    "runtimeForm": "CustomResource · operators.coreos.com",
+    "linuxPrimitive": "etcd record (guest API Server)",
+    "problemSolved": "Declares which namespaces an operator may watch — the multitenancy scope OLM grants an installed operator.",
+    "interactions": [
+      "Read by the OLM Operator to set the target namespaces and generate the operator's RBAC.",
+      "Defines whether an operator runs namespace-scoped or watches all namespaces.",
+      "Stored in the guest cluster's etcd, served through the Guest API Server."
+    ],
+    "explorationCommands": [
+      "# List OperatorGroups in the guest\noc get operatorgroup -A --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "OLM",
+        "url": "https://olm.operatorframework.io/docs/concepts/crds/operatorgroup/"
       }
     ]
   },

@@ -243,12 +243,153 @@ export const ZONES = [
                 title: 'Control Plane Operator',
                 typePrefix: 'Pod',
                 badges: [{ label: 'per-HCP owner', color: 'var(--k-sky)' }],
+                // The CPO doubles as an "operator set": it deploys the control-
+                // plane operands (the OpenShift API extension servers and the
+                // HyperShift-specific controllers) into this HCP namespace.
+                // Unlike the controller-manager loops or etcd records, each of
+                // these IS a real, separate Deployment Pod — they are nested
+                // here only to keep ~10 Pods off the primary canvas. Expanding
+                // the node reveals them; see OperatorSetCard.jsx + ARCHITECTURE §2.
+                operatorSetCaption:
+                  'Control-plane operands the Control Plane Operator deploys into this HCP namespace — each a separate Deployment Pod, grouped here to keep the canvas legible.',
+                operators: [
+                  {
+                    id: 'openshift-apiserver',
+                    title: 'OpenShift API Server',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'Routes · Projects · Images', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'openshift-oauth-apiserver',
+                    title: 'OpenShift OAuth API Server',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'user.openshift.io', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'openshift-controller-manager',
+                    title: 'OpenShift Controller Manager',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'builds · images · SCC', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'route-controller-manager',
+                    title: 'Route Controller Manager',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'route.openshift.io', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'hosted-cluster-config-operator',
+                    title: 'Hosted Cluster Config Operator',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'guest config bridge', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'cluster-network-operator',
+                    title: 'Cluster Network Operator',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'Network CR → OVN', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'multus-admission-controller',
+                    title: 'Multus Admission Controller',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'net-attach-def webhook', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'cluster-policy-controller',
+                    title: 'Cluster Policy Controller',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'SCC · quota', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'machine-approver',
+                    title: 'Machine Approver',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'CSR auto-approve', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'cluster-autoscaler',
+                    title: 'Cluster Autoscaler',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'NodePool scaling', color: 'var(--k-sky)' }],
+                  },
+                ],
               },
               {
                 id: 'cluster-version-operator',
                 title: 'Cluster Version Operator',
                 typePrefix: 'Pod',
                 badges: [{ label: 'ClusterVersion CR', color: 'var(--k-sky)' }],
+                // The CVO doubles as an "operator set": it reconciles the
+                // second-level OpenShift cluster operators from the release
+                // payload, pinning each to the guest cluster's version. As with
+                // the CPO above, every member here is a real, separate
+                // Deployment Pod (each reports a ClusterOperator) — nested only
+                // to keep the canvas legible, not because they share a process.
+                operatorSetCaption:
+                  'Second-level cluster operators the CVO reconciles from the release payload — each a separate Deployment Pod reporting a ClusterOperator, grouped here to keep the canvas legible.',
+                operators: [
+                  {
+                    id: 'ingress-operator',
+                    title: 'Ingress Operator',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'IngressController CR', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'dns-operator',
+                    title: 'DNS Operator',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'DNS CR → CoreDNS', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'cluster-authentication-operator',
+                    title: 'Authentication Operator',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'Authentication CR', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'cluster-storage-operator',
+                    title: 'Storage Operator',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'CSI drivers · StorageClass', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'csi-snapshot-controller',
+                    title: 'CSI Snapshot Controller',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'VolumeSnapshot', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'cluster-image-registry-operator',
+                    title: 'Image Registry Operator',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'Config (imageregistry)', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'cluster-node-tuning-operator',
+                    title: 'Node Tuning Operator',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'Tuned CR · MachineConfig', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'olm-operator',
+                    title: 'OLM Operator',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'CSV · Subscription', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'catalog-operator',
+                    title: 'Catalog Operator',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'CatalogSource · InstallPlan', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'packageserver',
+                    title: 'Package Server',
+                    typePrefix: 'Pod',
+                    badges: [{ label: 'packages.operators API', color: 'var(--k-sky)' }],
+                  },
+                ],
               },
               {
                 id: 'capi-manager',
@@ -407,6 +548,84 @@ export const ZONES = [
                     title: 'EndpointSlice',
                     typePrefix: 'API Object',
                     badges: [{ label: 'discovery.k8s.io', color: 'var(--k-sky)' }],
+                  },
+                  // config.openshift.io singletons — the desired-state knobs the
+                  // relocated cluster operators (DNS, Ingress, CNO, Auth, Image
+                  // Registry, …) reconcile. They are pure records with no
+                  // data-plane card of their own, so they live in here.
+                  {
+                    id: 'dns-config-cr',
+                    title: 'DNS',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'config.openshift.io', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'ingress-config-cr',
+                    title: 'Ingress',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'config.openshift.io', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'network-config-cr',
+                    title: 'Network',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'config.openshift.io', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'authentication-config-cr',
+                    title: 'Authentication',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'config.openshift.io', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'image-config-cr',
+                    title: 'Image',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'config.openshift.io', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'proxy-config-cr',
+                    title: 'Proxy',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'config.openshift.io', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'infrastructure-config-cr',
+                    title: 'Infrastructure',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'config.openshift.io', color: 'var(--k-sky)' }],
+                  },
+                  // OLM records — the operator catalog/install objects the OLM
+                  // and Catalog Operators reconcile. Also pure desired state.
+                  {
+                    id: 'subscription-cr',
+                    title: 'Subscription',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'operators.coreos.com', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'csv-cr',
+                    title: 'ClusterServiceVersion',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'operators.coreos.com', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'catalogsource-cr',
+                    title: 'CatalogSource',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'operators.coreos.com', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'installplan-cr',
+                    title: 'InstallPlan',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'operators.coreos.com', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'operatorgroup-cr',
+                    title: 'OperatorGroup',
+                    typePrefix: 'Custom Resource',
+                    badges: [{ label: 'operators.coreos.com', color: 'var(--k-sky)' }],
                   },
                 ],
               },
@@ -596,6 +815,47 @@ export const ZONES = [
                     typePrefix: 'Pod',
                     badges: [{ label: 'DNS :53', color: 'var(--k-green)' }],
                   },
+                  // Per-node agents that run *inside* the guest VM — the data-plane
+                  // counterparts of the control-plane-resident operators above
+                  // (DNS Operator → CoreDNS, CNO → Multus, Node Tuning Operator →
+                  // TuneD, Storage Operator → CSI node driver). They are real
+                  // DaemonSet Pods on the guest worker, so they get flat cards
+                  // here rather than nesting.
+                  {
+                    id: 'multus-guest',
+                    title: 'Multus CNI',
+                    typePrefix: 'Pod',
+                    badges: [
+                      { label: 'DaemonSet', color: 'var(--k-green)' },
+                      { label: 'meta-CNI', color: 'var(--k-green)' },
+                    ],
+                  },
+                  {
+                    id: 'tuned-guest',
+                    title: 'Node Tuning (TuneD)',
+                    typePrefix: 'Pod',
+                    badges: [
+                      { label: 'DaemonSet', color: 'var(--k-green)' },
+                      { label: 'Tuned profile', color: 'var(--k-green)' },
+                    ],
+                  },
+                  {
+                    id: 'csi-node-guest',
+                    title: 'CSI Node Driver',
+                    typePrefix: 'Pod',
+                    badges: [
+                      { label: 'DaemonSet', color: 'var(--k-green)' },
+                      { label: 'kubevirt-csi', color: 'var(--k-green)' },
+                    ],
+                  },
+                  {
+                    id: 'image-registry-guest',
+                    title: 'Image Registry',
+                    typePrefix: 'Pod',
+                    badges: [
+                      { label: 'openshift-image-registry', color: 'var(--k-green)' },
+                    ],
+                  },
                   {
                     id: 'openshift-ingress-router-guest',
                     title: 'Ingress Router',
@@ -720,6 +980,13 @@ function collectNodes(zones, result = []) {
         if (node.controllers) {
           for (const ctrl of node.controllers) result.push({ node: ctrl, zone })
         }
+        // Operators (operator Pods nested inside an "operator set" owner — the
+        // CVO / Control Plane Operator) only render once their owner expands, so
+        // like the two above they need their color / zone / badge lookups
+        // resolved here for the DetailPanel and trace highlighting.
+        if (node.operators) {
+          for (const op of node.operators) result.push({ node: op, zone })
+        }
       }
     }
     if (zone.zones) collectNodes(zone.zones, result)
@@ -770,6 +1037,24 @@ export const CONTROLLER_PARENT = (() => {
     for (const zone of zones) {
       zone.nodes?.forEach((n) =>
         n.controllers?.forEach((c) => { map[c.id] = n.id })
+      )
+      if (zone.zones) walk(zone.zones)
+    }
+  }
+  walk(ZONES)
+  return map
+})()
+
+// Map operator id → the id of the "operator set" owner node (CVO / Control Plane
+// Operator) that holds it. Same role as the two maps above: an operator Pod only
+// gains a DOM id once its owner expands, so spotlighting one during a trace means
+// expanding the owner first.
+export const OPERATOR_PARENT = (() => {
+  const map = {}
+  const walk = (zones) => {
+    for (const zone of zones) {
+      zone.nodes?.forEach((n) =>
+        n.operators?.forEach((o) => { map[o.id] = n.id })
       )
       if (zone.zones) walk(zone.zones)
     }
