@@ -1,11 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import componentsData from '../data/components.json'
+import { findComponent } from '../data/components-index'
 import events from '../data/events.json'
 import { COMPONENT_COLOR } from '../data/zones'
-
-function findComponent(id) {
-  return componentsData.find(c => c.componentId === id)
-}
 
 function Hop({ step, isOpen, isSelected, onToggle, onJump, isFinal }) {
   const target = findComponent(step.targetComponentId)
@@ -154,7 +150,7 @@ export default function PacketFlowTab({
   onSelectEvent,
   onClearEvent,
   activeStep,
-  onSelectStep,
+  onFocusStep,
   onJumpToStep,
   followSelected = false,
 }) {
@@ -182,7 +178,10 @@ export default function PacketFlowTab({
       return next
     })
     // In docked mode this also highlights the matching arrow in the overview.
-    onSelectStep?.(n)
+    // Focus (not toggle) so opening a hop's detail always lights up its arrow,
+    // even when that hop was already selected from the overview side — toggling
+    // here would clear the highlight at the moment the detail opens.
+    onFocusStep?.(n)
   }
 
   return (

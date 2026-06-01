@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import componentsData from '../data/components.json'
+import { findComponent } from '../data/components-index'
 import { COMPONENT_COLOR, COMPONENT_ZONE } from '../data/zones'
 import { buildPipeline } from '../data/pipeline-model'
 import PipelineTree from './PipelineTree'
@@ -192,7 +192,7 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
 
   if (!componentId) return null
 
-  const component = componentsData.find(c => c.componentId === componentId)
+  const component = findComponent(componentId)
   if (!component) return null
 
   const color = COMPONENT_COLOR[componentId] || 'var(--k-cyan)'

@@ -113,7 +113,7 @@
     "componentId": "cluster-version-operator",
     "displayName": "Cluster Version Operator",
     "typePrefix": "Pod",
-    "layer": "Management Control Plane",
+    "layer": "Guest Control Plane",
     "role": "OPERATOR",
     "runtimeForm": "Deployment · <hcp-namespace>",
     "linuxPrimitive": "CVO binary",
@@ -1251,6 +1251,8 @@
       "associatedObject": "Deployment/frontend"
     },
     "role": "APPLICATION",
+    "runtimeForm": "Deployment · e-commerce-prod (in VM)",
+    "linuxPrimitive": "frontend app binary",
     "problemSolved": "The user-facing application — the terminal destination of the whole external traffic flow.",
     "interactions": [
       "Listens on a private Pod IP address within the guest cluster network.",
@@ -1338,6 +1340,8 @@
       "associatedObject": "Deployment/backend"
     },
     "role": "APPLICATION",
+    "runtimeForm": "Deployment · e-commerce-prod (in VM)",
+    "linuxPrimitive": "backend app binary",
     "problemSolved": "The application's data and API tier, called east-west by the front end.",
     "interactions": [
       "Fronted by the Back-End ClusterIP Service, which the Front-End Application consumes for east-west API calls.",

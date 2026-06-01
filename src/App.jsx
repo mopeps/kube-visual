@@ -162,7 +162,7 @@ export default function App() {
       onSelectEvent={selectEvent}
       onClearEvent={clearEvent}
       activeStep={activeStep}
-      onSelectStep={selectStep}
+      onFocusStep={focusStep}
       onJumpToStep={jumpToStep}
     />
   )
@@ -228,7 +228,7 @@ export default function App() {
                   onSelectEvent={selectEvent}
                   onClearEvent={clearEvent}
                   activeStep={activeStep}
-                  onSelectStep={selectStep}
+                  onFocusStep={focusStep}
                   onJumpToStep={jumpToStep}
                   followSelected
                 />

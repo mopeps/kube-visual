@@ -34,7 +34,7 @@ function buildPath(srcEl, tgtEl, canvasEl) {
 
 export default function ArrowOverlay({ activeEvent, canvasRef, activeStep, onSelectStep }) {
   const [paths, setPaths] = useState([])
-  const tickRef = useRef(0)
+  const rafRef = useRef(0)
 
   function measure() {
     const canvas = canvasRef.current
@@ -51,28 +51,38 @@ export default function ArrowOverlay({ activeEvent, canvasRef, activeStep, onSel
     setPaths(newPaths)
   }
 
-  useLayoutEffect(() => {
-    tickRef.current += 1
-    const t = tickRef.current
-    // defer one frame so the DOM has settled after event selection
-    const id = requestAnimationFrame(() => {
-      if (t === tickRef.current) measure()
+  // Coalesce bursts of scroll/resize events into at most one measure per frame.
+  // measure() does a getBoundingClientRect per step plus a setState, so running
+  // it on every raw scroll tick would force layout + re-render many times per
+  // frame; one rAF-batched pass keeps the arrows pinned without the jank. The
+  // single deferred frame also lets the DOM settle after event selection.
+  function scheduleMeasure() {
+    if (rafRef.current) return
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = 0
+      measure()
     })
-    return () => cancelAnimationFrame(id)
+  }
+
+  useLayoutEffect(() => {
+    scheduleMeasure()
+    return () => {
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = 0 }
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeEvent])
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ro = new ResizeObserver(() => measure())
+    const ro = new ResizeObserver(scheduleMeasure)
     ro.observe(canvas)
     // Capture phase so we also catch an inner scroll container (the compact
     // swipe pane), whose scroll events don't bubble to the window.
-    window.addEventListener('scroll', measure, { passive: true, capture: true })
+    window.addEventListener('scroll', scheduleMeasure, { passive: true, capture: true })
     return () => {
       ro.disconnect()
-      window.removeEventListener('scroll', measure, { capture: true })
+      window.removeEventListener('scroll', scheduleMeasure, { capture: true })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeEvent])

@@ -6,6 +6,11 @@ import IntentStoreCard from './IntentStoreCard'
 import ArrowOverlay from './ArrowOverlay'
 import { scrollIntoUpperThird } from '../lib/scroll'
 
+// How long the reveal spotlight stays lit before it auto-clears. Kept in sync
+// with the `.is-highlighted` pulse in index.css (reveal-pulse-* runs 1.3s × 2),
+// so the highlight clears exactly when the animation finishes.
+const SPOTLIGHT_MS = 1300 * 2
+
 // Map componentId → step number it first appears in the active event.
 function buildStepNumMap(activeEvent) {
   const map = new Map()
@@ -54,7 +59,7 @@ export default function OverviewTab({
         scrollIntoUpperThird(document.getElementById(highlightId))
       })
     })
-    const clear = setTimeout(() => onClearHighlight?.(), 2600)
+    const clear = setTimeout(() => onClearHighlight?.(), SPOTLIGHT_MS)
     return () => {
       cancelAnimationFrame(raf1)
       if (raf2) cancelAnimationFrame(raf2)

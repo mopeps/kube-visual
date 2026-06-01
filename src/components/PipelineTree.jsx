@@ -76,32 +76,28 @@ function KindGlyph({ name }) {
   }
 }
 
-// Prose helper: object references in the revealed detail are lifted into the
+// Object references in the revealed detail are lifted (via ObjectText) into the
 // same inline chips used by the why-callout and interaction rows, so the same
 // nodes are navigable wherever they're named.
-function Prose({ text, onSelectComponent, selfId }) {
-  return <ObjectText text={text} onSelectComponent={onSelectComponent} selfId={selfId} />
-}
-
 function RowDetail({ detail, color, onSelectComponent, selfId }) {
   return (
     <>
       {detail.lines?.map((l, i) => (
         <div key={`l${i}`} className="tree-detail-line">
-          <Prose text={l} onSelectComponent={onSelectComponent} selfId={selfId} />
+          <ObjectText text={l} onSelectComponent={onSelectComponent} selfId={selfId} />
         </div>
       ))}
       {detail.bullets?.map((b, i) => (
         <div key={`b${i}`} className="tree-detail-bullet">
           <span className="tree-detail-marker" style={{ color }} aria-hidden="true">•</span>
-          <span><Prose text={b} onSelectComponent={onSelectComponent} selfId={selfId} /></span>
+          <span><ObjectText text={b} onSelectComponent={onSelectComponent} selfId={selfId} /></span>
         </div>
       ))}
       {detail.kv?.map((p, i) => (
         <div key={`k${i}`} className="tree-detail-kv">
           <span className="tree-detail-k">{p.k}</span>
           <span className="tree-detail-v">
-            <Prose text={p.v} onSelectComponent={onSelectComponent} selfId={selfId} />
+            <ObjectText text={p.v} onSelectComponent={onSelectComponent} selfId={selfId} />
           </span>
         </div>
       ))}
@@ -156,7 +152,7 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
                   {action.label}
                 </span>
               )}
-              {node.note && <Prose text={node.note} onSelectComponent={onSelectComponent} selfId={selfId} />}
+              {node.note && <ObjectText text={node.note} onSelectComponent={onSelectComponent} selfId={selfId} />}
             </div>
           )}
           {node.detail && (
