@@ -53,7 +53,7 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
-    "runtimeForm": "CustomResource · clusters ns",
+    "runtimeForm": "CustomResource · clusters",
     "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "The one object an admin writes to ask OpenShift for a whole guest control plane.",
     "interactions": [
@@ -83,7 +83,7 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
-    "runtimeForm": "CustomResource · clusters ns",
+    "runtimeForm": "CustomResource · clusters",
     "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "The only knob for guest workers — declaring one scales the hosted cluster's worker nodes up or down.",
     "interactions": [
@@ -115,7 +115,7 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "OPERATOR",
-    "runtimeForm": "Deployment · <hcp-namespace>",
+    "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "CVO binary",
     "problemSolved": "Keeps the guest cluster pinned at its intended OpenShift version — nothing else owns guest upgrades.",
     "interactions": [
@@ -141,7 +141,7 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "OPERATOR",
-    "runtimeForm": "Deployment · <hcp-namespace>",
+    "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "CPO binary + controller-runtime",
     "problemSolved": "The per-guest operator that actually builds this hosted cluster's control-plane components into existence.",
     "interactions": [
@@ -172,7 +172,7 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "CONTROLLER",
-    "runtimeForm": "Deployment · <hcp-namespace>",
+    "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "cluster-api controller-manager",
     "problemSolved": "Drives the generic machine lifecycle that ultimately provisions guest worker nodes.",
     "interactions": [
@@ -198,7 +198,7 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "CONTROLLER",
-    "runtimeForm": "Deployment · <hcp-namespace>",
+    "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "capk controller-manager",
     "problemSolved": "Bridges generic Cluster API machines to real KubeVirt VMs that become guest worker nodes.",
     "interactions": [
@@ -228,7 +228,7 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "API SERVER",
-    "runtimeForm": "Deployment · <hcp-namespace>",
+    "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "kube-apiserver binary",
     "problemSolved": "The front door to the guest cluster — every kubectl/oc command and controller talks to it.",
     "interactions": [
@@ -259,7 +259,7 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "AUTH SERVER",
-    "runtimeForm": "Deployment · <hcp-namespace>",
+    "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "oauth-server binary",
     "problemSolved": "Issues the tokens that authenticate users to the guest cluster.",
     "interactions": [
@@ -285,7 +285,7 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "CONTROLLER",
-    "runtimeForm": "Deployment · <hcp-namespace>",
+    "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "kube-controller-manager binary",
     "problemSolved": "Runs the core Kubernetes control loops that keep the guest cluster reconciled to desired state.",
     "interactions": [
@@ -311,7 +311,7 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "SCHEDULER",
-    "runtimeForm": "Deployment · <hcp-namespace>",
+    "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "kube-scheduler binary",
     "problemSolved": "Decides which guest worker node each pending guest Pod runs on.",
     "interactions": [
@@ -336,7 +336,7 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "KEY-VALUE STORE",
-    "runtimeForm": "StatefulSet · <hcp-namespace>",
+    "runtimeForm": "StatefulSet · hcp-namespace",
     "linuxPrimitive": "etcd binary + Raft log",
     "problemSolved": "The guest cluster's source of truth — it persists every object the guest API server serves.",
     "interactions": [
@@ -433,13 +433,13 @@
     "typePrefix": "Service",
     "layer": "Guest Control Plane",
     "role": "LOAD BALANCER",
-    "runtimeForm": "Service (LoadBalancer) · <hcp-namespace>",
+    "runtimeForm": "Service (LoadBalancer) · hcp-namespace",
     "linuxPrimitive": "MetalLB L2 VIP (ARP/NDP) → virt-launcher endpoints",
     "problemSolved": "The bare-metal entry point that carries the guest's *.apps application traffic into the worker VMs.",
     "interactions": [
       "Created and reconciled by the kubevirt cloud provider (Cloud Controller Manager) to mirror the guest cluster's router-default LoadBalancer Service.",
       "Selects the virt-launcher Pods that host the guest worker VMIs and forwards to the NodePort where the in-VM OpenShift Ingress Router listens.",
-      "MetalLB (L2 mode) advertises its external VIP via ARP/NDP; *.apps.<guest-domain> DNS resolves here.",
+      "MetalLB (L2 mode) advertises its external VIP via ARP/NDP; the hosted cluster's *.apps wildcard DNS resolves here.",
       "Does NOT serve the guest API / OAuth / Konnectivity / Ignition endpoints — those ride the Shared Ingress Proxy."
     ],
     "explorationCommands": [
@@ -495,7 +495,7 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "CONTROLLER",
-    "runtimeForm": "Deployment · <hcp-namespace>",
+    "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "CCM binary + cloud API calls",
     "problemSolved": "The guest cluster's bridge to infrastructure — it realises LoadBalancers and node addresses that have no cloud behind them.",
     "interactions": [
@@ -520,7 +520,7 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "TUNNEL",
-    "runtimeForm": "Deployment · <hcp-namespace>",
+    "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "konnectivity-server + GRPC tunnel",
     "problemSolved": "Lets the guest API server reach node kubelets (exec, logs, port-forward) across a network it can't route to directly.",
     "interactions": [
@@ -545,7 +545,7 @@
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "BOOTSTRAP",
-    "runtimeForm": "Deployment · <hcp-namespace>",
+    "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "Ignition HTTP server",
     "problemSolved": "Hands each booting worker node the config it needs to join the guest cluster — enabling zero-touch provisioning.",
     "interactions": [
@@ -967,7 +967,7 @@
     "typePrefix": "Pod",
     "layer": "KubeVirt",
     "role": "VM WRAPPER",
-    "runtimeForm": "Pod (virt-launcher) · <hcp-namespace>",
+    "runtimeForm": "Pod (virt-launcher) · hcp-namespace",
     "linuxPrimitive": "qemu-kvm process + tap0 NIC",
     "problemSolved": "The Pod that wraps one VM, so KubeVirt can manage a qemu-kvm guest like any other Kubernetes application.",
     "interactions": [
@@ -997,7 +997,7 @@
       "associatedObject": "KubeVirt Launcher Pod"
     },
     "role": "WORKER NODE",
-    "runtimeForm": "VirtualMachineInstance · <hcp-namespace>",
+    "runtimeForm": "VirtualMachineInstance · hcp-namespace",
     "linuxPrimitive": "RHCOS guest OS + virtio-net",
     "problemSolved": "A full RHCOS VM that acts as a guest cluster worker node — where application Pods actually run.",
     "interactions": [
@@ -1540,7 +1540,7 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
-    "runtimeForm": "CustomResource · <hcp-namespace>",
+    "runtimeForm": "CustomResource · hcp-namespace",
     "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "The per-guest control-plane spec the Control Plane Operator reconciles into real Deployments.",
     "interactions": [
@@ -1570,7 +1570,7 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
-    "runtimeForm": "CustomResource (cluster.x-k8s.io) · <hcp-namespace>",
+    "runtimeForm": "CustomResource (cluster.x-k8s.io) · hcp-namespace",
     "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "The root of the machine ownership tree that ultimately provisions this hosted cluster's worker VMs.",
     "interactions": [
@@ -1595,7 +1595,7 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
-    "runtimeForm": "CustomResource (cluster.x-k8s.io) · <hcp-namespace>",
+    "runtimeForm": "CustomResource (cluster.x-k8s.io) · hcp-namespace",
     "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "Manages rolling upgrades of the guest worker pool, the way a Deployment does for Pods.",
     "interactions": [
@@ -1620,7 +1620,7 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
-    "runtimeForm": "CustomResource (cluster.x-k8s.io) · <hcp-namespace>",
+    "runtimeForm": "CustomResource (cluster.x-k8s.io) · hcp-namespace",
     "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "Guarantees a stable count of identical guest worker Machines, like a ReplicaSet for nodes.",
     "interactions": [
@@ -1645,7 +1645,7 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
-    "runtimeForm": "CustomResource (cluster.x-k8s.io) · <hcp-namespace>",
+    "runtimeForm": "CustomResource (cluster.x-k8s.io) · hcp-namespace",
     "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "The provider-agnostic intent for a single guest worker node.",
     "interactions": [
@@ -1670,7 +1670,7 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
-    "runtimeForm": "CustomResource (infra.cluster.x-k8s.io) · <hcp-namespace>",
+    "runtimeForm": "CustomResource (infra.cluster.x-k8s.io) · hcp-namespace",
     "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "The KubeVirt-specific half of a Machine that turns generic node intent into a real VM.",
     "interactions": [
@@ -1695,7 +1695,7 @@
     "typePrefix": "Custom Resource",
     "layer": "HyperShift Management",
     "role": "INTENT RECORD",
-    "runtimeForm": "CustomResource (kubevirt.io) · <hcp-namespace>",
+    "runtimeForm": "CustomResource (kubevirt.io) · hcp-namespace",
     "linuxPrimitive": "etcd record (mgmt API Server)",
     "problemSolved": "The desired-state record of a guest worker VM that KubeVirt runs as a live VirtualMachineInstance.",
     "interactions": [

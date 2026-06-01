@@ -139,11 +139,11 @@ function podBands(component) {
         nodes: [
           ancestry.deployment && {
             label: `[Deployment] ${ancestry.deployment}`,
-            note: 'defines replicas, strategy & pod template',
+            note: 'desired Pod template, replica count & rollout strategy',
           },
           ancestry.replicaSet && {
             label: `[ReplicaSet] ${ancestry.replicaSet}`,
-            note: 'stamps out unique pod-hash replicas',
+            note: 'desired replica count; unique pod-hash replicas stamped out by the controller',
           },
         ].filter(Boolean),
       }],
@@ -345,13 +345,14 @@ function ensureIntentBand(bands) {
 // form, by contrast, *is* that runtime object, so those stay on api-boundary.)
 const CONTROLLER_KIND = /^(Deployment|DaemonSet|StatefulSet|ReplicaSet|Job|CronJob)\b/
 
-// One-line note for a relocated controller row, matching the voice of the
-// hand-authored ancestry rows in podBands.
+// One-line note for a relocated controller row. Written as a noun phrase so it
+// reads naturally after the action chip that leads it ("Reconciled · desired
+// Pod template …") rather than chaining into the chip as a sentence fragment.
 function controllerNote(form) {
-  if (/^DaemonSet/.test(form)) return 'runs one replica per eligible node'
-  if (/^StatefulSet/.test(form)) return 'ordered, stable-identity replicas'
-  if (/^ReplicaSet/.test(form)) return 'stamps out unique pod-hash replicas'
-  return 'defines replicas, strategy & pod template' // Deployment / other
+  if (/^DaemonSet/.test(form)) return 'desired Pod template; one replica per eligible node'
+  if (/^StatefulSet/.test(form)) return 'desired Pod template; ordered, stable-identity replicas with persistent volume claims'
+  if (/^ReplicaSet/.test(form)) return 'desired replica count & Pod template; unique pod-hash replicas stamped out by the controller'
+  return 'desired Pod template, replica count & rollout strategy' // Deployment / other
 }
 
 // Fold a component's authored runtime form + Linux primitive (from
