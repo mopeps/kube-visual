@@ -1184,40 +1184,35 @@ body::after {
 }
 
 /* ── Inline object tags ────────────────────────────────────────────── */
-/* OpenShift / K8s object references lifted out of prose into chips. A
-   navigable chip (button) is tinted with the referenced node's zone accent and
-   opens that node on click; a static chip (span) is a muted, dashed highlight
-   for API objects that aren't drawn on the canvas. `--object-tag-color` is set
-   per-chip inline. */
+/* OpenShift / K8s object references lifted out of prose. These sit FLUSH with
+   the surrounding prose — same font and size, no chip background — and are set
+   apart only by their colour (the referenced node's zone accent) and a subtle
+   underline. A navigable tag (button) opens that node on click; a static tag
+   (span) is a muted, non-clickable highlight for API objects not drawn on the
+   canvas. `--object-tag-color` is set per-chip inline. */
 .object-tag {
-  display: inline-block;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.84em;
+  font: inherit;
   font-weight: 600;
-  line-height: 1.2;
-  padding: 1px 6px;
-  margin: 0 1px;
-  border-radius: 4px;
-  vertical-align: baseline;
-  white-space: nowrap;
-  border: 1px solid color-mix(in srgb, var(--object-tag-color, var(--tx-muted)) 45%, transparent);
-  background: color-mix(in srgb, var(--object-tag-color, var(--tx-muted)) 13%, transparent);
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
   color: var(--object-tag-color, var(--tx));
 }
 
 button.object-tag {
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--object-tag-color) 45%, transparent);
+  text-underline-offset: 2px;
+  transition: text-decoration-color 0.15s;
 }
 button.object-tag:hover {
-  background: color-mix(in srgb, var(--object-tag-color) 26%, transparent);
-  border-color: var(--object-tag-color);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--object-tag-color) 32%, transparent);
+  text-decoration-color: var(--object-tag-color);
 }
 
 .object-tag--static {
   font-weight: 500;
-  border-style: dashed;
   color: var(--tx-muted);
 }
 
@@ -1614,11 +1609,11 @@ button.object-tag:hover {
 }
 /* Action keyword leading a row's revealed description — an icon + label that
    tags what the pipeline does at this step (Stored / Mounted / Routed / Runs …).
-   Rendered as a pill in the same chip language as the inline object/intent tags
-   (.object-tag): an accent-bordered, faintly-tinted capsule sitting on the text
-   baseline, so every little keyword chip in the app reads as one family. The
-   per-action accent is set inline on `color`; the border + fill derive from it
-   via currentColor, mirroring how .object-tag derives its from --object-tag-color.
+   Rendered as an accent-bordered, faintly-tinted capsule sitting on the text
+   baseline. Unlike the inline object tags (.object-tag, which sit flush with the
+   prose), this is a discrete leading label, so the pill treatment reads as a
+   deliberate badge rather than an in-line word. The per-action accent is set
+   inline on `color`; the border + fill derive from it via currentColor.
    inline-block (not inline-flex) keeps the chip's baseline on its label so it
    lines up with the prose that follows it; the icon is nudged to the cap-height. */
 .tree-kind-chip {
