@@ -127,10 +127,7 @@ export default function ControllerManagerCard({
       </div>
 
       <p className="intent-store-caption">
-        Control loops — reconciliation goroutines running inside the single
-        kube-controller-manager binary, not separate Pods. Each watches the API
-        server and drives actual state toward desired; they share the manager's
-        process, so they have no card on the overview and live in here.
+        Reconcile loops inside one binary — goroutines, not separate Pods.
       </p>
 
       <div className="intent-store-objects">
