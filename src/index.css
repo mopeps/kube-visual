@@ -1259,6 +1259,54 @@ button.object-tag:hover {
 .ancestry-grip:active .ancestry-grip-bar { background: rgba(255, 255, 255, 0.5); }
 .detail-close { z-index: 3; }
 
+/* ── Example manifest ([MANIFEST] / [UNIT] chip + revealed code block) ──
+   The chip reuses .node-badge so it reads as one of the same family of chips,
+   plus an inline doc glyph. It appears identically in the detail header row and
+   on a pipeline logical-intent node. */
+.manifest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.manifest-chip-icon { flex: 0 0 auto; }
+.manifest-block {
+  margin-top: 10px;
+  border: 1px solid var(--border-w);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+.manifest-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border-d);
+}
+.manifest-block-lang {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--tx-muted);
+}
+.manifest-block-copy {
+  font-size: 0.62rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.manifest-code { border: none; border-radius: 0; margin: 0; }
+/* A node row that carries a manifest chip lays the label and chip on one line. */
+.tree-row-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tree-row-line .tree-row-head { width: auto; flex: 0 1 auto; }
+
 /* ── Hop inspector ─────────────────────────────────────────────────────
    A compact, non-modal panel docked at the bottom of the viewport. It does
    NOT dim the page or lock scrolling, and is content-height (capped), so the

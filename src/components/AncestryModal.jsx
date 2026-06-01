@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom'
 import { findComponent } from '../data/components-index'
 import { COMPONENT_COLOR, COMPONENT_ZONE } from '../data/zones'
 import { buildPipeline } from '../data/pipeline-model'
+import { MANIFESTS } from '../data/manifests'
 import PipelineTree from './PipelineTree'
 import DetailSections from './DetailSections'
+import { ManifestChip, ManifestBlock } from './Manifest'
 
 // How far (px) the sheet must be dragged down by touch before it dismisses, and
 // how far the finger must move before we decide a touch is a drag vs a scroll.
@@ -28,6 +30,8 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
   const [snapping, setSnapping] = useState(false)
   // Whether the Manifest → Kernel pipeline section is expanded (open by default).
   const [treeOpen, setTreeOpen] = useState(true)
+  // Whether the header's example-manifest block is expanded.
+  const [manifestOpen, setManifestOpen] = useState(false)
   // Explicit sheet height in px set by dragging the grip; null = default (auto,
   // capped at max-height). Seeded from the last size the user fixed it to.
   const [sheetHeight, setSheetHeight] = useState(lastSheetHeight)
@@ -56,6 +60,7 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
     setOffset(0)
     setSnapping(false)
     setTreeOpen(true)
+    setManifestOpen(false)
     drag.current = { startY: 0, atTop: false, mode: 'scroll' }
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -215,6 +220,17 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
   const { bands } = buildPipeline(component)
   const hasTree = bands.length > 0
 
+  // The object's minimal example manifest, surfaced behind a [MANIFEST]/[UNIT]
+  // chip both here in the header and on the pipeline's logical-intent node —
+  // attach it to that node (the declarative top of the descent) for PipelineTree
+  // to render its own chip there.
+  const manifest = MANIFESTS[componentId] || null
+  if (manifest) {
+    const intentBand = bands.find(b => b.layerId === 'logical-intent') || bands[0]
+    const node = intentBand?.groups?.[0]?.nodes?.[0]
+    if (node) node.manifest = manifest
+  }
+
   // The Manifest → Kernel pipeline is passed into DetailSections as a slot so it
   // can be positioned (after Tags, before Explore) within the section ordering.
   const pipelineSection = hasTree ? (
@@ -316,7 +332,21 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
                 {zone?.label || component.layer}
               </span>
             )}
+            {manifest && (
+              <ManifestChip
+                open={manifestOpen}
+                onToggle={() => setManifestOpen(o => !o)}
+                kind={manifest.kind}
+                color={color}
+              />
+            )}
           </div>
+
+          {manifest && manifestOpen && (
+            <div className="detail-section" style={{ marginTop: -10 }}>
+              <ManifestBlock body={manifest.body} kind={manifest.kind} color={color} />
+            </div>
+          )}
 
           <DetailSections
             component={component}
