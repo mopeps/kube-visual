@@ -57,6 +57,7 @@ src/
     Zone.jsx                 # one labeled zone; renders nested child zones recursively
     NodeCard.jsx             # one box inside a zone (shows [typePrefix] label)
     IntentStoreCard.jsx      # an etcd node that expands in place to show its records
+    ControllerManagerCard.jsx # a controller-manager node that expands to show its control loops
     ArrowOverlay.jsx         # SVG layer: numbered bezier connectors between step nodes
     OverviewTab.jsx          # recursively renders ZONES tree + ArrowOverlay
     PacketFlowTab.jsx        # expandable hop list for active event

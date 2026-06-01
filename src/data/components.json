@@ -1997,5 +1997,305 @@
         "url": "https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/"
       }
     ]
+  },
+  {
+    "componentId": "mgmt-ctrl-deployment",
+    "displayName": "Deployment Controller",
+    "typePrefix": "Controller",
+    "layer": "Bare Metal Master Node",
+    "role": "CONTROL LOOP",
+    "runtimeForm": "control loop · kube-controller-manager",
+    "linuxPrimitive": "goroutine + workqueue + shared informer",
+    "problemSolved": "Rolls out Deployments by creating and scaling the ReplicaSets behind them — including the guest control-plane Deployments the HyperShift Operator stamps out.",
+    "interactions": [
+      "Watches the Management Kube API Server for Deployment objects and the ReplicaSets they own.",
+      "Creates a new ReplicaSet on each pod-template change and scales the old one down to roll the update out.",
+      "Reconciles the guest control-plane Deployments (Guest API Server, OAuth, etc.) toward their desired replica count."
+    ],
+    "explorationCommands": [
+      "# Watch Deployments roll out\noc get deploy -A -w",
+      "# Inspect a Deployment's managed ReplicaSets\noc describe deploy <name> -n <ns>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/workloads/controllers/deployment/"
+      }
+    ]
+  },
+  {
+    "componentId": "mgmt-ctrl-replicaset",
+    "displayName": "ReplicaSet Controller",
+    "typePrefix": "Controller",
+    "layer": "Bare Metal Master Node",
+    "role": "CONTROL LOOP",
+    "runtimeForm": "control loop · kube-controller-manager",
+    "linuxPrimitive": "goroutine + workqueue + shared informer",
+    "problemSolved": "Keeps the actual number of Pods for each ReplicaSet equal to its desired replica count, creating or deleting Pods to match.",
+    "interactions": [
+      "Watches ReplicaSets and the Pods they own on the management API Server.",
+      "Creates Pods when actual is below desired and deletes surplus Pods when it is above.",
+      "Adopts matching orphan Pods via their ownerReferences."
+    ],
+    "explorationCommands": [
+      "# List ReplicaSets and their ready counts\noc get rs -A",
+      "# See which Pods a ReplicaSet owns\noc get pods -n <ns> -l <selector> -o wide"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/"
+      }
+    ]
+  },
+  {
+    "componentId": "mgmt-ctrl-node-lifecycle",
+    "displayName": "Node Lifecycle Controller",
+    "typePrefix": "Controller",
+    "layer": "Bare Metal Master Node",
+    "role": "CONTROL LOOP",
+    "runtimeForm": "control loop · kube-controller-manager",
+    "linuxPrimitive": "goroutine + workqueue + shared informer",
+    "problemSolved": "Watches node heartbeats and taints or evicts workloads from bare-metal nodes that stop reporting healthy.",
+    "interactions": [
+      "Monitors the Lease and status heartbeats each bare-metal kubelet posts to the management API Server.",
+      "Applies NoExecute / NoSchedule taints when a node goes NotReady.",
+      "Triggers eviction of Pods from a node that stays unreachable past the grace period."
+    ],
+    "explorationCommands": [
+      "# Check node readiness and taints\noc get nodes -o wide",
+      "# Inspect node conditions\noc describe node <node> | grep -A10 Conditions"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/architecture/nodes/"
+      }
+    ]
+  },
+  {
+    "componentId": "mgmt-ctrl-namespace",
+    "displayName": "Namespace Controller",
+    "typePrefix": "Controller",
+    "layer": "Bare Metal Master Node",
+    "role": "CONTROL LOOP",
+    "runtimeForm": "control loop · kube-controller-manager",
+    "linuxPrimitive": "goroutine + workqueue + shared informer",
+    "problemSolved": "Drives namespace teardown — once a Namespace is marked for deletion it purges every object inside before the namespace itself is removed.",
+    "interactions": [
+      "Watches Namespaces on the management API Server for a deletionTimestamp.",
+      "Deletes all resources in the namespace, then clears the kubernetes finalizer.",
+      "Blocks final removal until every contained object is gone."
+    ],
+    "explorationCommands": [
+      "# Watch namespaces and their phase\noc get ns",
+      "# Inspect a stuck namespace's finalizers\noc get ns <name> -o jsonpath='{.spec.finalizers}'"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/"
+      }
+    ]
+  },
+  {
+    "componentId": "mgmt-ctrl-serviceaccount",
+    "displayName": "ServiceAccount Controller",
+    "typePrefix": "Controller",
+    "layer": "Bare Metal Master Node",
+    "role": "CONTROL LOOP",
+    "runtimeForm": "control loop · kube-controller-manager",
+    "linuxPrimitive": "goroutine + workqueue + shared informer",
+    "problemSolved": "Ensures every namespace has a default ServiceAccount so the Pods scheduled into it have an identity to authenticate with.",
+    "interactions": [
+      "Watches Namespaces and creates the default ServiceAccount in each.",
+      "Works alongside the token controller to provision the API credentials Pods mount.",
+      "Backs the identities the guest control-plane Pods run as."
+    ],
+    "explorationCommands": [
+      "# List ServiceAccounts in a namespace\noc get sa -n <ns>",
+      "# Inspect the default ServiceAccount\noc get sa default -n <ns> -o yaml"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/security/service-accounts/"
+      }
+    ]
+  },
+  {
+    "componentId": "mgmt-ctrl-pv",
+    "displayName": "PersistentVolume Controller",
+    "typePrefix": "Controller",
+    "layer": "Bare Metal Master Node",
+    "role": "CONTROL LOOP",
+    "runtimeForm": "control loop · kube-controller-manager",
+    "linuxPrimitive": "goroutine + workqueue + shared informer",
+    "problemSolved": "Binds PersistentVolumeClaims to suitable PersistentVolumes and drives dynamic provisioning of new ones.",
+    "interactions": [
+      "Watches PVCs and PVs on the management API Server.",
+      "Matches a pending claim to an available volume and binds the pair, or triggers a provisioner.",
+      "Reclaims released volumes according to their reclaim policy."
+    ],
+    "explorationCommands": [
+      "# List PVCs and their bound volumes\noc get pvc -A",
+      "# Inspect PersistentVolume bind status\noc get pv"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/storage/persistent-volumes/"
+      }
+    ]
+  },
+  {
+    "componentId": "guest-ctrl-node-lifecycle",
+    "displayName": "Node Lifecycle Controller",
+    "typePrefix": "Controller",
+    "layer": "Guest Control Plane",
+    "role": "CONTROL LOOP",
+    "runtimeForm": "control loop · kube-controller-manager",
+    "linuxPrimitive": "goroutine + workqueue + shared informer",
+    "problemSolved": "Watches guest worker node heartbeats and taints or evicts workloads from VMI nodes that stop reporting healthy.",
+    "interactions": [
+      "Monitors the Lease heartbeats each guest kubelet posts to the Guest API Server.",
+      "Taints a guest node NotReady when its KubeVirt VMI stops reporting.",
+      "Evicts guest Pods from a node that stays unreachable past the grace period."
+    ],
+    "explorationCommands": [
+      "# Check guest node readiness\noc get nodes -o wide --kubeconfig <guest-kubeconfig>",
+      "# Inspect guest node conditions\noc describe node <node> --kubeconfig <guest-kubeconfig> | grep -A10 Conditions"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/architecture/nodes/"
+      }
+    ]
+  },
+  {
+    "componentId": "guest-ctrl-deployment",
+    "displayName": "Deployment Controller",
+    "typePrefix": "Controller",
+    "layer": "Guest Control Plane",
+    "role": "CONTROL LOOP",
+    "runtimeForm": "control loop · kube-controller-manager",
+    "linuxPrimitive": "goroutine + workqueue + shared informer",
+    "problemSolved": "Rolls out the guest cluster's application Deployments (the e-commerce front-end / back-end) by managing the ReplicaSets behind them.",
+    "interactions": [
+      "Watches Deployments on the Guest API Server.",
+      "Creates a new ReplicaSet on each pod-template change and scales the old one down.",
+      "Keeps the e-commerce application Deployments at their desired replica count."
+    ],
+    "explorationCommands": [
+      "# Watch application Deployments\noc get deploy -n e-commerce-prod -w --kubeconfig <guest-kubeconfig>",
+      "# Inspect rollout status\noc rollout status deploy/frontend -n e-commerce-prod --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/workloads/controllers/deployment/"
+      }
+    ]
+  },
+  {
+    "componentId": "guest-ctrl-replicaset",
+    "displayName": "ReplicaSet Controller",
+    "typePrefix": "Controller",
+    "layer": "Guest Control Plane",
+    "role": "CONTROL LOOP",
+    "runtimeForm": "control loop · kube-controller-manager",
+    "linuxPrimitive": "goroutine + workqueue + shared informer",
+    "problemSolved": "Keeps the actual number of application Pods equal to each ReplicaSet's desired replica count, creating or deleting Pods to match.",
+    "interactions": [
+      "Watches ReplicaSets and the Pods they own on the Guest API Server.",
+      "Creates Pods when actual is below desired and deletes surplus Pods when it is above.",
+      "Adopts matching orphan Pods via their ownerReferences."
+    ],
+    "explorationCommands": [
+      "# List ReplicaSets and their ready counts\noc get rs -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
+      "# See which Pods a ReplicaSet owns\noc get pods -n e-commerce-prod -o wide --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/"
+      }
+    ]
+  },
+  {
+    "componentId": "guest-ctrl-endpointslice",
+    "displayName": "EndpointSlice Controller",
+    "typePrefix": "Controller",
+    "layer": "Guest Control Plane",
+    "role": "CONTROL LOOP",
+    "runtimeForm": "control loop · kube-controller-manager",
+    "linuxPrimitive": "goroutine + workqueue + shared informer",
+    "problemSolved": "Keeps each Service's EndpointSlice in sync with the live, ready Pod IPs behind it — the list OVN reads to load-balance a ClusterIP to a real Pod.",
+    "interactions": [
+      "Watches Services, Pods, and their readiness on the Guest API Server.",
+      "Writes ready Pod IPs into the Service's EndpointSlice as Pods come and go.",
+      "Drives the data the guest OVN-Kubernetes reads to DNAT a ClusterIP onto a live Pod."
+    ],
+    "explorationCommands": [
+      "# List EndpointSlices for a Service\noc get endpointslices -n e-commerce-prod -l kubernetes.io/service-name=frontend --kubeconfig <guest-kubeconfig>",
+      "# Inspect the ready endpoints\noc get endpointslices -n e-commerce-prod -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/"
+      }
+    ]
+  },
+  {
+    "componentId": "guest-ctrl-serviceaccount",
+    "displayName": "ServiceAccount Controller",
+    "typePrefix": "Controller",
+    "layer": "Guest Control Plane",
+    "role": "CONTROL LOOP",
+    "runtimeForm": "control loop · kube-controller-manager",
+    "linuxPrimitive": "goroutine + workqueue + shared informer",
+    "problemSolved": "Ensures every guest namespace has a default ServiceAccount so the application Pods scheduled into it have an identity to authenticate with.",
+    "interactions": [
+      "Watches guest Namespaces and creates the default ServiceAccount in each.",
+      "Works alongside the token controller to provision the API credentials guest Pods mount.",
+      "Backs the identities the e-commerce application Pods run as."
+    ],
+    "explorationCommands": [
+      "# List ServiceAccounts in a guest namespace\noc get sa -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
+      "# Inspect the default ServiceAccount\noc get sa default -n e-commerce-prod -o yaml --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/security/service-accounts/"
+      }
+    ]
+  },
+  {
+    "componentId": "guest-ctrl-pv",
+    "displayName": "PersistentVolume Controller",
+    "typePrefix": "Controller",
+    "layer": "Guest Control Plane",
+    "role": "CONTROL LOOP",
+    "runtimeForm": "control loop · kube-controller-manager",
+    "linuxPrimitive": "goroutine + workqueue + shared informer",
+    "problemSolved": "Binds the guest application PersistentVolumeClaims to suitable PersistentVolumes and drives dynamic provisioning of new ones.",
+    "interactions": [
+      "Watches PVCs and PVs on the Guest API Server.",
+      "Matches a pending claim to an available volume and binds the pair, or triggers a provisioner.",
+      "Reclaims released volumes according to their reclaim policy."
+    ],
+    "explorationCommands": [
+      "# List PVCs and their bound volumes\noc get pvc -n e-commerce-prod --kubeconfig <guest-kubeconfig>",
+      "# Inspect PersistentVolume bind status\noc get pv --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/storage/persistent-volumes/"
+      }
+    ]
   }
 ]

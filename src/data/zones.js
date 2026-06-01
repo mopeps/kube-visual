@@ -164,6 +164,51 @@ export const ZONES = [
               { label: 'Static Manifest', color: 'var(--k-blue)' },
               { label: 'Controllers', color: 'var(--k-blue)' },
             ],
+            // The controller manager is a single binary hosting dozens of
+            // independent control loops. Like the etcd intent store, those
+            // loops are not separate Pods — they are reconciliation goroutines
+            // sharing one process, so they get no sibling card and instead live
+            // *inside* this node, revealed when it expands into a "controller
+            // set". These loops keep the management cluster (including the guest
+            // control-plane Deployments) reconciled to desired state.
+            controllers: [
+              {
+                id: 'mgmt-ctrl-deployment',
+                title: 'Deployment Controller',
+                typePrefix: 'Controller',
+                badges: [{ label: 'apps/v1 Deployment', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'mgmt-ctrl-replicaset',
+                title: 'ReplicaSet Controller',
+                typePrefix: 'Controller',
+                badges: [{ label: 'apps/v1 ReplicaSet', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'mgmt-ctrl-node-lifecycle',
+                title: 'Node Lifecycle Controller',
+                typePrefix: 'Controller',
+                badges: [{ label: 'core/v1 Node', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'mgmt-ctrl-namespace',
+                title: 'Namespace Controller',
+                typePrefix: 'Controller',
+                badges: [{ label: 'core/v1 Namespace', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'mgmt-ctrl-serviceaccount',
+                title: 'ServiceAccount Controller',
+                typePrefix: 'Controller',
+                badges: [{ label: 'core/v1 ServiceAccount', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'mgmt-ctrl-pv',
+                title: 'PersistentVolume Controller',
+                typePrefix: 'Controller',
+                badges: [{ label: 'core/v1 PersistentVolume', color: 'var(--k-blue)' }],
+              },
+            ],
           },
           {
             id: 'mgmt-scheduler',
@@ -237,6 +282,49 @@ export const ZONES = [
                 title: 'Guest Controller Manager',
                 typePrefix: 'Pod',
                 badges: [{ label: 'Controllers', color: 'var(--k-sky)' }],
+                // Same model as the management controller manager above: one
+                // kube-controller-manager binary hosting many control loops
+                // (goroutines, not Pods). Expanding this node into a "controller
+                // set" reveals the loops that keep the *guest* cluster reconciled
+                // to the desired-state records held in Guest Etcd.
+                controllers: [
+                  {
+                    id: 'guest-ctrl-node-lifecycle',
+                    title: 'Node Lifecycle Controller',
+                    typePrefix: 'Controller',
+                    badges: [{ label: 'core/v1 Node', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'guest-ctrl-deployment',
+                    title: 'Deployment Controller',
+                    typePrefix: 'Controller',
+                    badges: [{ label: 'apps/v1 Deployment', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'guest-ctrl-replicaset',
+                    title: 'ReplicaSet Controller',
+                    typePrefix: 'Controller',
+                    badges: [{ label: 'apps/v1 ReplicaSet', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'guest-ctrl-endpointslice',
+                    title: 'EndpointSlice Controller',
+                    typePrefix: 'Controller',
+                    badges: [{ label: 'discovery.k8s.io EndpointSlice', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'guest-ctrl-serviceaccount',
+                    title: 'ServiceAccount Controller',
+                    typePrefix: 'Controller',
+                    badges: [{ label: 'core/v1 ServiceAccount', color: 'var(--k-sky)' }],
+                  },
+                  {
+                    id: 'guest-ctrl-pv',
+                    title: 'PersistentVolume Controller',
+                    typePrefix: 'Controller',
+                    badges: [{ label: 'core/v1 PersistentVolume', color: 'var(--k-sky)' }],
+                  },
+                ],
               },
               {
                 id: 'guest-kube-scheduler',
@@ -622,6 +710,12 @@ function collectNodes(zones, result = []) {
         if (node.intentObjects) {
           for (const obj of node.intentObjects) result.push({ node: obj, zone })
         }
+        // Controllers (control loops nested inside a controller-manager node)
+        // are likewise not standalone cards, but need the same lookups so their
+        // detail popups inherit the manager's zone accent.
+        if (node.controllers) {
+          for (const ctrl of node.controllers) result.push({ node: ctrl, zone })
+        }
       }
     }
     if (zone.zones) collectNodes(zone.zones, result)
@@ -663,6 +757,23 @@ export const INTENT_OBJECT_STORE = (() => {
   return map
 })()
 
+// Map controller-loop id → the id of the controller-manager node that hosts it.
+// Same role as INTENT_OBJECT_STORE: a loop only gains a DOM id once its manager
+// expands into a "controller set", so spotlighting one means expanding it first.
+export const CONTROLLER_PARENT = (() => {
+  const map = {}
+  const walk = (zones) => {
+    for (const zone of zones) {
+      zone.nodes?.forEach((n) =>
+        n.controllers?.forEach((c) => { map[c.id] = n.id })
+      )
+      if (zone.zones) walk(zone.zones)
+    }
+  }
+  walk(ZONES)
+  return map
+})()
+
 // First Overview rendering rule (ARCHITECTURE.md §1) — the primary canvas is a
 // whitelist: a NodeCard may only be a systemd enforcer/service, a concrete
 // application instance (Pod / Static Pod / VMI), or a networking Service
@@ -684,7 +795,9 @@ function assertOverviewWhitelist(zones) {
   const walk = (list) => {
     for (const zone of list) {
       if (zone.traceOnly) continue // not rendered on the default overview
-      // intentObjects (CRs) live inside the etcd store, never as cards — skip.
+      // intentObjects (CRs) live inside the etcd store and controllers (control
+      // loops) inside the controller-manager set — neither is a card, so the
+      // loop only checks the node's own typePrefix and leaves both alone.
       zone.nodes?.forEach((n) => {
         if (!OVERVIEW_NODE_TYPES.has(n.typePrefix)) {
           offenders.push(`${n.id} [${n.typePrefix}]`)

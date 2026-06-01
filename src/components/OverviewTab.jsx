@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { ZONES, INTENT_OBJECT_STORE } from '../data/zones'
+import { ZONES, INTENT_OBJECT_STORE, CONTROLLER_PARENT } from '../data/zones'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
 import IntentStoreCard from './IntentStoreCard'
+import ControllerManagerCard from './ControllerManagerCard'
 import ArrowOverlay from './ArrowOverlay'
 import { scrollIntoUpperThird } from '../lib/scroll'
 
@@ -44,12 +45,13 @@ export default function OverviewTab({
   const hasActive = activeComponentIds && activeComponentIds.size > 0
 
   // Spotlight a component requested from elsewhere (e.g. a detail popup's
-  // location badge): expand its intent store if it lives in one, scroll the
-  // target into the upper third of the viewport, and clear the highlight once
-  // its pulse animation has had time to play.
+  // location badge): expand its parent store if it lives in one — an etcd
+  // intent store or a controller-manager controller set — scroll the target
+  // into the upper third of the viewport, and clear the highlight once its
+  // pulse animation has had time to play.
   useEffect(() => {
     if (!highlightId) return
-    const storeId = INTENT_OBJECT_STORE[highlightId]
+    const storeId = INTENT_OBJECT_STORE[highlightId] || CONTROLLER_PARENT[highlightId]
     if (storeId) setExpandedStoreId(storeId)
     // Two frames so the scroll measures the post-expand layout when a store
     // had to open to reveal the target.
@@ -81,6 +83,25 @@ export default function OverviewTab({
     if (node.intentObjects) {
       return (
         <IntentStoreCard
+          key={node.id}
+          node={node}
+          color={zone.color}
+          stepNum={stepNums.get(node.id)}
+          isActive={isActive}
+          isDimmed={hasActive && !isActive}
+          isHighlighted={node.id === highlightId}
+          highlightId={highlightId}
+          isExpanded={expandedStoreId === node.id}
+          onToggle={() => setExpandedStoreId(prev => prev === node.id ? null : node.id)}
+          onSelectComponent={onSelectComponent}
+        />
+      )
+    }
+    // Nodes carrying controllers (a controller-manager "controller set") render
+    // as the same expand-in-place card, revealing the loops inside the binary.
+    if (node.controllers) {
+      return (
+        <ControllerManagerCard
           key={node.id}
           node={node}
           color={zone.color}

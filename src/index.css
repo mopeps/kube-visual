@@ -484,6 +484,20 @@ body::after {
   color: var(--tx-dim);
 }
 
+/* ── Controller-manager controller set ────────────────────────────────
+   Reuses the etcd intent-store layout above (.intent-store*, .intent-object) —
+   both are expandable "store" cards. Controllers are active reconcile loops,
+   not inert desired-state records, so each loop chip carries a ↻ marker and a
+   solid (not dashed) border to set it apart from an intent object. */
+.controller-loop {
+  border-style: solid;
+}
+.controller-loop-mark {
+  font-size: 0.78rem;
+  margin-right: 5px;
+  opacity: 0.8;
+}
+
 @media (max-width: 640px) {
   /* Two intent objects per row on mobile. Gap is 10px, so each takes half
      the row minus half the gap; min-width:0 lets them shrink past content. */
