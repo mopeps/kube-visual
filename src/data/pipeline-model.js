@@ -41,6 +41,8 @@ function primitiveNote(p) {
 // bare rather than gaining a hollow note.
 function realisationNote(lp) {
   if (!lp) return undefined
+  if (/goroutine|workqueue|informer|control loop/i.test(lp))
+    return 'Not a process of its own — a goroutine inside the controller-manager binary, looping watch → diff → act.'
   if (/encrypted at rest/i.test(lp))
     return 'An etcd key, not a process — encrypted at rest so a stolen disk reveals nothing.'
   if (/etcd record/i.test(lp))
@@ -293,6 +295,23 @@ function customResourceBands(component) {
   }]
 }
 
+// A controller is a reconcile loop, not a supervised instance: it has no
+// Runtime Object band of its own (the kube-controller-manager Pod is that
+// instance — the loop just lives inside it). So it bottoms out in the Logical
+// Intent band naming the loop, and withForms folds its `linuxPrimitive`
+// (goroutine + workqueue + informer) into the kernel band as the lead row.
+function controllerBands(component) {
+  return [{
+    layerId: 'logical-intent',
+    groups: [{
+      nodes: [{
+        label: `[Controller] ${component.displayName}`,
+        note: 'a reconcile loop — watches the API server and drives actual state toward desired',
+      }],
+    }],
+  }]
+}
+
 // Find the Linux-primitive band, creating (and appending) an empty one if the
 // builder produced none — Custom Resources, for instance, bottom out in an etcd
 // record rather than a process, so they get no kernel band on their own.
@@ -445,5 +464,6 @@ export function buildPipeline(component) {
   if (t === 'systemd') return { bands: withForms(component, systemdBands(component)) }
   if (t === 'VirtualMachineInstance') return { bands: withForms(component, vmiBands(component)) }
   if (t === 'Custom Resource') return { bands: withForms(component, customResourceBands(component)) }
+  if (t === 'Controller') return { bands: withForms(component, controllerBands(component)) }
   return { bands: simpleBands(component) }
 }

@@ -40,7 +40,16 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │     │      ├── [Custom Resource] Machine
   │     │      ├── [Custom Resource] KubevirtMachine
   │     │      └── [Custom Resource] VirtualMachine (KubeVirt)
-  │     ├── [Static Pod] Management Controller Manager Instance
+  │     ├── [Static Pod] Management Controller Manager Instance ──┐  // expandable "controller set"
+  │     │      // Control loops inside the ONE kube-controller-manager binary —
+  │     │      // goroutines, not Pods — that reconcile the management cluster
+  │     │      // (including the guest control-plane Deployments):
+  │     │      ├── [Controller] Deployment Controller
+  │     │      ├── [Controller] ReplicaSet Controller
+  │     │      ├── [Controller] Node Lifecycle Controller
+  │     │      ├── [Controller] Namespace Controller
+  │     │      ├── [Controller] ServiceAccount Controller
+  │     │      └── [Controller] PersistentVolume Controller
   │     ├── [Static Pod] Management Kube-Scheduler Instance
   │     │
   │     │   // Cluster-wide management operator (ONE per mgmt cluster,
@@ -58,7 +67,15 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │           │   // Guest API, State & Authentication Engines
   │           ├── [Pod] Guest API Server Instance
   │           ├── [Pod] Guest OAuth Server Instance
-  │           ├── [Pod] Guest Controller Manager Instance
+  │           ├── [Pod] Guest Controller Manager Instance ──┐  // also a "controller set"
+  │           │      // The same kube-controller-manager loops, here reconciling
+  │           │      // the GUEST cluster's own objects (held in Guest Etcd):
+  │           │      ├── [Controller] Node Lifecycle Controller
+  │           │      ├── [Controller] Deployment Controller
+  │           │      ├── [Controller] ReplicaSet Controller
+  │           │      ├── [Controller] EndpointSlice Controller
+  │           │      ├── [Controller] ServiceAccount Controller
+  │           │      └── [Controller] PersistentVolume Controller
   │           ├── [Pod] Guest Kube-Scheduler Instance
   │           ├── [Pod] Guest Etcd Instance (StatefulSet — NOT a static pod) ──┐  // also an "intent store"
   │           │      // The guest cluster's own API records — no overview card:
@@ -144,7 +161,10 @@ own `ClusterVersion`/`ClusterOperator`, `Route`, application `Deployment`/`Repli
 cgroups, host PIDs), and Project/Namespace boundaries are *not* instances, enforcers, or
 realized Service/policy abstractions, so they never appear as cards on the first overview —
 they live inside the expandable etcd intent stores (Management Etcd / Guest Etcd) or behind
-a node's detail modal instead.
+a node's detail modal instead. The same applies to the **control loops** inside each
+controller manager (`[Controller]` objects): they are goroutines sharing the
+`kube-controller-manager` process, not standalone instances, so they live inside the
+expandable controller-manager "controller set" rather than as cards (see §2).
 
 ### Modeling invariants (get these right)
 
@@ -202,8 +222,25 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    * **Application Pods:** Expose logical OpenShift Project metadata, isolated Linux Network Namespace (netns), host-side veth pair IDs, and cgroups slice boundaries.
    * **systemd Services:** Reveal corresponding host service unit configuration paths and tracking metrics.
    * **VirtualMachineInstance:** Expose the host qemu-kvm process execution details, host-side virtual network tap configuration (tap0), and master cgroup runtime boundaries.
-   * **Guest Controller Manager:** Reveal internal control loops (NodeLifecycleController, EndpointController, etc.) running inside the binary.
  * **Etcd Intent Stores (expandable nodes):** Both etcd nodes double as homes for the API objects they persist — desired-state records, **not** Linux processes, so they are deliberately not rendered as sibling cards next to real Pods. **Management Etcd** holds the HCP control-plane intent and the worker-provisioning chain (`HostedCluster`, `HostedControlPlane`, `NodePool`, and the Cluster API → KubeVirt objects: `Cluster`, `MachineDeployment`, `MachineSet`, `Machine`, `KubevirtMachine`, `VirtualMachine`). **Guest Etcd** holds the guest cluster's own records that have no data-plane card (`ClusterVersion`, `ClusterOperator`, `Route`, the application `Deployment`/`ReplicaSet`, their `Secret`/`ConfigMap`/`PersistentVolumeClaim`/`PersistentVolume`, and the `EndpointSlice`s behind its Services). Realized Services and the NetworkPolicy keep their own cards; only pure records live inside the store. Clicking an etcd node enlarges it in place to reveal these objects. Inside the expanded store: clicking the **title** (ⓘ) opens etcd's own detail popup; clicking an **object** opens that record's popup; clicking the empty body, the ▴ chevron, outside the card, or pressing **Esc** collapses it. A node declares this behavior via an `intentObjects` array in `zones.js`.
+ * **Controller Sets (expandable nodes):** The two controller-manager nodes
+   (**Management Controller Manager** and **Guest Controller Manager**) work the
+   same way as the etcd intent stores, but for *control loops* instead of
+   records. A `kube-controller-manager` is a single binary hosting dozens of
+   independent reconcile loops (Deployment, ReplicaSet, Node Lifecycle,
+   EndpointSlice, ServiceAccount, PersistentVolume, …). Those loops are
+   goroutines sharing one process — **not** separate Pods — so they are
+   deliberately not rendered as sibling cards. Clicking a controller-manager
+   node enlarges it in place to reveal the loops it runs (the management set
+   reconciles the management cluster, including the guest control-plane
+   Deployments; the guest set reconciles the guest cluster's own objects held in
+   Guest Etcd). The interaction model is identical to the intent store: the
+   **title** (ⓘ) opens the controller manager's own detail popup; a **loop**
+   opens that controller's popup; clicking the empty body, the ▴ chevron,
+   outside the card, or pressing **Esc** collapses it. Each loop is a
+   `[Controller]`-typed object whose detail popup shows its watch→diff→act
+   pipeline. A node declares this behavior via a `controllers` array in
+   `zones.js`, rendered by `ControllerManagerCard.jsx`.
 ## 3. Reference Data Schemas
 ### Metadata Schema (components.json)
 ```json
