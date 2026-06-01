@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { ZONES, INTENT_OBJECT_STORE, CONTROLLER_PARENT } from '../data/zones'
+import { ZONES, INTENT_OBJECT_STORE, CONTROLLER_PARENT, OPERATOR_PARENT } from '../data/zones'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
 import IntentStoreCard from './IntentStoreCard'
 import ControllerManagerCard from './ControllerManagerCard'
+import OperatorSetCard from './OperatorSetCard'
 import ServicePair from './ServicePair'
 import ArrowOverlay from './ArrowOverlay'
 import { scrollIntoUpperThird } from '../lib/scroll'
@@ -52,7 +53,10 @@ export default function OverviewTab({
   // pulse animation has had time to play.
   useEffect(() => {
     if (!highlightId) return
-    const storeId = INTENT_OBJECT_STORE[highlightId] || CONTROLLER_PARENT[highlightId]
+    const storeId =
+      INTENT_OBJECT_STORE[highlightId] ||
+      CONTROLLER_PARENT[highlightId] ||
+      OPERATOR_PARENT[highlightId]
     if (storeId) setExpandedStoreId(storeId)
     // Two frames so the scroll measures the post-expand layout when a store
     // had to open to reveal the target.
@@ -103,6 +107,26 @@ export default function OverviewTab({
     if (node.controllers) {
       return (
         <ControllerManagerCard
+          key={node.id}
+          node={node}
+          color={zone.color}
+          stepNum={stepNums.get(node.id)}
+          isActive={isActive}
+          isDimmed={hasActive && !isActive}
+          isHighlighted={node.id === highlightId}
+          highlightId={highlightId}
+          isExpanded={expandedStoreId === node.id}
+          onToggle={() => setExpandedStoreId(prev => prev === node.id ? null : node.id)}
+          onSelectComponent={onSelectComponent}
+        />
+      )
+    }
+    // Nodes carrying operators (an "operator set" owned by the CVO / Control
+    // Plane Operator) render as the same expand-in-place card, revealing the
+    // operator Pods that owner deploys and reconciles in the HCP namespace.
+    if (node.operators) {
+      return (
+        <OperatorSetCard
           key={node.id}
           node={node}
           color={zone.color}

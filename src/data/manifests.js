@@ -163,12 +163,40 @@ export const MANIFESTS = {
   'ignition-server': M(deployment('ignition-server', HCPNS)),
   'openshift-ingress-router-guest': M(deployment('router-default', 'openshift-ingress')),
 
+  // ── Control-plane operands (Control Plane Operator "operator set") ──────
+  'openshift-apiserver': M(deployment('openshift-apiserver', HCPNS, 'openshift-apiserver:latest', 3)),
+  'openshift-oauth-apiserver': M(deployment('openshift-oauth-apiserver', HCPNS)),
+  'openshift-controller-manager': M(deployment('openshift-controller-manager', HCPNS)),
+  'route-controller-manager': M(deployment('route-controller-manager', HCPNS)),
+  'hosted-cluster-config-operator': M(deployment('hosted-cluster-config-operator', HCPNS, 'hosted-cluster-config-operator:latest', 1)),
+  'cluster-network-operator': M(deployment('cluster-network-operator', HCPNS, 'cluster-network-operator:latest', 1)),
+  'multus-admission-controller': M(deployment('multus-admission-controller', HCPNS)),
+  'cluster-policy-controller': M(deployment('cluster-policy-controller', HCPNS)),
+  'machine-approver': M(deployment('machine-approver', HCPNS, 'cluster-machine-approver:latest', 1)),
+  'cluster-autoscaler': M(deployment('cluster-autoscaler', HCPNS, 'cluster-autoscaler:latest', 1)),
+
+  // ── Cluster operators (Cluster Version Operator "operator set") ─────────
+  'ingress-operator': M(deployment('ingress-operator', HCPNS, 'cluster-ingress-operator:latest', 1)),
+  'dns-operator': M(deployment('dns-operator', HCPNS, 'cluster-dns-operator:latest', 1)),
+  'cluster-authentication-operator': M(deployment('cluster-authentication-operator', HCPNS, 'cluster-authentication-operator:latest', 1)),
+  'cluster-storage-operator': M(deployment('cluster-storage-operator', HCPNS, 'cluster-storage-operator:latest', 1)),
+  'csi-snapshot-controller': M(deployment('csi-snapshot-controller', HCPNS)),
+  'cluster-image-registry-operator': M(deployment('cluster-image-registry-operator', HCPNS, 'cluster-image-registry-operator:latest', 1)),
+  'cluster-node-tuning-operator': M(deployment('cluster-node-tuning-operator', HCPNS, 'cluster-node-tuning-operator:latest', 1)),
+  'olm-operator': M(deployment('olm-operator', HCPNS, 'olm:latest', 1)),
+  'catalog-operator': M(deployment('catalog-operator', HCPNS, 'olm:latest', 1)),
+  'packageserver': M(deployment('packageserver', HCPNS)),
+
   // ── StatefulSets / DaemonSets ───────────────────────────────────────────
   'cluster-monitoring': M(statefulset('prometheus-k8s', 'openshift-monitoring', 'prometheus:latest', 2)),
   'ovn-node-master': M(daemonset('ovnkube-node', 'openshift-ovn-kubernetes')),
   'ovn-node-host': M(daemonset('ovnkube-node', 'openshift-ovn-kubernetes')),
   'ovn-node-guest': M(daemonset('ovnkube-node', 'openshift-ovn-kubernetes')),
   'virt-handler': M(daemonset('virt-handler', 'openshift-cnv')),
+  'multus-guest': M(daemonset('multus', 'openshift-multus')),
+  'tuned-guest': M(daemonset('tuned', 'openshift-cluster-node-tuning-operator')),
+  'csi-node-guest': M(daemonset('kubevirt-csi-node', 'openshift-cluster-csi-drivers')),
+  'image-registry-guest': M(deployment('image-registry', 'openshift-image-registry', 'image-registry:latest', 2)),
   'konnectivity-agent': M(daemonset('konnectivity-agent', 'kube-system')),
   'coredns-node': M(daemonset('dns-default', 'openshift-dns')),
 

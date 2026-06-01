@@ -58,6 +58,7 @@ src/
     NodeCard.jsx             # one box inside a zone (shows [typePrefix] label)
     IntentStoreCard.jsx      # an etcd node that expands in place to show its records
     ControllerManagerCard.jsx # a controller-manager node that expands to show its control loops
+    OperatorSetCard.jsx      # a CPO/CVO node that expands to show the operator Pods it owns
     ArrowOverlay.jsx         # SVG layer: numbered bezier connectors between step nodes
     OverviewTab.jsx          # recursively renders ZONES tree + ArrowOverlay
     PacketFlowTab.jsx        # expandable hop list for active event

@@ -59,8 +59,32 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │     │
   │     └── [Dedicated Guest Control Plane Namespace Zone]
   │           │   // Per-HCP operators & lifecycle controllers
-  │           ├── [Pod] Control Plane Operator (CPO) Instance
-  │           ├── [Pod] Cluster Version Operator (CVO) Instance
+  │           ├── [Pod] Control Plane Operator (CPO) Instance ──┐  // expandable "operator set"
+  │           │      // Control-plane operands the CPO deploys — each a REAL,
+  │           │      // separate Deployment Pod, nested only to manage clutter:
+  │           │      ├── [Pod] OpenShift API Server
+  │           │      ├── [Pod] OpenShift OAuth API Server
+  │           │      ├── [Pod] OpenShift Controller Manager
+  │           │      ├── [Pod] Route Controller Manager
+  │           │      ├── [Pod] Hosted Cluster Config Operator (HCCO)
+  │           │      ├── [Pod] Cluster Network Operator (CNO)
+  │           │      ├── [Pod] Multus Admission Controller
+  │           │      ├── [Pod] Cluster Policy Controller
+  │           │      ├── [Pod] Machine Approver
+  │           │      └── [Pod] Cluster Autoscaler
+  │           ├── [Pod] Cluster Version Operator (CVO) Instance ──┐  // also an "operator set"
+  │           │      // Second-level cluster operators the CVO reconciles from
+  │           │      // the release payload (each reports a ClusterOperator):
+  │           │      ├── [Pod] Ingress Operator
+  │           │      ├── [Pod] DNS Operator
+  │           │      ├── [Pod] Authentication Operator
+  │           │      ├── [Pod] Storage Operator
+  │           │      ├── [Pod] CSI Snapshot Controller
+  │           │      ├── [Pod] Image Registry Operator
+  │           │      ├── [Pod] Node Tuning Operator
+  │           │      ├── [Pod] OLM Operator
+  │           │      ├── [Pod] Catalog Operator
+  │           │      └── [Pod] Package Server
   │           ├── [Pod] Cluster API Manager Instance
   │           ├── [Pod] Cluster API Provider · KubeVirt (CAPK) Instance
   │           │
@@ -84,7 +108,10 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │           │      ├── [API Object] Deployment / ReplicaSet (e-commerce applications)
   │           │      ├── [API Object] Secret / ConfigMap
   │           │      ├── [API Object] PersistentVolumeClaim / PersistentVolume
-  │           │      └── [API Object] EndpointSlice
+  │           │      ├── [API Object] EndpointSlice
+  │           │      ├── [Custom Resource] DNS / Ingress / Network (config.openshift.io)
+  │           │      ├── [Custom Resource] Authentication / Image / Proxy / Infrastructure
+  │           │      └── [Custom Resource] Subscription / CSV / CatalogSource / InstallPlan / OperatorGroup (OLM)
   │           │
   │           │   // Ingress Control, Networking & Proxy Systems
   │           │   // Two SEPARATE north-south paths front this namespace:
@@ -115,6 +142,14 @@ The workspace viewport canvas must render this exact structural hierarchy:
                     ├── [Pod] OVN-Kubernetes Guest Node Instance
                     ├── [Pod] Konnectivity Agent Instance
                     ├── [Pod] CoreDNS Node Instance
+                    │
+                    │   // Per-node agents (DaemonSets) — the data-plane side of the
+                    │   // control-plane operators above (DNS Op → CoreDNS, CNO → Multus,
+                    │   // Node Tuning Op → TuneD, Storage Op → CSI node driver)
+                    ├── [Pod] Multus CNI Instance
+                    ├── [Pod] Node Tuning (TuneD) Instance
+                    ├── [Pod] CSI Node Driver Instance
+                    ├── [Pod] Image Registry Instance
                     ├── [Pod] OpenShift Ingress Router Instance
                     ├── [Service · LoadBalancer] Ingress Router VIP (MetalLB L2)
                     ├── [Pod] Cluster Monitoring Instance (openshift-monitoring)
@@ -164,7 +199,12 @@ they live inside the expandable etcd intent stores (Management Etcd / Guest Etcd
 a node's detail modal instead. The same applies to the **control loops** inside each
 controller manager (`[Controller]` objects): they are goroutines sharing the
 `kube-controller-manager` process, not standalone instances, so they live inside the
-expandable controller-manager "controller set" rather than as cards (see §2).
+expandable controller-manager "controller set" rather than as cards (see §2). One
+**deliberate exception** to "an instance earns a card" is the **operator set** (§2):
+the ~20 OpenShift operators HCP relocates into the management HCP namespace *are*
+real Pods, but they are nested inside their owner (the Control Plane Operator / Cluster
+Version Operator) as a progressive-disclosure grouping purely to keep the canvas legible
+and two-up on mobile — not because they fail the whitelist.
 
 ### Modeling invariants (get these right)
 
@@ -222,7 +262,7 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    * **Application Pods:** Expose logical OpenShift Project metadata, isolated Linux Network Namespace (netns), host-side veth pair IDs, and cgroups slice boundaries.
    * **systemd Services:** Reveal corresponding host service unit configuration paths and tracking metrics.
    * **VirtualMachineInstance:** Expose the host qemu-kvm process execution details, host-side virtual network tap configuration (tap0), and master cgroup runtime boundaries.
- * **Etcd Intent Stores (expandable nodes):** Both etcd nodes double as homes for the API objects they persist — desired-state records, **not** Linux processes, so they are deliberately not rendered as sibling cards next to real Pods. **Management Etcd** holds the HCP control-plane intent and the worker-provisioning chain (`HostedCluster`, `HostedControlPlane`, `NodePool`, and the Cluster API → KubeVirt objects: `Cluster`, `MachineDeployment`, `MachineSet`, `Machine`, `KubevirtMachine`, `VirtualMachine`). **Guest Etcd** holds the guest cluster's own records that have no data-plane card (`ClusterVersion`, `ClusterOperator`, `Route`, the application `Deployment`/`ReplicaSet`, their `Secret`/`ConfigMap`/`PersistentVolumeClaim`/`PersistentVolume`, and the `EndpointSlice`s behind its Services). Realized Services and the NetworkPolicy keep their own cards; only pure records live inside the store. Clicking an etcd node enlarges it in place to reveal these objects. Inside the expanded store: clicking the **title** (ⓘ) opens etcd's own detail popup; clicking an **object** opens that record's popup; clicking the empty body, the ▴ chevron, outside the card, or pressing **Esc** collapses it. A node declares this behavior via an `intentObjects` array in `zones.js`.
+ * **Etcd Intent Stores (expandable nodes):** Both etcd nodes double as homes for the API objects they persist — desired-state records, **not** Linux processes, so they are deliberately not rendered as sibling cards next to real Pods. **Management Etcd** holds the HCP control-plane intent and the worker-provisioning chain (`HostedCluster`, `HostedControlPlane`, `NodePool`, and the Cluster API → KubeVirt objects: `Cluster`, `MachineDeployment`, `MachineSet`, `Machine`, `KubevirtMachine`, `VirtualMachine`). **Guest Etcd** holds the guest cluster's own records that have no data-plane card (`ClusterVersion`, `ClusterOperator`, `Route`, the application `Deployment`/`ReplicaSet`, their `Secret`/`ConfigMap`/`PersistentVolumeClaim`/`PersistentVolume`, the `EndpointSlice`s behind its Services, the `config.openshift.io` singletons the relocated operators reconcile — `DNS`, `Ingress`, `Network`, `Authentication`, `Image`, `Proxy`, `Infrastructure` — and the OLM records `Subscription`, `ClusterServiceVersion`, `CatalogSource`, `InstallPlan`, `OperatorGroup`). Realized Services and the NetworkPolicy keep their own cards; only pure records live inside the store. Clicking an etcd node enlarges it in place to reveal these objects. Inside the expanded store: clicking the **title** (ⓘ) opens etcd's own detail popup; clicking an **object** opens that record's popup; clicking the empty body, the ▴ chevron, outside the card, or pressing **Esc** collapses it. A node declares this behavior via an `intentObjects` array in `zones.js`.
  * **Controller Sets (expandable nodes):** The two controller-manager nodes
    (**Management Controller Manager** and **Guest Controller Manager**) work the
    same way as the etcd intent stores, but for *control loops* instead of
@@ -241,6 +281,32 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    `[Controller]`-typed object whose detail popup shows its watch→diff→act
    pipeline. A node declares this behavior via a `controllers` array in
    `zones.js`, rendered by `ControllerManagerCard.jsx`.
+ * **Operator Sets (expandable nodes):** The two operator-owner nodes in the
+   guest control-plane namespace — the **Control Plane Operator** and the
+   **Cluster Version Operator** — reuse the same expand-in-place card, but with a
+   **deliberate semantic difference from the two stores above, which the
+   whitelist in §1 must be read against.** An operator set's members are *real,
+   separate Deployment Pods*, not records in a key-value store or goroutines
+   sharing one process. They would each qualify for their own card under §1, but
+   HCP relocates ~20 OpenShift operators into the management cluster's HCP
+   namespace, and rendering them all flat would wreck the mobile two-up layout.
+   So the operator set is a **progressive-disclosure grouping by owner**: the
+   parent is the thing that *deploys and reconciles* the children (the CPO stamps
+   out the control-plane operands — the OpenShift API extension servers, HCCO,
+   CNO, and the HyperShift controllers; the CVO reconciles the second-level
+   cluster operators from the release payload, each reporting a `ClusterOperator`,
+   including the OLM trio). It is **not** a claim that the children live inside
+   the parent's process. The interaction model is identical to the intent store
+   and controller set: the **title** (ⓘ) opens the owner's detail popup; an
+   **operator** opens that operator's popup; clicking the empty body, the ▴
+   chevron, outside the card, or pressing **Esc** collapses it. Each operator is
+   an ordinary `[Pod]` whose detail popup shows its full Manifest → Kernel
+   pipeline. A node declares this behavior via an `operators` array (plus an
+   optional `operatorSetCaption`) in `zones.js`, rendered by
+   `OperatorSetCard.jsx`. The data-plane agents these operators manage on the
+   guest nodes (CoreDNS, Multus, TuneD, the CSI node driver, the image registry,
+   the ingress router) run *inside the guest VMs* and keep their own flat cards
+   in the Guest Worker Node zone.
 ## 3. Reference Data Schemas
 ### Metadata Schema (components.json)
 ```json
@@ -333,7 +399,12 @@ Adding a component touches several places — keep them in sync:
    show it as the kernel band's lead row.
 2. **`src/data/zones.js`** — add a node (with `id`, `title`, `typePrefix`, `badges`) to
    the correct zone in the recursive `ZONES` tree. `COMPONENT_COLOR` / `COMPONENT_ZONE`
-   derive automatically from the tree.
+   derive automatically from the tree. To nest a component inside an expandable parent
+   instead of giving it a sibling card, add it to the parent's `intentObjects` (etcd
+   records), `controllers` (controller-manager loops), or `operators` (operator Pods the
+   CPO/CVO own) array rather than the zone's `nodes`; the matching
+   `INTENT_OBJECT_STORE` / `CONTROLLER_PARENT` / `OPERATOR_PARENT` map is derived
+   automatically so trace highlighting can expand the parent first.
 3. **`src/data/events.json`** — reference the new `componentId` in any flow steps that
    should highlight it and draw connectors to/from it.
 
