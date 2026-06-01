@@ -337,12 +337,14 @@ function controllerNote(form) {
 
 // Fold a component's authored runtime form + Linux primitive (from
 // components.json) into a rich builder's bands:
-//   • runtimeForm  → subhead of the Runtime Object band (the concrete K8s form),
-//                    or the kernel band for host systemd services, which have no
-//                    Runtime Object band by design. A application-controller form
-//                    (Deployment/DaemonSet/StatefulSet/…) is declarative intent,
-//                    not a runtime object, so it moves up to the Logical Intent
-//                    band instead (see CONTROLLER_KIND).
+//   • runtimeForm  → for host systemd services (which have no Runtime Object
+//                    band by design) it annotates the kernel band. A
+//                    application-controller form (Deployment/DaemonSet/
+//                    StatefulSet/…) is declarative intent, not a runtime object,
+//                    so it moves up to the Logical Intent band as a node (see
+//                    CONTROLLER_KIND). Any other concrete form (a CR, a static
+//                    Pod, a VMI…) is left to the band's own node label, which
+//                    already states it — repeating it as a subhead was redundant.
 //   • linuxPrimitive → the per-instance realisation. For a type whose primitive
 //                    set already has a process row (a Pod's PID-1 process, a
 //                    systemd service's process), we fold the realisation into
@@ -366,11 +368,6 @@ function withForms(component, bands) {
         label: runtimeForm,
         note: controllerNote(runtimeForm),
       })
-    } else {
-      const host =
-        bands.find(b => b.layerId === 'api-boundary') ||
-        bands.find(b => b.layerId === 'logical-intent')
-      if (host) host.groups[0].subhead = runtimeForm
     }
   }
   if (linuxPrimitive) {
