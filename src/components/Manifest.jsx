@@ -1,31 +1,34 @@
 import { useState } from 'react'
 import { copyToClipboard } from './ExploreCommands'
 
-// The clickable chip-badge that opens an object's minimal example manifest.
-// Styled exactly like the detail-modal concept badges (.node-badge) so it reads
-// as one of the same family wherever it appears — the detail header row and the
-// pipeline's logical-intent node both render this identical chip.
+// The clickable tag that opens an object's minimal example manifest. It is
+// styled to be visually identical to the detail-modal concept badges
+// (.node-badge--concept) — same size, fill-on-open, and hover — so it reads as
+// one of the same family of tags wherever it appears (the detail badge row and,
+// inside a pipeline node's expanded detail).
 //   kind: 'MANIFEST' → a Kubernetes YAML object
 //         'UNIT'     → a systemd unit file (host services have no K8s manifest)
 export function ManifestChip({ open, onToggle, kind = 'MANIFEST', color }) {
   return (
     <button
       type="button"
-      className="node-badge manifest-chip"
+      className="node-badge node-badge--concept"
       aria-expanded={open}
       onClick={(e) => { e.stopPropagation(); onToggle() }}
       style={{
         color: open ? 'var(--bg)' : color,
-        borderColor: color,
+        borderColor: open ? color : `${color}66`,
         background: open ? color : `${color}1a`,
+        fontSize: '0.62rem',
+        padding: '4px 10px',
+        cursor: 'pointer',
+        fontFamily: 'inherit',
+        transition: 'background 0.15s, color 0.15s',
       }}
+      onMouseEnter={(e) => { if (!open) e.currentTarget.style.background = `${color}35` }}
+      onMouseLeave={(e) => { if (!open) e.currentTarget.style.background = `${color}1a` }}
       title={open ? 'Hide example manifest' : 'Show a minimal example manifest'}
     >
-      <svg className="manifest-chip-icon" width="10" height="10" viewBox="0 0 16 16" fill="none"
-        stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M4 1.7h5L12.5 5.2V14a.3.3 0 0 1-.3.3H4a.3.3 0 0 1-.3-.3V2a.3.3 0 0 1 .3-.3Z" />
-        <path d="M9 1.7V5.2h3.5" />
-      </svg>
       {kind}
     </button>
   )

@@ -6,6 +6,7 @@ import ExploreCommands from './ExploreCommands'
 import InteractionList from './InteractionList'
 import ObjectText from './ObjectText'
 import DocLinks from './DocLinks'
+import { ManifestChip, ManifestBlock } from './Manifest'
 
 // Single accent icon (a key) that fronts the "why it exists" callout — it
 // telegraphs "this is the essential reason" without needing a text heading.
@@ -61,9 +62,10 @@ function PrimitiveInline({ primitive, color, onSelectComponent, selfId }) {
 // `suppressLegacyPrimitives` hides the PRIMITIVES_BY_TYPE section for components
 // whose kernel primitives are already shown in the modal's pipeline tree
 // (Layer 4), so the same information isn't presented twice.
-export default function DetailSections({ component, color, suppressLegacyPrimitives = false, onSelectComponent, pipelineSection = null }) {
+export default function DetailSections({ component, color, suppressLegacyPrimitives = false, onSelectComponent, pipelineSection = null, manifest = null }) {
   const [expandedPrimitive, setExpandedPrimitive] = useState(null)
   const [expandedBadge, setExpandedBadge] = useState(null)
+  const [manifestOpen, setManifestOpen] = useState(false)
 
   const componentId = component.componentId
   const allBadges = COMPONENT_BADGES[componentId] || []
@@ -109,9 +111,9 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
         </div>
       </div>
 
-      {(badges.length > 0 || apiStamps.length > 0) && (
+      {(badges.length > 0 || apiStamps.length > 0 || manifest) && (
         <div className="detail-section">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: explanation ? 12 : 0 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: (explanation || (manifest && manifestOpen)) ? 12 : 0 }}>
             {badges.map((b) => {
               const isOpen = expandedBadge === b.label
               const hasExplanation = !!BADGE_GLOSSARY[b.label]
@@ -156,7 +158,18 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
                 </button>
               )
             })}
+            {manifest && (
+              <ManifestChip
+                open={manifestOpen}
+                onToggle={() => setManifestOpen(o => !o)}
+                kind={manifest.kind}
+                color={color}
+              />
+            )}
           </div>
+          {manifest && manifestOpen && (
+            <ManifestBlock body={manifest.body} kind={manifest.kind} color={color} />
+          )}
           {explanation && (
             <div
               style={{
