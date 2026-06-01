@@ -224,7 +224,7 @@
   },
   {
     "componentId": "guest-api-server",
-    "displayName": "Guest API Server",
+    "displayName": "API Server",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "API SERVER",
@@ -255,7 +255,7 @@
   },
   {
     "componentId": "guest-oauth-server",
-    "displayName": "Guest OAuth Server",
+    "displayName": "OAuth Server",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "AUTH SERVER",
@@ -281,7 +281,7 @@
   },
   {
     "componentId": "guest-controller-manager",
-    "displayName": "Guest Controller Manager",
+    "displayName": "Controller Manager",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "CONTROLLER",
@@ -307,7 +307,7 @@
   },
   {
     "componentId": "guest-kube-scheduler",
-    "displayName": "Guest Scheduler",
+    "displayName": "Scheduler",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "SCHEDULER",
@@ -332,7 +332,7 @@
   },
   {
     "componentId": "guest-etcd",
-    "displayName": "Guest Etcd",
+    "displayName": "Etcd",
     "typePrefix": "Pod",
     "layer": "Guest Control Plane",
     "role": "KEY-VALUE STORE",
@@ -989,7 +989,7 @@
   },
   {
     "componentId": "guest-worker-node-vm",
-    "displayName": "Guest Worker Node",
+    "displayName": "Worker Node",
     "typePrefix": "VirtualMachineInstance",
     "layer": "KubeVirt",
     "logicalContext": {
@@ -1024,7 +1024,7 @@
   },
   {
     "componentId": "kubelet-guest",
-    "displayName": "Kubelet (Guest)",
+    "displayName": "Kubelet",
     "typePrefix": "systemd",
     "layer": "Guest Worker Node",
     "role": "NODE AGENT",
@@ -1049,7 +1049,7 @@
   },
   {
     "componentId": "crio-guest",
-    "displayName": "CRI-O (Guest)",
+    "displayName": "CRI-O",
     "typePrefix": "systemd",
     "layer": "Guest Worker Node",
     "role": "CONTAINER RUNTIME",
@@ -1079,7 +1079,7 @@
   },
   {
     "componentId": "ovs-guest",
-    "displayName": "Open vSwitch (Guest)",
+    "displayName": "Open vSwitch",
     "typePrefix": "systemd",
     "layer": "Guest Worker Node",
     "role": "VIRTUAL SWITCH",
@@ -1104,7 +1104,7 @@
   },
   {
     "componentId": "ovn-node-guest",
-    "displayName": "OVN-K8s Guest Node",
+    "displayName": "OVN-K8s Node",
     "typePrefix": "Pod",
     "layer": "Guest Worker Node",
     "role": "NODE NETWORKING",
@@ -1183,7 +1183,7 @@
   },
   {
     "componentId": "openshift-ingress-router-guest",
-    "displayName": "Ingress Router (Guest)",
+    "displayName": "Ingress Router",
     "typePrefix": "Pod",
     "layer": "Guest Worker Node",
     "role": "INGRESS ROUTER",

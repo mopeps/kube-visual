@@ -233,7 +233,7 @@ export const ZONES = [
         zones: [
           {
             id: 'guest-cp-namespace',
-            label: 'Guest Control Plane Namespace',
+            label: 'Hosted Control Plane Namespace',
             color: 'var(--k-sky)',
             colorVar: 'k-sky',
             dashed: true,
@@ -264,7 +264,7 @@ export const ZONES = [
               },
               {
                 id: 'guest-api-server',
-                title: 'Guest API Server',
+                title: 'API Server',
                 typePrefix: 'Pod',
                 badges: [
                   { label: ':6443', color: 'var(--k-sky)' },
@@ -273,13 +273,13 @@ export const ZONES = [
               },
               {
                 id: 'guest-oauth-server',
-                title: 'Guest OAuth Server',
+                title: 'OAuth Server',
                 typePrefix: 'Pod',
                 badges: [{ label: 'OAuth2', color: 'var(--k-sky)' }],
               },
               {
                 id: 'guest-controller-manager',
-                title: 'Guest Controller Manager',
+                title: 'Controller Manager',
                 typePrefix: 'Pod',
                 badges: [{ label: 'Controllers', color: 'var(--k-sky)' }],
                 // Same model as the management controller manager above: one
@@ -328,13 +328,13 @@ export const ZONES = [
               },
               {
                 id: 'guest-kube-scheduler',
-                title: 'Guest Scheduler',
+                title: 'Scheduler',
                 typePrefix: 'Pod',
                 badges: [{ label: 'Bindings', color: 'var(--k-sky)' }],
               },
               {
                 id: 'guest-etcd',
-                title: 'Guest Etcd',
+                title: 'Etcd',
                 typePrefix: 'Pod',
                 badges: [
                   { label: 'StatefulSet', color: 'var(--k-sky)' },
@@ -546,7 +546,7 @@ export const ZONES = [
                 // this id so ArrowOverlay can anchor connectors to it and
                 // DetailPanel can open when the label is clicked.
                 componentId: 'guest-worker-node-vm',
-                label: 'Guest Worker Node · VirtualMachineInstance',
+                label: 'Worker Node · VirtualMachineInstance',
                 color: 'var(--k-green)',
                 colorVar: 'k-green',
                 badges: [
@@ -556,13 +556,13 @@ export const ZONES = [
                 nodes: [
                   {
                     id: 'kubelet-guest',
-                    title: 'Kubelet (Guest)',
+                    title: 'Kubelet',
                     typePrefix: 'systemd',
                     badges: [{ label: 'CRI client', color: 'var(--k-green)' }],
                   },
                   {
                     id: 'crio-guest',
-                    title: 'CRI-O (Guest)',
+                    title: 'CRI-O',
                     typePrefix: 'systemd',
                     badges: [
                       { label: 'OCI', color: 'var(--k-green)' },
@@ -571,7 +571,7 @@ export const ZONES = [
                   },
                   {
                     id: 'ovs-guest',
-                    title: 'Open vSwitch (Guest)',
+                    title: 'Open vSwitch',
                     typePrefix: 'systemd',
                     badges: [
                       { label: 'br-int', color: 'var(--k-green)' },
@@ -580,7 +580,7 @@ export const ZONES = [
                   },
                   {
                     id: 'ovn-node-guest',
-                    title: 'OVN-K8s Guest Node',
+                    title: 'OVN-K8s Node',
                     typePrefix: 'Pod',
                     badges: [{ label: 'CNI', color: 'var(--k-green)' }],
                   },
@@ -598,7 +598,7 @@ export const ZONES = [
                   },
                   {
                     id: 'openshift-ingress-router-guest',
-                    title: 'Ingress Router (Guest)',
+                    title: 'Ingress Router',
                     typePrefix: 'Pod',
                     badges: [
                       { label: 'HAProxy', color: 'var(--k-green)' },
