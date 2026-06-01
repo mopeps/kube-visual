@@ -307,6 +307,19 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    guest nodes (CoreDNS, Multus, TuneD, the CSI node driver, the image registry,
    the ingress router) run *inside the guest VMs* and keep their own flat cards
    in the Guest Worker Node zone.
+ * **Deep Dive tab (secondary surface):** A third tab — **Deep Dive**, sitting to
+   the *left* of Overview so the topology stays the first thing you see — holds
+   ground-up explainers one level below the cluster: what **systemd** is and
+   manages, the standard **Linux boot** sequence, and how an **OpenShift/HCP node
+   boots** (NodePool → MachineConfig → Ignition Server → VMI → kubelet joins). It
+   reuses the packet-flow interaction model wholesale: a topic index (cards) opens
+   a numbered, expandable stage list (`.event-*` / `.hop` styling). Each topic is
+   pure data in `src/data/deep-dives.js` (event-shaped: `title`, `tagline`,
+   ordered `steps`), reusing `primitives.js` and the unit files in `manifests.js`
+   rather than re-authoring them — so a new explainer is just another array entry.
+   It is also reachable via a `systemd ↗` chip beside the `[UNIT]` tag in any
+   systemd-service detail modal, which deep-links straight to the systemd page.
+   Rendered by `DeepDiveTab.jsx`.
 ## 3. Reference Data Schemas
 ### Metadata Schema (components.json)
 ```json

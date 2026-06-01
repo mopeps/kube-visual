@@ -62,7 +62,7 @@ function PrimitiveInline({ primitive, color, onSelectComponent, selfId }) {
 // `suppressLegacyPrimitives` hides the PRIMITIVES_BY_TYPE section for components
 // whose kernel primitives are already shown in the modal's pipeline tree
 // (Layer 4), so the same information isn't presented twice.
-export default function DetailSections({ component, color, suppressLegacyPrimitives = false, onSelectComponent, pipelineSection = null, manifest = null }) {
+export default function DetailSections({ component, color, suppressLegacyPrimitives = false, onSelectComponent, pipelineSection = null, manifest = null, onOpenDeepDive = null }) {
   const [expandedPrimitive, setExpandedPrimitive] = useState(null)
   const [expandedBadge, setExpandedBadge] = useState(null)
   const [manifestOpen, setManifestOpen] = useState(false)
@@ -165,6 +165,31 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
                 kind={manifest.kind}
                 color={color}
               />
+            )}
+            {/* For host services, a sibling chip beside [UNIT] that opens the
+                systemd deep dive — same chip family, so it reads as a peer of
+                the manifest tag. */}
+            {onOpenDeepDive && component.typePrefix === 'systemd' && (
+              <button
+                type="button"
+                className="node-badge node-badge--concept"
+                onClick={(e) => { e.stopPropagation(); onOpenDeepDive('systemd') }}
+                style={{
+                  color,
+                  borderColor: `${color}66`,
+                  background: `${color}1a`,
+                  fontSize: '0.62rem',
+                  padding: '4px 10px',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = `${color}35` }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = `${color}1a` }}
+                title="Open the systemd deep dive"
+              >
+                systemd&nbsp;↗
+              </button>
             )}
           </div>
           {manifest && manifestOpen && (

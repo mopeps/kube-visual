@@ -948,6 +948,41 @@ body::after {
 }
 .hop-detail.is-open { display: block; }
 
+/* ── Deep Dive tab ──────────────────────────────────────────────────────
+   Reuses .event-gallery / .event-card / .flow-switcher / .hop wholesale; only
+   the per-topic accent and a few prose elements are bespoke. */
+.deep-card:hover { border-color: var(--deep-accent, var(--k-cyan)); }
+.deep-dive .flow-switcher .event-pill.is-active {
+  color: var(--bg);
+  background: var(--deep-accent, var(--packet));
+  border-color: var(--deep-accent, var(--packet));
+  box-shadow: 0 0 24px color-mix(in srgb, var(--deep-accent, var(--packet)) 40%, transparent);
+}
+.deep-kicker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.deep-body {
+  font-size: 0.76rem;
+  line-height: 1.65;
+  color: var(--tx);
+  margin: 8px 0 0;
+}
+.deep-bullets {
+  margin: 10px 0 0;
+  padding-left: 16px;
+  list-style: disc;
+}
+.deep-bullets li {
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--tx-muted);
+  margin-bottom: 4px;
+}
+
 .code-block {
   background: rgba(0, 0, 0, 0.45);
   border: 1px solid var(--border-w);

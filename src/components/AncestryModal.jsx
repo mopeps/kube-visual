@@ -21,7 +21,7 @@ const MIN_SHEET_PX = 220
 const DISMISS_SHEET_PX = 120
 let lastSheetHeight = null
 
-export default function AncestryModal({ componentId, onClose, onSelectComponent, onRevealInOverview }) {
+export default function AncestryModal({ componentId, onClose, onSelectComponent, onRevealInOverview, onOpenDeepDive }) {
   // Distance the modal is currently pushed down by a touch drag.
   const [offset, setOffset] = useState(0)
   // While true the modal animates (snapping back / sliding off); while false it
@@ -337,6 +337,7 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
             onSelectComponent={onSelectComponent}
             pipelineSection={pipelineSection}
             manifest={manifest}
+            onOpenDeepDive={onOpenDeepDive ? (topicId) => { onClose(); onOpenDeepDive(topicId) } : null}
           />
 
           <div
