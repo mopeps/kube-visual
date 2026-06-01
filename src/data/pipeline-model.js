@@ -357,15 +357,15 @@ function controllerNote(form) {
 
 // Fold a component's authored runtime form + Linux primitive (from
 // components.json) into a rich builder's bands:
-//   • runtimeForm  → for host systemd services (which have no Runtime Object
-//                    band by design) it annotates the kernel band as a subhead —
-//                    minus its leading "systemd unit" clause, which the band's own
-//                    `systemd Unit` node already states. A application-controller
-//                    form (Deployment/DaemonSet/StatefulSet/…) is declarative
-//                    intent, not a runtime object, so it moves up to the Logical
-//                    Intent band as a node (see CONTROLLER_KIND) — unless the pod
-//                    carries hand-authored ancestry, which already names its
-//                    Deployment/ReplicaSet there. Any other concrete form (a CR, a static
+//   • runtimeForm  → a application-controller form (Deployment/DaemonSet/
+//                    StatefulSet/…) is declarative intent, not a runtime object,
+//                    so it moves up to the Logical Intent band as a node (see
+//                    CONTROLLER_KIND) — unless the pod carries hand-authored
+//                    ancestry, which already names its Deployment/ReplicaSet there.
+//                    Host systemd services contribute no row from runtimeForm: they
+//                    have no Runtime Object band by design, and their host context
+//                    ("bare metal master node") is already shown by the modal's
+//                    location chip. Any other concrete form (a CR, a static
 //                    Pod, a VMI…) is left to the band's own node label, which
 //                    already states it — repeating it as a subhead was redundant.
 //   • linuxPrimitive → the per-instance realisation. For a type whose primitive
@@ -383,23 +383,17 @@ const FOLD_PROCESS_ID = {
 }
 function withForms(component, bands) {
   const { typePrefix: t, runtimeForm, linuxPrimitive } = component
-  if (runtimeForm) {
-    if (t === 'systemd') {
-      // runtimeForm is "systemd unit · <host context>"; its "systemd unit" half
-      // just echoes the band's own `systemd Unit` node row, so strip it and keep
-      // only the host context (e.g. "bare metal master node") as the subhead.
-      const host = runtimeForm.replace(/^systemd unit\s*·\s*/i, '')
-      ensureKernelBand(bands).groups[0].subhead = host
-    } else if (CONTROLLER_KIND.test(runtimeForm) && !component.ancestry) {
-      // A pod with hand-authored ancestry already names its Deployment/ReplicaSet
-      // in the Logical Intent band, so relocating the runtimeForm here too would
-      // just repeat the kind word. Only the control-plane pods *without* ancestry
-      // need it — their intent band would otherwise be empty.
-      ensureIntentBand(bands).groups[0].nodes.push({
-        label: runtimeForm,
-        note: controllerNote(runtimeForm),
-      })
-    }
+  // A application-controller runtimeForm (Deployment/DaemonSet/StatefulSet/…) is
+  // declarative intent, not a runtime object, so it moves up to the Logical Intent
+  // band as a node — unless the pod carries hand-authored ancestry, which already
+  // names its Deployment/ReplicaSet there. (Host systemd services have no Runtime
+  // Object band by design and their host context is already shown by the modal's
+  // location chip, so their runtimeForm contributes no row here.)
+  if (runtimeForm && CONTROLLER_KIND.test(runtimeForm) && !component.ancestry) {
+    ensureIntentBand(bands).groups[0].nodes.push({
+      label: runtimeForm,
+      note: controllerNote(runtimeForm),
+    })
   }
   if (linuxPrimitive) {
     const foldId = FOLD_PROCESS_ID[t]
