@@ -233,7 +233,7 @@ export const ZONES = [
         zones: [
           {
             id: 'guest-cp-namespace',
-            label: 'Hosted Control Plane Namespace',
+            label: 'Guest Control Plane Namespace',
             color: 'var(--k-sky)',
             colorVar: 'k-sky',
             dashed: true,
