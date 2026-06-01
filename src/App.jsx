@@ -4,14 +4,16 @@ import useMediaQuery from './hooks/useMediaQuery'
 import Tabs from './components/Tabs'
 import OverviewTab from './components/OverviewTab'
 import PacketFlowTab from './components/PacketFlowTab'
+import DeepDiveTab from './components/DeepDiveTab'
 import AncestryModal from './components/AncestryModal'
 import HopInspector from './components/HopInspector'
 import SwipeViews from './components/SwipeViews'
 import { scrollIntoUpperThird } from './lib/scroll'
 
 const TABS = [
-  { id: 'overview',   label: 'Architecture Overview' },
-  { id: 'packetflow', label: 'Step-by-Step Packet Flow' },
+  { id: 'deepdive',   label: 'Deep Dive' },
+  { id: 'overview',   label: 'Overview' },
+  { id: 'packetflow', label: 'Packet Flow' },
 ]
 
 const DOCK_KEY = 'kv-dock-open'
@@ -28,6 +30,8 @@ function Header() {
 
 export default function App() {
   const [tab, setTab] = useState('overview')
+  // Which in-depth page the Deep Dive tab is showing (null = the topic index).
+  const [deepTopic, setDeepTopic] = useState(null)
   const {
     activeEvent,
     activeComponentId,
@@ -113,6 +117,21 @@ export default function App() {
     revealComponent(id)
   }
 
+  // Deep Dive selection: toggle a topic open/closed (re-selecting clears back to
+  // the index), or clear to the index. Mirrors selectEvent / clearEvent.
+  const selectTopic = (id) => setDeepTopic(prev => (prev === id ? null : id))
+  const clearTopic = () => setDeepTopic(null)
+
+  // Deep-link entry from a [systemd] node's detail popup: close the popup,
+  // surface the Deep Dive tab, and open the requested page. Mirrors the
+  // revealInOverview jump.
+  const openDeepDive = (topicId) => {
+    scrollPositions.current[tab] = window.scrollY
+    clearComponent()
+    setDeepTopic(topicId)
+    setTab('deepdive')
+  }
+
   // Follow the trace on the overview: whenever the inspected hop changes (or an
   // event is freshly selected) and the overview is showing, scroll the object
   // the packet is currently on into the upper third of the viewport — keeping
@@ -166,8 +185,16 @@ export default function App() {
       onJumpToStep={jumpToStep}
     />
   )
+  const deepDivePanel = (
+    <DeepDiveTab
+      activeTopic={deepTopic}
+      onSelectTopic={selectTopic}
+      onClearTopic={clearTopic}
+    />
+  )
   const panelFor = (id) => {
     if (id === 'packetflow') return packetPanel
+    if (id === 'deepdive') return deepDivePanel
     return overviewPanel
   }
 
@@ -248,6 +275,7 @@ export default function App() {
         onClose={clearComponent}
         onSelectComponent={selectComponent}
         onRevealInOverview={revealInOverview}
+        onOpenDeepDive={openDeepDive}
       />
 
       {/* Bottom-docked hop inspector — only on the overview tab, and only when
