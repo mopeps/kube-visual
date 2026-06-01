@@ -1259,20 +1259,10 @@ button.object-tag:hover {
 .ancestry-grip:active .ancestry-grip-bar { background: rgba(255, 255, 255, 0.5); }
 .detail-close { z-index: 3; }
 
-/* ── Example manifest ([MANIFEST] / [UNIT] chip + revealed code block) ──
-   The chip reuses .node-badge so it reads as one of the same family of chips,
-   plus an inline doc glyph. It appears identically in the detail header row and
-   on a pipeline logical-intent node. */
-.manifest-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  font-family: inherit;
-  white-space: nowrap;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-.manifest-chip-icon { flex: 0 0 auto; }
+/* ── Example manifest ([MANIFEST] / [UNIT] tag + revealed code block) ──
+   The tag reuses .node-badge--concept so it is visually identical to the other
+   detail badges. It appears in the detail badge row and inside a pipeline
+   node's expanded detail; both reveal this code block. */
 .manifest-block {
   margin-top: 10px;
   border: 1px solid var(--border-w);
@@ -1303,9 +1293,9 @@ button.object-tag:hover {
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .manifest-code { border: none; border-radius: 0; margin: 0; }
-/* A node row that carries a manifest chip lays the label and chip on one line. */
-.tree-row-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.tree-row-line .tree-row-head { width: auto; flex: 0 1 auto; }
+/* The manifest tag + its revealed block, nested inside a pipeline node detail. */
+.tree-manifest { margin-top: 8px; }
+.tree-manifest .manifest-block { margin-top: 8px; }
 
 /* ── Hop inspector ─────────────────────────────────────────────────────
    A compact, non-modal panel docked at the bottom of the viewport. It does

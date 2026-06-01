@@ -120,45 +120,30 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
   const [manifestOpen, setManifestOpen] = useState(false)
   const color = node.color || bandColor
   const kids = node.children || []
-  // A row is expandable when it carries a note or deeper detail to reveal.
-  const hasExtra = !!node.note || !!node.detail
+  // A row is expandable when it carries a note, deeper detail, or an example
+  // manifest to reveal.
+  const hasExtra = !!node.note || !!node.detail || !!node.manifest
   // Action chip — tags the revealed description by *what the pipeline does* at
   // this step (Stored, Mounted, Routed, Runs …), colour-coded by accent the way
   // the Interactions section tags each line by its verb. It complements the row
   // label (what the thing is) rather than echoing it.
-  const action = hasExtra ? classifyRow(node.label) : null
+  const action = (node.note || node.detail) ? classifyRow(node.label) : null
 
   return (
     <div className="tree-node">
-      <div className="tree-row-line">
-        <button
-          type="button"
-          className="tree-row-head"
-          onClick={hasExtra ? () => setOpen(o => !o) : undefined}
-          aria-expanded={hasExtra ? open : undefined}
-          data-expandable={hasExtra ? '' : undefined}
-          style={{ color, cursor: hasExtra ? 'pointer' : 'default' }}
-        >
-          {hasExtra && (
-            <span className={`tree-caret${open ? ' is-open' : ''}`} aria-hidden="true">▸</span>
-          )}
-          <span className="tree-label">{node.label}</span>
-        </button>
-        {node.manifest && (
-          <ManifestChip
-            open={manifestOpen}
-            onToggle={() => setManifestOpen(o => !o)}
-            kind={node.manifest.kind}
-            color={color}
-          />
+      <button
+        type="button"
+        className="tree-row-head"
+        onClick={hasExtra ? () => setOpen(o => !o) : undefined}
+        aria-expanded={hasExtra ? open : undefined}
+        data-expandable={hasExtra ? '' : undefined}
+        style={{ color, cursor: hasExtra ? 'pointer' : 'default' }}
+      >
+        {hasExtra && (
+          <span className={`tree-caret${open ? ' is-open' : ''}`} aria-hidden="true">▸</span>
         )}
-      </div>
-
-      {node.manifest && manifestOpen && (
-        <div className="tree-reveal" style={{ '--row-color': color }}>
-          <ManifestBlock body={node.manifest.body} kind={node.manifest.kind} color={color} />
-        </div>
-      )}
+        <span className="tree-label">{node.label}</span>
+      </button>
 
       {hasExtra && open && (
         <div className="tree-reveal" style={{ '--row-color': color }}>
@@ -175,6 +160,19 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
           )}
           {node.detail && (
             <RowDetail detail={node.detail} color={color} onSelectComponent={onSelectComponent} selfId={selfId} />
+          )}
+          {node.manifest && (
+            <div className="tree-manifest">
+              <ManifestChip
+                open={manifestOpen}
+                onToggle={() => setManifestOpen(o => !o)}
+                kind={node.manifest.kind}
+                color={color}
+              />
+              {manifestOpen && (
+                <ManifestBlock body={node.manifest.body} kind={node.manifest.kind} color={color} />
+              )}
+            </div>
           )}
         </div>
       )}
