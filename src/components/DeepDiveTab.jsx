@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { DEEP_DIVES, findDeepDive, indexTopicBoxes } from '../data/deep-dives'
 import DeepDiveCanvas from './DeepDiveCanvas'
 import DeepDiveModal from './DeepDiveModal'
@@ -94,7 +94,7 @@ function FlowNavigator({ topic, activeFlow, onSelectFlow, onClearFlow }) {
       <p className="text-[0.7rem] mt-1.5 leading-snug" style={{ color: 'var(--tx-muted)' }}>
         {activeFlow
           ? activeFlow.description
-          : 'Pick a flow to trace its hops on the canvas — step through them with the hop reader at the bottom, or click a numbered badge.'}
+          : 'Pick a flow to trace its hops on the canvas, then click a numbered badge to read a hop.'}
       </p>
     </div>
   )
@@ -122,23 +122,15 @@ export default function DeepDiveTab({
 
   // Follow the trace: when a hop is focused, bring its target box into the upper
   // third of whatever scrolls the canvas (mirrors the Overview's trace-follow).
-  // The first focus after a topic opens is the auto-engaged hop 1, so skip the
-  // scroll there — don't yank the page before the reader has even settled — and
-  // only follow once the user actually starts stepping within the same topic.
-  const scrollTopicRef = useRef(null)
   useEffect(() => {
     if (activeFlowStep == null || !activeFlow) return
-    if (scrollTopicRef.current !== activeTopic) {
-      scrollTopicRef.current = activeTopic
-      return
-    }
     const step = activeFlow.steps.find(s => s.step === activeFlowStep)
     if (!step) return
     const raf = requestAnimationFrame(() => {
       scrollIntoUpperThird(document.getElementById(`dd-${step.targetBoxId}`))
     })
     return () => cancelAnimationFrame(raf)
-  }, [activeFlowStep, activeFlow, activeTopic])
+  }, [activeFlowStep, activeFlow])
 
   const selectBox = useCallback((id) => setSelectedBoxId(id), [])
   const closeBox = useCallback(() => setSelectedBoxId(null), [])

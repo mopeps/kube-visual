@@ -10,24 +10,18 @@ export default function useFlowState() {
   const [activeFlowStep, setActiveFlowStep] = useState(null)
 
   const selectFlow = useCallback((flow) => {
-    // Re-selecting the active flow toggles the whole trace off.
-    if (activeFlow?.flowId === flow.flowId) {
-      setActiveFlow(null)
-      setActiveFlowStep(null)
-      return
-    }
-    // Selecting a flow drops you straight onto its first hop — so the arrows
-    // light up and the hop reader pops, the way actively tracing an event does
-    // on the Overview (rather than leaving a static, unengaged diagram).
-    setActiveFlow(flow)
-    setActiveFlowStep(flow.steps[0]?.step ?? null)
-  }, [activeFlow])
+    // Switching/clearing the trace always drops any inspected hop — the reader
+    // opens only when you click a hop/badge, never on flow selection itself.
+    setActiveFlowStep(null)
+    setActiveFlow(prev => prev?.flowId === flow.flowId ? null : flow)
+  }, [])
 
-  // Unconditionally engage a flow on its first hop (no toggle) — used to
-  // auto-start the trace when a deep-dive topic opens.
+  // Unconditionally engage a flow (no toggle) so its arrows light up, leaving
+  // the hop reader closed — used to auto-start the trace when a deep-dive topic
+  // opens. The reader stays a deliberate click away, as on the Overview.
   const focusFlow = useCallback((flow) => {
     setActiveFlow(flow)
-    setActiveFlowStep(flow?.steps?.[0]?.step ?? null)
+    setActiveFlowStep(null)
   }, [])
 
   const clearFlow = useCallback(() => {
