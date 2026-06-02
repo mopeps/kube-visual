@@ -10,9 +10,24 @@ export default function useFlowState() {
   const [activeFlowStep, setActiveFlowStep] = useState(null)
 
   const selectFlow = useCallback((flow) => {
-    // Switching/clearing the trace always drops any inspected hop.
-    setActiveFlowStep(null)
-    setActiveFlow(prev => prev?.flowId === flow.flowId ? null : flow)
+    // Re-selecting the active flow toggles the whole trace off.
+    if (activeFlow?.flowId === flow.flowId) {
+      setActiveFlow(null)
+      setActiveFlowStep(null)
+      return
+    }
+    // Selecting a flow drops you straight onto its first hop — so the arrows
+    // light up and the hop reader pops, the way actively tracing an event does
+    // on the Overview (rather than leaving a static, unengaged diagram).
+    setActiveFlow(flow)
+    setActiveFlowStep(flow.steps[0]?.step ?? null)
+  }, [activeFlow])
+
+  // Unconditionally engage a flow on its first hop (no toggle) — used to
+  // auto-start the trace when a deep-dive topic opens.
+  const focusFlow = useCallback((flow) => {
+    setActiveFlow(flow)
+    setActiveFlowStep(flow?.steps?.[0]?.step ?? null)
   }, [])
 
   const clearFlow = useCallback(() => {
@@ -41,6 +56,7 @@ export default function useFlowState() {
     activeFlowStep,
     activeBoxIds,
     selectFlow,
+    focusFlow,
     clearFlow,
     selectFlowStep,
     focusFlowStep,

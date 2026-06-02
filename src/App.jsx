@@ -59,6 +59,7 @@ export default function App() {
     activeFlowStep,
     activeBoxIds,
     selectFlow,
+    focusFlow,
     clearFlow,
     selectFlowStep,
     clearFlowStep,
@@ -164,10 +165,11 @@ export default function App() {
   }
 
   // Deep Dive selection: toggle a topic open/closed (re-selecting clears back to
-  // the index), or clear to the index. Mirrors selectEvent / clearEvent. Either
-  // way the active trace flow is dropped — flows belong to a single topic.
-  const selectTopic = (id) => { clearFlow(); setDeepTopic(prev => (prev === id ? null : id)) }
-  const clearTopic = () => { clearFlow(); setDeepTopic(null) }
+  // the index), or clear to the index. Mirrors selectEvent / clearEvent. The
+  // active trace flow is owned by the auto-engage effect below, keyed on the
+  // resolved topic — so the handlers only move the topic.
+  const selectTopic = (id) => setDeepTopic(prev => (prev === id ? null : id))
+  const clearTopic = () => setDeepTopic(null)
 
   // Deep-link entry from a [systemd] node's detail popup: close the popup,
   // surface the Deep Dive tab, and open the requested page. Mirrors the
@@ -175,7 +177,6 @@ export default function App() {
   const openDeepDive = (topicId) => {
     scrollPositions.current[tab] = window.scrollY
     clearComponent()
-    clearFlow()
     setDeepTopic(topicId)
     setTab('deepdive')
   }
@@ -185,6 +186,15 @@ export default function App() {
   // transformed swipe pane — same reason the Overview's HopInspector lives here).
   const deepTopicObj = useMemo(() => (deepTopic ? findDeepDive(deepTopic) : null), [deepTopic])
   const deepBoxIndex = useMemo(() => (deepTopicObj ? indexTopicBoxes(deepTopicObj) : {}), [deepTopicObj])
+
+  // Auto-engage the trace when a deep-dive topic opens: a topic exists to walk
+  // its one canonical flow, so we land already tracing — arrows lit, hop reader
+  // on hop 1 — instead of a static, unengaged diagram. Topics without a flow
+  // (e.g. systemd, which has its own reconciliation loop) just clear the trace.
+  useEffect(() => {
+    if (deepTopicObj?.flows?.length) focusFlow(deepTopicObj.flows[0])
+    else clearFlow()
+  }, [deepTopicObj, focusFlow, clearFlow])
 
   // Follow the trace on the overview: whenever the inspected hop changes (or an
   // event is freshly selected) and the overview is showing, scroll the object
