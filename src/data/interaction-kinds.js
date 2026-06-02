@@ -125,6 +125,21 @@ const VERB_KIND = {
   enforced: 'manage', enforces: 'manage',
   maintains: 'manage', maintain: 'manage',
   updates: 'manage', updated: 'manage', update: 'manage',
+
+  // pipeline mechanics — the verbs that lead the kubelet/CRI-O/kernel-primitive
+  // detail bullets (see pipeline-model.js / primitives.js). Classed so the
+  // pipeline tree's revealed detail reads in the same icon+accent language as the
+  // Interactions section rather than as neutral notes.
+  resolves: 'create', resolve: 'create', resolved: 'create',
+  assembles: 'create', assemble: 'create', assembled: 'create',
+  allocates: 'create', allocate: 'create', allocated: 'create',
+  assigns: 'create', assign: 'create', assigned: 'create',
+  executes: 'outbound', execute: 'outbound', executed: 'outbound',
+  issues: 'outbound', issue: 'outbound', issued: 'outbound',
+  hands: 'outbound', hand: 'outbound', handed: 'outbound',
+  enters: 'outbound', enter: 'outbound', entered: 'outbound',
+  attached: 'manage', attaches: 'manage', attach: 'manage',
+  captures: 'observe', capture: 'observe', captured: 'observe',
 }
 
 // Pull the leading verb token off a sentence: first run of letters/hyphens.

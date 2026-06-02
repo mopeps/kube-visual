@@ -2156,27 +2156,23 @@ button.object-tag:hover {
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
-.tree-detail-bullet {
-  display: flex;
-  gap: 7px;
-  font-size: 0.72rem;
-  line-height: 1.55;
-  color: var(--tx-muted);
-  overflow-wrap: anywhere;
-}
-.tree-detail-marker {
-  flex: 0 0 auto;
-  line-height: 1.55;
-}
+/* A row's mechanics, rendered as the same interaction rows the modal's
+   Interactions section uses (.interaction-list / .interaction-row). The shared
+   list reset (.detail-section .interaction-list) already strips the bullet and
+   left indent; here we only tune the vertical rhythm so the rows sit snugly
+   under the lead line within the reveal rail. */
+.tree-detail-interactions { gap: 7px; }
 .tree-detail-kv {
   display: flex;
   gap: 8px;
-  font-size: 0.72rem;
-  line-height: 1.55;
+  font-size: 0.76rem;
+  line-height: 1.6;
   overflow-wrap: anywhere;
 }
+/* The key is a quiet label; the value carries the same white body text as the
+   interaction sentences so the whole reveal reads in one colour. */
 .tree-detail-k {
-  color: var(--tx-dim);
+  color: var(--tx-muted);
   flex: 0 0 auto;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -2186,10 +2182,12 @@ button.object-tag:hover {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+/* The lead description — body prose, white and at the interaction text size, so
+   it matches the rows beneath it instead of reading as dimmed sub-text. */
 .tree-detail-line {
-  font-size: 0.72rem;
-  line-height: 1.55;
-  color: var(--tx-muted);
+  font-size: 0.76rem;
+  line-height: 1.6;
+  color: var(--tx);
   overflow-wrap: anywhere;
 }
 

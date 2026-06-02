@@ -3,6 +3,7 @@ import { PIPELINE_LAYER_BY_ID } from '../data/pipeline-layers'
 import { classifyRow } from '../data/pipeline-kinds'
 import ExploreCommands from './ExploreCommands'
 import ObjectText from './ObjectText'
+import InteractionRow from './InteractionRow'
 import { ManifestChip, ManifestBlock } from './Manifest'
 
 // Monochrome line glyphs for the pipeline bands. Each is a single-stroke SVG
@@ -77,9 +78,18 @@ function KindGlyph({ name }) {
   }
 }
 
-// Object references in the revealed detail are lifted (via ObjectText) into the
-// same inline chips used by the why-callout and interaction rows, so the same
-// nodes are navigable wherever they're named.
+// The revealed detail under a node. Its content is rendered in the same visual
+// language as the detail-modal Interactions section so the two read as one:
+//   • lines   → the row's lead description, set white as body prose;
+//   • bullets → the row's mechanics, each an interaction-style row (kind-icon
+//               chip + emphasised verb + sentence) via the shared InteractionRow —
+//               they're verb-led interaction sentences from the same source as
+//               the Interactions section, so they classify the same way;
+//   • kv      → tight key/value facts (host path, backing object);
+//   • commands → copyable shell.
+// Object references throughout are lifted (via ObjectText) into the same inline
+// chips used by the why-callout and interaction rows, so the same nodes are
+// navigable wherever they're named.
 function RowDetail({ detail, color, onSelectComponent, selfId }) {
   return (
     <>
@@ -88,12 +98,18 @@ function RowDetail({ detail, color, onSelectComponent, selfId }) {
           <ObjectText text={l} onSelectComponent={onSelectComponent} selfId={selfId} />
         </div>
       ))}
-      {detail.bullets?.map((b, i) => (
-        <div key={`b${i}`} className="tree-detail-bullet">
-          <span className="tree-detail-marker" style={{ color }} aria-hidden="true">•</span>
-          <span><ObjectText text={b} onSelectComponent={onSelectComponent} selfId={selfId} /></span>
-        </div>
-      ))}
+      {detail.bullets?.length > 0 && (
+        <ul className="interaction-list tree-detail-interactions">
+          {detail.bullets.map((b, i) => (
+            <InteractionRow
+              key={`b${i}`}
+              text={b}
+              onSelectComponent={onSelectComponent}
+              selfId={selfId}
+            />
+          ))}
+        </ul>
+      )}
       {detail.kv?.map((p, i) => (
         <div key={`k${i}`} className="tree-detail-kv">
           <span className="tree-detail-k">{p.k}</span>
