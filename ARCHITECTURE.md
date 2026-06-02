@@ -309,17 +309,26 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    in the Guest Worker Node zone.
  * **Deep Dive tab (secondary surface):** A third tab — **Deep Dive**, sitting to
    the *left* of Overview so the topology stays the first thing you see — holds
-   ground-up explainers one level below the cluster: what **systemd** is and
-   manages, the standard **Linux boot** sequence, and how an **OpenShift/HCP node
-   boots** (NodePool → MachineConfig → Ignition Server → VMI → kubelet joins). It
-   reuses the packet-flow interaction model wholesale: a topic index (cards) opens
-   a numbered, expandable stage list (`.event-*` / `.hop` styling). Each topic is
-   pure data in `src/data/deep-dives.js` (event-shaped: `title`, `tagline`,
-   ordered `steps`), reusing `primitives.js` and the unit files in `manifests.js`
-   rather than re-authoring them — so a new explainer is just another array entry.
-   It is also reachable via a `systemd ↗` chip beside the `[UNIT]` tag in any
-   systemd-service detail modal, which deep-links straight to the systemd page.
-   Rendered by `DeepDiveTab.jsx`.
+   ground-up explainers one level below the cluster: the **systemd state
+   reconciliation loop** (followed through `ovnkube-node.service`), the standard
+   **Linux boot** sequence, and how an **OpenShift/HCP node boots** (NodePool →
+   MachineConfig → Ignition Server → VMI → kubelet joins). **It deliberately
+   mirrors the Overview's interaction model rather than the packet flow:** a topic
+   index + switcher opens a canvas of labelled **zones** holding **clickable
+   boxes** (reusing `Zone.jsx`/`NodeCard.jsx`), and clicking a box opens a detail
+   **popup** (`DeepDiveModal`, reusing `AncestryModal`'s gestures/CSS) with prose,
+   key/value rows, copyable commands, an example unit, or an ASCII blueprint. Each
+   topic is pure data in `src/data/deep-dives.js` — a zone tree (`zones → boxes`),
+   not registered in `zones.js`/`components.json` — so a new explainer is just
+   another entry. The systemd topic additionally declares a `reconciliation`
+   descriptor that drives an **animated loop** (`useReconciliationLoop`): a
+   "Kill Main PID" control fires `SIGCHLD` up to the PID 1 engine, flips the DAG
+   box to `UNIT_FAILED`, then animates the `fork()/execve()` restart, with the two
+   dependency dimensions — **Requires** (structural, solid badge) vs **After**
+   (chronological, dashed badge) — drawn distinctly. It is also reachable via a
+   `systemd ↗` chip beside the `[UNIT]` tag in any systemd-service detail modal,
+   which deep-links straight to the systemd page. Rendered by `DeepDiveTab.jsx` →
+   `DeepDiveCanvas.jsx`.
 ## 3. Reference Data Schemas
 ### Metadata Schema (components.json)
 ```json

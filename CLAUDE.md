@@ -46,12 +46,14 @@ src/
     primitives.js            # kernel/OS/virt primitives keyed by typePrefix
     manifests.js             # minimal example manifest (YAML) / systemd unit per componentId
     pipeline-layers.js       # Manifest → Kernel band definitions
-    deep-dives.js            # Deep Dive tab topics (systemd, Linux boot, HCP node boot); event-shaped, reuses primitives.js + manifests.js
+    deep-dives.js            # Deep Dive tab topics (systemd loop, Linux boot, HCP node boot) as zone trees of clickable boxes (mirrors the ZONES shape)
     pipeline-model.js        # builds a component's pipeline-tree band model
     interaction-kinds.js     # classifies interaction sentences (icon + accent)
     object-tags.js           # turns object names in prose into clickable chips
     badge-glossary.js        # explanations shown when a badge chip is clicked
-  hooks/useEventState.js     # active event + selected component + inspected hop state
+  hooks/
+    useEventState.js         # active event + selected component + inspected hop state
+    useReconciliationLoop.js # Deep Dive: systemd kill→SIGCHLD→UNIT_FAILED→restart animation state machine
   components/
     Tabs.jsx                 # tab nav
     EventSelector.jsx        # trace-flow dropdown
@@ -63,7 +65,9 @@ src/
     ArrowOverlay.jsx         # SVG layer: numbered bezier connectors between step nodes
     OverviewTab.jsx          # recursively renders ZONES tree + ArrowOverlay
     PacketFlowTab.jsx        # expandable hop list for active event
-    DeepDiveTab.jsx          # Deep Dive tab: topic index → numbered explainer stages (mirrors PacketFlowTab; reuses .event-*/.hop)
+    DeepDiveTab.jsx          # Deep Dive tab: topic index + switcher → an Overview-style canvas; owns the box-popup selection
+    DeepDiveCanvas.jsx       # renders a deep-dive topic's zone/box tree (reuses Zone/NodeCard) + the systemd reconciliation loop
+    DeepDiveModal.jsx        # box detail popup — AncestryModal's gestures/CSS with generic content (prose, kv, commands, ASCII)
     HopInspector.jsx         # bottom-docked single-hop reader (Overview tab)
     AncestryModal.jsx        # node detail sheet (React portal); Esc / tap-outside closes
     DetailSections.jsx       # tags, context, primitives, interactions, commands

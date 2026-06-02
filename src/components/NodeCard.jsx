@@ -10,6 +10,11 @@ export default function NodeCard({
   isDimmed,
   isHighlighted,
   onClick,
+  // Optional, used by the Deep Dive canvas only — Overview never passes these,
+  // so its cards are unchanged. `subtitle` is a status line; `badges` carry
+  // relationship chips ({ label, kind: 'requires' | 'after' | 'stat' }).
+  subtitle,
+  badges,
 }) {
   return (
     <div
@@ -45,6 +50,20 @@ export default function NodeCard({
         </span>
       )}
       <div className="node-title" style={{ color }}>{title}</div>
+      {subtitle && <div className="node-subtitle">{subtitle}</div>}
+      {badges?.length > 0 && (
+        <div className="node-badges">
+          {badges.map((b) => (
+            <span
+              key={b.label}
+              className={`node-badge node-badge--${b.kind || 'stat'}`}
+              style={{ color }}
+            >
+              {b.label}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
