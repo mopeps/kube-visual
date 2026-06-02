@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
 import ReconLoopOverlay from './ReconLoopOverlay'
+import ReconControls from './ReconControls'
 import useReconciliationLoop from '../hooks/useReconciliationLoop'
 
 // Renders a deep-dive topic as an Overview-style canvas: a stack of labelled
@@ -18,10 +19,10 @@ const accentOf = (zone, topic) => `var(--${zone.colorVar || topic.colorVar || 'k
 // kernel pins inside the unit's cgroup. Clicking a PID kills it; clicking the
 // box background opens its detail popup. Children sit visibly trapped here until
 // systemd sweeps them.
-function CgroupBox({ box, accent, subtitle, highlight, procs, running, onKillMain, onKillChild, onOpen }) {
+function CgroupBox({ box, accent, subtitle, highlight, procs, locked, onKillMain, onKillChild, onOpen }) {
   const killProc = (e, p) => {
     e.stopPropagation()
-    if (running) return
+    if (locked) return
     if (p.role === 'main') onKillMain()
     else onKillChild(p.pid)
   }
@@ -51,11 +52,12 @@ function CgroupBox({ box, accent, subtitle, highlight, procs, running, onKillMai
               type="button"
               className={`cgroup-proc cgroup-proc--${p.state} ${p.role === 'main' ? 'is-main' : ''}`}
               onClick={(e) => killProc(e, p)}
-              disabled={running || p.state !== 'running'}
+              disabled={locked || p.state !== 'running'}
               title={
-                p.state === 'trapped' ? 'Trapped — the kernel won’t let it escape the cgroup'
-                : p.role === 'main' ? 'Kill the main PID → unit restarts'
-                : 'Kill this child → reaped, no restart'
+                locked ? 'Walkthrough in progress — Reset to kill a different PID'
+                : p.state === 'trapped' ? 'Trapped — the kernel won’t let it escape the cgroup'
+                : p.role === 'main' ? 'Kill the main PID → walk the restart'
+                : 'Kill this child → walk the reap (no restart)'
               }
             >
               <span className="cgroup-proc-pid">{p.pid}</span>
@@ -90,7 +92,7 @@ export default function DeepDiveCanvas({ topic, onSelectBox }) {
           subtitle={ov?.subtitle ?? box.subtitle}
           highlight={ov?.highlight}
           procs={loop.procs}
-          running={loop.running}
+          locked={loop.armed}
           onKillMain={loop.killMain}
           onKillChild={loop.killChild}
           onOpen={() => onSelectBox(box.id)}
@@ -128,54 +130,19 @@ export default function DeepDiveCanvas({ topic, onSelectBox }) {
 
   return (
     <div className="deep-dive-canvas">
-      {recon && (
-        <div className="recon-controls" data-noswipe>
-          <span className="recon-controls-label">Reconciliation loop</span>
-          <button
-            type="button"
-            className="recon-btn recon-btn--kill"
-            onClick={loop.killMain}
-            disabled={loop.running}
-          >
-            ⚡ Kill Main PID {recon.main.pid}
-          </button>
-          <button
-            type="button"
-            className="recon-btn"
-            onClick={loop.reset}
-            disabled={loop.running}
-          >
-            ↺ Reset
-          </button>
-          <span className="recon-phase">{phaseLabel(loop.phase)}</span>
-        </div>
-      )}
+      {recon && <ReconControls loop={loop} recon={recon} />}
 
       <div className={`overview-canvas recon-stack ${recon?.edges ? 'recon-stack--edges' : ''}`} ref={stackRef}>
         {recon?.edges && (
-          <ReconLoopOverlay edges={recon.edges} canvasRef={stackRef} activePhase={loop.phase} />
-        )}
-        {loop.courier?.active && (
-          <div className={`recon-courier is-${loop.courier.dir}`} aria-hidden>
-            {loop.courier.label}
-          </div>
+          <ReconLoopOverlay
+            edges={recon.edges}
+            canvasRef={stackRef}
+            activeEdgeId={loop.activeEdgeId}
+            signal={loop.signal}
+          />
         )}
         {topic.zones.map((zone) => renderZone(zone))}
       </div>
     </div>
   )
-}
-
-function phaseLabel(phase) {
-  switch (phase) {
-    case 'killed': return 'main process killed'
-    case 'sigchld': return 'kernel fired SIGCHLD ↑'
-    case 'failed': return 'engine woke · UNIT_FAILED'
-    case 'sweep': return 'sweeping trapped children'
-    case 'restart': return 'fork() / execve() ↓'
-    case 'active': return 'restarted · UNIT_ACTIVE'
-    case 'child-killed': return 'child killed · SIGCHLD ↑'
-    case 'child-reaped': return 'child reaped · unit ACTIVE'
-    default: return 'idle · UNIT_ACTIVE'
-  }
 }
