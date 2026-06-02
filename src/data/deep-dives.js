@@ -98,9 +98,21 @@ const SYSTEMD = {
     engineBoxId: 'sd-engine',
     cgroupBoxId: 'sd-cgroup',
     realityBoxId: 'sd-reality',
-    mainPid: 10243,
-    restartPid: 10310,
-    childPid: 10255,
+    // The processes the kernel pins inside the unit's cgroup. The main process
+    // death triggers a unit restart; a child death is merely reaped.
+    main: { pid: 10243, label: 'ovnkube-node' },
+    children: [
+      { pid: 10255, label: 'ovn-nbctl' },
+      { pid: 10256, label: 'ovn-controller mon' },
+    ],
+    // Fresh PIDs systemd forks on restart.
+    restart: {
+      main: { pid: 10310, label: 'ovnkube-node' },
+      children: [
+        { pid: 10322, label: 'ovn-nbctl' },
+        { pid: 10323, label: 'ovn-controller mon' },
+      ],
+    },
   },
   zones: [
     {
@@ -227,7 +239,7 @@ const SYSTEMD = {
           id: 'sd-cgroup',
           title: 'Actual State · cgroup Tree',
           typePrefix: 'cgroupfs',
-          subtitle: 'cgroup.procs → 10243  (+ helper 10255)',
+          subtitle: 'system.slice/ovnkube-node.service · click a PID to kill it',
           detail: {
             role: 'PILLAR 3 · ACTUAL STATE',
             summary:
@@ -240,6 +252,10 @@ const SYSTEMD = {
                   { k: 'Path', v: '/sys/fs/cgroup/system.slice/ovnkube-node.service/' },
                   { k: 'cgroup.procs', v: 'holds the main PID; every child inherits the slice' },
                 ],
+              },
+              {
+                heading: 'Try it on the canvas',
+                body: 'Click the main PID inside this box to kill it: the children stay trapped in the cgroup (the kernel won’t let them escape) until systemd sweeps them and re-execs. Kill a child PID instead and it is simply reaped — the unit stays UNIT_ACTIVE, no restart.',
               },
               {
                 heading: 'Explore',
