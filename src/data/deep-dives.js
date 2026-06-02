@@ -21,10 +21,12 @@
 //     detail: {
 //       role?, summary,
 //       // Sections render keyword-first (mirrors the Overview's chip/tag look):
-//       //   tags  → short keyword chips        facts → accent key-chip + value
-//       //   units → chip-selectable unit gallery (UnitGallery)
+//       //   tags   → short keyword chips        facts  → accent key-chip + value
+//       //   states → colour-coded status pills + meaning (ok/bad/busy/idle tone)
+//       //   units  → chip-selectable unit gallery (UnitGallery)
 //       // plus the long-form fallbacks: body, bullets, kv, manifest, commands, ascii.
-//       sections: [{ heading, body?, tags?:[str], facts?:[{k,v}], bullets?,
+//       sections: [{ heading, body?, tags?:[str], facts?:[{k,v}],
+//                    states?:[{label,tone,meaning}], bullets?,
 //                    kv?:[{k,v}], units?:[unit], commands?,
 //                    manifest?:{kind,body}, ascii? }],
 //     },
@@ -294,7 +296,36 @@ const SYSTEMD = {
               'systemd compiles the unit files into a Directed Acyclic Graph held in its heap. Each unit is a C `Unit` struct carrying status flags (UNIT_ACTIVE, UNIT_FAILED) and pointers to its dependency nodes.',
             sections: [
               {
-                heading: 'Two distinct dimensions',
+                heading: 'Why “Directed Acyclic Graph”?',
+                facts: [
+                  { k: 'Directed', v: 'edges point one way — Requires= / After= have a direction' },
+                  { k: 'Acyclic', v: 'no cycles allowed — guarantees a solvable start order (no A→B→A deadlock)' },
+                  { k: 'Graph', v: 'units are nodes, dependencies are the edges between them' },
+                ],
+                tags: ['cycle → systemd breaks it + warns', 'topologically sortable'],
+              },
+              {
+                heading: 'Unit states (the ACTIVE flag)',
+                body: 'Every unit reports one high-level active state. The engine flips between them as it reconciles desired vs actual.',
+                states: [
+                  { label: 'active', tone: 'ok', meaning: 'running / ran successfully — desired == actual' },
+                  { label: 'activating', tone: 'busy', meaning: 'starting up — ExecStart in flight' },
+                  { label: 'deactivating', tone: 'busy', meaning: 'shutting down — ExecStop in flight' },
+                  { label: 'reloading', tone: 'busy', meaning: 're-reading its own config, no full restart' },
+                  { label: 'inactive', tone: 'idle', meaning: 'stopped cleanly — not running, no error' },
+                  { label: 'failed', tone: 'bad', meaning: 'process exited non-zero, timed out, or was killed' },
+                ],
+              },
+              {
+                heading: 'Load state (is the file even parsed?)',
+                facts: [
+                  { k: 'loaded', v: 'file found on the search path + parsed into the DAG' },
+                  { k: 'not-found', v: 'no such unit file — nothing to start' },
+                  { k: 'masked', v: 'symlinked to /dev/null — cannot be started at all' },
+                ],
+              },
+              {
+                heading: 'Two distinct dependency dimensions',
                 facts: [
                   { k: 'Requires=', v: 'structural — if ovs-vswitchd dies, ovnkube-node is stopped with it' },
                   { k: 'After=', v: 'ordering only — “start me after this”, nothing about presence' },
@@ -365,6 +396,7 @@ const SYSTEMD = {
                 tags: ['cgroups v2', 'kernel-enforced', 'no escape', 'children inherit the slice'],
                 facts: [
                   { k: 'Path', v: '/sys/fs/cgroup/system.slice/ovnkube-node.service/' },
+                  { k: 'system.slice', v: 'the cgroup branch grouping OS daemons (user apps live under user.slice)' },
                   { k: 'cgroup.procs', v: 'holds the main PID; every child inherits the slice' },
                 ],
               },
