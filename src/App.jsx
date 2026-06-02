@@ -188,9 +188,10 @@ export default function App() {
   const deepBoxIndex = useMemo(() => (deepTopicObj ? indexTopicBoxes(deepTopicObj) : {}), [deepTopicObj])
 
   // Auto-engage the trace when a deep-dive topic opens: a topic exists to walk
-  // its one canonical flow, so we land already tracing — arrows lit, hop reader
-  // on hop 1 — instead of a static, unengaged diagram. Topics without a flow
-  // (e.g. systemd, which has its own reconciliation loop) just clear the trace.
+  // its one canonical flow, so we land with the arrows already lit instead of a
+  // static, unengaged diagram. The hop reader stays closed until a badge/hop is
+  // clicked (focusFlow leaves the step null). Topics without a flow (e.g.
+  // systemd, which has its own reconciliation loop) just clear the trace.
   useEffect(() => {
     if (deepTopicObj?.flows?.length) focusFlow(deepTopicObj.flows[0])
     else clearFlow()
