@@ -1,5 +1,7 @@
+import { useRef } from 'react'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
+import ReconLoopOverlay from './ReconLoopOverlay'
 import useReconciliationLoop from '../hooks/useReconciliationLoop'
 
 // Renders a deep-dive topic as an Overview-style canvas: a stack of labelled
@@ -73,6 +75,7 @@ export default function DeepDiveCanvas({ topic, onSelectBox }) {
   const loop = useReconciliationLoop(topic.reconciliation)
   const overlays = loop.overlays
   const recon = topic.reconciliation
+  const stackRef = useRef(null)
 
   const renderBox = (box, zone) => {
     const ov = overlays[box.id]
@@ -148,7 +151,10 @@ export default function DeepDiveCanvas({ topic, onSelectBox }) {
         </div>
       )}
 
-      <div className="overview-canvas recon-stack">
+      <div className={`overview-canvas recon-stack ${recon?.edges ? 'recon-stack--edges' : ''}`} ref={stackRef}>
+        {recon?.edges && (
+          <ReconLoopOverlay edges={recon.edges} canvasRef={stackRef} activePhase={loop.phase} />
+        )}
         {loop.courier?.active && (
           <div className={`recon-courier is-${loop.courier.dir}`} aria-hidden>
             {loop.courier.label}
