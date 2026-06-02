@@ -83,6 +83,37 @@ export default function App() {
   const scrollPositions = useRef({})
   const restoreTabRef = useRef(null)
 
+  // Compact mode: the header + tab strip live in an absolutely-positioned
+  // "chrome" layer over the top of the swipe pager. We slide that layer up by
+  // the active pane's scroll offset (clamped to its own height) so it scrolls
+  // away with the content — then back into view when you scroll to the top —
+  // while the pager keeps its per-tab independent scroll and swipe gestures.
+  const shellRef = useRef(null)
+  const chromeRef = useRef(null)
+  const chromeHRef = useRef(0)
+
+  useLayoutEffect(() => {
+    if (!isCompact) return
+    const el = chromeRef.current
+    if (!el) return
+    const measure = () => {
+      const h = el.offsetHeight
+      chromeHRef.current = h
+      shellRef.current?.style.setProperty('--compact-chrome-h', `${h}px`)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [isCompact])
+
+  const handleActiveScroll = (scrollTop) => {
+    const el = chromeRef.current
+    if (!el) return
+    const shift = Math.min(Math.max(scrollTop, 0), chromeHRef.current)
+    el.style.transform = `translate3d(0, ${-shift}px, 0)`
+  }
+
   const changeTab = (next) => {
     if (next === tab) return
     scrollPositions.current[tab] = window.scrollY
@@ -198,44 +229,59 @@ export default function App() {
     return overviewPanel
   }
 
+  const chrome = (
+    <>
+      <Header />
+
+      <div className="tabs-row">
+        <Tabs tabs={visibleTabs} active={tab} onSelect={changeTab} />
+        {isWide && (
+          <button
+            type="button"
+            className={`dock-toggle ${dockOpen ? 'is-active' : ''}`}
+            onClick={() => setDockOpen(v => !v)}
+            aria-pressed={dockOpen}
+            title={dockOpen ? 'Undock the packet flow panel' : 'Dock the packet flow beside the overview'}
+          >
+            <span aria-hidden>⧉</span>
+            {dockOpen ? 'Undock flow' : 'Dock flow'}
+          </button>
+        )}
+      </div>
+    </>
+  )
+
   return (
     <div className="relative">
       <div
+        ref={shellRef}
         className={`mx-auto ${isCompact ? 'app-shell--compact' : 'px-3 sm:px-8 py-10'}`}
         style={{ maxWidth: 1500 }}
       >
-        <Header />
-
-        <div className="tabs-row">
-          <Tabs tabs={visibleTabs} active={tab} onSelect={changeTab} />
-          {isWide && (
-            <button
-              type="button"
-              className={`dock-toggle ${dockOpen ? 'is-active' : ''}`}
-              onClick={() => setDockOpen(v => !v)}
-              aria-pressed={dockOpen}
-              title={dockOpen ? 'Undock the packet flow panel' : 'Dock the packet flow beside the overview'}
-            >
-              <span aria-hidden>⧉</span>
-              {dockOpen ? 'Undock flow' : 'Dock flow'}
-            </button>
-          )}
-        </div>
-
         {isCompact ? (
-          // Touch / small screens: swipe horizontally between tabs. The host
-          // fills the rest of the fixed-height shell so each pane can scroll on
-          // its own.
-          <div className="swipe-host pt-4">
-            <SwipeViews
-              index={activeIndex}
-              count={visibleTabs.length}
-              onIndexChange={(i) => changeTab(visibleTabs[i].id)}
-            >
-              {visibleTabs.map(t => panelFor(t.id))}
-            </SwipeViews>
-          </div>
-        ) : docked ? (
+          // Touch / small screens: swipe horizontally between tabs. The chrome
+          // (header + tabs) floats over the top of the pager and slides away as
+          // the active pane scrolls; the host fills the fixed-height shell so
+          // each pane can scroll on its own.
+          <>
+            <div className="compact-chrome" ref={chromeRef}>
+              {chrome}
+            </div>
+            <div className="swipe-host">
+              <SwipeViews
+                index={activeIndex}
+                count={visibleTabs.length}
+                onIndexChange={(i) => changeTab(visibleTabs[i].id)}
+                onActiveScroll={handleActiveScroll}
+              >
+                {visibleTabs.map(t => panelFor(t.id))}
+              </SwipeViews>
+            </div>
+          </>
+        ) : (
+          <>
+            {chrome}
+            {docked ? (
           // Wide desktop with the flow docked: overview + flow, side by side.
           <div className="pt-6 dock-layout">
             <div className="dock-main min-w-0">{panelFor(tab)}</div>
@@ -262,11 +308,13 @@ export default function App() {
               </div>
             </aside>
           </div>
-        ) : (
-          // Mid-width desktop: classic single-column tabs.
-          <div className="pt-6 animate-fade-in" key={tab}>
-            {panelFor(tab)}
-          </div>
+            ) : (
+              // Mid-width desktop: classic single-column tabs.
+              <div className="pt-6 animate-fade-in" key={tab}>
+                {panelFor(tab)}
+              </div>
+            )}
+          </>
         )}
       </div>
 
