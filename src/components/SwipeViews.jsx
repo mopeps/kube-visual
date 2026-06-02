@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import useMediaQuery from '../hooks/useMediaQuery'
 
 // Horizontal, finger-tracking pager. The panels live in a flex track; the track
@@ -16,12 +16,20 @@ import useMediaQuery from '../hooks/useMediaQuery'
 const THRESHOLD = 0.22 // fraction of width that commits to the next panel
 const LOCK = 8 // px of travel before we decide the gesture's axis
 
-export default function SwipeViews({ index, count, onIndexChange, children }) {
+export default function SwipeViews({ index, count, onIndexChange, onActiveScroll, children }) {
   const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const viewportRef = useRef(null)
+  const paneRefs = useRef([])
   const drag = useRef({ active: false, axis: null, startX: 0, startY: 0, dx: 0, width: 0 })
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
+
+  // Report the active pane's scroll offset so the host can scroll its chrome
+  // (header + tabs) away in step with the content. Each pane keeps its own
+  // scroll position, so on a tab switch we re-report the incoming pane's offset.
+  useEffect(() => {
+    onActiveScroll?.(paneRefs.current[index]?.scrollTop || 0)
+  }, [index, onActiveScroll])
 
   function excluded(target) {
     return !!(target.closest &&
@@ -97,7 +105,13 @@ export default function SwipeViews({ index, count, onIndexChange, children }) {
         }}
       >
         {children.map((child, i) => (
-          <div className="swipe-pane" key={i} aria-hidden={i !== index}>
+          <div
+            className="swipe-pane"
+            key={i}
+            ref={(el) => { paneRefs.current[i] = el }}
+            onScroll={(e) => { if (i === index) onActiveScroll?.(e.currentTarget.scrollTop) }}
+            aria-hidden={i !== index}
+          >
             {child}
           </div>
         ))}
