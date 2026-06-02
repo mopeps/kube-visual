@@ -202,11 +202,20 @@ function podBands(component) {
     enrich('pod-mountns', kernelRealization.mountNamespace)
     enrich('pod-cgroups', kernelRealization.cgroupPath)
   }
-  // No separate "projected volumes" group here: each consumed resource is already
-  // shown — with its kernel primitive, host path, and backing object — as a child
-  // of the Pod node in the API-boundary band above, so restating the same mounts
-  // at the kernel layer was pure duplication.
-  bands.push({ layerId: 'linux-primitive', groups: [{ nodes: base }] })
+  // The consumed resources reappear here as a "projected volumes" group: band 2
+  // names each as an API object, while this kernel-layer view names the actual
+  // mount (its Linux primitive + host path) that realises it.
+  const groups = [{ nodes: base }]
+  if (cr.length) {
+    groups.push({
+      subhead: 'projected volumes',
+      nodes: cr.map(r => ({
+        label: `${r.linuxPrimitive} ${r.hostPath}`,
+        note: r.apiObject,
+      })),
+    })
+  }
+  bands.push({ layerId: 'linux-primitive', groups })
 
   return bands
 }
