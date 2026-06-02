@@ -1,5 +1,6 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import useEventState from './hooks/useEventState'
+import useFlowState from './hooks/useFlowState'
 import useMediaQuery from './hooks/useMediaQuery'
 import Tabs from './components/Tabs'
 import OverviewTab from './components/OverviewTab'
@@ -7,7 +8,9 @@ import PacketFlowTab from './components/PacketFlowTab'
 import DeepDiveTab from './components/DeepDiveTab'
 import AncestryModal from './components/AncestryModal'
 import HopInspector from './components/HopInspector'
+import DeepDiveHopInspector from './components/DeepDiveHopInspector'
 import SwipeViews from './components/SwipeViews'
+import { findDeepDive, indexTopicBoxes } from './data/deep-dives'
 import { scrollIntoUpperThird } from './lib/scroll'
 
 const TABS = [
@@ -48,6 +51,18 @@ export default function App() {
     focusStep,
     clearStep,
   } = useEventState()
+
+  // Deep-dive trace flows mirror the Overview's event state, but live on their
+  // own hook so the two never tangle (a topic's flow vs the topology's event).
+  const {
+    activeFlow,
+    activeFlowStep,
+    activeBoxIds,
+    selectFlow,
+    clearFlow,
+    selectFlowStep,
+    clearFlowStep,
+  } = useFlowState()
 
   // Swipe paging is the navigation model on small/touch screens; the dockable
   // side panel is a wide-desktop affordance. The 1024–1279px band keeps the
@@ -149,9 +164,10 @@ export default function App() {
   }
 
   // Deep Dive selection: toggle a topic open/closed (re-selecting clears back to
-  // the index), or clear to the index. Mirrors selectEvent / clearEvent.
-  const selectTopic = (id) => setDeepTopic(prev => (prev === id ? null : id))
-  const clearTopic = () => setDeepTopic(null)
+  // the index), or clear to the index. Mirrors selectEvent / clearEvent. Either
+  // way the active trace flow is dropped — flows belong to a single topic.
+  const selectTopic = (id) => { clearFlow(); setDeepTopic(prev => (prev === id ? null : id)) }
+  const clearTopic = () => { clearFlow(); setDeepTopic(null) }
 
   // Deep-link entry from a [systemd] node's detail popup: close the popup,
   // surface the Deep Dive tab, and open the requested page. Mirrors the
@@ -159,9 +175,16 @@ export default function App() {
   const openDeepDive = (topicId) => {
     scrollPositions.current[tab] = window.scrollY
     clearComponent()
+    clearFlow()
     setDeepTopic(topicId)
     setTab('deepdive')
   }
+
+  // Resolve the open topic + its box index once, for the deep-dive hop inspector
+  // that mounts at App root (so its fixed panel anchors to the viewport, not a
+  // transformed swipe pane — same reason the Overview's HopInspector lives here).
+  const deepTopicObj = useMemo(() => (deepTopic ? findDeepDive(deepTopic) : null), [deepTopic])
+  const deepBoxIndex = useMemo(() => (deepTopicObj ? indexTopicBoxes(deepTopicObj) : {}), [deepTopicObj])
 
   // Follow the trace on the overview: whenever the inspected hop changes (or an
   // event is freshly selected) and the overview is showing, scroll the object
@@ -221,6 +244,12 @@ export default function App() {
       activeTopic={deepTopic}
       onSelectTopic={selectTopic}
       onClearTopic={clearTopic}
+      activeFlow={activeFlow}
+      activeFlowStep={activeFlowStep}
+      activeBoxIds={activeBoxIds}
+      onSelectFlow={selectFlow}
+      onClearFlow={clearFlow}
+      onSelectFlowStep={selectFlowStep}
     />
   )
   const panelFor = (id) => {
@@ -334,6 +363,17 @@ export default function App() {
           activeStep={activeStep}
           onSelectStep={selectStep}
           onClose={clearStep}
+        />
+      )}
+
+      {/* The same bottom hop reader, for deep-dive trace flows. */}
+      {tab === 'deepdive' && (
+        <DeepDiveHopInspector
+          boxIndex={deepBoxIndex}
+          activeFlow={activeFlow}
+          activeStep={activeFlowStep}
+          onSelectStep={selectFlowStep}
+          onClose={clearFlowStep}
         />
       )}
     </div>

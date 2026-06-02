@@ -12,8 +12,14 @@
 //     topicId, title, tagline, colorVar,
 //     reconciliation?,                 // systemd only — drives the animation +
 //                                      // the on-canvas loop edges (recon.edges)
+//     flows?: [ flow ],                // Overview-style trace flows: numbered
+//                                      // box→box hops drawn on the canvas with a
+//                                      // flow navigator + bottom hop inspector.
+//                                      // Mirrors events.json for the deep dives.
 //     zones: [ zone ],
 //   }
+//   flow  = { flowId, flowName, description,
+//             steps: [{ step, sourceBoxId, targetBoxId, description }] }
 //   zone  = { id, label, colorVar, dashed?, boxes: [box], zones?: [zone] }
 //   box   = {
 //     id, title, typePrefix?, subtitle?,
@@ -456,6 +462,26 @@ const LINUX_BOOT = {
   tagline:
     'Four handoffs get a bare machine from power-on to a mounted root filesystem, before systemd ever runs. The same chain underlies the RHCOS/HCP node boot — with cluster-specific steps grafted on.',
   colorVar: 'k-cyan',
+  flows: [
+    {
+      flowId: 'lb-poweron',
+      flowName: 'Power-on → PID 1',
+      description:
+        'The five handoffs that carry a bare machine from firmware to a mounted real root with systemd running as PID 1.',
+      steps: [
+        { step: 1, sourceBoxId: 'lb-uefi', targetBoxId: 'lb-grub',
+          description: 'Firmware finishes POST and hands control to the bootloader it found on the EFI System Partition.' },
+        { step: 2, sourceBoxId: 'lb-grub', targetBoxId: 'lb-kernel-stage',
+          description: 'GRUB2 loads vmlinuz + the initramfs into memory, sets the kernel command line, and jumps into the kernel.' },
+        { step: 3, sourceBoxId: 'lb-kernel-stage', targetBoxId: 'lb-initramfs',
+          description: 'The kernel brings up core subsystems and the device model, then mounts the initramfs as a temporary in-RAM root.' },
+        { step: 4, sourceBoxId: 'lb-initramfs', targetBoxId: 'lb-switchroot',
+          description: 'dracut’s early userspace loads storage drivers, locates the real root device, and mounts it at /sysroot.' },
+        { step: 5, sourceBoxId: 'lb-switchroot', targetBoxId: 'lb-default-target',
+          description: 'switch_root pivots onto the real filesystem and execs systemd as PID 1, which drives the boot up to default.target.' },
+      ],
+    },
+  ],
   zones: [
     {
       id: 'lb-firmware',
@@ -592,6 +618,26 @@ const HCP_BOOT = {
   tagline:
     'A hosted-cluster worker is the standard Linux boot with three OpenShift graft points: its desired OS state is a MachineConfig, that state is delivered by an Ignition Server, and the “machine” is a KubeVirt VirtualMachineInstance. The end state is a node that has joined the hosted cluster.',
   colorVar: 'k-sky',
+  flows: [
+    {
+      flowId: 'hcp-provision',
+      flowName: 'NodePool → Node Ready',
+      description:
+        'How a declared NodePool becomes a running worker that has joined the hosted cluster — control-plane intent on the left, the booting VMI on the right.',
+      steps: [
+        { step: 1, sourceBoxId: 'hcp-nodepool', targetBoxId: 'hcp-mco',
+          description: 'The NodePool is reconciled; the Machine Config Operator merges every MachineConfig for the pool into one rendered config.' },
+        { step: 2, sourceBoxId: 'hcp-mco', targetBoxId: 'hcp-ignition',
+          description: 'The rendered config is compiled to an Ignition payload and handed to the per-hosted-cluster Ignition Server.' },
+        { step: 3, sourceBoxId: 'hcp-ignition', targetBoxId: 'hcp-vmi',
+          description: 'The KubeVirt VMI powers on and, via its kernel args, fetches its Ignition payload from the Ignition Server over the shared ingress.' },
+        { step: 4, sourceBoxId: 'hcp-vmi', targetBoxId: 'hcp-ignition-apply',
+          description: 'Still inside the initramfs, Ignition writes the units, files and kernel args to /sysroot on first boot.' },
+        { step: 5, sourceBoxId: 'hcp-ignition-apply', targetBoxId: 'hcp-join',
+          description: 'After switch_root, systemd reaches multi-user.target and starts kubelet; it sends a CSR, gets approved, and the node flips to Ready.' },
+      ],
+    },
+  ],
   zones: [
     {
       id: 'hcp-control',
