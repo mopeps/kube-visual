@@ -20,7 +20,12 @@
 //     badges?: [{ label, kind:'requires'|'after'|'stat' }],
 //     detail: {
 //       role?, summary,
-//       sections: [{ heading, body?, bullets?, kv?:[{k,v}], commands?,
+//       // Sections render keyword-first (mirrors the Overview's chip/tag look):
+//       //   tags  → short keyword chips        facts → accent key-chip + value
+//       //   units → chip-selectable unit gallery (UnitGallery)
+//       // plus the long-form fallbacks: body, bullets, kv, manifest, commands, ascii.
+//       sections: [{ heading, body?, tags?:[str], facts?:[{k,v}], bullets?,
+//                    kv?:[{k,v}], units?:[unit], commands?,
 //                    manifest?:{kind,body}, ascii? }],
 //     },
 //   }
@@ -41,6 +46,138 @@ Slice=system.slice
 
 [Install]
 WantedBy=multi-user.target`
+
+// ── A gallery of example units ───────────────────────────────────────────────
+// Many unit *types*, deliberately spanning beyond Kubernetes, so the reader sees
+// the range of what a unit can be and what each kind is for. Surfaced as a
+// chip-selectable gallery in the "Unit Files" popup.
+//   { id, name, kind, tag, summary, body, directives:[keyword chips] }
+const UNIT_EXAMPLES = [
+  {
+    id: 'u-nginx', name: 'nginx.service', kind: '.service', tag: 'forking daemon',
+    summary: 'A long-running web server. Type=forking tells systemd the launched process forks and the parent exits, so it tracks the daemonised child.',
+    directives: ['Type=forking', 'ExecReload', 'Restart=on-failure', 'Wants='],
+    body: `[Unit]
+Description=nginx web server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+PIDFile=/run/nginx.pid
+ExecStart=/usr/sbin/nginx
+ExecReload=/usr/sbin/nginx -s reload
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target`,
+  },
+  {
+    id: 'u-sysctl', name: 'systemd-sysctl.service', kind: '.service', tag: 'oneshot',
+    summary: 'Runs once to completion, not a daemon. RemainAfterExit keeps it reported "active" so other units can order After= it even though no process lingers.',
+    directives: ['Type=oneshot', 'RemainAfterExit=yes', 'WantedBy=sysinit.target'],
+    body: `[Unit]
+Description=Apply Kernel Variables
+DefaultDependencies=no
+After=systemd-modules-load.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/systemd/systemd-sysctl
+
+[Install]
+WantedBy=sysinit.target`,
+  },
+  {
+    id: 'u-backup-timer', name: 'backup.timer', kind: '.timer', tag: 'scheduler · cron',
+    summary: 'The systemd replacement for cron. It owns no process — it starts its sibling backup.service on a schedule. Persistent=true runs a missed job after downtime.',
+    directives: ['OnCalendar=', 'Persistent=true', 'WantedBy=timers.target'],
+    body: `[Unit]
+Description=Run the daily backup job
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+RandomizedDelaySec=15m
+
+[Install]
+WantedBy=timers.target`,
+  },
+  {
+    id: 'u-sshd-socket', name: 'sshd.socket', kind: '.socket', tag: 'socket activation',
+    summary: 'systemd itself holds the listening port and only launches the service when a connection actually arrives — saving resources until something connects.',
+    directives: ['ListenStream=22', 'Accept=yes', 'WantedBy=sockets.target'],
+    body: `[Unit]
+Description=OpenSSH per-connection socket
+
+[Socket]
+ListenStream=22
+Accept=yes
+
+[Install]
+WantedBy=sockets.target`,
+  },
+  {
+    id: 'u-data-mount', name: 'srv-data.mount', kind: '.mount', tag: 'filesystem',
+    summary: 'A declarative mount, equivalent to an /etc/fstab line. The unit filename must encode the mount point: /srv/data → srv-data.mount.',
+    directives: ['What=', 'Where=', 'Type=ext4', 'Options=noatime'],
+    body: `[Unit]
+Description=Mount the data volume
+
+[Mount]
+What=/dev/disk/by-label/DATA
+Where=/srv/data
+Type=ext4
+Options=defaults,noatime
+
+[Install]
+WantedBy=multi-user.target`,
+  },
+  {
+    id: 'u-jobs-path', name: 'jobs.path', kind: '.path', tag: 'path activation',
+    summary: 'Watches the filesystem (via inotify) and starts a companion service the moment a matching file appears — e.g. a spool directory that triggers a processor.',
+    directives: ['PathExistsGlob=', 'Unit=', 'WantedBy=multi-user.target'],
+    body: `[Unit]
+Description=Watch the job spool directory
+
+[Path]
+PathExistsGlob=/var/spool/jobs/*
+Unit=jobs-process.service
+
+[Install]
+WantedBy=multi-user.target`,
+  },
+  {
+    id: 'u-multiuser', name: 'multi-user.target', kind: '.target', tag: 'sync point',
+    summary: 'A target runs nothing — it is a named milestone (like an old SysV runlevel) that other units order against. Reaching it means "the system is up, multi-user".',
+    directives: ['Requires=', 'After=', 'AllowIsolate=yes'],
+    body: `[Unit]
+Description=Multi-User System
+Documentation=man:systemd.special(7)
+Requires=basic.target
+Conflicts=rescue.service rescue.target
+After=basic.target rescue.service rescue.target
+AllowIsolate=yes`,
+  },
+  {
+    id: 'u-kubelet', name: 'kubelet.service', kind: '.service', tag: 'kubernetes',
+    summary: 'The Kubernetes node agent — the cluster-side counterpart of ovnkube-node. After=crio.service guarantees the container runtime is up before the kubelet starts pods.',
+    directives: ['After=crio.service', 'Restart=always', 'RestartSec=10'],
+    body: `[Unit]
+Description=Kubernetes Kubelet
+Wants=crio.service
+After=crio.service
+
+[Service]
+ExecStart=/usr/bin/kubelet --config=/etc/kubernetes/kubelet.conf
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target`,
+  },
+]
 
 // ── systemd · the state reconciliation loop ─────────────────────────────────
 const SYSTEMD = {
@@ -104,19 +241,25 @@ const SYSTEMD = {
           detail: {
             role: 'DECLARATION',
             summary:
-              'Flat text unit files (.service, .socket, .target) are the on-disk source of truth. They are parsed once — at boot or on `systemctl daemon-reload` — and compiled into systemd’s in-memory graph. Editing a file changes nothing until that reload.',
+              'Flat text unit files are the on-disk source of truth. They are parsed once — at boot or on `systemctl daemon-reload` — and compiled into systemd’s in-memory graph. Editing a file changes nothing until that reload.',
             sections: [
               {
-                heading: 'Physical reality',
-                bullets: [
-                  '.service / .socket / .target files under the system unit search path.',
-                  'On OpenShift these are rendered from a MachineConfig and applied by Ignition / the MCO — not hand-edited.',
-                  'A reload re-parses the files and recompiles the dependency graph in place.',
+                heading: 'At a glance',
+                tags: ['plain text', 'declarative', 'parsed on daemon-reload', 'MCO-rendered on OpenShift'],
+                facts: [
+                  { k: '[Unit]', v: 'metadata + dependencies (Description, Requires, After)' },
+                  { k: '[Service]', v: 'how to run it (Type, ExecStart, Restart)' },
+                  { k: '[Install]', v: 'enablement target (WantedBy)' },
                 ],
               },
               {
-                heading: 'Example: ovnkube-node.service',
-                body: 'Note the two distinct dependency dimensions — a structural Requires= on Open vSwitch and a chronological After= on the network-pre target.',
+                heading: 'Unit types — pick a chip',
+                body: 'Units come in many kinds, far beyond Kubernetes. Each example shows what that type is for.',
+                units: UNIT_EXAMPLES,
+              },
+              {
+                heading: 'The headline unit · ovnkube-node.service',
+                tags: ['Requires= → structural', 'After= → ordering'],
                 manifest: { kind: 'UNIT', body: OVNKUBE_UNIT },
               },
               {
@@ -152,19 +295,14 @@ const SYSTEMD = {
             sections: [
               {
                 heading: 'Two distinct dimensions',
-                body: 'These are not the same edge — the UI draws them differently on purpose.',
-                kv: [
-                  { k: 'Requires= (structural)', v: 'Hard dependency. If ovs-vswitchd fails or stops, ovnkube-node is stopped with it.' },
-                  { k: 'After= (chronological)', v: 'Ordering only. Says “start me after this” — says nothing about whether it must be present.' },
+                facts: [
+                  { k: 'Requires=', v: 'structural — if ovs-vswitchd dies, ovnkube-node is stopped with it' },
+                  { k: 'After=', v: 'ordering only — “start me after this”, nothing about presence' },
                 ],
               },
               {
                 heading: 'In memory',
-                bullets: [
-                  'Unit = a struct on the heap, not a process.',
-                  'State flags flip atomically as the engine evaluates the graph.',
-                  'Dependency edges are pointers between Unit nodes.',
-                ],
+                tags: ['Unit = heap struct', 'not a process', 'flags flip atomically', 'edges = pointers'],
               },
               {
                 heading: 'Explore',
@@ -188,10 +326,10 @@ const SYSTEMD = {
             sections: [
               {
                 heading: 'Core mechanism',
-                bullets: [
-                  'epoll() — one loop, asleep until a file descriptor is ready.',
-                  'On a state change it issues fork(), execve(), socket() directly against the kernel.',
-                  'It does not poll; it waits to be notified (see Pillar 4).',
+                tags: ['PID 1', 'single C event loop', 'epoll()', 'event-driven, never polls'],
+                facts: [
+                  { k: 'asleep', v: 'blocks on epoll() until a file descriptor is ready' },
+                  { k: 'on event', v: 'issues fork() / execve() / socket() directly to the kernel' },
                 ],
               },
               {
@@ -223,15 +361,17 @@ const SYSTEMD = {
             sections: [
               {
                 heading: 'The containment anchor',
-                body: 'Under cgroups v2 the kernel enforces that processes cannot escape their cgroup tree. Any sub-shell, linker, or ovn-* helper that ovnkube-node forks is chained into the same directory by the kernel — so systemd’s tracking is exact.',
-                kv: [
+                body: 'Under cgroups v2 the kernel won’t let a process escape its cgroup tree — every helper ovnkube-node forks is chained into the same directory, so tracking is exact.',
+                tags: ['cgroups v2', 'kernel-enforced', 'no escape', 'children inherit the slice'],
+                facts: [
                   { k: 'Path', v: '/sys/fs/cgroup/system.slice/ovnkube-node.service/' },
                   { k: 'cgroup.procs', v: 'holds the main PID; every child inherits the slice' },
                 ],
               },
               {
                 heading: 'Try it on the canvas',
-                body: 'Click the main PID inside this box to kill it: the children stay trapped in the cgroup (the kernel won’t let them escape) until systemd sweeps them and re-execs. Kill a child PID instead and it is simply reaped — the unit stays UNIT_ACTIVE, no restart.',
+                tags: ['kill main → restart', 'kill child → reaped, no restart', 'children stay trapped'],
+                body: 'Click a PID in this box to arm the walkthrough, then step through what the kernel and systemd do.',
               },
               {
                 heading: 'Explore',
@@ -255,15 +395,16 @@ const SYSTEMD = {
             sections: [
               {
                 heading: 'The feedback primitives',
-                bullets: [
-                  'signalfd — turns asynchronous SIGCHLD (fired by the kernel on process death) into a readable fd.',
-                  'inotify — watches cgroup files for change.',
-                  'On a signal, systemd matches the dead PID to its cgroup, flips the DAG node to UNIT_FAILED, and re-runs the graph rules (e.g. an immediate restart).',
+                tags: ['signalfd', 'SIGCHLD', 'inotify', 'no polling'],
+                facts: [
+                  { k: 'signalfd', v: 'turns async SIGCHLD (kernel fires it on death) into a readable fd' },
+                  { k: 'inotify', v: 'watches cgroup files for change' },
+                  { k: 'on signal', v: 'match dead PID → flip DAG to UNIT_FAILED → re-run rules (restart)' },
                 ],
               },
               {
                 heading: 'Try the loop',
-                body: 'Use the “Kill Main PID” control on the canvas to watch the SIGCHLD → UNIT_FAILED → fork()/execve() restart play out across the three layers.',
+                body: 'Use the step-through walkthrough on the canvas to watch SIGCHLD → UNIT_FAILED → fork()/execve() play out one event at a time.',
                 commands: [
                   '# Watch the unit recover after a kill\nsystemctl kill -s SIGKILL ovnkube-node.service ; journalctl -u ovnkube-node -f',
                 ],

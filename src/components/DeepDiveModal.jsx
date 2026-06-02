@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ManifestBlock } from './Manifest'
 import ExploreCommands from './ExploreCommands'
+import UnitGallery from './UnitGallery'
 
 // A detail popup for a deep-dive box. Shares AncestryModal's look, gestures and
 // CSS classes (.ancestry-overlay / .ancestry-modal / grip-resize / swipe-dismiss
@@ -209,8 +210,35 @@ export default function DeepDiveModal({ content, onClose }) {
             <div key={i} className="detail-section">
               {sec.heading && <h4>{sec.heading}</h4>}
               {sec.body && <p>{sec.body}</p>}
+
+              {/* Keyword chips — short, self-explanatory concepts at a glance. */}
+              {sec.tags?.length > 0 && (
+                <div className="deep-tags">
+                  {sec.tags.map((t) => (
+                    <span key={t} className="deep-tag" style={{ '--tag-accent': accent }}>{t}</span>
+                  ))}
+                </div>
+              )}
+
+              {/* Facts — a labelled accent chip + one short value. Flatter and
+                  more scannable than a prose key/value list. */}
+              {sec.facts?.length > 0 && (
+                <div className="deep-facts">
+                  {sec.facts.map((row, j) => (
+                    <div key={j} className="deep-fact">
+                      <span className="deep-fact-key" style={{ color: accent, borderColor: `${accent}66`, background: `${accent}1a` }}>
+                        {row.k}
+                      </span>
+                      <span className="deep-fact-val">{row.v}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {sec.bullets?.length > 0 && (
-                <ul>{sec.bullets.map((b, j) => <li key={j}>{b}</li>)}</ul>
+                <ul className="deep-bullets" style={{ '--tag-accent': accent }}>
+                  {sec.bullets.map((b, j) => <li key={j}>{b}</li>)}
+                </ul>
               )}
               {sec.kv?.length > 0 && (
                 <dl className="detail-kv">
@@ -221,6 +249,9 @@ export default function DeepDiveModal({ content, onClose }) {
                     </div>
                   ))}
                 </dl>
+              )}
+              {sec.units?.length > 0 && (
+                <UnitGallery units={sec.units} color={accent} />
               )}
               {sec.manifest && (
                 <ManifestBlock body={sec.manifest.body} kind={sec.manifest.kind} color={accent} />
