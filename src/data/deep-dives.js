@@ -10,7 +10,8 @@
 //
 //   topic = {
 //     topicId, title, tagline, colorVar,
-//     reconciliation?,                 // systemd only — drives the animation
+//     reconciliation?,                 // systemd only — drives the animation +
+//                                      // the on-canvas loop edges (recon.edges)
 //     zones: [ zone ],
 //   }
 //   zone  = { id, label, colorVar, dashed?, boxes: [box], zones?: [zone] }
@@ -41,50 +42,6 @@ Slice=system.slice
 [Install]
 WantedBy=multi-user.target`
 
-const SYSTEMD_BLUEPRINT = `========================================================================
-[ HUMAN / DISK LAYER ]      /etc/systemd/system  &  /usr/lib/systemd/system
-                                   |
-                                   |  systemctl daemon-reload
-================================== V ====================================
-[ SYSTEMD · PID 1 MEMORY SPACE ]
-
-  DESIRED STATE — compiled DAG (heap)
-  +------------------------------------------------------------------+
-  | [ovnkube-node.service] --Requires/pointer--> [ovs-vswitchd.svc]  |
-  |  state: UNIT_ACTIVE                                               |
-  +------------------------------------------------------------------+
-        ^
-        |  (4) wakes, evaluates drift, updates flags
-        |
-  THE ENGINE — epoll() event loop (C)
-  +-----------------------------------------------+
-  |  blocks on signalfd, waiting for kernel...    |
-  +-----------------------------------------------+
-        |
-        |  (1) state shift -> ExecStart
-        |      direct syscalls: fork() / execve()
-        v
-========================================================================
-[ LINUX KERNEL SPACE ]
-
-  ACTUAL STATE — /sys/fs/cgroup tree (kernel VFS)
-  +-----------------------------------------------+
-  |  /sys/fs/cgroup/system.slice/                 |
-  |    \\__ ovnkube-node.service/                  |
-  |         |__ cgroup.procs  <- main PID [10243]  |
-  |         \\__ (kernel pins all children here)   |
-  +-----------------------------------------------+
-        |                              ^
-        |  (2) daemon killed           |  (3) escaped sub-tools
-        v                              |      stay trapped
-  KERNEL REALITY — CPU & network primitives
-  +------------------------------------------|----+
-  |  [PID 10243: ovnkube-node main] ---------+    |
-  |  [PID 10255: ovn-nbctl helper]                |
-  |  !! KILL !!  -> kernel fires SIGCHLD ---------+
-  +-----------------------------------------------+
-========================================================================`
-
 // ── systemd · the state reconciliation loop ─────────────────────────────────
 const SYSTEMD = {
   topicId: 'systemd',
@@ -113,6 +70,25 @@ const SYSTEMD = {
         { pid: 10323, label: 'ovn-controller mon' },
       ],
     },
+    // The reconciliation loop drawn directly on the canvas (this replaces the
+    // old "Architectural Blueprint" popup): labelled connector edges between the
+    // four pillars — desired state (DAG), the engine, actual state (cgroup) and
+    // kernel reality — so the end-to-end loop reads off the overview itself.
+    //   from/to  = box ids to anchor between (dd-<id> in the DOM)
+    //   bias     = sideways bow for parallel vertical edges ('left' | 'right')
+    //   accent   = colour var; phase = loop phase that lights this edge up
+    edges: [
+      { id: 'compile', from: 'sd-units', to: 'sd-dag', step: '1',
+        label: 'daemon-reload\ncompiles the DAG', accent: 'k-purple' },
+      { id: 'evaluate', from: 'sd-engine', to: 'sd-dag', step: '2',
+        label: 'evaluates drift\nsets UNIT flags', accent: 'k-amber', phase: 'failed' },
+      { id: 'enforce', from: 'sd-engine', to: 'sd-reality', step: '3', bias: 'left',
+        label: 'ExecStart\nfork() / execve()', accent: 'k-green', phase: 'restart' },
+      { id: 'pin', from: 'sd-reality', to: 'sd-cgroup', step: '4',
+        label: 'kernel pins PIDs\ninto cgroup.procs', accent: 'k-green' },
+      { id: 'notify', from: 'sd-reality', to: 'sd-engine', step: '5', bias: 'right',
+        label: 'SIGCHLD on\nprocess death', accent: 'packet', phase: 'sigchld' },
+    ],
   },
   zones: [
     {
@@ -292,20 +268,6 @@ const SYSTEMD = {
                   '# Watch the unit recover after a kill\nsystemctl kill -s SIGKILL ovnkube-node.service ; journalctl -u ovnkube-node -f',
                 ],
               },
-            ],
-          },
-        },
-        {
-          id: 'sd-blueprint',
-          title: 'Architectural Blueprint',
-          typePrefix: 'ASCII',
-          subtitle: 'the full reconciliation loop, end to end',
-          detail: {
-            role: 'REFERENCE',
-            summary:
-              'The whole loop on one page: disk → PID 1 memory (DAG + engine) → kernel space (cgroup tree + reality), and the SIGCHLD feedback edge that closes it.',
-            sections: [
-              { heading: 'Blueprint', ascii: SYSTEMD_BLUEPRINT },
             ],
           },
         },

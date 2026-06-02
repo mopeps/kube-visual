@@ -1050,6 +1050,34 @@ body::after {
 /* The travelling signal courier — a chip that animates up (SIGCHLD) or down
    (fork/execve) the zone stack to convey the feedback edge. */
 .recon-stack { position: relative; }
+
+/* When the reconciliation loop is drawn on the canvas (ReconLoopOverlay), open
+   up the inter-zone gaps so the connector edges + their two-line labels have
+   room to breathe between the pillar boxes. */
+.recon-stack--edges { gap: 46px; padding-top: 14px; padding-bottom: 14px; }
+@media (max-width: 640px) {
+  .recon-stack--edges { gap: 40px; }
+}
+
+/* The reconciliation-loop connector edges. Static structural map by default; the
+   edge whose `phase` matches the live loop step brightens and pulses. */
+.recon-edge-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+.recon-edge.is-live .recon-edge-label { opacity: 1; }
+.recon-edge.is-live .recon-edge-line {
+  filter: drop-shadow(0 0 5px currentColor);
+  animation: recon-edge-flow 0.7s linear infinite;
+}
+@keyframes recon-edge-flow {
+  to { stroke-dashoffset: -20; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .recon-edge.is-live .recon-edge-line { animation: none; }
+}
 .recon-courier {
   position: absolute;
   right: 22px;
