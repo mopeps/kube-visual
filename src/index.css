@@ -1312,6 +1312,37 @@ body::after {
   background: color-mix(in srgb, var(--tag-accent, var(--k-cyan)) 12%, transparent);
 }
 
+/* Status pills — colour carries the meaning (ok/bad/busy/idle). */
+.deep-states { display: flex; flex-direction: column; gap: 7px; margin: 6px 0 2px; }
+.deep-state { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; --state: var(--tx-muted); }
+.deep-state--ok { --state: var(--k-green); }
+.deep-state--bad { --state: var(--packet); }
+.deep-state--busy { --state: var(--k-amber); }
+.deep-state--idle { --state: var(--tx-dim); }
+.deep-state-pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 104px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: var(--state);
+  border: 1px solid color-mix(in srgb, var(--state) 55%, transparent);
+  background: color-mix(in srgb, var(--state) 14%, transparent);
+}
+.deep-state-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--state);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--state) 70%, transparent);
+}
+.deep-state-meaning { font-size: 0.74rem; line-height: 1.5; color: var(--tx); flex: 1 1 200px; }
+
 .deep-facts { display: flex; flex-direction: column; gap: 7px; margin: 6px 0 2px; }
 .deep-fact { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
 .deep-fact-key {

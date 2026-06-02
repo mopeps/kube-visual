@@ -220,6 +220,20 @@ export default function DeepDiveModal({ content, onClose }) {
                 </div>
               )}
 
+              {/* States — colour-coded status pills (green=ok, red=failed,
+                  amber=transitional, dim=idle) each with a one-line meaning, so
+                  the state set is legible by colour at a glance. */}
+              {sec.states?.length > 0 && (
+                <div className="deep-states">
+                  {sec.states.map((s) => (
+                    <div key={s.label} className={`deep-state deep-state--${s.tone || 'idle'}`}>
+                      <span className="deep-state-pill"><span className="deep-state-dot" />{s.label}</span>
+                      <span className="deep-state-meaning">{s.meaning}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Facts — a labelled accent chip + one short value. Flatter and
                   more scannable than a prose key/value list. */}
               {sec.facts?.length > 0 && (
