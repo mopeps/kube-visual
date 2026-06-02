@@ -964,8 +964,9 @@ body::after {
 .hop-detail.is-open { display: block; }
 
 /* ── Deep Dive tab ──────────────────────────────────────────────────────
-   Reuses .event-gallery / .event-card / .flow-switcher / .hop wholesale; only
-   the per-topic accent and a few prose elements are bespoke. */
+   The index + switcher reuse .event-gallery / .event-card / .flow-switcher.
+   The topic body reuses the Overview's .overview-canvas / .zone / .node, plus
+   the .ancestry-modal popup — so only a few deep-dive specifics live here. */
 .deep-card:hover { border-color: var(--deep-accent, var(--k-cyan)); }
 .deep-dive .flow-switcher .event-pill.is-active {
   color: var(--bg);
@@ -973,29 +974,147 @@ body::after {
   border-color: var(--deep-accent, var(--packet));
   box-shadow: 0 0 24px color-mix(in srgb, var(--deep-accent, var(--packet)) 40%, transparent);
 }
-.deep-kicker {
+
+/* Deep-dive boxes carry a status line + relationship badges, so unlike the
+   fixed 128px Overview cards they size to their content. */
+.deep-dive-canvas .node {
+  width: auto;
+  min-width: 150px;
+  max-width: 320px;
+}
+@media (max-width: 640px) {
+  .deep-dive-canvas .node {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}
+
+/* Two distinct dependency dimensions: a hard structural Requires= (solid, with
+   a faint fill) vs a chronological After= ordering edge (dashed, hollow). */
+.node-badge--requires {
+  border-style: solid;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+.node-badge--after {
+  border-style: dashed;
+  background: none;
+  opacity: 0.8;
+}
+
+/* Reconciliation-loop control bar. */
+.recon-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-w);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+}
+.recon-controls-label {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.56rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  margin-bottom: 5px;
+  color: var(--tx-dim);
 }
-.deep-body {
-  font-size: 0.76rem;
-  line-height: 1.65;
+.recon-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-w);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--tx);
-  margin: 8px 0 0;
+  cursor: pointer;
+  transition: all 0.18s;
 }
-.deep-bullets {
-  margin: 10px 0 0;
-  padding-left: 16px;
-  list-style: disc;
+.recon-btn:hover:not(:disabled) { border-color: var(--tx-muted); color: var(--tx-bright); }
+.recon-btn:disabled { opacity: 0.4; cursor: default; }
+.recon-btn--kill { color: var(--packet); border-color: color-mix(in srgb, var(--packet) 55%, transparent); }
+.recon-btn--kill:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--packet) 18%, transparent);
+  border-color: var(--packet);
+  color: var(--packet);
 }
-.deep-bullets li {
-  font-size: 0.72rem;
-  line-height: 1.6;
+.recon-phase {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
   color: var(--tx-muted);
-  margin-bottom: 4px;
+}
+
+/* The travelling signal courier — a chip that animates up (SIGCHLD) or down
+   (fork/execve) the zone stack to convey the feedback edge. */
+.recon-stack { position: relative; }
+.recon-courier {
+  position: absolute;
+  right: 22px;
+  z-index: 5;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--bg);
+  background: var(--packet);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--packet) 55%, transparent);
+}
+.recon-courier.is-up { animation: recon-up 0.82s ease forwards; }
+.recon-courier.is-down {
+  background: var(--k-green);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--k-green) 55%, transparent);
+  animation: recon-down 0.9s ease forwards;
+}
+@keyframes recon-up {
+  0%   { bottom: 8%;  opacity: 0; transform: translateY(8px) scale(0.9); }
+  18%  { opacity: 1; }
+  100% { bottom: 62%; opacity: 0; transform: translateY(-8px) scale(1); }
+}
+@keyframes recon-down {
+  0%   { bottom: 62%; opacity: 0; transform: translateY(-8px) scale(0.9); }
+  18%  { opacity: 1; }
+  100% { bottom: 8%;  opacity: 0; transform: translateY(8px) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .recon-courier { animation-duration: 0.01ms !important; }
+}
+
+/* Key/value rows + ASCII blueprint inside the deep-dive popup. */
+.detail-kv { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.detail-kv-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.4fr) 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+.detail-kv-row dt {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.detail-kv-row dd {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.6;
+  color: var(--tx);
+}
+.deep-ascii {
+  font-size: 0.62rem;
+  line-height: 1.5;
+  color: var(--tx);
+  white-space: pre;
+}
+@media (max-width: 640px) {
+  .detail-kv-row { grid-template-columns: 1fr; gap: 2px; }
+  .deep-ascii { font-size: 0.54rem; }
 }
 
 .code-block {
