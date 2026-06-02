@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { DEEP_DIVES, findDeepDive, indexTopicBoxes } from '../data/deep-dives'
 import DeepDiveCanvas from './DeepDiveCanvas'
 import DeepDiveModal from './DeepDiveModal'
+import { scrollIntoUpperThird } from '../lib/scroll'
 
 const accent = (colorVar) => `var(--${colorVar || 'k-cyan'})`
 
@@ -63,14 +64,73 @@ function TopicSwitcher({ activeTopic, onSelectTopic, onClearTopic }) {
   )
 }
 
-export default function DeepDiveTab({ activeTopic, onSelectTopic, onClearTopic }) {
+// The flow navigator: the Overview's trace-flow picker, on the deep-dive page.
+// Only shown for topics that declare `flows`. Picking a flow lights up its hops
+// on the canvas (arrows + step badges) and opens the bottom hop inspector.
+function FlowNavigator({ topic, activeFlow, onSelectFlow, onClearFlow }) {
+  if (!topic.flows?.length) return null
+  return (
+    <div className="mb-3">
+      <div className="flow-switcher">
+        <span className="flow-switcher-label">Trace flow</span>
+        {topic.flows.map((f) => (
+          <button
+            key={f.flowId}
+            type="button"
+            className={`event-pill ${activeFlow?.flowId === f.flowId ? 'is-active' : ''}`}
+            style={activeFlow?.flowId === f.flowId ? { '--deep-accent': accent(topic.colorVar) } : undefined}
+            onClick={() => onSelectFlow(f)}
+            title={f.description}
+          >
+            {f.flowName}
+          </button>
+        ))}
+        {activeFlow && (
+          <button type="button" className="event-pill flow-switcher-clear" onClick={onClearFlow}>
+            × Clear
+          </button>
+        )}
+      </div>
+      <p className="text-[0.7rem] mt-1.5 leading-snug" style={{ color: 'var(--tx-muted)' }}>
+        {activeFlow
+          ? activeFlow.description
+          : 'Pick a flow to trace its hops on the canvas, then click a numbered badge to inspect a hop.'}
+      </p>
+    </div>
+  )
+}
+
+export default function DeepDiveTab({
+  activeTopic,
+  onSelectTopic,
+  onClearTopic,
+  activeFlow,
+  activeFlowStep,
+  activeBoxIds,
+  onSelectFlow,
+  onClearFlow,
+  onSelectFlowStep,
+}) {
   const [selectedBoxId, setSelectedBoxId] = useState(null)
 
   const topic = activeTopic ? findDeepDive(activeTopic) : null
   const boxIndex = useMemo(() => (topic ? indexTopicBoxes(topic) : {}), [topic])
+  const colorOf = useCallback((boxId) => boxIndex[boxId]?.accent || 'var(--k-cyan)', [boxIndex])
 
   // Switching topics drops any open popup.
   useEffect(() => { setSelectedBoxId(null) }, [activeTopic])
+
+  // Follow the trace: when a hop is focused, bring its target box into the upper
+  // third of whatever scrolls the canvas (mirrors the Overview's trace-follow).
+  useEffect(() => {
+    if (activeFlowStep == null || !activeFlow) return
+    const step = activeFlow.steps.find(s => s.step === activeFlowStep)
+    if (!step) return
+    const raf = requestAnimationFrame(() => {
+      scrollIntoUpperThird(document.getElementById(`dd-${step.targetBoxId}`))
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [activeFlowStep, activeFlow])
 
   const selectBox = useCallback((id) => setSelectedBoxId(id), [])
   const closeBox = useCallback(() => setSelectedBoxId(null), [])
@@ -106,7 +166,26 @@ export default function DeepDiveTab({ activeTopic, onSelectTopic, onClearTopic }
         </p>
       </div>
 
-      <DeepDiveCanvas topic={topic} onSelectBox={selectBox} />
+      <FlowNavigator
+        topic={topic}
+        activeFlow={activeFlow}
+        onSelectFlow={onSelectFlow}
+        onClearFlow={onClearFlow}
+      />
+
+      <DeepDiveCanvas
+        topic={topic}
+        onSelectBox={selectBox}
+        activeFlow={activeFlow}
+        activeFlowStep={activeFlowStep}
+        onSelectFlowStep={onSelectFlowStep}
+        activeBoxIds={activeBoxIds}
+        colorOf={colorOf}
+      />
+
+      {/* Tail spacer so the bottom box can scroll clear of the fixed hop
+          inspector when a flow hop is being inspected (--hop-inset). */}
+      <div aria-hidden style={{ height: 'calc(1rem + var(--hop-inset, 0px))' }} />
 
       <DeepDiveModal content={content} onClose={closeBox} />
     </div>

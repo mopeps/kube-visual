@@ -3,7 +3,20 @@ import Zone from './Zone'
 import NodeCard from './NodeCard'
 import ReconLoopOverlay from './ReconLoopOverlay'
 import ReconControls from './ReconControls'
+import DeepDiveArrowOverlay from './DeepDiveArrowOverlay'
 import useReconciliationLoop from '../hooks/useReconciliationLoop'
+
+// Map a flow's box ids → the step number each first appears in (mirrors the
+// Overview's buildStepNumMap), so boxes can show a corner step badge.
+function buildStepNumMap(flow) {
+  const map = new Map()
+  if (!flow) return map
+  flow.steps.forEach(s => {
+    if (!map.has(s.sourceBoxId)) map.set(s.sourceBoxId, s.step)
+    if (!map.has(s.targetBoxId)) map.set(s.targetBoxId, s.step)
+  })
+  return map
+}
 
 // Renders a deep-dive topic as an Overview-style canvas: a stack of labelled
 // zones holding clickable boxes. Reuses Zone / NodeCard (pure presentational),
@@ -73,15 +86,30 @@ function CgroupBox({ box, accent, subtitle, highlight, procs, locked, onKillMain
   )
 }
 
-export default function DeepDiveCanvas({ topic, onSelectBox }) {
+export default function DeepDiveCanvas({
+  topic,
+  onSelectBox,
+  activeFlow,
+  activeFlowStep,
+  onSelectFlowStep,
+  activeBoxIds,
+  colorOf,
+}) {
   const loop = useReconciliationLoop(topic.reconciliation)
   const overlays = loop.overlays
   const recon = topic.reconciliation
   const stackRef = useRef(null)
 
+  // Trace-flow highlighting (mirrors the Overview): boxes touched by the active
+  // flow light up + carry a step badge, the rest dim down.
+  const stepNums = buildStepNumMap(activeFlow)
+  const hasActive = activeBoxIds && activeBoxIds.size > 0
+
   const renderBox = (box, zone) => {
     const ov = overlays[box.id]
     const accent = ov?.accent || accentOf(zone, topic)
+    const isActive = activeBoxIds?.has?.(box.id)
+    const isDimmed = hasActive && !isActive
 
     if (recon && box.id === recon.cgroupBoxId) {
       return (
@@ -109,6 +137,9 @@ export default function DeepDiveCanvas({ topic, onSelectBox }) {
         color={accent}
         subtitle={ov?.subtitle ?? box.subtitle}
         badges={box.badges}
+        stepNum={stepNums.get(box.id)}
+        isActive={isActive}
+        isDimmed={isDimmed}
         isHighlighted={ov?.highlight}
         onClick={() => onSelectBox(box.id)}
       />
@@ -139,6 +170,15 @@ export default function DeepDiveCanvas({ topic, onSelectBox }) {
             canvasRef={stackRef}
             activeEdgeId={loop.activeEdgeId}
             signal={loop.signal}
+          />
+        )}
+        {activeFlow && (
+          <DeepDiveArrowOverlay
+            activeFlow={activeFlow}
+            canvasRef={stackRef}
+            activeStep={activeFlowStep}
+            onSelectStep={onSelectFlowStep}
+            colorOf={colorOf}
           />
         )}
         {topic.zones.map((zone) => renderZone(zone))}
