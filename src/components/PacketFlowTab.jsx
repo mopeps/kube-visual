@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { findComponent } from '../data/components-index'
 import events from '../data/events.json'
 import { COMPONENT_COLOR } from '../data/zones'
+import ObjectSelect from './ObjectSelect'
+
+const hopCount = (n) => `${n} hop${n === 1 ? '' : 's'}`
 
 function Hop({ step, isOpen, isSelected, onToggle, onJump, isFinal }) {
   const target = findComponent(step.targetComponentId)
@@ -116,31 +119,29 @@ function EventGallery({ onSelectEvent }) {
 
 // Always-available switcher: jump straight to any other flow, or clear back to
 // the gallery. This carries the trace-picking that used to live in the header
-// dropdown, so the tab is self-sufficient.
+// dropdown, so the tab is self-sufficient. Styled as an "open an object" popover
+// (ObjectSelect), keyed to the packet accent that identifies the trace theme.
 function FlowSwitcher({ activeEvent, onSelectEvent, onClearEvent }) {
+  const options = events.map(e => ({
+    id: e.eventId,
+    title: e.eventName,
+    desc: e.description,
+    meta: hopCount(e.steps.length),
+    accent: 'var(--packet)',
+    event: e,
+  }))
   return (
-    <div className="flow-switcher">
-      <span className="flow-switcher-label">Trace flow</span>
-      {events.map(e => (
-        <button
-          key={e.eventId}
-          type="button"
-          className={`event-pill ${activeEvent?.eventId === e.eventId ? 'is-active' : ''}`}
-          onClick={() => onSelectEvent(e)}
-          title={e.description}
-        >
-          {e.eventName}
-        </button>
-      ))}
-      {onClearEvent && (
-        <button
-          type="button"
-          className="event-pill flow-switcher-clear"
-          onClick={onClearEvent}
-        >
-          × Clear
-        </button>
-      )}
+    <div className="obj-select-row">
+      <ObjectSelect
+        label="Trace flow"
+        accent="var(--packet)"
+        value={activeEvent ? { title: activeEvent.eventName, meta: hopCount(activeEvent.steps.length) } : null}
+        placeholder="Choose a trace flow"
+        options={options}
+        activeId={activeEvent?.eventId}
+        onSelect={(opt) => { if (opt.id !== activeEvent?.eventId) onSelectEvent(opt.event) }}
+        clear={onClearEvent ? { label: '× Clear — back to gallery', onClear: onClearEvent } : undefined}
+      />
     </div>
   )
 }

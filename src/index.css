@@ -840,6 +840,174 @@ body::after {
 .flow-switcher .event-pill { font-size: 0.66rem; padding: 6px 12px; }
 .flow-switcher-clear { color: var(--tx-dim); }
 
+/* ── Object selector ──────────────────────────────────────────────────
+   The trace pickers (Overview event flow, Deep Dive topic + flow) styled in
+   the etcd intent-store idiom: a clickable trigger card opening a floating
+   popover list. See ObjectSelect.jsx for the anchoring rationale. */
+.obj-select-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: stretch;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-w);
+}
+.obj-select {
+  position: relative;
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.obj-select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--obj-accent) 45%, var(--border-w));
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--obj-accent) 11%, transparent) 0%,
+    rgba(0, 0, 0, 0.35) 100%);
+  cursor: pointer;
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+}
+.obj-select-trigger:hover,
+.obj-select-trigger.is-open {
+  border-color: var(--obj-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--obj-accent) 32%, transparent),
+              0 0 22px color-mix(in srgb, var(--obj-accent) 15%, transparent);
+}
+.obj-select-label {
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.54rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tx-dim);
+}
+.obj-select-value {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+.obj-select-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.obj-select-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.54rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tx-muted);
+}
+.obj-select-placeholder {
+  font-size: 0.85rem;
+  color: var(--tx-muted);
+}
+.obj-select-chevron {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--obj-accent);
+  font-size: 0.8rem;
+  line-height: 1;
+  transition: transform 0.18s;
+}
+.obj-select-trigger.is-open .obj-select-chevron { transform: rotate(180deg); }
+
+.obj-select-pop {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  min-width: 220px;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--obj-accent) 40%, var(--border-w));
+  background: var(--bg-3);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--obj-accent) 20%, transparent),
+              0 18px 44px rgba(0, 0, 0, 0.6);
+  animation: obj-select-pop 0.16s ease;
+}
+@keyframes obj-select-pop {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.obj-select-option {
+  position: relative;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 28px 8px 10px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s;
+}
+.obj-select-option:hover {
+  background: color-mix(in srgb, var(--opt-accent) 13%, transparent);
+  border-color: color-mix(in srgb, var(--opt-accent) 45%, transparent);
+}
+.obj-select-option.is-active {
+  border-color: var(--opt-accent);
+  background: color-mix(in srgb, var(--opt-accent) 10%, transparent);
+}
+.obj-select-option-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.obj-select-option-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--tx-bright);
+}
+.obj-select-option.is-active .obj-select-option-title { color: var(--opt-accent); }
+.obj-select-option-meta {
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--opt-accent);
+  white-space: nowrap;
+}
+.obj-select-option-desc {
+  font-size: 0.66rem;
+  line-height: 1.4;
+  color: var(--tx-muted);
+}
+.obj-select-check {
+  position: absolute;
+  right: 9px;
+  top: 8px;
+  color: var(--opt-accent);
+  font-size: 0.8rem;
+}
+.obj-select-clear .obj-select-option-title {
+  color: var(--tx-dim);
+  font-weight: 500;
+}
+
 /* ── Hop list ──────────────────────────────────────────────────────── */
 .hop {
   display: flex;

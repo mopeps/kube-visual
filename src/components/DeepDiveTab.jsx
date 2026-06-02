@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { DEEP_DIVES, findDeepDive, indexTopicBoxes } from '../data/deep-dives'
 import DeepDiveCanvas from './DeepDiveCanvas'
 import DeepDiveModal from './DeepDiveModal'
+import ObjectSelect from './ObjectSelect'
 import { scrollIntoUpperThird } from '../lib/scroll'
 
 const accent = (colorVar) => `var(--${colorVar || 'k-cyan'})`
@@ -38,65 +39,55 @@ function TopicIndex({ onSelectTopic }) {
   )
 }
 
-// Always-available switcher: jump to any other deep dive, or clear to the index.
-function TopicSwitcher({ activeTopic, onSelectTopic, onClearTopic }) {
+const hops = (n) => `${n} hop${n === 1 ? '' : 's'}`
+
+// Topic picker — jump to any other deep dive, or clear to the index. Styled as
+// an "open an object" popover (ObjectSelect), echoing the etcd intent store.
+function TopicSelect({ activeTopic, topic, onSelectTopic, onClearTopic }) {
+  const options = DEEP_DIVES.map((t) => ({
+    id: t.topicId,
+    title: t.title,
+    desc: t.tagline,
+    meta: `${countBoxes(t)} boxes`,
+    accent: accent(t.colorVar),
+  }))
   return (
-    <div className="flow-switcher">
-      <span className="flow-switcher-label">Deep dive</span>
-      {DEEP_DIVES.map((t) => (
-        <button
-          key={t.topicId}
-          type="button"
-          className={`event-pill ${activeTopic === t.topicId ? 'is-active' : ''}`}
-          style={activeTopic === t.topicId ? { '--deep-accent': accent(t.colorVar) } : undefined}
-          onClick={() => onSelectTopic(t.topicId)}
-          title={t.title}
-        >
-          {t.title}
-        </button>
-      ))}
-      {onClearTopic && (
-        <button type="button" className="event-pill flow-switcher-clear" onClick={onClearTopic}>
-          × Clear
-        </button>
-      )}
-    </div>
+    <ObjectSelect
+      label="Deep dive"
+      accent={accent(topic.colorVar)}
+      value={{ title: topic.title, meta: `${countBoxes(topic)} boxes` }}
+      options={options}
+      activeId={activeTopic}
+      onSelect={(opt) => { if (opt.id !== activeTopic) onSelectTopic(opt.id) }}
+      clear={{ label: '← All deep dives', onClear: onClearTopic }}
+    />
   )
 }
 
-// The flow navigator: the Overview's trace-flow picker, on the deep-dive page.
-// Only shown for topics that declare `flows`. Picking a flow lights up its hops
-// on the canvas (arrows + step badges) and opens the bottom hop inspector.
-function FlowNavigator({ topic, activeFlow, onSelectFlow, onClearFlow }) {
+// Flow picker — only for topics that declare `flows`. Picking a flow lights up
+// its hops on the canvas (arrows + step badges); the bottom hop reader opens
+// when a badge/hop is clicked. Clearing drops to the static (no-trace) view.
+function FlowSelect({ topic, activeFlow, onSelectFlow, onClearFlow }) {
   if (!topic.flows?.length) return null
+  const options = topic.flows.map((f) => ({
+    id: f.flowId,
+    title: f.flowName,
+    desc: f.description,
+    meta: hops(f.steps.length),
+    accent: accent(topic.colorVar),
+    flow: f,
+  }))
   return (
-    <div className="mb-3">
-      <div className="flow-switcher">
-        <span className="flow-switcher-label">Trace flow</span>
-        {topic.flows.map((f) => (
-          <button
-            key={f.flowId}
-            type="button"
-            className={`event-pill ${activeFlow?.flowId === f.flowId ? 'is-active' : ''}`}
-            style={activeFlow?.flowId === f.flowId ? { '--deep-accent': accent(topic.colorVar) } : undefined}
-            onClick={() => onSelectFlow(f)}
-            title={f.description}
-          >
-            {f.flowName}
-          </button>
-        ))}
-        {activeFlow && (
-          <button type="button" className="event-pill flow-switcher-clear" onClick={onClearFlow}>
-            × Clear
-          </button>
-        )}
-      </div>
-      <p className="text-[0.7rem] mt-1.5 leading-snug" style={{ color: 'var(--tx-muted)' }}>
-        {activeFlow
-          ? activeFlow.description
-          : 'Pick a flow to trace its hops on the canvas, then click a numbered badge to read a hop.'}
-      </p>
-    </div>
+    <ObjectSelect
+      label="Trace flow"
+      accent={accent(topic.colorVar)}
+      value={activeFlow ? { title: activeFlow.flowName, meta: hops(activeFlow.steps.length) } : null}
+      placeholder="Static view (no trace)"
+      options={options}
+      activeId={activeFlow?.flowId}
+      onSelect={(opt) => { if (opt.id !== activeFlow?.flowId) onSelectFlow(opt.flow) }}
+      clear={activeFlow ? { label: '× Static view (no trace)', onClear: onClearFlow } : undefined}
+    />
   )
 }
 
@@ -152,26 +143,29 @@ export default function DeepDiveTab({
 
   return (
     <div className="deep-dive">
-      <TopicSwitcher
-        activeTopic={activeTopic}
-        onSelectTopic={onSelectTopic}
-        onClearTopic={onClearTopic}
-      />
+      <div className="obj-select-row">
+        <TopicSelect
+          activeTopic={activeTopic}
+          topic={topic}
+          onSelectTopic={onSelectTopic}
+          onClearTopic={onClearTopic}
+        />
+        <FlowSelect
+          topic={topic}
+          activeFlow={activeFlow}
+          onSelectFlow={onSelectFlow}
+          onClearFlow={onClearFlow}
+        />
+      </div>
+
       <div className="mb-4">
         <div className="font-display text-[1.05rem] font-semibold leading-tight" style={{ color: accent(topic.colorVar) }}>
           {topic.title}
         </div>
         <p className="text-[0.74rem] mt-1 leading-snug" style={{ color: 'var(--tx-muted)' }}>
-          {topic.tagline}
+          {activeFlow ? activeFlow.description : topic.tagline}
         </p>
       </div>
-
-      <FlowNavigator
-        topic={topic}
-        activeFlow={activeFlow}
-        onSelectFlow={onSelectFlow}
-        onClearFlow={onClearFlow}
-      />
 
       <DeepDiveCanvas
         topic={topic}
