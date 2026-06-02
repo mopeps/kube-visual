@@ -53,7 +53,7 @@ function buildEdge(srcEl, tgtEl, canvasEl, bias) {
   return { d: `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${tx} ${ty}`, labelX, labelY }
 }
 
-export default function ReconLoopOverlay({ edges, canvasRef, activePhase }) {
+export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signal }) {
   const [paths, setPaths] = useState([])
   const rafRef = useRef(0)
 
@@ -103,6 +103,8 @@ export default function ReconLoopOverlay({ edges, canvasRef, activePhase }) {
 
   if (!paths.length) return null
 
+  const signalPath = signal ? paths.find((p) => p.id === signal.edgeId) : null
+
   return (
     <svg
       className="recon-loop-svg"
@@ -118,7 +120,7 @@ export default function ReconLoopOverlay({ edges, canvasRef, activePhase }) {
       </defs>
 
       {paths.map((p) => {
-        const live = activePhase && p.phase === activePhase
+        const live = activeEdgeId && p.id === activeEdgeId
         const lines = p.label.split('\n')
         return (
           <g key={p.id} className={`recon-edge ${live ? 'is-live' : ''}`}>
@@ -147,6 +149,23 @@ export default function ReconLoopOverlay({ edges, canvasRef, activePhase }) {
           </g>
         )
       })}
+
+      {/* The travelling signal — a token that animates along the active edge's
+          path (replacing the old side-docked courier), so a crossing signal
+          like SIGCHLD or fork()/execve() visibly moves between the two boxes it
+          connects. Keyed so it replays whenever the step changes. */}
+      {signalPath && (
+        <g key={signal.key} className="recon-signal">
+          <g>
+            <circle r="5" fill={signalPath.color} />
+            <text x="0" y="-9" textAnchor="middle" fontSize="8.5" fontWeight="700" fill={signalPath.color} style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+              {signal.label}
+            </text>
+            <animateMotion dur="1.15s" begin="0s" fill="freeze" path={signalPath.d} rotate="0" />
+            <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.12;0.82;1" dur="1.15s" begin="0s" fill="freeze" />
+          </g>
+        </g>
+      )}
     </svg>
   )
 }
