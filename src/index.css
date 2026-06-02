@@ -2148,12 +2148,53 @@ button.object-tag:hover {
   flex-direction: column;
   gap: 5px;
 }
-/* Revealed note text matches the interaction sentence (.interaction-text):
-   same 0.76rem / 1.6 body size and rhythm. */
-.tree-note {
+/* The definition callout that leads a revealed row — the same key-glyph + role
+   badge + sentence the detail modal opens with (.why-callout), set one level in.
+   It states what the row's object is / the problem it solves before the mechanics
+   (interaction rows) below it. Accent-tinted off the row colour so it threads to
+   the row it belongs to. A touch tighter than the modal's callout since it nests
+   inside the reveal rail. */
+.tree-why {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 11px;
+  margin-bottom: 1px;
+  border: 1px solid color-mix(in srgb, var(--row-color, var(--band-color)) 32%, transparent);
+  background: color-mix(in srgb, var(--row-color, var(--band-color)) 8%, transparent);
+  border-radius: 9px;
+}
+.tree-why-icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--row-color, var(--band-color));
+  border: 1px solid color-mix(in srgb, var(--row-color, var(--band-color)) 45%, transparent);
+  background: color-mix(in srgb, var(--row-color, var(--band-color)) 14%, transparent);
+  border-radius: 7px;
+}
+.tree-why-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* The action chip, here reused as the callout's role badge — sits on its own
+   line above the definition like .why-role, so its margin-right (tuned for inline
+   use) is cleared in favour of a block bottom-margin. */
+.tree-why-role {
+  align-self: flex-start;
+  margin: 0 0 6px;
+}
+/* The definition sentence: white body prose at the interaction text size. */
+.tree-why-text {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  font-weight: 500;
   color: var(--tx);
-  font-size: 0.76rem;
-  line-height: 1.6;
   overflow-wrap: anywhere;
 }
 /* A row's mechanics, rendered as the same interaction rows the modal's
