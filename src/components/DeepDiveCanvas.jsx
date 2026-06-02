@@ -172,6 +172,9 @@ export default function DeepDiveCanvas({
             signal={loop.signal}
           />
         )}
+        {topic.zones.map((zone) => renderZone(zone))}
+        {/* Trace arrows paint last (over the boxes), exactly like the Overview's
+            ArrowOverlay sits as the final child of its canvas. */}
         {activeFlow && (
           <DeepDiveArrowOverlay
             activeFlow={activeFlow}
@@ -181,7 +184,6 @@ export default function DeepDiveCanvas({
             colorOf={colorOf}
           />
         )}
-        {topic.zones.map((zone) => renderZone(zone))}
       </div>
     </div>
   )
