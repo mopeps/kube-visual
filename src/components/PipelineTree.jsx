@@ -27,6 +27,21 @@ const BAND_GLYPHS = {
   chip: <><rect x="7" y="7" width="10" height="10" rx="1" /><rect x="10.5" y="10.5" width="3" height="3" /><path d="M10 7V4M14 7V4M10 20v-3M14 20v-3M7 10H4M7 14H4M20 10h-3M20 14h-3" /></>,
 }
 
+// The key glyph that fronts a row's definition callout — the same "essential
+// reason" mark the detail modal's opening why-callout uses (DetailSections.jsx),
+// so a revealed pipeline row leads with the identical visual cue as the object's
+// first section, just one level in. Drawn at 1em to track the chip's font-size.
+function KeyGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="5.5" cy="5.5" r="3.2" />
+      <path d="M7.8 7.8 13 13" />
+      <path d="M11 11l1.6-1.6M12.4 12.4 14 10.8" />
+    </svg>
+  )
+}
+
 function BandIcon({ name }) {
   const glyph = BAND_GLYPHS[name]
   if (!glyph) return null
@@ -78,9 +93,11 @@ function KindGlyph({ name }) {
   }
 }
 
-// The revealed detail under a node. Its content is rendered in the same visual
-// language as the detail-modal Interactions section so the two read as one:
-//   • lines   → the row's lead description, set white as body prose;
+// The revealed detail under a node, shown beneath the definition callout. Its
+// content is rendered in the same visual language as the detail-modal Interactions
+// section so the two read as one:
+//   • lines   → any supplementary prose (e.g. the socket a daemon listens on),
+//               set white as body prose;
 //   • bullets → the row's mechanics, each an interaction-style row (kind-icon
 //               chip + emphasised verb + sentence) via the shared InteractionRow —
 //               they're verb-led interaction sentences from the same source as
@@ -136,14 +153,19 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
   const [manifestOpen, setManifestOpen] = useState(false)
   const color = node.color || bandColor
   const kids = node.children || []
-  // A row is expandable when it carries a note, deeper detail, or an example
+  // The row's definition — what this thing is / the problem it solves. Primitives
+  // carry their full description in `definition`; every other node's one-line
+  // `note` plays the same part. Either leads the reveal as a key-glyph callout.
+  const definition = node.definition || node.note
+  // A row is expandable when it carries a definition, deeper detail, or an example
   // manifest to reveal.
-  const hasExtra = !!node.note || !!node.detail || !!node.manifest
+  const hasExtra = !!definition || !!node.detail || !!node.manifest
   // Action chip — tags the revealed description by *what the pipeline does* at
   // this step (Stored, Mounted, Routed, Runs …), colour-coded by accent the way
   // the Interactions section tags each line by its verb. It complements the row
-  // label (what the thing is) rather than echoing it.
-  const action = (node.note || node.detail) ? classifyRow(node.label) : null
+  // label (what the thing is) rather than echoing it, and sits as the callout's
+  // "role" badge the way the modal's why-callout leads with a role.
+  const action = (definition || node.detail) ? classifyRow(node.label) : null
 
   return (
     <div className="tree-node">
@@ -163,15 +185,22 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
 
       {hasExtra && open && (
         <div className="tree-reveal" style={{ '--row-color': color }}>
-          {(action || node.note) && (
-            <div className="tree-note">
-              {action && (
-                <span className="tree-kind-chip" style={{ color: action.accent }}>
-                  <span className="tree-kind-chip-icon" aria-hidden="true"><KindGlyph name={action.icon} /></span>
-                  {action.label}
-                </span>
-              )}
-              {node.note && <ObjectText text={node.note} onSelectComponent={onSelectComponent} selfId={selfId} />}
+          {(definition || action) && (
+            <div className="tree-why">
+              <span className="tree-why-icon" aria-hidden="true"><KeyGlyph /></span>
+              <div className="tree-why-body">
+                {action && (
+                  <span className="tree-kind-chip tree-why-role" style={{ color: action.accent }}>
+                    <span className="tree-kind-chip-icon" aria-hidden="true"><KindGlyph name={action.icon} /></span>
+                    {action.label}
+                  </span>
+                )}
+                {definition && (
+                  <p className="tree-why-text">
+                    <ObjectText text={definition} onSelectComponent={onSelectComponent} selfId={selfId} />
+                  </p>
+                )}
+              </div>
             </div>
           )}
           {node.detail && (

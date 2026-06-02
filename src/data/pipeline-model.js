@@ -16,15 +16,6 @@ import { PRIMITIVES_BY_TYPE } from './primitives'
 
 const PURPLE = 'var(--k-purple)'
 
-// Trim a primitive's long description down to a one-line note.
-function shortNote(text) {
-  if (!text) return ''
-  const sentence = text.split(/(?<=\.)\s/)[0]
-  const clause = sentence.split(/\s[—–-]\s/)[0] // prefer text before an em/en dash
-  const out = clause.length < sentence.length ? clause : sentence
-  return out.length > 70 ? out.slice(0, 67).trimEnd() + '…' : out
-}
-
 // Short human label for a consumed resource's underlying kernel primitive.
 function primitiveNote(p) {
   if (/tmpfs/i.test(p)) return 'tmpfs RAM-disk mount · volatile'
@@ -84,16 +75,19 @@ function manifestNote(form) {
   return undefined
 }
 
-// Map PRIMITIVES_BY_TYPE items → tree rows (label + short note, full detail on expand).
+// Map PRIMITIVES_BY_TYPE items → tree rows. `definition` carries the primitive's
+// full description — it leads the revealed detail as the key-glyph callout (what
+// this primitive is / the problem it solves), mirroring the modal's opening
+// section. It is NOT also repeated as a detail line: the description lives in one
+// place only.
 function primitiveNodes(typePrefix) {
   const set = PRIMITIVES_BY_TYPE[typePrefix]
   if (!set) return null
   return set.items.map(it => ({
     id: it.id,
     label: it.label,
-    note: shortNote(it.description),
+    definition: it.description,
     detail: {
-      lines: [it.description],
       bullets: it.interactions,
       commands: it.commands,
     },
@@ -191,31 +185,28 @@ function podBands(component) {
   // veth, mount namespace, cgroups, SELinux, and the PID-1 process) is the base
   // for every Pod, so the descent always bottoms out in the running process.
   // When the component carries hand-authored kernelRealization, this instance's
-  // concrete identifiers (its cgroup path / netns / mount ns) are appended to
-  // the matching rows; any consumedResources hang beneath as the projected
-  // volume mounts.
+  // concrete identifiers (its cgroup path / netns / mount ns) attach to the
+  // matching primitive rows as a labelled fact — shown in that row's detail
+  // beneath the primitive's definition, so the per-instance value is grounded
+  // against the general primitive without crowding the row label.
   const base = primitiveNodes('Pod') || []
   if (kernelRealization) {
     const enrich = (id, value) => {
       if (!value) return
       const row = base.find(n => n.id === id)
-      if (row) row.note = row.note ? `${row.note} · ${value}` : value
+      if (!row) return
+      row.detail = row.detail || {}
+      row.detail.kv = [{ k: 'this Pod', v: value }, ...(row.detail.kv || [])]
     }
     enrich('pod-netns', kernelRealization.networkNamespace)
     enrich('pod-mountns', kernelRealization.mountNamespace)
     enrich('pod-cgroups', kernelRealization.cgroupPath)
   }
-  const groups = [{ nodes: base }]
-  if (cr.length) {
-    groups.push({
-      subhead: 'projected volumes',
-      nodes: cr.map(r => ({
-        label: `${r.linuxPrimitive} ${r.hostPath}`,
-        note: r.apiObject,
-      })),
-    })
-  }
-  bands.push({ layerId: 'linux-primitive', groups })
+  // No separate "projected volumes" group here: each consumed resource is already
+  // shown — with its kernel primitive, host path, and backing object — as a child
+  // of the Pod node in the API-boundary band above, so restating the same mounts
+  // at the kernel layer was pure duplication.
+  bands.push({ layerId: 'linux-primitive', groups: [{ nodes: base }] })
 
   return bands
 }
