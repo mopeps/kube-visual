@@ -1298,6 +1298,101 @@ body::after {
   .deep-ascii { font-size: 0.54rem; }
 }
 
+/* ── Deep-dive popup: keyword-first content ─────────────────────────────
+   Mirrors the Overview inspector's flat chip/tag look — short, scannable,
+   self-explanatory by the visuals rather than walls of prose. */
+.deep-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 2px; }
+.deep-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--tag-accent, var(--k-cyan));
+  border: 1px solid color-mix(in srgb, var(--tag-accent, var(--k-cyan)) 45%, transparent);
+  background: color-mix(in srgb, var(--tag-accent, var(--k-cyan)) 12%, transparent);
+}
+
+.deep-facts { display: flex; flex-direction: column; gap: 7px; margin: 6px 0 2px; }
+.deep-fact { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.deep-fact-key {
+  flex: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid;
+}
+.deep-fact-val { font-size: 0.74rem; line-height: 1.5; color: var(--tx); flex: 1 1 220px; }
+
+/* Tighter bullets with an accent marker (vs the default disc). */
+.deep-bullets { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.deep-bullets li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 0.74rem;
+  line-height: 1.55;
+  color: var(--tx);
+}
+.deep-bullets li::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: var(--tag-accent, var(--k-cyan));
+}
+
+/* ── Unit-file gallery (chip-selectable examples) ──────────────────────── */
+.unit-gallery { margin-top: 6px; }
+.unit-gallery-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.unit-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-w);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.unit-chip:hover { border-color: color-mix(in srgb, var(--unit-accent) 55%, transparent); }
+.unit-chip-name { font-family: 'JetBrains Mono', monospace; font-size: 0.64rem; color: var(--tx); }
+.unit-chip-kind {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tx-dim);
+}
+.unit-chip.is-active {
+  border-color: var(--unit-accent);
+  background: color-mix(in srgb, var(--unit-accent) 14%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--unit-accent) 28%, transparent);
+}
+.unit-chip.is-active .unit-chip-name { color: var(--unit-accent); font-weight: 600; }
+.unit-chip.is-active .unit-chip-kind { color: var(--unit-accent); }
+
+.unit-gallery-tagline { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.unit-gallery-tagline p { margin: 0; font-size: 0.76rem; line-height: 1.55; color: var(--tx); }
+.unit-gallery-tag {
+  align-self: flex-start;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.unit-gallery-directives { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.unit-directive {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  padding: 2px 7px;
+  border-radius: 5px;
+  color: var(--unit-accent, var(--k-cyan));
+  border: 1px solid color-mix(in srgb, var(--unit-accent, var(--k-cyan)) 35%, transparent);
+  background: color-mix(in srgb, var(--unit-accent, var(--k-cyan)) 10%, transparent);
+}
+
 .code-block {
   background: rgba(0, 0, 0, 0.45);
   border: 1px solid var(--border-w);
