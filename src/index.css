@@ -1085,6 +1085,98 @@ body::after {
   .recon-courier { animation-duration: 0.01ms !important; }
 }
 
+/* The interactive cgroup box: a NodeCard-styled container whose body is the
+   kernel-pinned process list. Wider than a plain box to fit the table. */
+.deep-cgroup-box { min-width: 230px; max-width: 360px; }
+.cgroup-frame {
+  margin-top: 10px;
+  border: 1px dashed color-mix(in srgb, var(--node-accent) 45%, transparent);
+  border-radius: 8px;
+  padding: 16px 8px 8px;
+  position: relative;
+  background: rgba(0, 0, 0, 0.25);
+}
+.cgroup-frame-label {
+  position: absolute;
+  top: -7px;
+  left: 8px;
+  padding: 0 6px;
+  background: var(--bg-2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tx-dim);
+}
+.cgroup-procs { display: flex; flex-direction: column; gap: 6px; }
+.cgroup-proc {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  text-align: left;
+  padding: 5px 8px;
+  border: 1px solid color-mix(in srgb, var(--node-accent) 40%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--node-accent) 8%, transparent);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--tx);
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s, opacity 0.3s, transform 0.3s;
+}
+.cgroup-proc.is-main { border-style: solid; font-weight: 600; }
+.cgroup-proc:hover:not(:disabled) {
+  border-color: var(--packet);
+  background: color-mix(in srgb, var(--packet) 14%, transparent);
+}
+.cgroup-proc:disabled { cursor: default; }
+.cgroup-proc-pid { color: var(--node-accent); font-weight: 700; }
+.cgroup-proc-label { color: var(--tx-muted); }
+.cgroup-proc-tag {
+  font-size: 0.46rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--node-accent) 60%, transparent);
+  color: var(--node-accent);
+}
+.cgroup-proc-lock { margin-left: auto; font-size: 0.7rem; filter: grayscale(0.2); }
+.cgroup-proc-x { margin-left: auto; color: var(--tx-dim); font-size: 0.6rem; }
+.cgroup-proc:hover:not(:disabled) .cgroup-proc-x { color: var(--packet); }
+/* The clicked main PID / killed child: struck through, red. */
+.cgroup-proc--dead {
+  border-color: color-mix(in srgb, var(--packet) 70%, transparent);
+  background: color-mix(in srgb, var(--packet) 12%, transparent);
+  color: var(--tx-dim);
+  text-decoration: line-through;
+}
+/* Children the kernel keeps pinned after the main process dies. */
+.cgroup-proc--trapped {
+  border-style: dashed;
+  border-color: var(--k-amber);
+  color: var(--k-amber);
+  opacity: 0.92;
+  animation: trapped-pulse 1.1s ease-in-out infinite;
+}
+.cgroup-proc--trapped .cgroup-proc-pid { color: var(--k-amber); }
+/* systemd sweeps them on restart. */
+.cgroup-proc--swept { opacity: 0; transform: translateX(14px); }
+@keyframes trapped-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 10px 0 color-mix(in srgb, var(--k-amber) 45%, transparent); }
+}
+.cgroup-empty {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--tx-dim);
+  font-style: italic;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cgroup-proc--trapped { animation: none; }
+}
+
 /* Key/value rows + ASCII blueprint inside the deep-dive popup. */
 .detail-kv { margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .detail-kv-row {
