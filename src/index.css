@@ -2406,6 +2406,19 @@ button.object-tag:hover {
   .ancestry-modal-body {
     padding: 4px 16px calc(28px + env(safe-area-inset-bottom));
   }
+
+  /* Tighten the pipeline's nested rails on mobile. Desktop stair-steps each
+     level by 21px (.tree-children) and insets the reveal by 14px; on a narrow
+     phone column those compound into a deep left margin that leaves revealed
+     prose wrapping in a thin ribbon. Halving the bite here keeps the accent
+     rail readable as a hierarchy cue while handing ~11px/level back to text. */
+  .tree-children {
+    margin-left: 4px;
+    padding-left: 8px;
+  }
+  .tree-reveal {
+    padding-left: 8px;
+  }
 }
 
 /* ── Utility ───────────────────────────────────────────────────────── */
