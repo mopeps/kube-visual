@@ -1318,13 +1318,17 @@ body::after {
    up the inter-zone gaps so the connector edges + their label chips have a clear
    band to sit in *between* the pillar zones — never on top of a box. The two
    engine↔reality edges share this gap, so it has to fit two stacked chips. */
-.recon-stack--edges { gap: 90px; padding-top: 18px; padding-bottom: 18px; }
-/* Widen the gap between the two boxes inside each PID-1 / kernel zone too, so the
-   horizontal edges (evaluate, pin) can drop their chip cleanly in between. */
-.recon-stack--edges .zone-content-inner { gap: 132px; }
+.recon-stack--edges { gap: 100px; padding-top: 20px; padding-bottom: 20px; }
+/* Widen the gap between the two boxes inside each PID-1 / kernel zone so the
+   horizontal edges (evaluate, pin) can park their chip in genuinely empty space
+   — the gap is deliberately wider than a chip (capped at .recon-edge-chip
+   max-width) so the chip clears both boxes on either side. */
+.recon-stack--edges .zone-content-inner { gap: 168px; }
 @media (max-width: 640px) {
-  .recon-stack--edges { gap: 76px; }
-  .recon-stack--edges .zone-content-inner { gap: 72px; }
+  .recon-stack--edges { gap: 80px; }
+  /* On phones the boxes already reflow 2-up; keep the intra gap small so that
+     wrapping still works (the edge chips are a desktop-width affordance). */
+  .recon-stack--edges .zone-content-inner { gap: 16px; }
 }
 
 /* The label chip — the "little box" anchored on each connector, carrying a
@@ -1341,7 +1345,9 @@ body::after {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  max-width: 220px;
+  /* Stays under the intra-zone gap (168px) so a horizontal-edge chip always
+     clears the boxes on either side. */
+  max-width: 150px;
   padding: 4px 10px 4px 4px;
   border: 1px solid color-mix(in srgb, var(--edge-color) 50%, transparent);
   border-radius: 999px;
