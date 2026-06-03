@@ -61,41 +61,6 @@ function BandIcon({ name }) {
   )
 }
 
-// Line glyphs for the action chip that leads a revealed description. Drawn in the
-// same style as the interaction-row icons (InteractionList.jsx) and band glyphs: a
-// 16-unit viewBox with round caps/joins and currentColor stroke, so each inherits
-// its action accent. The 2.0 stroke at this 13px render lands at the same ~1.5px
-// effective weight those icons carry (the interaction icons reach it at 15px × 1.6).
-function KindGlyph({ name }) {
-  const c = {
-    width: 13, height: 13, viewBox: '0 0 16 16', fill: 'none',
-    stroke: 'currentColor', strokeWidth: 2.0, strokeLinecap: 'round', strokeLinejoin: 'round',
-  }
-  switch (name) {
-    case 'disk': // store — a database cylinder
-      return <svg {...c}><ellipse cx="8" cy="4" rx="5" ry="2" /><path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4" /><path d="M3 8c0 1.1 2.2 2 5 2s5-.9 5-2" /></svg>
-    case 'loop': // reconcile — two curved arrows chasing a loop
-      return <svg {...c}><path d="M12.5 7a4.5 4.5 0 0 0-8-2.2" /><path d="M3.5 9a4.5 4.5 0 0 0 8 2.2" /><path d="M4 2.5V5h2.5" /><path d="M12 13.5V11H9.5" /></svg>
-    case 'mount': // mount — arrow dropping onto a shelf
-      return <svg {...c}><path d="M8 2v6.5" /><path d="M5.5 6 8 8.5 10.5 6" /><path d="M3 11.5h10" /></svg>
-    case 'route': // route — a node forking out to two paths
-      return <svg {...c}><circle cx="3" cy="8" r="1.2" /><path d="M4.4 8H7.5" /><path d="M7.5 8 11 4.8h1.8" /><path d="M7.5 8 11 11.2h1.8" /></svg>
-    case 'shield': // filter — a guard shield
-      return <svg {...c}><path d="M8 1.8 13 3.6v3.6c0 3.3-2.4 5.2-5 6.6-2.6-1.4-5-3.3-5-6.6V3.6z" /></svg>
-    case 'build': // built — two blocks assembled, drawn as open outlines so it
-      // sits in the same light line family as the other action glyphs (rather
-      // than the dense solid cube it replaced, which read as a filled object and
-      // doubled the band's own cube icon)
-      return <svg {...c}><rect x="6.8" y="2.3" width="6.4" height="6.4" rx="1" /><rect x="2.6" y="7.3" width="6.4" height="6.4" rx="1" /></svg>
-    case 'run': // runs — a play triangle
-      return <svg {...c}><path d="M5 3.5 12 8l-7 4.5z" /></svg>
-    case 'isolate': // isolated — four corner brackets enclosing
-      return <svg {...c}><path d="M5.5 2.5H4A1.5 1.5 0 0 0 2.5 4v1.5" /><path d="M10.5 2.5H12A1.5 1.5 0 0 1 13.5 4v1.5" /><path d="M13.5 10.5V12a1.5 1.5 0 0 1-1.5 1.5h-1.5" /><path d="M5.5 13.5H4A1.5 1.5 0 0 1 2.5 12v-1.5" /></svg>
-    default:
-      return null
-  }
-}
-
 // The revealed detail under a node, shown beneath the definition callout. Its
 // content is rendered in the same visual language as the detail-modal Interactions
 // section so the two read as one:
@@ -163,11 +128,12 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
   // A row is expandable when it carries a definition, deeper detail, or an example
   // manifest to reveal.
   const hasExtra = !!definition || !!node.detail || !!node.manifest
-  // Action chip — tags the revealed description by *what the pipeline does* at
-  // this step (Stored, Mounted, Routed, Runs …), colour-coded by accent the way
-  // the Interactions section tags each line by its verb. It complements the row
-  // label (what the thing is) rather than echoing it, and sits as the callout's
-  // "role" badge the way the modal's why-callout leads with a role.
+  // Action keyword — tags the revealed description by *what the pipeline does* at
+  // this step (Stored, Mounted, Routed, Runs …), colour-coded by accent. It's
+  // rendered as a plain lead verb (the same `.interaction-verb` treatment the
+  // Interactions section gives each line's verb), not a boxed badge, so it reads
+  // as one family with those rows. It complements the row label (what the thing
+  // is) rather than echoing it.
   const action = (definition || node.detail) ? classifyRow(node.label) : null
 
   return (
@@ -192,17 +158,16 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
             <div className="tree-why">
               <span className="tree-why-icon" aria-hidden="true"><KeyGlyph /></span>
               <div className="tree-why-body">
-                {action && (
-                  <span className="tree-kind-chip tree-why-role" style={{ color: action.accent }}>
-                    <span className="tree-kind-chip-icon" aria-hidden="true"><KindGlyph name={action.icon} /></span>
-                    {action.label}
-                  </span>
-                )}
-                {definition && (
-                  <p className="tree-why-text">
+                <p className="tree-why-text">
+                  {action && (
+                    <span className="interaction-verb" style={{ color: action.accent }}>
+                      {action.label}{' '}
+                    </span>
+                  )}
+                  {definition && (
                     <ObjectText text={definition} onSelectComponent={onSelectComponent} selfId={selfId} />
-                  </p>
-                )}
+                  )}
+                </p>
               </div>
             </div>
           )}
