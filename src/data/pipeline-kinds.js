@@ -14,7 +14,12 @@
 
 export const PIPELINE_ACTIONS = {
   store:     { label: 'Stored',     accent: 'var(--k-sky)',    icon: 'disk' },
-  reconcile: { label: 'Reconciled', accent: 'var(--k-amber)',  icon: 'loop' },
+  // Controller objects (Deployment/DaemonSet/StatefulSet/ReplicaSet) live in the
+  // Logical Intent band as *declared* desired state — the controller reconciles
+  // the cluster toward them; they are not themselves reconciled — so the keyword
+  // reads "Declared". (The `reconcile` key names the classification rule below,
+  // not the displayed word.)
+  reconcile: { label: 'Declared',   accent: 'var(--k-amber)',  icon: 'loop' },
   mount:     { label: 'Mounted',    accent: 'var(--k-green)',  icon: 'mount' },
   route:     { label: 'Routed',     accent: 'var(--k-cyan)',   icon: 'route' },
   filter:    { label: 'Filtered',   accent: 'var(--k-orange)', icon: 'shield' },

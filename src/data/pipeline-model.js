@@ -346,13 +346,15 @@ function ensureIntentBand(bands) {
 const CONTROLLER_KIND = /^(Deployment|DaemonSet|StatefulSet|ReplicaSet|Job|CronJob)\b/
 
 // One-line note for a relocated controller row. Written as a noun phrase so it
-// reads naturally after the action chip that leads it ("Reconciled · desired
-// Pod template …") rather than chaining into the chip as a sentence fragment.
+// reads naturally after the "Declared" keyword that leads it ("Declared one Pod
+// per eligible node …") — the controller object *is* this declared intent, so the
+// note describes what it declares rather than restating "desired" (already implied
+// by the lead).
 function controllerNote(form) {
-  if (/^DaemonSet/.test(form)) return 'desired Pod template; one replica per eligible node'
-  if (/^StatefulSet/.test(form)) return 'desired Pod template; ordered, stable-identity replicas with persistent volume claims'
-  if (/^ReplicaSet/.test(form)) return 'desired replica count & Pod template; unique pod-hash replicas stamped out by the controller'
-  return 'desired Pod template, replica count & rollout strategy' // Deployment / other
+  if (/^DaemonSet/.test(form)) return 'one Pod per eligible node, from a single Pod template'
+  if (/^StatefulSet/.test(form)) return 'ordered, stable-identity Pods with persistent volume claims, from a single Pod template'
+  if (/^ReplicaSet/.test(form)) return 'a fixed replica count stamped from one Pod template, each with a unique pod-hash'
+  return 'a Pod template, replica count & rollout strategy' // Deployment / other
 }
 
 // Fold a component's authored runtime form + Linux primitive (from

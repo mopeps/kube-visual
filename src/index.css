@@ -1798,11 +1798,12 @@ body::after {
   border-radius: 7px;
 }
 .why-body { min-width: 0; }
-/* Role badge — unified with the pipeline action chip (.tree-kind-chip) so every
-   leading callout badge reads as one family: a rounded-rect (not a pill), at the
-   same 0.62rem / 600 / 0.08em tracking and 1px 6px padding. The accent colour,
-   border and fill are still set inline (color / borderColor / background) where
-   it's rendered. margin-bottom keeps it a block label above the definition. */
+/* Role badge — a rounded-rect (not a pill) leading callout label at 0.62rem /
+   600 / 0.08em tracking with 1px 6px padding. The accent colour, border and fill
+   are set inline (color / borderColor / background) where it's rendered.
+   margin-bottom keeps it a block label above the definition. (The pipeline tree's
+   action keyword used to share this boxed treatment; it now leads its row inline
+   as a plain `.interaction-verb` instead.) */
 .why-role {
   display: inline-block;
   font-size: 0.62rem;
@@ -2328,35 +2329,6 @@ button.object-tag:hover {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-/* Action keyword leading a row's revealed description — an icon + label that
-   tags what the pipeline does at this step (Stored / Mounted / Routed / Runs …).
-   Rendered as an accent-bordered, faintly-tinted capsule sitting on the text
-   baseline. Unlike the inline object tags (.object-tag, which sit flush with the
-   prose), this is a discrete leading label, so the pill treatment reads as a
-   deliberate badge rather than an in-line word. The per-action accent is set
-   inline on `color`; the border + fill derive from it via currentColor.
-   inline-block (not inline-flex) keeps the chip's baseline on its label so it
-   lines up with the prose that follows it; the icon is nudged to the cap-height. */
-.tree-kind-chip {
-  display: inline-block;
-  vertical-align: baseline;
-  margin-right: 0.5em;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
-  background: color-mix(in srgb, currentColor 13%, transparent);
-}
-.tree-kind-chip-icon {
-  display: inline-flex;
-  vertical-align: -0.16em;
-  margin-right: 4px;
-}
-
 /* Child nodes (e.g. a Pod's consumed resources) indent under their parent,
    threaded by a soft accent rail instead of ASCII branch glyphs. The indent is
    kept shallow (rail + a few px) so deep nesting doesn't march the content off
@@ -2414,14 +2386,9 @@ button.object-tag:hover {
   display: flex;
   flex-direction: column;
 }
-/* The action chip, here reused as the callout's role badge — sits on its own
-   line above the definition like .why-role, so its margin-right (tuned for inline
-   use) is cleared in favour of a block bottom-margin. */
-.tree-why-role {
-  align-self: flex-start;
-  margin: 0 0 6px;
-}
-/* The definition sentence: white body prose at the interaction text size. */
+/* The definition sentence: white body prose at the interaction text size. The
+   action keyword (when present) leads it inline as a plain `.interaction-verb`,
+   exactly as each Interactions row leads with its verb — no boxed badge. */
 .tree-why-text {
   margin: 0;
   font-size: 0.78rem;
@@ -2479,16 +2446,17 @@ button.object-tag:hover {
     padding: 4px 16px calc(28px + env(safe-area-inset-bottom));
   }
 
-  /* Tighten the pipeline's nested rails further on mobile. The base indent is
-     already shallow; on a narrow phone column we pull it in a touch more so the
-     accent rail still reads as a hierarchy cue while handing the last few px
-     back to the revealed prose. */
+  /* Tighten the pipeline's nested rails hard on mobile. On a narrow phone column
+     every level of indent compounds and marches deep rows off the right edge, so
+     we pull the per-level gutter right down to just the accent rail plus a couple
+     of px — enough for the rail to still read as a hierarchy cue while handing the
+     rest of the width back to the content. */
   .tree-children {
-    margin-left: 2px;
-    padding-left: 6px;
+    margin-left: 0;
+    padding-left: 3px;
   }
   .tree-reveal {
-    padding-left: 8px;
+    padding-left: 5px;
   }
 }
 
