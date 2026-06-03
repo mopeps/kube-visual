@@ -82,8 +82,11 @@ function KindGlyph({ name }) {
       return <svg {...c}><circle cx="3" cy="8" r="1.2" /><path d="M4.4 8H7.5" /><path d="M7.5 8 11 4.8h1.8" /><path d="M7.5 8 11 11.2h1.8" /></svg>
     case 'shield': // filter — a guard shield
       return <svg {...c}><path d="M8 1.8 13 3.6v3.6c0 3.3-2.4 5.2-5 6.6-2.6-1.4-5-3.3-5-6.6V3.6z" /></svg>
-    case 'build': // built — an assembled package/cube
-      return <svg {...c}><path d="M8 1.8 13.5 5 8 8.2 2.5 5z" /><path d="M2.5 5v6L8 14.2 13.5 11V5" /><path d="M8 8.2V14" /></svg>
+    case 'build': // built — two blocks assembled, drawn as open outlines so it
+      // sits in the same light line family as the other action glyphs (rather
+      // than the dense solid cube it replaced, which read as a filled object and
+      // doubled the band's own cube icon)
+      return <svg {...c}><rect x="6.8" y="2.3" width="6.4" height="6.4" rx="1" /><rect x="2.6" y="7.3" width="6.4" height="6.4" rx="1" /></svg>
     case 'run': // runs — a play triangle
       return <svg {...c}><path d="M5 3.5 12 8l-7 4.5z" /></svg>
     case 'isolate': // isolated — four corner brackets enclosing
