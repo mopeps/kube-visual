@@ -18,7 +18,7 @@ function TopicIndex({ onSelectTopic }) {
           overview: labelled zones of clickable boxes, each opening a detail popup.
         </p>
       </div>
-      <div className="event-gallery">
+      <div className="event-gallery event-gallery--index">
         {DEEP_DIVES.map((t) => (
           <button
             key={t.topicId}
