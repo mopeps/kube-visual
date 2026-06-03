@@ -230,7 +230,7 @@ const SYSTEMD = {
     //                  evaluate, syscall, pin, feedback signal).
     edges: [
       { id: 'compile', from: 'sd-units', to: 'sd-dag', step: '1',
-        label: 'daemon-reload\ncompiles the DAG', accent: 'k-purple',
+        label: 'daemon-reload\n→ compile DAG', accent: 'k-purple',
         title: 'daemon-reload — compile the DAG',
         detail: {
           role: 'EDGE 1 · PARSE → LOAD',
@@ -261,7 +261,7 @@ const SYSTEMD = {
         },
       },
       { id: 'evaluate', from: 'sd-engine', to: 'sd-dag', step: '2',
-        label: 'reads desired\nsets UNIT_FAILED', accent: 'k-amber', phase: 'failed',
+        label: 'read desired\n→ UNIT_FAILED', accent: 'k-amber', phase: 'failed',
         title: 'evaluate — read desired, set UNIT_FAILED',
         detail: {
           role: 'EDGE 2 · EVALUATE → DRIFT',
@@ -292,7 +292,7 @@ const SYSTEMD = {
         },
       },
       { id: 'enforce', from: 'sd-engine', to: 'sd-reality', step: '3', bias: 'left', labelT: 0.12, labelDX: -82,
-        label: 'ExecStart →\nfork() / execve()', accent: 'k-green', phase: 'restart',
+        label: 'ExecStart\nfork() / execve()', accent: 'k-green', phase: 'restart',
         title: 'enforce — ExecStart via fork() / execve()',
         detail: {
           role: 'EDGE 3 · ENFORCE → SYSCALL',
@@ -327,7 +327,7 @@ const SYSTEMD = {
         },
       },
       { id: 'pin', from: 'sd-reality', to: 'sd-cgroup', step: '4',
-        label: 'pins PIDs into\ncgroup.procs', accent: 'k-green',
+        label: 'pin PIDs →\ncgroup.procs', accent: 'k-green',
         title: 'pin — write PIDs into cgroup.procs',
         detail: {
           role: 'EDGE 4 · PIN → CONTAIN',
@@ -358,7 +358,7 @@ const SYSTEMD = {
         },
       },
       { id: 'notify', from: 'sd-reality', to: 'sd-engine', step: '5', bias: 'right', labelT: 0.88, labelDX: 82,
-        label: 'SIGCHLD →\nwakes the engine', accent: 'packet', phase: 'sigchld',
+        label: 'SIGCHLD\n→ wake engine', accent: 'packet', phase: 'sigchld',
         title: 'notify — SIGCHLD wakes the engine',
         detail: {
           role: 'EDGE 5 · NOTIFY → FEEDBACK',
