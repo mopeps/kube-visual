@@ -9,15 +9,32 @@ import { useState, useLayoutEffect, useEffect, useRef } from 'react'
 //   idPrefix: namespaces the SVG <marker>/<filter> ids so two overlays can live
 //             in the DOM at once (the compact swipe pager renders every pane).
 
-export function buildPath(srcEl, tgtEl, canvasEl) {
+export function buildPath(srcEl, tgtEl, canvasEl, edge = false) {
   const canvasRect = canvasEl.getBoundingClientRect()
   const sr = srcEl.getBoundingClientRect()
   const tr = tgtEl.getBoundingClientRect()
 
-  const sx = sr.left + sr.width / 2 - canvasRect.left
-  const sy = sr.top + sr.height / 2 - canvasRect.top
-  const tx = tr.left + tr.width / 2 - canvasRect.left
-  const ty = tr.top + tr.height / 2 - canvasRect.top
+  const sCx = sr.left + sr.width / 2 - canvasRect.left
+  const sCy = sr.top + sr.height / 2 - canvasRect.top
+  const tCx = tr.left + tr.width / 2 - canvasRect.left
+  const tCy = tr.top + tr.height / 2 - canvasRect.top
+
+  const vertical = Math.abs(tCy - sCy) >= Math.abs(tCx - sCx)
+
+  // Endpoints. `edge` mode anchors on the facing box edges so the connector and
+  // its step badge ride the gap *between* boxes — never across their title text
+  // (deep-dive rows pack boxes tight). The Overview keeps centre anchoring: its
+  // hops span open zone gaps where a centre-to-centre curve reads cleanly.
+  let sx, sy, tx, ty
+  if (edge && vertical) {
+    if (tCy >= sCy) { sx = sCx; sy = sr.bottom - canvasRect.top; tx = tCx; ty = tr.top - canvasRect.top }
+    else            { sx = sCx; sy = sr.top - canvasRect.top;    tx = tCx; ty = tr.bottom - canvasRect.top }
+  } else if (edge) {
+    if (tCx >= sCx) { sx = sr.right - canvasRect.left; sy = sCy; tx = tr.left - canvasRect.left;  ty = tCy }
+    else            { sx = sr.left - canvasRect.left;  sy = sCy; tx = tr.right - canvasRect.left; ty = tCy }
+  } else {
+    sx = sCx; sy = sCy; tx = tCx; ty = tCy
+  }
 
   // S-curve cubic bezier whose control points follow the flow's dominant axis.
   // The zones stack top-to-bottom, so most hops are vertical: bias the handles
@@ -40,7 +57,7 @@ export function buildPath(srcEl, tgtEl, canvasEl) {
   return { d: `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${tx} ${ty}`, midX, midY }
 }
 
-export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep, idPrefix = 'ov' }) {
+export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep, idPrefix = 'ov', edgeAnchor = false }) {
   const [paths, setPaths] = useState([])
   const rafRef = useRef(0)
 
@@ -53,7 +70,7 @@ export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep,
       const srcEl = document.getElementById(s.sourceId)
       const tgtEl = document.getElementById(s.targetId)
       if (!srcEl || !tgtEl) continue
-      newPaths.push({ step: s.step, color: s.color || 'var(--k-cyan)', ...buildPath(srcEl, tgtEl, canvas) })
+      newPaths.push({ step: s.step, color: s.color || 'var(--k-cyan)', ...buildPath(srcEl, tgtEl, canvas, edgeAnchor) })
     }
     setPaths(newPaths)
   }

@@ -6,18 +6,6 @@ import ReconControls from './ReconControls'
 import DeepDiveArrowOverlay from './DeepDiveArrowOverlay'
 import useReconciliationLoop from '../hooks/useReconciliationLoop'
 
-// Map a flow's box ids → the step number each first appears in (mirrors the
-// Overview's buildStepNumMap), so boxes can show a corner step badge.
-function buildStepNumMap(flow) {
-  const map = new Map()
-  if (!flow) return map
-  flow.steps.forEach(s => {
-    if (!map.has(s.sourceBoxId)) map.set(s.sourceBoxId, s.step)
-    if (!map.has(s.targetBoxId)) map.set(s.targetBoxId, s.step)
-  })
-  return map
-}
-
 // Renders a deep-dive topic as an Overview-style canvas: a stack of labelled
 // zones holding clickable boxes. Reuses Zone / NodeCard (pure presentational),
 // with a custom onClick that opens the deep-dive popup instead of the node
@@ -92,7 +80,6 @@ export default function DeepDiveCanvas({
   activeFlow,
   activeFlowStep,
   onSelectFlowStep,
-  activeBoxIds,
   colorOf,
 }) {
   const loop = useReconciliationLoop(topic.reconciliation)
@@ -100,16 +87,24 @@ export default function DeepDiveCanvas({
   const recon = topic.reconciliation
   const stackRef = useRef(null)
 
-  // Trace-flow highlighting (mirrors the Overview): boxes touched by the active
-  // flow light up + carry a step badge, the rest dim down.
-  const stepNums = buildStepNumMap(activeFlow)
-  const hasActive = activeBoxIds && activeBoxIds.size > 0
+  // Figure/ground for the trace, mirroring the Overview: the packet-red highlight
+  // is reserved for the *focused* hop's two boxes. With no hop focused the canvas
+  // stays quiet — every box just wears its own zone accent (the whole topic is one
+  // flow, so highlighting every box would leave nothing to stand out against).
+  // Boxes are already ordered by their [STAGE n] / [STEP n] labels, so they carry
+  // no separate corner step-badge (which used to contradict those labels).
+  const focusedStep = activeFlow && activeFlowStep != null
+    ? activeFlow.steps.find(s => s.step === activeFlowStep)
+    : null
+  const focusedIds = focusedStep
+    ? new Set([focusedStep.sourceBoxId, focusedStep.targetBoxId])
+    : null
 
   const renderBox = (box, zone) => {
     const ov = overlays[box.id]
     const accent = ov?.accent || accentOf(zone, topic)
-    const isActive = activeBoxIds?.has?.(box.id)
-    const isDimmed = hasActive && !isActive
+    const isActive = focusedIds?.has(box.id) || false
+    const isDimmed = focusedIds ? !focusedIds.has(box.id) : false
 
     if (recon && box.id === recon.cgroupBoxId) {
       return (
@@ -137,7 +132,6 @@ export default function DeepDiveCanvas({
         color={accent}
         subtitle={ov?.subtitle ?? box.subtitle}
         badges={box.badges}
-        stepNum={stepNums.get(box.id)}
         isActive={isActive}
         isDimmed={isDimmed}
         isHighlighted={ov?.highlight}

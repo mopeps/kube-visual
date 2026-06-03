@@ -97,7 +97,6 @@ export default function DeepDiveTab({
   onClearTopic,
   activeFlow,
   activeFlowStep,
-  activeBoxIds,
   onSelectFlow,
   onClearFlow,
   onSelectFlowStep,
@@ -173,7 +172,6 @@ export default function DeepDiveTab({
         activeFlow={activeFlow}
         activeFlowStep={activeFlowStep}
         onSelectFlowStep={onSelectFlowStep}
-        activeBoxIds={activeBoxIds}
         colorOf={colorOf}
       />
 

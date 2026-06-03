@@ -24,6 +24,7 @@ export default function DeepDiveArrowOverlay({ activeFlow, canvasRef, activeStep
       activeStep={activeStep}
       onSelectStep={onSelectStep}
       idPrefix="dd"
+      edgeAnchor
     />
   )
 }
