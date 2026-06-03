@@ -116,7 +116,7 @@ function RowDetail({ detail, color, onSelectComponent, selfId }) {
 // detail are hidden until the row is expanded, so the resting state is just a
 // clean list of labels. Child nodes render indented beneath, threaded by a soft
 // accent rail rather than ASCII gutter glyphs.
-function Node({ node, bandColor, onSelectComponent, selfId }) {
+function Node({ node, bandColor, layerId, onSelectComponent, selfId }) {
   const [open, setOpen] = useState(false)
   const [manifestOpen, setManifestOpen] = useState(false)
   const color = node.color || bandColor
@@ -134,7 +134,7 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
   // Interactions section gives each line's verb), not a boxed badge, so it reads
   // as one family with those rows. It complements the row label (what the thing
   // is) rather than echoing it.
-  const action = (definition || node.detail) ? classifyRow(node.label) : null
+  const action = (definition || node.detail) ? classifyRow(node.label, layerId) : null
 
   return (
     <div className="tree-node">
@@ -193,7 +193,7 @@ function Node({ node, bandColor, onSelectComponent, selfId }) {
       {kids.length > 0 && (
         <div className="tree-children" style={{ '--row-color': color }}>
           {kids.map((k, i) => (
-            <Node key={i} node={k} bandColor={bandColor} onSelectComponent={onSelectComponent} selfId={selfId} />
+            <Node key={i} node={k} bandColor={bandColor} layerId={layerId} onSelectComponent={onSelectComponent} selfId={selfId} />
           ))}
         </div>
       )}
@@ -213,7 +213,7 @@ function Band({ layerId, groups, last, onSelectComponent, selfId }) {
           <div className="tree-group" key={gi}>
             {g.subhead && <div className="tree-subhead" style={{ color }}>{g.subhead}</div>}
             {g.nodes.map((n, i) => (
-              <Node key={i} node={n} bandColor={color} onSelectComponent={onSelectComponent} selfId={selfId} />
+              <Node key={i} node={n} bandColor={color} layerId={layerId} onSelectComponent={onSelectComponent} selfId={selfId} />
             ))}
           </div>
         ))}
