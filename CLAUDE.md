@@ -41,11 +41,13 @@ src/
   index.css                  # design tokens, .zone, .node, .hop, .ancestry-modal, .pipeline-tree
   data/
     components.json          # one entry per componentId (incl. typePrefix, runtimeForm, linuxPrimitive, logicalContext)
+    components-index.js      # O(1) componentId → entry Map (the shared findComponent lookup)
     events.json              # ordered step lists (source → target hops)
     zones.js                 # recursive ZONES tree, COMPONENT_COLOR / _ZONE / _BADGES
     primitives.js            # kernel/OS/virt primitives keyed by typePrefix
     manifests.js             # minimal example manifest (YAML) / systemd unit per componentId
     pipeline-layers.js       # Manifest → Kernel band definitions
+    pipeline-kinds.js        # classifies pipeline-node actions into band-aware keyword chips
     deep-dives.js            # Deep Dive tab topics (systemd loop, Linux boot, HCP node boot) as zone trees of clickable boxes (mirrors the ZONES shape)
     pipeline-model.js        # builds a component's pipeline-tree band model
     interaction-kinds.js     # classifies interaction sentences (icon + accent)
@@ -53,28 +55,42 @@ src/
     badge-glossary.js        # explanations shown when a badge chip is clicked
   hooks/
     useEventState.js         # active event + selected component + inspected hop state
-    useReconciliationLoop.js # Deep Dive: systemd kill→SIGCHLD→UNIT_FAILED→restart animation state machine
+    useFlowState.js          # Deep Dive trace-flow state (mirrors useEventState for a topic's flows)
+    useMediaQuery.js         # subscribe to a CSS media query (compact / wide / reduced-motion)
+    useReconciliationLoop.js # Deep Dive: systemd kill→SIGCHLD→UNIT_FAILED→restart step-through state machine
+  lib/
+    scroll.js                # scrollIntoUpperThird helper (window or inner swipe-pane scroller)
   components/
     Tabs.jsx                 # tab nav
-    EventSelector.jsx        # trace-flow dropdown
+    SwipeViews.jsx           # compact-mode horizontal pager between tabs (finger-tracking, per-pane scroll)
     Zone.jsx                 # one labeled zone; renders nested child zones recursively
     NodeCard.jsx             # one box inside a zone (shows [typePrefix] label)
+    TypeIcon.jsx             # glyph for a node's typePrefix ([Pod]/[systemd]/…)
+    ServicePair.jsx          # stacks a Service over the in-zone target it `exposes`
     IntentStoreCard.jsx      # an etcd node that expands in place to show its records
     ControllerManagerCard.jsx # a controller-manager node that expands to show its control loops
     OperatorSetCard.jsx      # a CPO/CVO node that expands to show the operator Pods it owns
-    ArrowOverlay.jsx         # SVG layer: numbered bezier connectors between step nodes
+    ArrowLines.jsx           # the hand-rolled SVG arrow core: measures node rects + draws bezier connectors (shared)
+    ArrowOverlay.jsx         # Overview adapter: maps event hops → ArrowLines steps
+    DeepDiveArrowOverlay.jsx # Deep Dive adapter: maps flow hops (dd-<boxId>) → ArrowLines steps
     OverviewTab.jsx          # recursively renders ZONES tree + ArrowOverlay
     PacketFlowTab.jsx        # expandable hop list for active event
     DeepDiveTab.jsx          # Deep Dive tab: topic index + switcher → an Overview-style canvas; owns the box-popup selection
     DeepDiveCanvas.jsx       # renders a deep-dive topic's zone/box tree (reuses Zone/NodeCard) + the systemd reconciliation loop
     DeepDiveModal.jsx        # box detail popup — AncestryModal's gestures/CSS with generic content (prose, kv, commands, ASCII)
+    ReconLoopOverlay.jsx     # SVG overlay for the systemd reconciliation loop (edges + travelling signal token)
+    ReconControls.jsx        # play/step/reset bar for the reconciliation loop
+    UnitGallery.jsx          # systemd unit-file gallery for the systemd deep-dive
     HopInspector.jsx         # bottom-docked single-hop reader (Overview tab)
+    DeepDiveHopInspector.jsx # the same bottom hop reader, for deep-dive trace flows
     AncestryModal.jsx        # node detail sheet (React portal); Esc / tap-outside closes
     DetailSections.jsx       # tags, context, primitives, interactions, commands
     PipelineTree.jsx         # the Manifest → Kernel ASCII-style tree
     Manifest.jsx             # [MANIFEST]/[UNIT] chip + copyable example-manifest code block
     InteractionList.jsx      # classified interaction rows
+    InteractionRow.jsx       # a single classified interaction row (icon + accent + prose)
     ObjectText.jsx           # prose with inline object-reference chips
+    ObjectSelect.jsx         # object/trace-flow dropdown selector
     ExploreCommands.jsx      # copyable shell-command blocks
     DocLinks.jsx             # "Official Docs" chip row (per-component docLinks)
 ```
@@ -83,12 +99,15 @@ src/
 
 - **`base: './'` in vite.config.js** — required for GitHub Pages. Do not change to `/`.
 - **No test suite** — verify changes manually with `npm run dev`. The dev server build catches import / syntax errors but not visual regressions.
-- **No arrow library.** Connectors are drawn by the hand-rolled `ArrowOverlay.jsx`
+- **No arrow library.** Connectors are drawn by the hand-rolled `ArrowLines.jsx`
   (an absolutely-positioned SVG that measures node bounding rects and draws bezier
-  paths). Do not add `react-xarrows` or similar back.
-- **`ArrowOverlay` positions paths via `document.getElementById(componentId)`.** Every
-  NodeCard renders its `id` as the DOM `id`, so each `componentId` must be unique in the
-  DOM at render time or its connector step is silently dropped.
+  paths). `ArrowOverlay` (Overview) and `DeepDiveArrowOverlay` (Deep Dive) are thin
+  adapters that feed it resolved steps. Do not add `react-xarrows` or similar back.
+- **`ArrowLines` positions paths via `document.getElementById(id)`.** Every NodeCard
+  renders its `id` as the DOM `id`, so each id must be unique in the DOM at render time
+  or its connector step is silently dropped. The lookup is document-wide and the compact
+  swipe pager mounts every pane at once, so the Deep Dive namespaces its box ids as
+  `dd-<boxId>` to avoid colliding with the Overview's raw `componentId` nodes.
 - **`.claude/skills/*` predates this redesign** and still references the
   previous tmux/Catppuccin design (`ComponentBox`, `PodLayer`, `ArrowOverlay`).
   Treat those skills as historical context until they are refreshed.

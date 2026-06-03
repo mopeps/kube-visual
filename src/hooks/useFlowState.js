@@ -34,8 +34,6 @@ export default function useFlowState() {
     setActiveFlowStep(prev => prev === step ? null : step)
   }, [])
 
-  // Unconditionally focus a hop (no toggle).
-  const focusFlowStep = useCallback((step) => setActiveFlowStep(step), [])
   const clearFlowStep = useCallback(() => setActiveFlowStep(null), [])
 
   const activeBoxIds = useMemo(
@@ -53,7 +51,6 @@ export default function useFlowState() {
     focusFlow,
     clearFlow,
     selectFlowStep,
-    focusFlowStep,
     clearFlowStep,
   }
 }

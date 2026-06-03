@@ -52,15 +52,23 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
 
   // Esc to close + reset transient gesture state whenever a new component opens.
   // Sheet height is intentionally NOT reset — the size the user picked sticks.
+  // Also manage focus: move it into the dialog on open and return it to whatever
+  // was focused (the card that opened the sheet) on close, so keyboard / screen-
+  // reader users aren't stranded behind the modal.
   useEffect(() => {
     if (!componentId) return
     setOffset(0)
     setSnapping(false)
     setTreeOpen(true)
     drag.current = { startY: 0, atTop: false, mode: 'scroll' }
+    const opener = document.activeElement
+    modalRef.current?.focus()
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      if (opener instanceof HTMLElement) opener.focus()
+    }
   }, [componentId, onClose])
 
   // Lock the page behind the modal so it can't scroll while open. Pins <body>
@@ -268,6 +276,7 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
         role="dialog"
         aria-modal="true"
         aria-label={component.displayName}
+        tabIndex={-1}
         style={{
           height: sheetHeight != null ? `${sheetHeight}px` : undefined,
           transform: offset > 0 ? `translateY(${offset}px)` : undefined,
