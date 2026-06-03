@@ -221,18 +221,20 @@ const SYSTEMD = {
     // kernel reality — so the end-to-end loop reads off the overview itself.
     //   from/to  = box ids to anchor between (dd-<id> in the DOM)
     //   bias     = sideways bow for parallel vertical edges ('left' | 'right')
+    //   labelT   = where on the curve the chip parks (0=source … 1=target) — used
+    //              to slide the two engine↔reality chips apart in the same gap
     //   accent   = colour var; phase = loop phase that lights this edge up
     edges: [
       { id: 'compile', from: 'sd-units', to: 'sd-dag', step: '1',
         label: 'daemon-reload\ncompiles the DAG', accent: 'k-purple' },
       { id: 'evaluate', from: 'sd-engine', to: 'sd-dag', step: '2',
-        label: 'evaluates drift\nsets UNIT flags', accent: 'k-amber', phase: 'failed' },
-      { id: 'enforce', from: 'sd-engine', to: 'sd-reality', step: '3', bias: 'left',
-        label: 'ExecStart\nfork() / execve()', accent: 'k-green', phase: 'restart' },
+        label: 'reads desired\nsets UNIT_FAILED', accent: 'k-amber', phase: 'failed' },
+      { id: 'enforce', from: 'sd-engine', to: 'sd-reality', step: '3', bias: 'left', labelT: 0.28,
+        label: 'ExecStart →\nfork() / execve()', accent: 'k-green', phase: 'restart' },
       { id: 'pin', from: 'sd-reality', to: 'sd-cgroup', step: '4',
-        label: 'kernel pins PIDs\ninto cgroup.procs', accent: 'k-green' },
-      { id: 'notify', from: 'sd-reality', to: 'sd-engine', step: '5', bias: 'right',
-        label: 'SIGCHLD on\nprocess death', accent: 'packet', phase: 'sigchld' },
+        label: 'pins PIDs into\ncgroup.procs', accent: 'k-green' },
+      { id: 'notify', from: 'sd-reality', to: 'sd-engine', step: '5', bias: 'right', labelT: 0.28,
+        label: 'SIGCHLD →\nwakes the engine', accent: 'packet', phase: 'sigchld' },
     ],
   },
   zones: [

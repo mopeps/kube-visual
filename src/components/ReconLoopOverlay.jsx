@@ -10,10 +10,25 @@ import { useState, useLayoutEffect, useEffect, useRef } from 'react'
 // pointer-transparent SVG layer; unlike it these edges are a static structural
 // map, with a light highlight on the edge that matches the live loop phase.
 
+// A generous box the label chip is centred within (the chip itself auto-sizes
+// to its text; this is only the foreignObject canvas + the half-offsets used to
+// centre it on the curve point).
+const CHIP_W = 240
+const CHIP_H = 72
+
+// Evaluate a cubic bezier at parameter t — used to drop the label chip exactly
+// on the curve (so it tracks the bow), and to slide parallel edges' chips apart.
+function bezier(t, p0, p1, p2, p3) {
+  const u = 1 - t
+  return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3
+}
+
 // Anchor on the box *edges* (not centres) so an arrowhead never lands hidden
 // under the target box. Picks the side from the boxes' relative position and
 // bows the curve sideways by `bias` so parallel vertical edges don't overlap.
-function buildEdge(srcEl, tgtEl, canvasEl, bias) {
+// `labelT` slides the label chip along the curve (0 = source … 1 = target) so two
+// edges sharing the same gap can park their chips at different points.
+function buildEdge(srcEl, tgtEl, canvasEl, bias, labelT = 0.5) {
   const c = canvasEl.getBoundingClientRect()
   const s = srcEl.getBoundingClientRect()
   const t = tgtEl.getBoundingClientRect()
@@ -46,9 +61,11 @@ function buildEdge(srcEl, tgtEl, canvasEl, bias) {
     cx2 = tx - dx * 0.45; cy2 = ty + bow
   }
 
-  // Label sits on the curve's midpoint (the bezier midpoint, with the bow).
-  const labelX = (sx + tx) / 2 + (vertical ? bow : 0)
-  const labelY = (sy + ty) / 2 + (vertical ? 0 : bow)
+  // Drop the label chip on the curve itself at labelT — for vertical edges that
+  // lands it squarely in the inter-zone gap; for horizontal edges, in the gap
+  // between the two boxes it spans.
+  const labelX = bezier(labelT, sx, cx1, cx2, tx)
+  const labelY = bezier(labelT, sy, cy1, cy2, ty)
 
   return { d: `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${tx} ${ty}`, labelX, labelY }
 }
@@ -69,7 +86,7 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
       next.push({
         ...edge,
         color: `var(--${edge.accent || 'k-cyan'})`,
-        ...buildEdge(srcEl, tgtEl, canvas, edge.bias),
+        ...buildEdge(srcEl, tgtEl, canvas, edge.bias, edge.labelT),
       })
     }
     setPaths(next)
@@ -134,18 +151,29 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
               strokeDasharray="6 4"
               markerEnd={`url(#recon-arrow-${p.id})`}
             />
-            {/* step badge + multi-line label, on a backing chip for legibility */}
-            <g transform={`translate(${p.labelX} ${p.labelY})`}>
-              <circle cx="0" cy="0" r={live ? 9.5 : 8.5} fill="var(--bg-2)" stroke={p.color} strokeWidth={live ? 2 : 1.4} />
-              <text x="0" y="0" textAnchor="middle" dominantBaseline="central" fontSize="8.5" fontWeight="700" fill={p.color} style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                {p.step}
-              </text>
-              <text className="recon-edge-label" x="0" y={lines.length > 1 ? 17 : 16} textAnchor="middle" fill={p.color}>
-                {lines.map((ln, i) => (
-                  <tspan key={i} x="0" dy={i === 0 ? 0 : 10}>{ln}</tspan>
-                ))}
-              </text>
-            </g>
+            {/* The "little box" the user asked for: a solid step-numbered chip
+                that sits on the curve (in the gap), so the label never blends
+                into a box underneath it. foreignObject lets it auto-size to the
+                text and pick up the page's chip styling. CHIP_W/H is just a
+                generous canvas the flex wrapper centres the chip within. */}
+            <foreignObject
+              x={p.labelX - CHIP_W / 2}
+              y={p.labelY - CHIP_H / 2}
+              width={CHIP_W}
+              height={CHIP_H}
+              style={{ overflow: 'visible', pointerEvents: 'none' }}
+            >
+              <div className="recon-edge-chip-wrap">
+                <span className={`recon-edge-chip ${live ? 'is-live' : ''}`} style={{ '--edge-color': p.color }}>
+                  <span className="recon-edge-chip-num">{p.step}</span>
+                  <span className="recon-edge-chip-label">
+                    {lines.map((ln, i) => (
+                      <span key={i} className="recon-edge-chip-line">{ln}</span>
+                    ))}
+                  </span>
+                </span>
+              </div>
+            </foreignObject>
           </g>
         )
       })}
@@ -158,7 +186,15 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
         <g key={signal.key} className="recon-signal">
           <g>
             <circle r="5" fill={signalPath.color} />
-            <text x="0" y="-9" textAnchor="middle" fontSize="8.5" fontWeight="700" fill={signalPath.color} style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+            {/* paint-order:stroke draws a thick bg-coloured halo behind the
+                glyphs so the moving signal stays readable over any box. */}
+            <text
+              x="0" y="-9" textAnchor="middle" fontSize="8.5" fontWeight="700" fill={signalPath.color}
+              style={{
+                fontFamily: 'var(--font-mono, monospace)',
+                paintOrder: 'stroke', stroke: 'var(--bg)', strokeWidth: 3.5, strokeLinejoin: 'round',
+              }}
+            >
               {signal.label}
             </text>
             <animateMotion dur="1.15s" begin="0s" fill="freeze" path={signalPath.d} rotate="0" />
