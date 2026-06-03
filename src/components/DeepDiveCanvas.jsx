@@ -77,6 +77,7 @@ function CgroupBox({ box, accent, subtitle, highlight, procs, locked, onKillMain
 export default function DeepDiveCanvas({
   topic,
   onSelectBox,
+  onSelectEdge,
   activeFlow,
   activeFlowStep,
   onSelectFlowStep,
@@ -164,6 +165,7 @@ export default function DeepDiveCanvas({
             canvasRef={stackRef}
             activeEdgeId={loop.activeEdgeId}
             signal={loop.signal}
+            onSelectEdge={onSelectEdge}
           />
         )}
         {topic.zones.map((zone) => renderZone(zone))}

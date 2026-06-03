@@ -70,7 +70,7 @@ function buildEdge(srcEl, tgtEl, canvasEl, bias, labelT = 0.5) {
   return { d: `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${tx} ${ty}`, labelX, labelY }
 }
 
-export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signal }) {
+export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signal, onSelectEdge }) {
   const [paths, setPaths] = useState([])
   const rafRef = useRef(0)
 
@@ -145,6 +145,10 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
       {paths.map((p) => {
         const live = activeEdgeId && p.id === activeEdgeId
         const lines = p.label.split('\n')
+        // A chip is clickable when its edge carries detail and a handler exists —
+        // then it opens the edge's popup (same affordance as clicking a box).
+        const clickable = !!(p.detail && onSelectEdge)
+        const open = () => { if (clickable) onSelectEdge(p) }
         return (
           <g key={p.id} className={`recon-edge ${live ? 'is-live' : ''}`}>
             <path
@@ -161,7 +165,9 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
                 that sits on the curve (in the gap), so the label never blends
                 into a box underneath it. foreignObject lets it auto-size to the
                 text and pick up the page's chip styling. CHIP_W/H is just a
-                generous canvas the flex wrapper centres the chip within. */}
+                generous canvas the flex wrapper centres the chip within.
+                The wrap re-enables pointer events (the SVG layer itself is
+                transparent) so the chip can be clicked to open its detail. */}
             <foreignObject
               x={p.labelX - CHIP_W / 2}
               y={p.labelY - CHIP_H / 2}
@@ -169,14 +175,23 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
               height={CHIP_H}
               style={{ overflow: 'visible', pointerEvents: 'none' }}
             >
-              <div className="recon-edge-chip-wrap">
-                <span className={`recon-edge-chip ${live ? 'is-live' : ''}`} style={{ '--edge-color': p.color }}>
+              <div className="recon-edge-chip-wrap" style={clickable ? { pointerEvents: 'auto' } : undefined}>
+                <span
+                  className={`recon-edge-chip ${live ? 'is-live' : ''} ${clickable ? 'is-clickable' : ''}`}
+                  style={{ '--edge-color': p.color }}
+                  role={clickable ? 'button' : undefined}
+                  tabIndex={clickable ? 0 : undefined}
+                  aria-label={clickable ? `${p.title || p.label.replace(/\n/g, ' ')} — open details` : undefined}
+                  onClick={open}
+                  onKeyDown={(e) => { if (clickable && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open() } }}
+                >
                   <span className="recon-edge-chip-num">{p.step}</span>
                   <span className="recon-edge-chip-label">
                     {lines.map((ln, i) => (
                       <span key={i} className="recon-edge-chip-line">{ln}</span>
                     ))}
                   </span>
+                  {clickable && <span className="recon-edge-chip-go" aria-hidden>›</span>}
                 </span>
               </div>
             </foreignObject>
