@@ -15,9 +15,11 @@
 
   --tx-bright: #ffffff;
   --tx:        rgba(255, 255, 255, 0.85);
-  /* Bumped from 0.55 / 0.35: at the old alphas the small dim labels fell below
-     the WCAG AA 4.5:1 contrast floor against the #070b14 surface. */
-  --tx-muted:  rgba(255, 255, 255, 0.62);
+  /* Bumped from 0.55 / 0.35 (WCAG AA), then up to 0.82 to read as white as the
+     definition-callout prose (--tx): body text app-wide should match that
+     brightness rather than sit a tier below it. Held a hair under --tx so the
+     token still nominally ranks beneath primary prose. */
+  --tx-muted:  rgba(255, 255, 255, 0.82);
   --tx-dim:    rgba(255, 255, 255, 0.48);
 
   --border-w:  rgba(255, 255, 255, 0.10);
@@ -2336,6 +2338,13 @@ button.object-tag:hover {
   align-items: center;
   justify-content: center;
   color: var(--row-color, var(--band-color));
+  /* The accent-bordered chip around the key glyph — kept in step with the detail
+     modal's .why-icon so the definition callout leads with the same chip in both
+     places. (The card frame on the surrounding .tree-why stays dropped; only the
+     glyph's own chip returns.) */
+  border: 1px solid color-mix(in srgb, var(--row-color, var(--band-color)) 45%, transparent);
+  background: color-mix(in srgb, var(--row-color, var(--band-color)) 14%, transparent);
+  border-radius: 7px;
 }
 .tree-why-body {
   min-width: 0;
