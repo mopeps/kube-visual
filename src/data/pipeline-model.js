@@ -59,19 +59,20 @@ function realisationNote(lp) {
 // object an API Object / Service / NetworkPolicy reduces to). Same philosophy as
 // realisationNote: each is a desired-state record in etcd, so name the record, the
 // controller/kubelet that acts on it, and the concrete effect. Keyed off the kind
-// word that leads `runtimeForm`.
+// word that leads `runtimeForm`. Phrased as a noun phrase so it reads naturally
+// after the "Declared" keyword the intent band leads each row with.
 function manifestNote(form) {
   if (!form) return undefined
-  if (/^Deployment/.test(form)) return 'Desired Pod template & replica count in etcd; its controller rolls them out via ReplicaSets.'
-  if (/^ReplicaSet/.test(form)) return 'Holds the desired replica count in etcd; its controller adds or deletes Pods until actual matches.'
-  if (/^ConfigMap/.test(form)) return 'A key/value map of non-secret config in etcd; the kubelet projects it into the Pod as files or env vars.'
-  if (/^Secret/.test(form)) return 'A key/value map of sensitive data in etcd; the kubelet mounts it into the Pod as an in-memory tmpfs file.'
-  if (/^PersistentVolumeClaim/.test(form)) return 'A storage request in etcd; once bound to a PersistentVolume the kubelet mounts it.'
-  if (/^PersistentVolume/.test(form)) return 'A cluster-scoped volume in etcd that a PVC binds to, backed by real storage.'
-  if (/^EndpointSlice/.test(form)) return "A list of a Service's live, ready Pod IPs in etcd, written by the EndpointSlice controller to steer traffic."
-  if (/^Service \(LoadBalancer\)/.test(form)) return 'Declares an external entry point; a controller provisions the LB and writes its IP back.'
-  if (/^Service/.test(form)) return 'Allocates a stable virtual IP in etcd; the datapath DNATs it to the selected Pods.'
-  if (/^NetworkPolicy/.test(form)) return 'Declares allowed traffic for the selected Pods; OVN compiles it into datapath ACLs.'
+  if (/^Deployment/.test(form)) return 'a Pod template & replica count in etcd; its controller rolls them out via ReplicaSets.'
+  if (/^ReplicaSet/.test(form)) return 'a fixed replica count in etcd; its controller adds or deletes Pods until actual matches.'
+  if (/^ConfigMap/.test(form)) return 'a key/value map of non-secret config in etcd; the kubelet projects it into the Pod as files or env vars.'
+  if (/^Secret/.test(form)) return 'a key/value map of sensitive data in etcd; the kubelet mounts it into the Pod as an in-memory tmpfs file.'
+  if (/^PersistentVolumeClaim/.test(form)) return 'a storage request in etcd; once bound to a PersistentVolume the kubelet mounts it.'
+  if (/^PersistentVolume/.test(form)) return 'a cluster-scoped volume in etcd that a PVC binds to, backed by real storage.'
+  if (/^EndpointSlice/.test(form)) return "a list of a Service's live, ready Pod IPs in etcd, written by the EndpointSlice controller to steer traffic."
+  if (/^Service \(LoadBalancer\)/.test(form)) return 'an external entry point; a controller provisions the LB and writes its IP back.'
+  if (/^Service/.test(form)) return 'a stable virtual IP in etcd; the datapath DNATs it to the selected Pods.'
+  if (/^NetworkPolicy/.test(form)) return 'the traffic allowed to the selected Pods; OVN compiles it into datapath ACLs.'
   return undefined
 }
 
@@ -133,11 +134,11 @@ function podBands(component) {
         nodes: [
           ancestry.deployment && {
             label: `[Deployment] ${ancestry.deployment}`,
-            note: 'desired Pod template, replica count & rollout strategy',
+            note: 'a Pod template, replica count & rollout strategy',
           },
           ancestry.replicaSet && {
             label: `[ReplicaSet] ${ancestry.replicaSet}`,
-            note: 'desired replica count; unique pod-hash replicas stamped out by the controller',
+            note: 'a fixed replica count; unique pod-hash replicas stamped out by the controller',
           },
         ].filter(Boolean),
       }],
@@ -149,7 +150,7 @@ function podBands(component) {
       groups: [{
         nodes: [{
           label: `[Owner] ${component.logicalContext.associatedObject}`,
-          note: proj ? `declared in project ${proj}` : 'declares the desired Pod state',
+          note: proj ? `the desired Pod state, in project ${proj}` : 'the desired Pod state',
         }],
       }],
     })
@@ -162,7 +163,7 @@ function podBands(component) {
     groups: [{
       nodes: [{
         label: `[${t}] ${podName}`,
-        note: 'schedulable API object handed to the node',
+        note: 'the concrete API object handed to a node to run',
         children: cr.map(r => ({
           color: PURPLE,
           label: r.apiObject,
@@ -260,7 +261,7 @@ function vmiBands(component) {
     groups: [{
       nodes: [{
         label: `[VirtualMachineInstance] ${component.displayName}`,
-        note: 'KubeVirt API object describing the guest VM',
+        note: 'the KubeVirt API object describing the guest VM',
       }],
     }],
   }, {
@@ -289,7 +290,7 @@ function customResourceBands(component) {
     groups: [{
       nodes: [{
         label: `[CustomResource] ${component.displayName}`,
-        note: 'declares desired state; reconciled by its operator into Pods',
+        note: 'desired state for its operator to reconcile into Pods',
       }],
     }],
   }]
@@ -306,7 +307,7 @@ function controllerBands(component) {
     groups: [{
       nodes: [{
         label: `[Controller] ${component.displayName}`,
-        note: 'a reconcile loop — watches the API server and drives actual state toward desired',
+        note: 'actual cluster state toward desired — a control loop watching the API server',
       }],
     }],
   }]
