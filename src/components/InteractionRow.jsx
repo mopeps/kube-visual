@@ -86,7 +86,7 @@ export default function InteractionRow({ text, onSelectComponent, selfId }) {
         style={{
           color: r.kindMeta.accent,
           borderColor: `${r.kindMeta.accent}55`,
-          background: `${r.kindMeta.accent}14`,
+          background: 'transparent',
         }}
         aria-hidden="true"
       >

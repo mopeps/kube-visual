@@ -91,7 +91,7 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
           explicit heading — the callout is self-evident. */}
       <div className="detail-section">
         <div className="why-callout" style={{ borderColor: `${color}59`, background: `${color}12` }}>
-          <span className="why-icon" style={{ color, borderColor: `${color}59`, background: `${color}1f` }} aria-hidden="true">
+          <span className="why-icon" style={{ color, borderColor: `${color}59`, background: 'transparent' }} aria-hidden="true">
             <WhyIcon />
           </span>
           <div className="why-body">
