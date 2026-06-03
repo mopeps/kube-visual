@@ -111,6 +111,10 @@ export default function SwipeViews({ index, count, onIndexChange, onActiveScroll
             ref={(el) => { paneRefs.current[i] = el }}
             onScroll={(e) => { if (i === index) onActiveScroll?.(e.currentTarget.scrollTop) }}
             aria-hidden={i !== index}
+            // Keep the inactive panes (always mounted, for the swipe preview) out
+            // of the tab order and the a11y tree — focusable content inside an
+            // aria-hidden subtree is otherwise reachable by keyboard / AT.
+            inert={i !== index}
           >
             {child}
           </div>
