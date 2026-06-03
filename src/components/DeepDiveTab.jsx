@@ -102,13 +102,22 @@ export default function DeepDiveTab({
   onSelectFlowStep,
 }) {
   const [selectedBoxId, setSelectedBoxId] = useState(null)
+  const [selectedEdgeId, setSelectedEdgeId] = useState(null)
 
   const topic = activeTopic ? findDeepDive(activeTopic) : null
   const boxIndex = useMemo(() => (topic ? indexTopicBoxes(topic) : {}), [topic])
   const colorOf = useCallback((boxId) => boxIndex[boxId]?.accent || 'var(--k-cyan)', [boxIndex])
 
+  // The reconciliation loop's connector edges carry their own clickable detail
+  // (systemd topic only) — index them so a clicked chip resolves to its popup.
+  const edgeIndex = useMemo(() => {
+    const out = {}
+    for (const e of topic?.reconciliation?.edges || []) out[e.id] = e
+    return out
+  }, [topic])
+
   // Switching topics drops any open popup.
-  useEffect(() => { setSelectedBoxId(null) }, [activeTopic])
+  useEffect(() => { setSelectedBoxId(null); setSelectedEdgeId(null) }, [activeTopic])
 
   // Follow the trace: when a hop is focused, bring its target box into the upper
   // third of whatever scrolls the canvas (mirrors the Overview's trace-follow).
@@ -122,14 +131,17 @@ export default function DeepDiveTab({
     return () => cancelAnimationFrame(raf)
   }, [activeFlowStep, activeFlow])
 
-  const selectBox = useCallback((id) => setSelectedBoxId(id), [])
-  const closeBox = useCallback(() => setSelectedBoxId(null), [])
+  // Only one popup at a time — opening a box closes any open edge and vice versa.
+  const selectBox = useCallback((id) => { setSelectedEdgeId(null); setSelectedBoxId(id) }, [])
+  const selectEdge = useCallback((edge) => { setSelectedBoxId(null); setSelectedEdgeId(edge.id) }, [])
+  const closeBox = useCallback(() => { setSelectedBoxId(null); setSelectedEdgeId(null) }, [])
 
   if (!topic) {
     return <TopicIndex onSelectTopic={onSelectTopic} />
   }
 
   const selected = selectedBoxId ? boxIndex[selectedBoxId] : null
+  const selectedEdge = selectedEdgeId ? edgeIndex[selectedEdgeId] : null
   const content = selected
     ? {
         id: selected.box.id,
@@ -138,7 +150,14 @@ export default function DeepDiveTab({
         accent: selected.accent,
         detail: selected.box.detail,
       }
-    : null
+    : selectedEdge
+      ? {
+          id: selectedEdge.id,
+          title: selectedEdge.title || selectedEdge.label?.replace(/\n/g, ' '),
+          accent: `var(--${selectedEdge.accent || 'k-cyan'})`,
+          detail: selectedEdge.detail,
+        }
+      : null
 
   return (
     <div className="deep-dive">
@@ -169,6 +188,7 @@ export default function DeepDiveTab({
       <DeepDiveCanvas
         topic={topic}
         onSelectBox={selectBox}
+        onSelectEdge={selectEdge}
         activeFlow={activeFlow}
         activeFlowStep={activeFlowStep}
         onSelectFlowStep={onSelectFlowStep}

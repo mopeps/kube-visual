@@ -224,17 +224,170 @@ const SYSTEMD = {
     //   labelT   = where on the curve the chip parks (0=source … 1=target) — used
     //              to slide the two engine↔reality chips apart in the same gap
     //   accent   = colour var; phase = loop phase that lights this edge up
+    //   title/detail = the edge's clickable popup. Clicking a chip opens this in
+    //                  the DeepDiveModal, same as clicking a box — so each
+    //                  connector explains what actually crosses it (parse,
+    //                  evaluate, syscall, pin, feedback signal).
     edges: [
       { id: 'compile', from: 'sd-units', to: 'sd-dag', step: '1',
-        label: 'daemon-reload\ncompiles the DAG', accent: 'k-purple' },
+        label: 'daemon-reload\ncompiles the DAG', accent: 'k-purple',
+        title: 'daemon-reload — compile the DAG',
+        detail: {
+          role: 'EDGE 1 · PARSE → LOAD',
+          summary:
+            'The one-time translation from flat on-disk text into systemd’s in-memory graph. It runs at boot and on every `systemctl daemon-reload`; until it runs, an edited unit file has zero effect on the running system — the DAG, not the file, is what the engine acts on.',
+          sections: [
+            {
+              heading: 'What crosses this edge',
+              facts: [
+                { k: 'From', v: 'Unit Files — flat text on disk (/etc/ + /usr/lib/systemd/system)' },
+                { k: 'To', v: 'Compiled DAG — a graph of C `Unit` structs in PID 1’s heap' },
+                { k: 'Trigger', v: 'boot, or an explicit `systemctl daemon-reload`' },
+              ],
+              tags: ['parse once', 'text → structs', 'no reload = no effect', 'MCO-rendered on OpenShift'],
+            },
+            {
+              heading: 'Why a reload is required',
+              body: 'systemd never re-reads files on the fly — it would be both slow and racy mid-transaction. Instead it snapshots the whole tree into memory once, so every later decision is a pointer walk, not a disk read.',
+            },
+            {
+              heading: 'Explore',
+              commands: [
+                '# Re-parse unit files after editing one\nsystemctl daemon-reload',
+                '# Show the merged unit systemd actually compiled (file + drop-ins)\nsystemctl cat ovnkube-node.service',
+              ],
+            },
+          ],
+        },
+      },
       { id: 'evaluate', from: 'sd-engine', to: 'sd-dag', step: '2',
-        label: 'reads desired\nsets UNIT_FAILED', accent: 'k-amber', phase: 'failed' },
+        label: 'reads desired\nsets UNIT_FAILED', accent: 'k-amber', phase: 'failed',
+        title: 'evaluate — read desired, set UNIT_FAILED',
+        detail: {
+          role: 'EDGE 2 · EVALUATE → DRIFT',
+          summary:
+            'When the engine wakes, it reads the desired state off the DAG and compares it to what just happened. A dead main PID means desired (UNIT_ACTIVE) ≠ actual — so the engine flips the unit’s node to UNIT_FAILED. That flag flip is the formal moment drift is detected and the restart rules become eligible to fire.',
+          sections: [
+            {
+              heading: 'What crosses this edge',
+              facts: [
+                { k: 'From', v: 'The Engine — PID 1’s epoll loop, just woken by SIGCHLD' },
+                { k: 'To', v: 'Compiled DAG — the unit’s ACTIVE flag is flipped in place' },
+                { k: 'Decision', v: 'desired == actual? if not, mark UNIT_FAILED and consult Restart=' },
+              ],
+              tags: ['compare desired vs actual', 'atomic flag flip', 'Restart=always → recover'],
+            },
+            {
+              heading: 'It is a memory write, not a process',
+              body: 'Nothing executes here — the engine just sets a status flag on a heap struct and follows the unit’s pointers to decide the next action. The DAG is the single source of truth it reasons over.',
+            },
+            {
+              heading: 'Explore',
+              commands: [
+                '# The current active/sub state the engine is tracking\nsystemctl show ovnkube-node.service -p ActiveState,SubState,Result',
+                '# Watch the failure + recovery decision in the journal\njournalctl -u ovnkube-node -f',
+              ],
+            },
+          ],
+        },
+      },
       { id: 'enforce', from: 'sd-engine', to: 'sd-reality', step: '3', bias: 'left', labelT: 0.12, labelDX: -82,
-        label: 'ExecStart →\nfork() / execve()', accent: 'k-green', phase: 'restart' },
+        label: 'ExecStart →\nfork() / execve()', accent: 'k-green', phase: 'restart',
+        title: 'enforce — ExecStart via fork() / execve()',
+        detail: {
+          role: 'EDGE 3 · ENFORCE → SYSCALL',
+          summary:
+            'The write side of the loop: how desired state becomes a running process. The engine issues raw fork() then execve() syscalls to launch the unit’s ExecStart= — no shell, no fork-server, no intermediary. This is the only edge that turns in-memory intent into a live process on the CPU.',
+          sections: [
+            {
+              heading: 'What crosses this edge',
+              facts: [
+                { k: 'From', v: 'The Engine — issuing syscalls directly to the kernel' },
+                { k: 'To', v: 'Kernel Reality — a fresh process running ExecStart on the CPU' },
+                { k: 'Syscalls', v: 'fork() clones PID 1, then execve() replaces it with the binary' },
+              ],
+              tags: ['fork() + execve()', 'no shell', 'fresh PID', 'RestartSec= back-off'],
+            },
+            {
+              heading: 'fork() then execve()',
+              facts: [
+                { k: 'fork()', v: 'PID 1 clones itself, creating an empty child process' },
+                { k: 'execve()', v: 'the child overlays itself with /usr/bin/ovnkube — same PID, new program' },
+                { k: 'setup', v: 'between the two, systemd applies the cgroup, namespaces and limits' },
+              ],
+            },
+            {
+              heading: 'Explore',
+              commands: [
+                '# The ExecStart the engine runs on this edge\nsystemctl show ovnkube-node.service -p ExecStart',
+                '# Trace the actual fork/execve as a unit starts\nstrace -f -e trace=fork,execve systemctl restart ovnkube-node.service',
+              ],
+            },
+          ],
+        },
+      },
       { id: 'pin', from: 'sd-reality', to: 'sd-cgroup', step: '4',
-        label: 'pins PIDs into\ncgroup.procs', accent: 'k-green' },
+        label: 'pins PIDs into\ncgroup.procs', accent: 'k-green',
+        title: 'pin — write PIDs into cgroup.procs',
+        detail: {
+          role: 'EDGE 4 · PIN → CONTAIN',
+          summary:
+            'The instant a process is forked, the kernel writes its PID into the unit’s cgroup.procs file, and every child it later spawns inherits the same cgroup. This is what makes systemd’s tracking exact: actual state is no longer a guess from a PID file — it is precisely whatever the cgroup tree says is inside it.',
+          sections: [
+            {
+              heading: 'What crosses this edge',
+              facts: [
+                { k: 'From', v: 'Kernel Reality — the running PIDs on the CPU' },
+                { k: 'To', v: 'cgroup Tree — /sys/fs/cgroup/system.slice/ovnkube-node.service/' },
+                { k: 'Mechanism', v: 'the kernel records each PID in cgroup.procs; children inherit it' },
+              ],
+              tags: ['cgroups v2', 'kernel-enforced', 'no escape', 'exact membership'],
+            },
+            {
+              heading: 'Why it matters for the loop',
+              body: 'Because the kernel won’t let a process leave its cgroup, systemd can reliably sweep an entire unit — main process and every orphaned helper — by acting on the directory, not by chasing individual PIDs that could have re-parented to PID 1.',
+            },
+            {
+              heading: 'Explore',
+              commands: [
+                '# The exact PIDs the kernel has pinned under this unit\ncat /sys/fs/cgroup/system.slice/ovnkube-node.service/cgroup.procs',
+                '# The same, rendered as a tree\nsystemd-cgls /system.slice/ovnkube-node.service',
+              ],
+            },
+          ],
+        },
+      },
       { id: 'notify', from: 'sd-reality', to: 'sd-engine', step: '5', bias: 'right', labelT: 0.88, labelDX: 82,
-        label: 'SIGCHLD →\nwakes the engine', accent: 'packet', phase: 'sigchld' },
+        label: 'SIGCHLD →\nwakes the engine', accent: 'packet', phase: 'sigchld',
+        title: 'notify — SIGCHLD wakes the engine',
+        detail: {
+          role: 'EDGE 5 · NOTIFY → FEEDBACK',
+          summary:
+            'The feedback edge that closes the loop. systemd never polls for health — the kernel fires SIGCHLD the moment any child dies and delivers it through a signalfd that the engine’s epoll loop is blocked on. PID 1 is woken the exact millisecond reality changes, which is what makes the whole supervisor event-driven instead of a busy-wait.',
+          sections: [
+            {
+              heading: 'What crosses this edge',
+              facts: [
+                { k: 'From', v: 'Kernel Reality — a process just died on the CPU' },
+                { k: 'To', v: 'The Engine — woken from its epoll() sleep' },
+                { k: 'Carrier', v: 'SIGCHLD, converted to a readable event by signalfd' },
+              ],
+              tags: ['signalfd', 'SIGCHLD', 'event-driven', 'never polls', 'zero latency'],
+            },
+            {
+              heading: 'Why signalfd, not a handler',
+              body: 'A classic async signal handler can only run a few safe calls and races with the main loop. signalfd turns the signal into a plain file descriptor read, so the death is just another event the single epoll loop dequeues in order — no reentrancy, no polling.',
+            },
+            {
+              heading: 'Explore',
+              commands: [
+                '# The signalfd/epoll descriptors PID 1 is blocked on\nls -l /proc/1/fd',
+                '# Fire the loop yourself and watch the wake-up\nsystemctl kill -s SIGKILL ovnkube-node.service ; journalctl -u ovnkube-node -f',
+              ],
+            },
+          ],
+        },
+      },
     ],
   },
   zones: [
