@@ -322,8 +322,8 @@ body::after {
 
 .node-type-prefix {
   display: block;
-  font-size: 0.55rem;
-  letter-spacing: 0.14em;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 700;
   margin-bottom: 3px;
@@ -397,7 +397,7 @@ body::after {
   align-items: center;
   gap: 5px;
   margin-top: 8px;
-  font-size: 0.58rem;
+  font-size: 0.64rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 600;
@@ -517,7 +517,7 @@ body::after {
 
 .intent-store-footer {
   margin-top: 12px;
-  font-size: 0.58rem;
+  font-size: 0.64rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--tx-dim);
@@ -767,7 +767,7 @@ body::after {
 }
 .event-card-meta {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.58rem;
+  font-size: 0.64rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--k-cyan);
@@ -833,7 +833,7 @@ body::after {
 }
 .flow-switcher-label {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.58rem;
+  font-size: 0.64rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--tx-dim);
@@ -884,7 +884,7 @@ body::after {
 .obj-select-label {
   flex-shrink: 0;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.54rem;
+  font-size: 0.6rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--tx-dim);
@@ -907,7 +907,7 @@ body::after {
 }
 .obj-select-meta {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.54rem;
+  font-size: 0.6rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--tx-muted);
@@ -987,7 +987,7 @@ body::after {
 .obj-select-option-meta {
   flex-shrink: 0;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.52rem;
+  font-size: 0.58rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--opt-accent);
@@ -1192,7 +1192,7 @@ body::after {
 .recon-walk:has(.recon-walk-body) .recon-walk-bar { border-bottom-color: var(--border-w); }
 .recon-walk-title {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.56rem;
+  font-size: 0.62rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--tx-dim);
@@ -1236,7 +1236,7 @@ body::after {
   display: inline-block;
   margin-right: 8px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.54rem;
+  font-size: 0.6rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   vertical-align: middle;
@@ -1273,7 +1273,7 @@ body::after {
   background: var(--bg-2);
   border: 1px solid var(--border-w);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.56rem;
+  font-size: 0.62rem;
   font-weight: 700;
 }
 .recon-timeline-step.is-past { opacity: 0.6; }
@@ -1323,7 +1323,7 @@ body::after {
    horizontal edges (evaluate, pin) can park their chip in genuinely empty space
    — the gap is deliberately wider than a chip (capped at .recon-edge-chip
    max-width) so the chip clears both boxes on either side. */
-.recon-stack--edges .zone-content-inner { gap: 168px; }
+.recon-stack--edges .zone-content-inner { gap: 188px; }
 @media (max-width: 640px) {
   .recon-stack--edges { gap: 80px; }
   /* On phones the boxes already reflow 2-up; keep the intra gap small so that
@@ -1344,11 +1344,11 @@ body::after {
 .recon-edge-chip {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  /* Stays under the intra-zone gap (168px) so a horizontal-edge chip always
+  gap: 8px;
+  /* Stays under the intra-zone gap (188px) so a horizontal-edge chip always
      clears the boxes on either side. */
-  max-width: 150px;
-  padding: 4px 10px 4px 4px;
+  max-width: 172px;
+  padding: 5px 12px 5px 5px;
   border: 1px solid color-mix(in srgb, var(--edge-color) 50%, transparent);
   border-radius: 999px;
   background: var(--bg-2);
@@ -1360,24 +1360,24 @@ body::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 21px;
+  height: 21px;
   border-radius: 50%;
   border: 1px solid var(--edge-color);
   background: color-mix(in srgb, var(--edge-color) 18%, var(--bg));
   color: var(--edge-color);
-  font-size: 0.6rem;
+  font-size: 0.72rem;
   font-weight: 700;
 }
 .recon-edge-chip-label {
   display: flex;
   flex-direction: column;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 .recon-edge-chip-line {
   color: var(--tx-muted);
-  font-size: 0.54rem;
-  letter-spacing: 0.02em;
+  font-size: 0.64rem;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 .recon-edge-chip.is-live {
@@ -1408,7 +1408,7 @@ body::after {
   flex: 0 0 auto;
   margin-left: 1px;
   color: var(--edge-color);
-  font-size: 0.78rem;
+  font-size: 0.92rem;
   font-weight: 700;
   line-height: 1;
   opacity: 0.7;
@@ -1450,8 +1450,8 @@ body::after {
   padding: 0 6px;
   background: var(--bg-2);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.5rem;
-  letter-spacing: 0.12em;
+  font-size: 0.56rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--tx-dim);
 }
@@ -1481,8 +1481,8 @@ body::after {
 .cgroup-proc-pid { color: var(--node-accent); font-weight: 700; }
 .cgroup-proc-label { color: var(--tx-muted); }
 .cgroup-proc-tag {
-  font-size: 0.46rem;
-  letter-spacing: 0.1em;
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 1px 5px;
   border-radius: 999px;
@@ -1649,7 +1649,7 @@ body::after {
 .unit-chip-name { font-family: 'JetBrains Mono', monospace; font-size: 0.64rem; color: var(--tx); }
 .unit-chip-kind {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.5rem;
+  font-size: 0.56rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--tx-dim);
@@ -1667,7 +1667,7 @@ body::after {
 .unit-gallery-tag {
   align-self: flex-start;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.52rem;
+  font-size: 0.6rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -1727,7 +1727,7 @@ body::after {
 }
 
 .detail-type-prefix {
-  font-size: 0.6rem;
+  font-size: 0.66rem;
   font-family: 'JetBrains Mono', monospace;
   color: var(--tx-dim);
   letter-spacing: 0.1em;
@@ -1878,7 +1878,7 @@ body::after {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.58rem;
+  font-size: 0.64rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-weight: 600;
@@ -2079,7 +2079,7 @@ button.object-tag:hover {
   border-bottom: 1px solid var(--border-d);
 }
 .manifest-block-lang {
-  font-size: 0.6rem;
+  font-size: 0.66rem;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--tx-muted);
@@ -2324,9 +2324,9 @@ button.object-tag:hover {
 .tree-group { margin-top: 6px; }
 .tree-group:first-child { margin-top: 0; }
 /* In-band subheadings match the Interactions legend keyword exactly
-   (.interaction-legend-item): 0.58rem, 0.1em tracking, uppercase, 600, 0.85. */
+   (.interaction-legend-item): 0.64rem, 0.1em tracking, uppercase, 600, 0.85. */
 .tree-subhead {
-  font-size: 0.58rem;
+  font-size: 0.64rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;

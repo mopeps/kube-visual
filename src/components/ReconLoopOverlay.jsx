@@ -210,7 +210,7 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
             {/* paint-order:stroke draws a thick bg-coloured halo behind the
                 glyphs so the moving signal stays readable over any box. */}
             <text
-              x="0" y="-9" textAnchor="middle" fontSize="8.5" fontWeight="700" fill={signalPath.color}
+              x="0" y="-10" textAnchor="middle" fontSize="10.5" fontWeight="700" fill={signalPath.color}
               style={{
                 fontFamily: 'var(--font-mono, monospace)',
                 paintOrder: 'stroke', stroke: 'var(--bg)', strokeWidth: 3.5, strokeLinejoin: 'round',
