@@ -1798,16 +1798,21 @@ body::after {
   border-radius: 7px;
 }
 .why-body { min-width: 0; }
+/* Role badge — unified with the pipeline action chip (.tree-kind-chip) so every
+   leading callout badge reads as one family: a rounded-rect (not a pill), at the
+   same 0.62rem / 600 / 0.08em tracking and 1px 6px padding. The accent colour,
+   border and fill are still set inline (color / borderColor / background) where
+   it's rendered. margin-bottom keeps it a block label above the definition. */
 .why-role {
   display: inline-block;
-  font-size: 0.56rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 2px 8px;
+  padding: 1px 6px;
   border: 1px solid;
-  border-radius: 999px;
-  margin-bottom: 7px;
+  border-radius: 4px;
+  margin-bottom: 6px;
 }
 /* Scoped through .why-body so the font-size/line-height win over the shared
    `.detail-section p` rule (0,1,1) — unscoped, the callout sentence would be
