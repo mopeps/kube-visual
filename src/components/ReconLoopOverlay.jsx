@@ -39,7 +39,7 @@ function buildEdge(srcEl, tgtEl, canvasEl, bias, labelT = 0.5) {
   const tCy = t.top + t.height / 2 - c.top
 
   const vertical = Math.abs(tCy - sCy) >= Math.abs(tCx - sCx)
-  const bow = bias === 'left' ? -34 : bias === 'right' ? 34 : 0
+  const bow = bias === 'left' ? -64 : bias === 'right' ? 64 : 0
 
   let sx, sy, tx, ty
   if (vertical) {
@@ -83,10 +83,16 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
       const srcEl = document.getElementById(`dd-${edge.from}`)
       const tgtEl = document.getElementById(`dd-${edge.to}`)
       if (!srcEl || !tgtEl) continue
+      const built = buildEdge(srcEl, tgtEl, canvas, edge.bias, edge.labelT)
       next.push({
         ...edge,
         color: `var(--${edge.accent || 'k-cyan'})`,
-        ...buildEdge(srcEl, tgtEl, canvas, edge.bias, edge.labelT),
+        ...built,
+        // labelDX/labelDY: an explicit chip nudge, independent of the curve. Near
+        // the endpoints (small/large labelT) the bow's sideways pull fades out, so
+        // two chips parked in the same gap need this to separate horizontally.
+        labelX: built.labelX + (edge.labelDX || 0),
+        labelY: built.labelY + (edge.labelDY || 0),
       })
     }
     setPaths(next)
