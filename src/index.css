@@ -1315,22 +1315,72 @@ body::after {
 .recon-stack { position: relative; }
 
 /* When the reconciliation loop is drawn on the canvas (ReconLoopOverlay), open
-   up the inter-zone gaps so the connector edges + their two-line labels have
-   room to breathe between the pillar boxes. */
-.recon-stack--edges { gap: 46px; padding-top: 14px; padding-bottom: 14px; }
+   up the inter-zone gaps so the connector edges + their label chips have a clear
+   band to sit in *between* the pillar zones — never on top of a box. The two
+   engine↔reality edges share this gap, so it has to fit two stacked chips. */
+.recon-stack--edges { gap: 90px; padding-top: 18px; padding-bottom: 18px; }
+/* Widen the gap between the two boxes inside each PID-1 / kernel zone too, so the
+   horizontal edges (evaluate, pin) can drop their chip cleanly in between. */
+.recon-stack--edges .zone-content-inner { gap: 132px; }
 @media (max-width: 640px) {
-  .recon-stack--edges { gap: 40px; }
+  .recon-stack--edges { gap: 76px; }
+  .recon-stack--edges .zone-content-inner { gap: 72px; }
 }
 
-/* The reconciliation-loop connector edges. Static structural map by default; the
-   edge whose `phase` matches the live loop step brightens and pulses. */
-.recon-edge-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.5rem;
-  letter-spacing: 0.04em;
-  opacity: 0.85;
+/* The label chip — the "little box" anchored on each connector, carrying a
+   step-number badge + the edge's caption. A solid background keeps it readable
+   wherever it lands; the live edge's chip lifts to its full accent. */
+.recon-edge-chip-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.recon-edge.is-live .recon-edge-label { opacity: 1; }
+.recon-edge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 220px;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid color-mix(in srgb, var(--edge-color) 50%, transparent);
+  border-radius: 999px;
+  background: var(--bg-2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+  font-family: 'JetBrains Mono', monospace;
+}
+.recon-edge-chip-num {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--edge-color);
+  background: color-mix(in srgb, var(--edge-color) 18%, var(--bg));
+  color: var(--edge-color);
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+.recon-edge-chip-label {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.recon-edge-chip-line {
+  color: var(--tx-muted);
+  font-size: 0.54rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.recon-edge-chip.is-live {
+  border-color: var(--edge-color);
+  background: color-mix(in srgb, var(--edge-color) 14%, var(--bg-2));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--edge-color) 40%, transparent),
+    0 0 14px color-mix(in srgb, var(--edge-color) 45%, transparent);
+}
+.recon-edge-chip.is-live .recon-edge-chip-line { color: var(--tx-bright); }
 .recon-edge.is-live .recon-edge-line {
   filter: drop-shadow(0 0 5px currentColor);
   animation: recon-edge-flow 0.7s linear infinite;
