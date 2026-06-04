@@ -114,8 +114,8 @@ function RowDetail({ detail, color, onSelectComponent, selfId }) {
 
 // A single node row. The label is always shown; the one-line note and any deeper
 // detail are hidden until the row is expanded, so the resting state is just a
-// clean list of labels. Child nodes render indented beneath, threaded by a soft
-// accent rail rather than ASCII gutter glyphs.
+// clean list of labels. Child nodes render flush beneath their parent (no indent
+// or rail) — each child's own accent colour marks it as a level down.
 function Node({ node, bandColor, layerId, onSelectComponent, selfId }) {
   const [open, setOpen] = useState(false)
   const [manifestOpen, setManifestOpen] = useState(false)
