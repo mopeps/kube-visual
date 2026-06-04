@@ -100,18 +100,22 @@ export default function DeepDiveCanvas({
     ? new Set([focusedStep.sourceBoxId, focusedStep.targetBoxId])
     : null
 
+  // Boxes carry only their heading on the canvas — the static descriptive
+  // subtitle lives in the popup (DeepDiveModal) so the canvas stays uncluttered.
+  // The one exception is the reconciliation overlay's *live* status line (ov),
+  // shown only while the systemd walkthrough is armed: dynamic feedback, not a
+  // description.
   const renderBox = (box, zone) => {
     const ov = overlays[box.id]
     const accent = ov?.accent || accentOf(zone, topic)
     const isActive = focusedIds?.has(box.id) || false
     const isDimmed = focusedIds ? !focusedIds.has(box.id) : false
 
-    // Hide the per-box subtitles ("under headings") on the systemd canvas's
-    // resting main view; they return as live status only while the
-    // reconciliation walkthrough is armed. Other topics keep their subtitles.
+    // Static subtitles are hidden on the resting canvas for every topic; on the
+    // systemd topic the overlay's live status line returns while armed.
     const subtitle = recon
       ? (loop.armed ? ov?.subtitle : undefined)
-      : (ov?.subtitle ?? box.subtitle)
+      : undefined
 
     if (recon && box.id === recon.cgroupBoxId) {
       return (

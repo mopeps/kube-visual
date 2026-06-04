@@ -187,6 +187,120 @@ WantedBy=multi-user.target`,
   },
 ]
 
+// ── The cgroup v2 tree (what `systemd-cgls` prints) ──────────────────────────
+// The unified hierarchy the kernel actually keeps, so the three kinds of cgroup
+// — slices (grouping), services (systemd-forked) and scopes (externally-forked,
+// e.g. login sessions and VMs) — are visible side by side, with our headline
+// unit's pinned PIDs in place.
+const CGROUP_TREE = {
+  caption: 'systemd-cgls · the unified cgroup v2 tree',
+  nodes: [
+    {
+      label: '/ · root cgroup', kind: 'root',
+      children: [
+        {
+          label: 'init.scope', kind: 'scope', sub: 'systemd itself (PID 1)',
+          children: [{ label: '1 · systemd', kind: 'proc' }],
+        },
+        {
+          label: 'system.slice', kind: 'slice', sub: 'OS daemons',
+          children: [
+            {
+              label: 'ovnkube-node.service', kind: 'service', sub: 'the headline unit',
+              children: [
+                { label: '10243 · ovnkube-node', kind: 'proc', sub: 'main PID' },
+                { label: '10255 · ovn-nbctl', kind: 'proc' },
+                { label: '10256 · ovn-controller mon', kind: 'proc' },
+              ],
+            },
+            { label: 'crio.service', kind: 'service', children: [{ label: '3120 · crio', kind: 'proc' }] },
+            { label: 'kubelet.service', kind: 'service', children: [{ label: '3450 · kubelet', kind: 'proc' }] },
+          ],
+        },
+        {
+          label: 'user.slice', kind: 'slice', sub: 'human logins',
+          children: [
+            {
+              label: 'user-1000.slice', kind: 'slice',
+              children: [
+                { label: 'user@1000.service', kind: 'service', sub: 'the per-user manager' },
+                {
+                  label: 'session-3.scope', kind: 'scope', sub: 'an SSH login — systemd adopts, it did not fork it',
+                  children: [
+                    { label: '14782 · sshd', kind: 'proc' },
+                    { label: '14790 · bash', kind: 'proc' },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          label: 'machine.slice', kind: 'slice', sub: 'VMs & containers',
+          children: [
+            { label: 'machine-qemu\\x2d1.scope', kind: 'scope', sub: 'a KubeVirt/libvirt guest' },
+          ],
+        },
+      ],
+    },
+  ],
+  legend: [
+    { kind: 'slice', meaning: 'a grouping branch (no process) for accounting & limits' },
+    { kind: 'service', meaning: 'processes systemd forked from a unit' },
+    { kind: 'scope', meaning: 'externally-forked processes systemd only adopts (sessions, VMs)' },
+    { kind: 'proc', meaning: 'a live PID pinned by the kernel' },
+  ],
+}
+
+// ── The systemd target dependency tree (what `systemctl list-dependencies`
+// prints) ──────────────────────────────────────────────────────────────────
+// Targets own no process — they are named sync points other units order
+// against. This is the forward graph from the boot goal down to the leaf
+// services, with our headline unit grafted in where it really sits.
+const TARGET_TREE = {
+  caption: 'systemctl list-dependencies · targets pull in units',
+  nodes: [
+    {
+      label: 'default.target', kind: 'target', sub: '→ aliased to multi-user.target',
+      children: [
+        {
+          label: 'multi-user.target', kind: 'target', sub: 'the “system is up” milestone',
+          children: [
+            {
+              label: 'basic.target', kind: 'target',
+              children: [
+                {
+                  label: 'sysinit.target', kind: 'target', sub: 'early init',
+                  children: [
+                    { label: 'systemd-journald.service', kind: 'service' },
+                    { label: 'systemd-sysctl.service', kind: 'service', sub: 'oneshot' },
+                  ],
+                },
+                {
+                  label: 'sockets.target', kind: 'target',
+                  children: [{ label: 'dbus.socket', kind: 'socket' }],
+                },
+              ],
+            },
+            {
+              label: 'network-online.target', kind: 'target',
+              children: [{ label: 'NetworkManager.service', kind: 'service' }],
+            },
+            { label: 'crio.service', kind: 'service', sub: 'container runtime' },
+            { label: 'ovnkube-node.service', kind: 'service', sub: 'After=network-pre.target · Requires=ovs-vswitchd' },
+            { label: 'kubelet.service', kind: 'service', sub: 'After=crio.service' },
+          ],
+        },
+      ],
+    },
+  ],
+  legend: [
+    { kind: 'target', meaning: 'a named sync point — runs nothing, units order against it' },
+    { kind: 'service', meaning: 'a unit that actually runs a process' },
+    { kind: 'socket', meaning: 'a listening socket that activates its service on demand' },
+  ],
+}
+
 // ── systemd · the state reconciliation loop ─────────────────────────────────
 const SYSTEMD = {
   topicId: 'systemd',
@@ -493,6 +607,11 @@ const SYSTEMD = {
                 ],
               },
               {
+                heading: 'The graph, drawn',
+                body: 'Following the edges from the boot goal down to the leaf services — targets are sync points that pull in the units below them. This is what `systemctl list-dependencies` walks.',
+                tree: TARGET_TREE,
+              },
+              {
                 heading: 'In memory',
                 tags: ['Unit = heap struct', 'not a process', 'flags flip atomically', 'edges = pointers'],
               },
@@ -560,6 +679,11 @@ const SYSTEMD = {
                   { k: 'system.slice', v: 'the cgroup branch grouping OS daemons (user apps live under user.slice)' },
                   { k: 'cgroup.procs', v: 'holds the main PID; every child inherits the slice' },
                 ],
+              },
+              {
+                heading: 'The tree, drawn',
+                body: 'The whole hierarchy at once — slices group, services hold what systemd forked, and scopes hold processes it merely adopted (login sessions, VMs). Our unit’s pinned PIDs sit under system.slice.',
+                tree: CGROUP_TREE,
               },
               {
                 heading: 'Try it on the canvas',
@@ -754,6 +878,11 @@ const LINUX_BOOT = {
             summary:
               'PID 1 resolves the dependency graph up to default.target (multi-user.target on a server). Reaching it means networking, logging, and all enabled services — including the cluster’s kubelet/CRI-O/OVS units — are up.',
             sections: [
+              {
+                heading: 'What “reaching the target” pulls in',
+                body: 'A target runs nothing itself — it is the milestone the units below it order against. PID 1 walks this tree until every required unit is active.',
+                tree: TARGET_TREE,
+              },
               { heading: 'Explore', commands: [
                 '# What this machine boots into\nsystemctl get-default',
                 '# Slowest units this boot\nsystemd-analyze blame | head',

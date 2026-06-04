@@ -197,6 +197,7 @@ export default function DeepDiveTab({
         id: selected.box.id,
         title: selected.box.title,
         typePrefix: selected.box.typePrefix,
+        subtitle: selected.box.subtitle,
         accent: selected.accent,
         detail: selected.box.detail,
       }
