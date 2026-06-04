@@ -327,7 +327,7 @@ export const ZONES = [
                 // Deployment Pod (each reports a ClusterOperator) — nested only
                 // to keep the canvas legible, not because they share a process.
                 operatorSetCaption:
-                  'Second-level cluster operators the CVO reconciles from the release payload — each a separate Deployment Pod reporting a ClusterOperator, grouped here to keep the canvas legible.',
+                  'The OpenShift operators the CVO installs and keeps at the right version — each runs as its own Pod, grouped here to keep the canvas legible.',
                 operators: [
                   {
                     id: 'ingress-operator',
