@@ -1671,6 +1671,94 @@ body::after {
   color: var(--tag-accent, var(--k-cyan));
 }
 
+/* The box's one-line descriptor — moved off the canvas into the popup, sitting
+   just under the title so the on-canvas boxes stay heading-only. */
+.deep-detail-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem;
+  line-height: 1.5;
+  color: var(--tx-dim);
+  margin: -4px 0 10px;
+}
+
+/* ── Deep-dive popup: visual tree (cgroup & target hierarchies) ─────────
+   A real, CSS-drawn hierarchy — for things that *are* trees (cgroup v2
+   slices/services/scopes/PIDs, the systemd target dependency graph) — far more
+   legible than a raw ASCII block. Guide lines are drawn per-node so the trunk
+   stops cleanly at the last child. */
+.deep-tree {
+  margin: 8px 0 2px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.deep-tree-caption {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  opacity: 0.9;
+}
+.deep-tree-list,
+.deep-tree-sub-list { list-style: none; margin: 0; padding: 0; }
+.deep-tree-sub-list > .deep-tree-node {
+  position: relative;
+  padding-left: 22px;
+}
+/* vertical trunk down the left edge of each child (connects siblings) */
+.deep-tree-sub-list > .deep-tree-node::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-left: 1px solid var(--tree-guide, rgba(255, 255, 255, 0.18));
+}
+/* horizontal elbow into each child's row */
+.deep-tree-sub-list > .deep-tree-node::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 13px;
+  border-top: 1px solid var(--tree-guide, rgba(255, 255, 255, 0.18));
+}
+/* last child: trim the trunk so it ends at the elbow */
+.deep-tree-sub-list > .deep-tree-node:last-child::before { height: 12px; }
+.deep-tree-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px;
+  padding: 2px 0;
+}
+.deep-tree-kind {
+  flex: none;
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+.deep-tree-label { font-size: 0.68rem; color: var(--tx-bright); }
+.deep-tree-sub { font-size: 0.62rem; color: var(--tx-dim); }
+.deep-tree-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 14px;
+  padding-top: 11px;
+  border-top: 1px solid var(--border-d);
+}
+.deep-tree-legend-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.62rem;
+  line-height: 1.5;
+  color: var(--tx-muted);
+}
+
 /* ── Unit-file gallery (chip-selectable examples) ──────────────────────── */
 .unit-gallery { margin-top: 6px; }
 .unit-gallery-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }

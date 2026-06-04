@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { ManifestBlock } from './Manifest'
 import ExploreCommands from './ExploreCommands'
 import UnitGallery from './UnitGallery'
+import DeepTree from './DeepTree'
 
 // A detail popup for a deep-dive box. Shares AncestryModal's look, gestures and
 // CSS classes (.ancestry-overlay / .ancestry-modal / grip-resize / swipe-dismiss
@@ -140,7 +141,7 @@ export default function DeepDiveModal({ content, onClose }) {
 
   if (!content) return null
 
-  const { title, typePrefix, accent = 'var(--k-cyan)', detail } = content
+  const { title, typePrefix, subtitle, accent = 'var(--k-cyan)', detail } = content
   const transition = resizing
     ? 'none'
     : snapping
@@ -190,6 +191,8 @@ export default function DeepDiveModal({ content, onClose }) {
             {typePrefix && <span className="detail-type-prefix">[{typePrefix}]&nbsp;</span>}
             {title}
           </div>
+
+          {subtitle && <div className="deep-detail-subtitle">{subtitle}</div>}
 
           {detail?.summary && (
             <div className="detail-section">
@@ -267,6 +270,7 @@ export default function DeepDiveModal({ content, onClose }) {
               {sec.units?.length > 0 && (
                 <UnitGallery units={sec.units} color={accent} />
               )}
+              {sec.tree && <DeepTree tree={sec.tree} accent={accent} />}
               {sec.manifest && (
                 <ManifestBlock body={sec.manifest.body} kind={sec.manifest.kind} color={accent} />
               )}
