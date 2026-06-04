@@ -118,10 +118,10 @@ const CRUN = {
   note: 'the low-level OCI runtime that turns the bundle into a running process',
   detail: {
     bullets: [
+      'Implements the OCI runtime spec in C — a fast drop-in for runc',
       'Issues clone() / unshare() / setns() to build the namespaces & cgroup',
       'execs the container entrypoint as PID 1 inside the new sandbox',
     ],
-    lines: ['a fast C implementation of the OCI runtime spec — a drop-in for runc'],
   },
 }
 
@@ -130,11 +130,11 @@ const CRIO = {
   note: 'translates the kubelet\'s CRI calls into an OCI bundle, then invokes crun',
   detail: {
     bullets: [
+      'Listens on the Unix socket /var/run/crio/crio.sock for the kubelet\'s CRI calls',
       'Receives container-lifecycle requests from the kubelet over CRI (RunPodSandbox, CreateContainer)',
       'Pulls the image and assembles the OCI bundle — a rootfs plus a config.json',
       'Hands the bundle to crun, the low-level OCI runtime, to actually start it',
     ],
-    lines: ['via Unix socket /var/run/crio/crio.sock'],
   },
   children: [CRUN],
 }
