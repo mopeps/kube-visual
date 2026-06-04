@@ -251,7 +251,7 @@ export const ZONES = [
                 // here only to keep ~10 Pods off the primary canvas. Expanding
                 // the node reveals them; see OperatorSetCard.jsx + ARCHITECTURE §2.
                 operatorSetCaption:
-                  'Control-plane operands the Control Plane Operator deploys into this HCP namespace — each a separate Deployment Pod, grouped here to keep the canvas legible.',
+                  'The control-plane components the Control Plane Operator runs in this namespace — each runs as its own Pod, grouped here to keep the canvas legible.',
                 operators: [
                   {
                     id: 'openshift-apiserver',
