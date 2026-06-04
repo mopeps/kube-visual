@@ -46,6 +46,7 @@ const RULES = [
   [/\bService\b/i, 'route'],
   [/NetworkPolicy|OVN ACL/i, 'filter'],
   [/\[systemd\] (Kubelet|CRI-O)/i, 'build'],
+  [/\[OCI\] crun|\bcrun\b/i, 'build'],
   [/\[Pod\]|\[Static Pod\]|VirtualMachineInstance/i, 'build'],
   [/Process|PID 1|guest OS|RHCOS|KVM vCPU|vCPU/i, 'run'],
   [/Network Namespace|netns|mount ns|cgroup/i, 'isolate'],
