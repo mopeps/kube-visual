@@ -7,7 +7,9 @@ import { scrollIntoUpperThird } from '../lib/scroll'
 
 const accent = (colorVar) => `var(--${colorVar || 'k-cyan'})`
 
-// Default view: an index of every in-depth page so the tab is never empty.
+// Default view (no topic selected): the Deep dive picker itself, expanded — so
+// the dropdown of every in-depth page IS the landing view, rather than a
+// separate card gallery.
 function TopicIndex({ onSelectTopic }) {
   return (
     <div>
@@ -16,24 +18,11 @@ function TopicIndex({ onSelectTopic }) {
         <p className="text-[0.72rem]" style={{ color: 'var(--tx-muted)' }}>
           Ground-up explainers one level below the topology — laid out like the
           overview: labelled zones of clickable boxes, each opening a detail popup.
+          Pick one to open it.
         </p>
       </div>
-      <div className="event-gallery">
-        {DEEP_DIVES.map((t) => (
-          <button
-            key={t.topicId}
-            type="button"
-            className="event-card deep-card"
-            style={{ '--deep-accent': accent(t.colorVar) }}
-            onClick={() => onSelectTopic(t.topicId)}
-          >
-            <div className="event-card-title">{t.title}</div>
-            <p className="event-card-desc">{t.tagline}</p>
-            <div className="event-card-meta" style={{ color: accent(t.colorVar) }}>
-              {countBoxes(t)} boxes →
-            </div>
-          </button>
-        ))}
+      <div className="obj-select-row">
+        <TopicSelect activeTopic={null} topic={null} onSelectTopic={onSelectTopic} defaultOpen />
       </div>
     </div>
   )
@@ -43,7 +32,7 @@ const hops = (n) => `${n} hop${n === 1 ? '' : 's'}`
 
 // Topic picker — jump to any other deep dive, or clear to the index. Styled as
 // an "open an object" popover (ObjectSelect), echoing the etcd intent store.
-function TopicSelect({ activeTopic, topic, onSelectTopic, onClearTopic }) {
+function TopicSelect({ activeTopic, topic, onSelectTopic, onClearTopic, defaultOpen }) {
   const options = DEEP_DIVES.map((t) => ({
     id: t.topicId,
     title: t.title,
@@ -54,12 +43,14 @@ function TopicSelect({ activeTopic, topic, onSelectTopic, onClearTopic }) {
   return (
     <ObjectSelect
       label="Deep dive"
-      accent={accent(topic.colorVar)}
-      value={{ title: topic.title, meta: `${countBoxes(topic)} boxes` }}
+      accent={accent(topic?.colorVar)}
+      value={topic ? { title: topic.title, meta: `${countBoxes(topic)} boxes` } : null}
+      placeholder="Choose a deep dive"
       options={options}
       activeId={activeTopic}
+      defaultOpen={defaultOpen}
       onSelect={(opt) => { if (opt.id !== activeTopic) onSelectTopic(opt.id) }}
-      clear={{ label: '← All deep dives', onClear: onClearTopic }}
+      clear={onClearTopic ? { label: '← All deep dives', onClear: onClearTopic } : undefined}
     />
   )
 }
