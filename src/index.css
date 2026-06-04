@@ -860,7 +860,14 @@ body::after {
   flex: 1 1 240px;
   min-width: 0;
 }
+.obj-select-control {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
 .obj-select-trigger {
+  flex: 1;
+  min-width: 0;
   width: 100%;
   display: flex;
   align-items: center;
@@ -925,6 +932,32 @@ body::after {
   transition: transform 0.18s;
 }
 .obj-select-trigger.is-open .obj-select-chevron { transform: rotate(180deg); }
+
+/* One-click clear pill beside the trigger — visible whenever a flow/event is
+   selected, so it no longer hides at the foot of the dropdown list. */
+.obj-select-clearbtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--obj-accent) 35%, var(--border-w));
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--tx-dim);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.18s, color 0.18s, background 0.18s, box-shadow 0.18s;
+}
+.obj-select-clearbtn:hover,
+.obj-select-clearbtn:focus-visible {
+  border-color: var(--obj-accent);
+  color: var(--obj-accent);
+  background: color-mix(in srgb, var(--obj-accent) 12%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--obj-accent) 30%, transparent),
+              0 0 18px color-mix(in srgb, var(--obj-accent) 14%, transparent);
+}
 
 .obj-select-pop {
   position: absolute;
