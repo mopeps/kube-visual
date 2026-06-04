@@ -1871,32 +1871,32 @@ body::after {
   background: rgba(0, 0, 0, 0.28);
   overflow: hidden;
 }
-.cmd-row { padding: 11px 12px 12px; }
+.cmd-row { padding: 7px 10px 8px; }
 .cmd-row + .cmd-row { border-top: 1px dashed var(--border-w); }
 .cmd-note {
-  font-size: 0.66rem;
-  line-height: 1.5;
+  font-size: 0.63rem;
+  line-height: 1.45;
   letter-spacing: 0.02em;
   color: var(--tx-dim);
-  margin-bottom: 7px;
+  margin-bottom: 4px;
 }
-.cmd-line { display: flex; align-items: flex-start; gap: 10px; }
+.cmd-line { display: flex; align-items: flex-start; gap: 8px; }
 .cmd-code {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
-  line-height: 1.6;
+  font-size: 0.7rem;
+  line-height: 1.5;
   color: var(--tx);
 }
 .cmd-code-line { white-space: pre-wrap; overflow-wrap: anywhere; }
 .cmd-prompt {
   color: var(--cmd-accent, var(--k-cyan));
   font-weight: 600;
-  margin-right: 9px;
+  margin-right: 8px;
   user-select: none;
 }
 /* The copy control sits quiet at rest (no header-bar "copy" button anymore) and
@@ -1904,8 +1904,8 @@ body::after {
    — not hover-only — so it works on touch where the modal is a bottom sheet. */
 .cmd-copy {
   flex: 0 0 auto;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
