@@ -45,28 +45,46 @@ export default function ObjectSelect({
 
   const pick = (opt) => { onSelect(opt); setOpen(false) }
 
+  // Strip the leading glyph (× / ←) from the clear label for the icon button's
+  // accessible name, since the × itself already reads as the clear glyph.
+  const clearName = clear ? clear.label.replace(/^[×←]\s*/, '') : ''
+
   return (
     <div className="obj-select" ref={ref} style={{ '--obj-accent': accent }}>
-      <button
-        type="button"
-        className={`obj-select-trigger ${open ? 'is-open' : ''}`}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span className="obj-select-label">{label}</span>
-        <span className="obj-select-value">
-          {value ? (
-            <>
-              <span className="obj-select-title" style={{ color: accent }}>{value.title}</span>
-              {value.meta && <span className="obj-select-meta">{value.meta}</span>}
-            </>
-          ) : (
-            <span className="obj-select-placeholder">{placeholder}</span>
-          )}
-        </span>
-        <span className="obj-select-chevron" aria-hidden>▾</span>
-      </button>
+      <div className="obj-select-control">
+        <button
+          type="button"
+          className={`obj-select-trigger ${open ? 'is-open' : ''}`}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          <span className="obj-select-label">{label}</span>
+          <span className="obj-select-value">
+            {value ? (
+              <>
+                <span className="obj-select-title" style={{ color: accent }}>{value.title}</span>
+                {value.meta && <span className="obj-select-meta">{value.meta}</span>}
+              </>
+            ) : (
+              <span className="obj-select-placeholder">{placeholder}</span>
+            )}
+          </span>
+          <span className="obj-select-chevron" aria-hidden>▾</span>
+        </button>
+        {/* One-click clear, always visible beside the trigger when there's an
+            active selection — so clearing a flow/event no longer means opening
+            the dropdown to hunt for the clear row at the foot of the list. */}
+        {clear && value && (
+          <button
+            type="button"
+            className="obj-select-clearbtn"
+            onClick={() => clear.onClear()}
+            aria-label={clearName || 'Clear selection'}
+            title={clear.label}
+          >×</button>
+        )}
+      </div>
 
       {open && (
         <div className="obj-select-pop" role="listbox">
