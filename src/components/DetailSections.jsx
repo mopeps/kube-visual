@@ -66,6 +66,10 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
   const [expandedPrimitive, setExpandedPrimitive] = useState(null)
   const [expandedBadge, setExpandedBadge] = useState(null)
   const [manifestOpen, setManifestOpen] = useState(false)
+  // The exploration commands sit behind a collapsed-by-default toggle (mirroring
+  // the Manifest → Kernel Pipeline section), so the modal opens quiet and the
+  // copy-paste shell block is summoned on demand.
+  const [exploreOpen, setExploreOpen] = useState(false)
 
   const componentId = component.componentId
   const allBadges = COMPONENT_BADGES[componentId] || []
@@ -282,8 +286,24 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
 
       {component.explorationCommands?.length > 0 && (
         <div className="detail-section">
-          <h4>Explore</h4>
-          <ExploreCommands commands={component.explorationCommands} color={color} />
+          <button
+            type="button"
+            className="tree-section-toggle"
+            onClick={() => setExploreOpen(o => !o)}
+            aria-expanded={exploreOpen}
+            style={{ color }}
+          >
+            <span className="tree-section-caret">{exploreOpen ? '▾' : '▸'}</span>
+            <h4 style={{ margin: 0, border: 'none', padding: 0, color: 'var(--tx-muted)' }}>
+              Explore
+            </h4>
+            <span className="tree-section-count">{component.explorationCommands.length}</span>
+          </button>
+          {exploreOpen && (
+            <div style={{ marginTop: 12 }}>
+              <ExploreCommands commands={component.explorationCommands} color={color} />
+            </div>
+          )}
         </div>
       )}
 

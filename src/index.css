@@ -2374,6 +2374,19 @@ button.object-tag:hover {
   flex: 0 0 auto;
 }
 .tree-section-toggle:hover h4 { color: var(--tx-bright); }
+/* A quiet count of what's tucked behind a collapsed section (e.g. how many
+   explore commands), pinned to the right of the toggle row. */
+.tree-section-count {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: var(--tx-dim);
+  border: 1px solid var(--border-w);
+  background: rgba(255, 255, 255, 0.03);
+}
 
 .pipeline-tree {
   font-family: 'JetBrains Mono', monospace;
