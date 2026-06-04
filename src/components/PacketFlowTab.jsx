@@ -84,8 +84,9 @@ function Hop({ step, isOpen, isSelected, onToggle, onJump, isFinal }) {
   )
 }
 
-// Shown when no trace is selected: a gallery of every available flow so the tab
-// is never empty. Picking one promotes it to the active trace.
+// Shown when no trace is selected: the trace-flow picker itself, expanded — so
+// the dropdown of every available flow IS the landing view, rather than a
+// separate card gallery. Picking one promotes it to the active trace.
 function EventGallery({ onSelectEvent }) {
   return (
     <div>
@@ -97,22 +98,7 @@ function EventGallery({ onSelectEvent }) {
           Pick a flow to step through every hop from external client to PID&nbsp;1.
         </p>
       </div>
-      <div className="event-gallery">
-        {events.map(e => (
-          <button
-            key={e.eventId}
-            type="button"
-            className="event-card"
-            onClick={() => onSelectEvent(e)}
-          >
-            <div className="event-card-title">{e.eventName}</div>
-            <p className="event-card-desc">{e.description}</p>
-            <div className="event-card-meta">
-              {e.steps.length} hop{e.steps.length === 1 ? '' : 's'} →
-            </div>
-          </button>
-        ))}
-      </div>
+      <FlowSwitcher onSelectEvent={onSelectEvent} defaultOpen />
     </div>
   )
 }
@@ -121,7 +107,7 @@ function EventGallery({ onSelectEvent }) {
 // the gallery. This carries the trace-picking that used to live in the header
 // dropdown, so the tab is self-sufficient. Styled as an "open an object" popover
 // (ObjectSelect), keyed to the packet accent that identifies the trace theme.
-function FlowSwitcher({ activeEvent, onSelectEvent, onClearEvent }) {
+function FlowSwitcher({ activeEvent, onSelectEvent, onClearEvent, defaultOpen }) {
   const options = events.map(e => ({
     id: e.eventId,
     title: e.eventName,
@@ -138,6 +124,7 @@ function FlowSwitcher({ activeEvent, onSelectEvent, onClearEvent }) {
         placeholder="Choose a trace flow"
         options={options}
         activeId={activeEvent?.eventId}
+        defaultOpen={defaultOpen}
         onSelect={(opt) => { if (opt.id !== activeEvent?.eventId) onSelectEvent(opt.event) }}
         clear={onClearEvent ? { label: '× Clear — back to gallery', onClear: onClearEvent } : undefined}
       />

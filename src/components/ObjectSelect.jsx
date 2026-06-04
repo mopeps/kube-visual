@@ -25,15 +25,24 @@ export default function ObjectSelect({
   activeId,              // id of the current selection (drives the ✓)
   onSelect,
   clear,                 // optional { label, onClear } row at the foot of the list
+  defaultOpen = false,   // start expanded — used for the "no selection" landing
+                         // views, where the popover list IS the default view
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   const ref = useRef(null)
 
   // While open, close on Escape or on a pointer-down anywhere outside the card.
   useEffect(() => {
     if (!open) return
     const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
-    const onOutside = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    const onOutside = (e) => {
+      if (ref.current && ref.current.contains(e.target)) return
+      // Tab navigation must not collapse a default-open landing dropdown: under
+      // the compact swipe pager every pane (and its default-open picker) mounts
+      // at once, so the very tap used to reach this tab would otherwise close it.
+      if (e.target.closest?.('.tab-btn')) return
+      setOpen(false)
+    }
     window.addEventListener('keydown', onKey)
     // capture-phase so it still fires when inner handlers stopPropagation
     document.addEventListener('mousedown', onOutside, true)
