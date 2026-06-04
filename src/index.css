@@ -2627,17 +2627,19 @@ button.object-tag:hover {
 }
 .tree-why-icon {
   flex-shrink: 0;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--row-color, var(--band-color));
   /* The accent-bordered chip around the key glyph. A bare outline only — no fill,
      so the glyph sits on the reveal's own background rather than a tinted square.
-     (The card frame on the surrounding .tree-why stays dropped; only the glyph's
-     own outline returns.) */
-  border: 1px solid color-mix(in srgb, var(--row-color, var(--band-color)) 45%, transparent);
+     Sized 26×26 and drawn at full accent brightness to match the sibling
+     icon chips (.tree-band-icon / .interaction-icon / .why-icon) so they all
+     read as one family. (The card frame on the surrounding .tree-why stays
+     dropped; only the glyph's own outline returns.) */
+  border: 1px solid var(--row-color, var(--band-color));
   background: transparent;
   border-radius: 7px;
 }
