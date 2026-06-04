@@ -127,7 +127,7 @@ export default function ControllerManagerCard({
       </div>
 
       <p className="intent-store-caption">
-        Reconcile loops inside one binary — goroutines, not separate Pods.
+        The control loops running inside this single Pod — threads of one process, not separate Pods.
       </p>
 
       <div className="intent-store-objects">

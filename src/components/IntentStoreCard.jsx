@@ -124,7 +124,7 @@ export default function IntentStoreCard({
       </div>
 
       <p className="intent-store-caption">
-        Desired-state records persisted in etcd — not running processes.
+        The objects the cluster saves in etcd to track its desired state — stored records, not running Pods.
       </p>
 
       <div className="intent-store-objects">
