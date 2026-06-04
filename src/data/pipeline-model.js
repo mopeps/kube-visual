@@ -102,7 +102,7 @@ const KUBELET = {
     bullets: [
       'Listens to the Guest API Server for Pod assignment',
       'Creates local dir /var/lib/kubelet/pods/',
-      'Resolves Secrets / ConfigMaps into RAM files',
+      'Writes Secret / ConfigMap keys into tmpfs (RAM) mounts',
       'Executes storage-plugin mount commands',
     ],
   },
