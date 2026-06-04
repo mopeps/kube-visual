@@ -107,13 +107,20 @@ export default function DeepDiveCanvas({
     const isActive = focusedIds?.has(box.id) || false
     const isDimmed = focusedIds ? !focusedIds.has(box.id) : false
 
+    // Hide the per-box subtitles ("under headings") on the systemd canvas's
+    // resting main view; they return as live status only while the
+    // reconciliation walkthrough is armed. Other topics keep their subtitles.
+    const subtitle = recon
+      ? (loop.armed ? ov?.subtitle : undefined)
+      : (ov?.subtitle ?? box.subtitle)
+
     if (recon && box.id === recon.cgroupBoxId) {
       return (
         <CgroupBox
           key={box.id}
           box={box}
           accent={accent}
-          subtitle={ov?.subtitle ?? box.subtitle}
+          subtitle={subtitle}
           highlight={ov?.highlight}
           procs={loop.procs}
           locked={loop.armed}
@@ -131,7 +138,7 @@ export default function DeepDiveCanvas({
         title={box.title}
         typePrefix={box.typePrefix}
         color={accent}
-        subtitle={ov?.subtitle ?? box.subtitle}
+        subtitle={subtitle}
         badges={box.badges}
         isActive={isActive}
         isDimmed={isDimmed}
