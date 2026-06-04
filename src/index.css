@@ -1859,6 +1859,79 @@ body::after {
 .code-block .cm { color: var(--tx-dim); }
 .code-block .kw { color: var(--k-cyan); }
 
+/* ── Explore commands — terminal-prompt pane ─────────────────────────────
+   A single framed stack (not stacked card-boxes): an accent left spine ties it
+   to the component colour, dashed inner separators divide rows, each row pairs
+   a dim caption with its `$`-prompted command. Drops the lime-on-black terminal
+   look for the navy/accent palette so it reads as part of the diagram. */
+.cmd-stack {
+  border: 1px solid color-mix(in srgb, var(--cmd-accent, var(--k-cyan)) 26%, transparent);
+  border-left: 2px solid var(--cmd-accent, var(--k-cyan));
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+.cmd-row { padding: 11px 12px 12px; }
+.cmd-row + .cmd-row { border-top: 1px dashed var(--border-w); }
+.cmd-note {
+  font-size: 0.66rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--tx-dim);
+  margin-bottom: 7px;
+}
+.cmd-line { display: flex; align-items: flex-start; gap: 10px; }
+.cmd-code {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--tx);
+}
+.cmd-code-line { white-space: pre-wrap; overflow-wrap: anywhere; }
+.cmd-prompt {
+  color: var(--cmd-accent, var(--k-cyan));
+  font-weight: 600;
+  margin-right: 9px;
+  user-select: none;
+}
+/* The copy control sits quiet at rest (no header-bar "copy" button anymore) and
+   lifts to the accent on hover / focus / after a successful copy. Kept visible
+   — not hover-only — so it works on touch where the modal is a bottom sheet. */
+.cmd-copy {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--border-w);
+  background: transparent;
+  color: var(--tx-dim);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s, color 0.15s, background 0.15s, border-color 0.15s;
+}
+.cmd-copy:hover,
+.cmd-copy:focus-visible {
+  opacity: 1;
+  color: var(--cmd-accent, var(--k-cyan));
+  border-color: color-mix(in srgb, var(--cmd-accent, var(--k-cyan)) 45%, transparent);
+  background: color-mix(in srgb, var(--cmd-accent, var(--k-cyan)) 12%, transparent);
+  outline: none;
+}
+.cmd-copy.is-copied {
+  opacity: 1;
+  color: var(--bg);
+  background: var(--cmd-accent, var(--k-cyan));
+  border-color: var(--cmd-accent, var(--k-cyan));
+}
+
 /* ── Detail sections (shared by the ancestry modal) ────────────────── */
 .detail-close {
   position: absolute;
