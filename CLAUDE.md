@@ -79,7 +79,7 @@ src/
     DeepDiveCanvas.jsx       # renders a deep-dive topic's zone/box tree (reuses Zone/NodeCard) + the systemd reconciliation loop
     DeepDiveModal.jsx        # box detail popup — AncestryModal's gestures/CSS with generic content (prose, kv, commands, ASCII)
     ReconLoopOverlay.jsx     # SVG overlay for the systemd reconciliation loop (edges + travelling signal token)
-    ReconControls.jsx        # play/step/reset bar for the reconciliation loop
+    ReconControls.jsx        # bottom-docked play/step/reset navigator for the reconciliation loop (mounts at App root like HopInspector; scenario armed via the Deep Dive "Scenario" dropdown)
     UnitGallery.jsx          # systemd unit-file gallery for the systemd deep-dive
     HopInspector.jsx         # bottom-docked single-hop reader (Overview tab)
     DeepDiveHopInspector.jsx # the same bottom hop reader, for deep-dive trace flows

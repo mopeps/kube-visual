@@ -11,7 +11,9 @@ import { useEffect, useRef, useState } from 'react'
 // so an anchored absolute popover floats over the canvas and scrolls naturally
 // with the content instead of pushing it down.
 //
-// options: [{ id, title, desc?, meta?, accent?, ...payload }]
+// options: [{ id, title, meta?, accent?, ...payload }]
+// Kept deliberately lean — title + a short meta chip only, no description blurb —
+// so the popover stays a quick, scannable picker rather than a wall of prose.
 // onSelect receives the full option object, so call sites can stash whatever
 // payload they need to act on (e.g. the raw event / flow) on each option.
 export default function ObjectSelect({
@@ -82,7 +84,6 @@ export default function ObjectSelect({
                 <span className="obj-select-option-title">{opt.title}</span>
                 {opt.meta && <span className="obj-select-option-meta">{opt.meta}</span>}
               </span>
-              {opt.desc && <span className="obj-select-option-desc">{opt.desc}</span>}
               {opt.id === activeId && <span className="obj-select-check" aria-hidden>✓</span>}
             </button>
           ))}

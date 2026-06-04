@@ -72,7 +72,6 @@ function FlowSelect({ topic, activeFlow, onSelectFlow, onClearFlow }) {
   const options = topic.flows.map((f) => ({
     id: f.flowId,
     title: f.flowName,
-    desc: f.description,
     meta: hops(f.steps.length),
     accent: accent(topic.colorVar),
     flow: f,
@@ -91,6 +90,56 @@ function FlowSelect({ topic, activeFlow, onSelectFlow, onClearFlow }) {
   )
 }
 
+// Scenario picker — the "second dropdown" for the systemd topic, which has no
+// trace flows but a reconciliation walkthrough instead. Picking an event (kill
+// main, kill child, daemon-reload, stop) arms the loop; the step controls then
+// dock to the bottom of the viewport (ReconControls). Clearing disarms it.
+function ScenarioSelect({ loop, accentVar }) {
+  if (!loop?.scenarios?.length) return null
+  const acc = accent(accentVar)
+  const options = loop.scenarios.map((s) => ({
+    id: s.id,
+    title: s.name,
+    meta: s.meta,
+    accent: acc,
+  }))
+  return (
+    <ObjectSelect
+      label="Scenario"
+      accent={acc}
+      value={loop.armed ? { title: loop.scenarioName } : null}
+      placeholder="Pick an event to walk"
+      options={options}
+      activeId={loop.scenario}
+      onSelect={(opt) => loop.arm(opt.id)}
+      clear={loop.armed ? { label: '× Reset walkthrough', onClear: loop.reset } : undefined}
+    />
+  )
+}
+
+// Off-canvas context: the long topic blurb (and, for flow topics, the active
+// flow's description) folded into a collapsed-by-default "About" disclosure so
+// it no longer fills the top of the canvas as a wall of text.
+function TopicAbout({ topic, activeFlow }) {
+  const [open, setOpen] = useState(false)
+  const text = activeFlow ? activeFlow.description : topic.tagline
+  return (
+    <div className="dd-about" style={{ '--dd-accent': accent(topic.colorVar) }}>
+      <button
+        type="button"
+        className={`dd-about-toggle ${open ? 'is-open' : ''}`}
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className="dd-about-icon" aria-hidden>ⓘ</span>
+        About this deep dive
+        <span className="dd-about-chev" aria-hidden>⌄</span>
+      </button>
+      {open && <p className="dd-about-body">{text}</p>}
+    </div>
+  )
+}
+
 export default function DeepDiveTab({
   activeTopic,
   onSelectTopic,
@@ -100,6 +149,7 @@ export default function DeepDiveTab({
   onSelectFlow,
   onClearFlow,
   onSelectFlowStep,
+  loop,
 }) {
   const [selectedBoxId, setSelectedBoxId] = useState(null)
   const [selectedEdgeId, setSelectedEdgeId] = useState(null)
@@ -174,19 +224,14 @@ export default function DeepDiveTab({
           onSelectFlow={onSelectFlow}
           onClearFlow={onClearFlow}
         />
+        {topic.reconciliation && <ScenarioSelect loop={loop} accentVar={topic.colorVar} />}
       </div>
 
-      <div className="mb-4">
-        <div className="font-display text-[1.05rem] font-semibold leading-tight" style={{ color: accent(topic.colorVar) }}>
-          {topic.title}
-        </div>
-        <p className="text-[0.74rem] mt-1 leading-snug" style={{ color: 'var(--tx-muted)' }}>
-          {activeFlow ? activeFlow.description : topic.tagline}
-        </p>
-      </div>
+      <TopicAbout topic={topic} activeFlow={activeFlow} />
 
       <DeepDiveCanvas
         topic={topic}
+        loop={loop}
         onSelectBox={selectBox}
         onSelectEdge={selectEdge}
         activeFlow={activeFlow}
