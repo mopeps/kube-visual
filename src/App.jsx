@@ -9,7 +9,9 @@ import DeepDiveTab from './components/DeepDiveTab'
 import AncestryModal from './components/AncestryModal'
 import HopInspector from './components/HopInspector'
 import DeepDiveHopInspector from './components/DeepDiveHopInspector'
+import ReconControls from './components/ReconControls'
 import SwipeViews from './components/SwipeViews'
+import useReconciliationLoop from './hooks/useReconciliationLoop'
 import { findDeepDive, indexTopicBoxes } from './data/deep-dives'
 import { scrollIntoUpperThird } from './lib/scroll'
 
@@ -187,6 +189,13 @@ export default function App() {
   const deepTopicObj = useMemo(() => (deepTopic ? findDeepDive(deepTopic) : null), [deepTopic])
   const deepBoxIndex = useMemo(() => (deepTopicObj ? indexTopicBoxes(deepTopicObj) : {}), [deepTopicObj])
 
+  // The systemd reconciliation walkthrough state lives here (not inside the
+  // canvas) so its step controls can dock to the bottom of the viewport as a
+  // fixed navigator — exactly like the hop inspectors — instead of an inline
+  // panel on the canvas. The hook resets itself when the open topic changes.
+  const recon = deepTopicObj?.reconciliation || null
+  const reconLoop = useReconciliationLoop(recon)
+
   // Auto-engage the trace when a deep-dive topic opens: a topic exists to walk
   // its one canonical flow, so we land with the arrows already lit instead of a
   // static, unengaged diagram. The hop reader stays closed until a badge/hop is
@@ -261,6 +270,7 @@ export default function App() {
       onSelectFlow={selectFlow}
       onClearFlow={clearFlow}
       onSelectFlowStep={selectFlowStep}
+      loop={reconLoop}
     />
   )
   const panelFor = (id) => {
@@ -387,6 +397,10 @@ export default function App() {
           onClose={clearFlowStep}
         />
       )}
+
+      {/* The systemd reconciliation walkthrough, docked at the bottom like the
+          hop readers above (only the systemd topic arms a scenario). */}
+      {tab === 'deepdive' && recon && <ReconControls loop={reconLoop} />}
     </div>
   )
 }

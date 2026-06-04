@@ -2,17 +2,16 @@ import { useRef } from 'react'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
 import ReconLoopOverlay from './ReconLoopOverlay'
-import ReconControls from './ReconControls'
 import DeepDiveArrowOverlay from './DeepDiveArrowOverlay'
-import useReconciliationLoop from '../hooks/useReconciliationLoop'
 
 // Renders a deep-dive topic as an Overview-style canvas: a stack of labelled
 // zones holding clickable boxes. Reuses Zone / NodeCard (pure presentational),
 // with a custom onClick that opens the deep-dive popup instead of the node
 // modal. When the topic declares `reconciliation`, it also drives the animated
 // systemd loop — the cgroup box becomes an interactive process table (click a
-// PID to kill it), with live status overlays, a control bar and a travelling
-// signal courier.
+// PID to kill it), with live status overlays and a travelling signal courier.
+// The `loop` state (and its bottom-docked navigator) is owned by App and passed
+// in, so the navigator can dock to the viewport like the hop inspectors.
 
 const accentOf = (zone, topic) => `var(--${zone.colorVar || topic.colorVar || 'k-cyan'})`
 
@@ -76,6 +75,7 @@ function CgroupBox({ box, accent, subtitle, highlight, procs, locked, onKillMain
 
 export default function DeepDiveCanvas({
   topic,
+  loop,
   onSelectBox,
   onSelectEdge,
   activeFlow,
@@ -83,7 +83,6 @@ export default function DeepDiveCanvas({
   onSelectFlowStep,
   colorOf,
 }) {
-  const loop = useReconciliationLoop(topic.reconciliation)
   const overlays = loop.overlays
   const recon = topic.reconciliation
   const stackRef = useRef(null)
@@ -163,8 +162,6 @@ export default function DeepDiveCanvas({
 
   return (
     <div className="deep-dive-canvas">
-      {recon && <ReconControls loop={loop} recon={recon} />}
-
       <div className={`overview-canvas recon-stack ${recon?.edges ? 'recon-stack--edges' : ''}`} ref={stackRef}>
         {recon?.edges && (
           <ReconLoopOverlay

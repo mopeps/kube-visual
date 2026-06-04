@@ -125,7 +125,6 @@ function FlowSwitcher({ activeEvent, onSelectEvent, onClearEvent }) {
   const options = events.map(e => ({
     id: e.eventId,
     title: e.eventName,
-    desc: e.description,
     meta: hopCount(e.steps.length),
     accent: 'var(--packet)',
     event: e,

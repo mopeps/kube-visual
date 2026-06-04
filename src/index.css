@@ -993,11 +993,6 @@ body::after {
   color: var(--opt-accent);
   white-space: nowrap;
 }
-.obj-select-option-desc {
-  font-size: 0.66rem;
-  line-height: 1.4;
-  color: var(--tx-muted);
-}
 .obj-select-check {
   position: absolute;
   right: 9px;
@@ -1138,6 +1133,40 @@ body::after {
    The topic body reuses the Overview's .overview-canvas / .zone / .node, plus
    the .ancestry-modal popup — so only a few deep-dive specifics live here. */
 .deep-card:hover { border-color: var(--deep-accent, var(--k-cyan)); }
+
+/* Collapsed-by-default "About this deep dive" disclosure — folds the long topic
+   blurb off the canvas (it used to sit at the top as a wall of text) and reveals
+   it on demand. */
+.dd-about { margin-bottom: 16px; }
+.dd-about-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tx-muted);
+  transition: color 0.18s;
+}
+.dd-about-toggle:hover { color: var(--tx-bright); }
+.dd-about-icon { color: var(--dd-accent, var(--k-cyan)); font-size: 0.85rem; }
+.dd-about-chev { font-size: 0.7rem; transition: transform 0.18s; }
+.dd-about-toggle.is-open .dd-about-chev { transform: rotate(180deg); }
+.dd-about-body {
+  margin: 8px 0 0;
+  max-width: 70ch;
+  font-size: 0.76rem;
+  line-height: 1.6;
+  color: var(--tx-muted);
+  border-left: 2px solid color-mix(in srgb, var(--dd-accent, var(--k-cyan)) 50%, transparent);
+  padding-left: 12px;
+}
+
 .deep-dive .flow-switcher .event-pill.is-active {
   color: var(--bg);
   background: var(--deep-accent, var(--packet));
@@ -1171,75 +1200,106 @@ body::after {
   opacity: 0.8;
 }
 
-/* ── Reconciliation-loop walkthrough panel ──────────────────────────────
-   Manual step-through: an arm/step control bar, a plain-language narration
-   caption (aria-live) and a clickable event timeline. */
-.recon-walk {
-  margin-bottom: 14px;
-  border: 1px solid var(--border-w);
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.28);
-  overflow: hidden;
-}
-.recon-walk-bar {
+/* ── Reconciliation-loop navigator ──────────────────────────────────────
+   The systemd walkthrough's step controls, docked at the bottom of the viewport
+   exactly like .hop-inspector — a fixed panel that keeps the canvas visible. A
+   flex column: a control bar + narration that stay put and the step timeline
+   below, with the whole panel capped so it never swallows the page. */
+.recon-nav {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: calc(100% - 24px);
+  max-width: 720px;
+  max-height: 52vh;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  z-index: 100;
+  background: color-mix(in srgb, var(--bg-2) 94%, transparent);
+  border: 1px solid var(--border-w);
+  border-top: 2px solid var(--k-amber);
+  border-radius: 12px;
+  padding: 14px 16px 16px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+}
+.recon-nav-bar {
+  display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-bottom: 1px solid transparent;
+  flex: 0 0 auto;
 }
-.recon-walk:has(.recon-walk-body) .recon-walk-bar { border-bottom-color: var(--border-w); }
-.recon-walk-title {
+.recon-nav-tag {
+  flex: 0 0 auto;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.62rem;
-  letter-spacing: 0.16em;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--tx-dim);
-}
-.recon-walk-arm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.recon-walk-hint { font-size: 0.66rem; color: var(--tx-muted); }
-.recon-walk-scenario {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 0.04em;
-  padding: 3px 10px;
+  padding: 4px 9px;
   border-radius: 999px;
   color: var(--k-amber);
   border: 1px solid color-mix(in srgb, var(--k-amber) 45%, transparent);
   background: color-mix(in srgb, var(--k-amber) 10%, transparent);
+  white-space: nowrap;
 }
-.recon-steps-ctrl { display: flex; align-items: center; gap: 6px; }
-.recon-walk-count {
+.recon-nav-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--tx-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recon-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.recon-nav-count {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.62rem;
-  letter-spacing: 0.06em;
   color: var(--tx-muted);
+  margin-right: 2px;
+  white-space: nowrap;
 }
-.recon-walk-reset { margin-left: auto; }
-.recon-btn--play { color: var(--k-green); border-color: color-mix(in srgb, var(--k-green) 50%, transparent); }
-.recon-btn--play:hover:not(:disabled) {
+.recon-nav-play {
+  background: none;
+  border: 1px solid color-mix(in srgb, var(--k-green) 50%, transparent);
+  color: var(--k-green);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s;
+}
+.recon-nav-play:hover {
   background: color-mix(in srgb, var(--k-green) 16%, transparent);
   border-color: var(--k-green);
-  color: var(--k-green);
 }
-
-/* Body: narration caption + the event timeline. */
-.recon-walk-body { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
-.recon-narration {
+/* Narration takes the slack and scrolls when a step runs long; the timeline
+   below stays pinned. */
+.recon-nav-narration {
   margin: 0;
-  font-size: 0.82rem;
-  line-height: 1.6;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  font-size: 0.8rem;
+  line-height: 1.55;
   color: var(--tx-bright);
-}
-.recon-narration-tag {
-  display: inline-block;
-  margin-right: 8px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  vertical-align: middle;
 }
 .recon-timeline {
   margin: 0;
@@ -1293,25 +1353,6 @@ body::after {
   border-color: var(--bg);
 }
 
-.recon-btn {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.66rem;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border-w);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--tx);
-  cursor: pointer;
-  transition: all 0.18s;
-}
-.recon-btn:hover:not(:disabled) { border-color: var(--tx-muted); color: var(--tx-bright); }
-.recon-btn:disabled { opacity: 0.4; cursor: default; }
-.recon-btn--kill { color: var(--packet); border-color: color-mix(in srgb, var(--packet) 55%, transparent); }
-.recon-btn--kill:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--packet) 18%, transparent);
-  border-color: var(--packet);
-  color: var(--packet);
-}
 .recon-stack { position: relative; }
 
 /* When the reconciliation loop is drawn on the canvas (ReconLoopOverlay), open
