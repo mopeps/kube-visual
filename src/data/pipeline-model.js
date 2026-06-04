@@ -111,11 +111,12 @@ const KUBELET = {
 // crun is the low-level OCI runtime CRI-O actually shells out to — the step that
 // turns the prepared bundle into a live, isolated process. It hangs off CRI-O as
 // a child row so the descent reads kubelet → CRI-O → crun → kernel: CRI-O is the
-// engine that *prepares* the sandbox, crun is the tool that *creates* it. (runc is
-// the interchangeable Go reference implementation; OpenShift defaults to crun.)
+// engine that *prepares* the sandbox, crun is the tool that *creates* it — which is
+// why CRI-O reads "Built" (the bundle) and crun "Runs" (the process) in the tree.
+// (runc is the interchangeable Go reference implementation; OpenShift defaults to crun.)
 const CRUN = {
   label: '[OCI] crun',
-  note: 'the low-level OCI runtime that turns the bundle into a running process',
+  note: 'the low-level runtime that creates the sandbox — turns the prepared bundle into a running, isolated process',
   detail: {
     bullets: [
       'Implements the OCI runtime spec in C — a fast drop-in for runc',
@@ -127,7 +128,7 @@ const CRUN = {
 
 const CRIO = {
   label: '[systemd] CRI-O',
-  note: 'translates the kubelet\'s CRI calls into an OCI bundle, then invokes crun',
+  note: 'the high-level runtime that prepares the sandbox — translates the kubelet\'s CRI calls into an OCI bundle, then invokes crun',
   detail: {
     bullets: [
       'Listens on the Unix socket /var/run/crio/crio.sock for the kubelet\'s CRI calls',

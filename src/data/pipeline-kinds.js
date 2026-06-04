@@ -45,8 +45,13 @@ const RULES = [
   [/ClusterIP|MetalLB|L2 VIP|router-default LB|LoadBalancer|vhost/i, 'route'],
   [/\bService\b/i, 'route'],
   [/NetworkPolicy|OVN ACL/i, 'filter'],
+  // The Translation Engine prepares, then crun creates. The kubelet and CRI-O
+  // *build* — resolve the spec, assemble the OCI bundle — so they read "Built".
+  // crun is the low-level runtime that actually *runs* that bundle (clone /
+  // unshare / setns → exec PID 1), so it reads "Runs", marking the high-level
+  // (prepare) → low-level (create) handoff right where it happens.
   [/\[systemd\] (Kubelet|CRI-O)/i, 'build'],
-  [/\[OCI\] crun|\bcrun\b/i, 'build'],
+  [/\[OCI\] crun|\bcrun\b/i, 'run'],
   [/\[Pod\]|\[Static Pod\]|VirtualMachineInstance/i, 'build'],
   [/Process|PID 1|guest OS|RHCOS|KVM vCPU|vCPU/i, 'run'],
   [/Network Namespace|netns|mount ns|cgroup/i, 'isolate'],
@@ -78,7 +83,8 @@ export function classifyRow(label, layerId) {
 
   // Runtime Object band: the instance is *handed to a supervisor* — scheduled, not
   // yet built. Building is the Translation Engine's job (kubelet / CRI-O /
-  // virt-launcher keep "Built"), one band down.
+  // virt-launcher keep "Built"; crun, the low-level runtime, "Runs" it), one band
+  // down.
   if (layerId === 'api-boundary' && key === 'build') key = 'schedule'
 
   return { key, ...PIPELINE_ACTIONS[key] }
