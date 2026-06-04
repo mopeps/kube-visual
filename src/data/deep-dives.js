@@ -393,7 +393,7 @@ const SYSTEMD = {
   zones: [
     {
       id: 'sd-disk',
-      label: 'Human / Disk Layer',
+      label: 'On-Disk · Unit Files',
       colorVar: 'k-purple',
       boxes: [
         {
@@ -439,7 +439,7 @@ const SYSTEMD = {
     },
     {
       id: 'sd-pid1',
-      label: 'systemd · PID 1 — Memory Space',
+      label: 'systemd · PID 1 — User Space',
       colorVar: 'k-amber',
       boxes: [
         {
