@@ -2503,15 +2503,14 @@ button.object-tag:hover {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-/* Child nodes (e.g. a Pod's consumed resources) indent under their parent,
-   threaded by a soft accent rail instead of ASCII branch glyphs. The indent is
-   kept shallow (rail + a few px) so deep nesting doesn't march the content off
-   the right edge — the accent rail carries the hierarchy, not a wide gutter. */
+/* Child nodes (e.g. a Pod's consumed resources) sit flush with their parent
+   rather than indented beneath it: each child carries its own accent colour
+   (a Pod's consumed resources are purple, distinct from the band colour), and
+   that colour — not a left gutter — is what marks them as a level down. Keeping
+   them at the band's left edge stops deep nesting from marching content off the
+   right edge. */
 .tree-children {
-  margin: 1px 0 2px 3px;
-  padding-left: 7px;
-  border-left: 1px solid var(--border-w);
-  border-left-color: color-mix(in srgb, var(--row-color, var(--band-color)) 25%, transparent);
+  margin: 1px 0 2px;
 }
 
 /* The note + deeper detail revealed when a row is expanded. Styled to read as
