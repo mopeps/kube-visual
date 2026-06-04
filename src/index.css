@@ -2591,15 +2591,40 @@ button.object-tag:hover {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-/* Child nodes (e.g. a Pod's consumed resources) sit flush with their parent
-   rather than indented beneath it: each child carries its own accent colour
-   (a Pod's consumed resources are purple, distinct from the band colour), and
-   that colour — not a left gutter — is what marks them as a level down. Keeping
-   them at the band's left edge stops deep nesting from marching content off the
-   right edge. */
+/* Child nodes (a Pod's consumed resources; crun under CRI-O) are indented under
+   their parent and joined by a trunk + elbow connector — the same shape the Deep
+   Dive tree draws — so a parent→child relationship (CRI-O *invokes* crun) reads
+   structurally, not only from the prose. The connector is tinted with the child
+   group's accent (--row-color), so the level-down and its colour reinforce each
+   other; each child still keeps its own accent colour too. Nesting is at most one
+   level deep in the pipeline, so the indent never marches content off the edge. */
 .tree-children {
   margin: 1px 0 2px;
 }
+.tree-children > .tree-node {
+  position: relative;
+  padding-left: 16px;
+}
+/* vertical trunk down the child's left edge — joins sibling children */
+.tree-children > .tree-node::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-left: 1px solid color-mix(in srgb, var(--row-color, currentColor) 42%, transparent);
+}
+/* elbow turning in to the child's row head */
+.tree-children > .tree-node::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--row-color, currentColor) 42%, transparent);
+}
+/* last child: stop the trunk at the elbow so it doesn't dangle past the row */
+.tree-children > .tree-node:last-child::before { height: 11px; }
 
 /* The note + deeper detail revealed when a row is expanded. Styled to read as
    prose — like the why-callout / interaction rows — rather than a dark code
@@ -2717,6 +2742,10 @@ button.object-tag:hover {
     margin-left: 0;
     padding-left: 3px;
   }
+  .tree-children > .tree-node {
+    padding-left: 11px;
+  }
+  .tree-children > .tree-node::after { width: 7px; }
   .tree-reveal {
     padding-left: 5px;
   }
