@@ -201,13 +201,15 @@ function Node({ node, bandColor, layerId, onSelectComponent, selfId }) {
   )
 }
 
-function Band({ layerId, groups, last, onSelectComponent, selfId }) {
+function Band({ layerId, groups, onSelectComponent, selfId }) {
   const layer = PIPELINE_LAYER_BY_ID[layerId]
   const color = `var(${layer.colorVar})`
   return (
-    <div className={`tree-band${last ? ' is-last' : ''}`} style={{ '--band-color': color }}>
-      <div className="tree-band-icon" aria-hidden="true"><BandIcon name={layer.icon} /></div>
-      <div className="tree-band-head" style={{ color }}>{layer.label}</div>
+    <div className="tree-band" style={{ '--band-color': color }}>
+      <div className="tree-band-header">
+        <div className="tree-band-icon" aria-hidden="true"><BandIcon name={layer.icon} /></div>
+        <div className="tree-band-head" style={{ color }}>{layer.label}</div>
+      </div>
       <div className="tree-band-body">
         {groups.map((g, gi) => (
           <div className="tree-group" key={gi}>
@@ -234,7 +236,6 @@ export default function PipelineTree({ bands, onSelectComponent, selfId }) {
           key={`${b.layerId}-${i}`}
           layerId={b.layerId}
           groups={b.groups}
-          last={i === bands.length - 1}
           onSelectComponent={onSelectComponent}
           selfId={selfId}
         />
