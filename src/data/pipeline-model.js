@@ -108,16 +108,35 @@ const KUBELET = {
   },
 }
 
-const CRIO = {
-  label: '[systemd] CRI-O',
-  note: 'issues the kernel syscalls that build the sandbox',
+// crun is the low-level OCI runtime CRI-O actually shells out to — the step that
+// turns the prepared bundle into a live, isolated process. It hangs off CRI-O as
+// a child row so the descent reads kubelet → CRI-O → crun → kernel: CRI-O is the
+// engine that *prepares* the sandbox, crun is the tool that *creates* it. (runc is
+// the interchangeable Go reference implementation; OpenShift defaults to crun.)
+const CRUN = {
+  label: '[OCI] crun',
+  note: 'the low-level OCI runtime that turns the bundle into a running process',
   detail: {
     bullets: [
-      'Receives low-level container runtime requests',
-      'Issues clone() / unshare() / setns() syscalls',
+      'Issues clone() / unshare() / setns() to build the namespaces & cgroup',
+      'execs the container entrypoint as PID 1 inside the new sandbox',
+    ],
+    lines: ['a fast C implementation of the OCI runtime spec — a drop-in for runc'],
+  },
+}
+
+const CRIO = {
+  label: '[systemd] CRI-O',
+  note: 'translates the kubelet\'s CRI calls into an OCI bundle, then invokes crun',
+  detail: {
+    bullets: [
+      'Receives container-lifecycle requests from the kubelet over CRI (RunPodSandbox, CreateContainer)',
+      'Pulls the image and assembles the OCI bundle — a rootfs plus a config.json',
+      'Hands the bundle to crun, the low-level OCI runtime, to actually start it',
     ],
     lines: ['via Unix socket /var/run/crio/crio.sock'],
   },
+  children: [CRUN],
 }
 
 function podBands(component) {
