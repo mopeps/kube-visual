@@ -251,7 +251,7 @@ export const ZONES = [
                 // here only to keep ~10 Pods off the primary canvas. Expanding
                 // the node reveals them; see OperatorSetCard.jsx + ARCHITECTURE §2.
                 operatorSetCaption:
-                  'The per-HCP owner: the Control Plane Operator builds THIS hosted cluster\'s control plane, so it deploys the control-plane operands — the OpenShift API extension servers, HCCO, the network/policy controllers, and the HyperShift lifecycle controllers (Machine Approver, Autoscaler). Each is a real, separate Deployment Pod, grouped under its owner to keep the canvas legible. (Contrast the CVO below, which version-pins the standard cluster operators.)',
+                  'Per-HCP owner: the control-plane operands the CPO builds for THIS guest — each a separate Pod, grouped to keep the canvas legible. Open the CPO for the full picture.',
                 operators: [
                   {
                     id: 'openshift-apiserver',
@@ -327,7 +327,7 @@ export const ZONES = [
                 // Deployment Pod (each reports a ClusterOperator) — nested only
                 // to keep the canvas legible, not because they share a process.
                 operatorSetCaption:
-                  'The release-payload owner: the Cluster Version Operator installs and version-pins the standard second-level OpenShift cluster operators (Ingress, DNS, Auth, Storage, Image Registry, Node Tuning, the OLM trio), each reporting its own ClusterOperator status. Each is a real, separate Deployment Pod, grouped under its owner to keep the canvas legible. (Contrast the CPO above, which builds this guest\'s control-plane operands.)',
+                  'Release-payload owner: the standard cluster operators the CVO version-pins — each a separate Pod, grouped to keep the canvas legible. Open the CVO for the full picture.',
                 operators: [
                   {
                     id: 'ingress-operator',

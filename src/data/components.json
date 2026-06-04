@@ -121,7 +121,8 @@
     "interactions": [
       "Reads the ClusterVersion CR to determine target version.",
       "Applies manifests from the release image to the guest API Server.",
-      "Monitors ClusterOperator status and blocks upgrades when operators are degraded."
+      "Monitors ClusterOperator status and blocks upgrades when operators are degraded.",
+      "Operator set: the cards grouped under this node are the standard second-level OpenShift cluster operators the CVO installs and version-pins from the release payload (Ingress, DNS, Authentication, Storage, Image Registry, Node Tuning, and the OLM trio), each reporting its own ClusterOperator status. Every one is a real, separate Deployment Pod — nested under the CVO only to keep the canvas legible, not because they share a process. Contrast the Control Plane Operator, which builds this guest's HCP-specific control-plane operands."
     ],
     "explorationCommands": [
       "# View cluster version and upgrade status\noc get clusterversion",
@@ -148,7 +149,8 @@
       "Reconciles the HostedControlPlane CR created by the HyperShift Operator.",
       "Creates and manages the Deployments/StatefulSets for every guest control-plane component in the HCP namespace.",
       "Wires up certificates, kubeconfigs, and service endpoints between the components.",
-      "While the HyperShift Operator is one cluster-wide controller, the CPO is deployed per HCP namespace to reconcile this guest's own etcd, API server, OAuth, Konnectivity, Ignition, and OVN control plane."
+      "While the HyperShift Operator is one cluster-wide controller, the CPO is deployed per HCP namespace to reconcile this guest's own etcd, API server, OAuth, Konnectivity, Ignition, and OVN control plane.",
+      "Operator set: the cards grouped under this node are the control-plane operands the CPO builds for THIS hosted cluster — the OpenShift API extension servers, the Hosted Cluster Config Operator, the network and policy controllers, and the HyperShift lifecycle controllers (Machine Approver, Cluster Autoscaler). Every one is a real, separate Deployment Pod — nested under the CPO only to keep the canvas legible, not because they share a process. Contrast the Cluster Version Operator, which version-pins the standard release-payload cluster operators."
     ],
     "explorationCommands": [
       "# Check the control-plane-operator pod\noc get pods -n <hcp-namespace> -l app=control-plane-operator",
