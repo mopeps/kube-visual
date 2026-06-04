@@ -1033,7 +1033,513 @@ const HCP_BOOT = {
   ],
 }
 
-export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT]
+// ── HCP cluster install · the Agent platform ─────────────────────────────────
+// The end-to-end "how do I actually stand up a hosted cluster on bare metal"
+// flow, using HyperShift's **Agent** provider (Central Infrastructure Management
+// / the Assisted Installer). It sits one level *beside* the HCP node-boot deep
+// dive: that one starts at an already-declared NodePool and follows a single VMI
+// to Ready; this one starts from a bare management hub and lays out every
+// prerequisite + operator step that has to be in place before a host can even be
+// discovered, then traces a physical machine from "boots the discovery ISO" to
+// "joins the hosted cluster as a worker".
+//
+// Mental model — the agent platform has two layers that are easy to conflate:
+//   · the **Agent** (assisted-installer-agent) — a binary that runs in the
+//     RHCOS *live/discovery* environment, inventories the host and phones home.
+//   · the **Agent CR** — the Kubernetes object CIM creates on the hub once that
+//     binary registers; it is what you approve, label and the NodePool selects.
+const AGENT_SERVICE_CONFIG = `apiVersion: agent-install.openshift.io/v1beta1
+kind: AgentServiceConfig
+metadata:
+  name: agent          # singleton — must be named "agent"
+spec:
+  databaseStorage:     # assisted-service Postgres
+    accessModes: [ReadWriteOnce]
+    resources: { requests: { storage: 20Gi } }
+  filesystemStorage:   # manifests, logs, boot artifacts
+    accessModes: [ReadWriteOnce]
+    resources: { requests: { storage: 20Gi } }
+  imageStorage:        # cached RHCOS images
+    accessModes: [ReadWriteOnce]
+    resources: { requests: { storage: 50Gi } }
+  osImages:            # the RHCOS the discovery ISO + install use
+    - openshiftVersion: "4.17"
+      version: "417.94.20240..."
+      url: "https://.../rhcos-live.x86_64.iso"
+      cpuArchitecture: x86_64`
+
+const INFRAENV = `apiVersion: agent-install.openshift.io/v1beta1
+kind: InfraEnv
+metadata:
+  name: my-infraenv
+  namespace: my-hosts          # the "agent namespace" the NodePool selects from
+spec:
+  pullSecretRef:
+    name: pull-secret
+  sshAuthorizedKey: "ssh-ed25519 AAAA... admin@laptop"
+  # No clusterRef → "late binding": agents register unbound and are claimed by a
+  # NodePool later, instead of being pinned to one ClusterDeployment up front.`
+
+const HCP_CREATE_AGENT = `# Create the HostedCluster + NodePool on the agent platform.
+# --agent-namespace is where the approved Agent CRs live (the InfraEnv namespace).
+hcp create cluster agent \\
+  --name my-hosted \\
+  --pull-secret ./pull-secret.json \\
+  --ssh-key ~/.ssh/id_ed25519.pub \\
+  --agent-namespace my-hosts \\
+  --base-domain example.com \\
+  --api-server-address api.my-hosted.example.com \\
+  --release-image quay.io/openshift-release-dev/ocp-release:4.17.0-x86_64 \\
+  --node-pool-replicas 0          # start at 0; scale up once agents are approved`
+
+const HCP_INSTALL = {
+  topicId: 'hcp-install',
+  title: 'Installing an HCP cluster on the Agent platform',
+  tagline:
+    'The full bare-metal hosted-cluster install with HyperShift’s Agent provider: every prerequisite that must already be on the management hub (MCE → HyperShift → Central Infrastructure Management), then the live steps that carry a physical machine from booting the discovery ISO, to registering as an Agent, to joining the hosted cluster as a Ready worker.',
+  colorVar: 'k-orange',
+  flows: [
+    {
+      flowId: 'hcp-install-e2e',
+      flowName: 'Discovery ISO → Node Ready',
+      description:
+        'The end-to-end path once the prerequisites are in place: CIM mints a discovery ISO from an InfraEnv, a host boots it and registers as an Agent, you approve it, create the HostedCluster, and scaling the NodePool binds the Agent, installs RHCOS to disk, and the rebooted host joins the hosted cluster.',
+      steps: [
+        { step: 1, sourceBoxId: 'hi-cim', targetBoxId: 'hi-infraenv',
+          description: 'You create an InfraEnv; CIM (the Assisted Service) reconciles it and publishes a per-InfraEnv discovery ISO download URL.' },
+        { step: 2, sourceBoxId: 'hi-infraenv', targetBoxId: 'hi-boot',
+          description: 'The host boots that discovery ISO — manually, via virtual media, or automatically through a BareMetalHost + BMC.' },
+        { step: 3, sourceBoxId: 'hi-boot', targetBoxId: 'hi-register',
+          description: 'Inside the RHCOS live environment the assisted-installer-agent inventories CPU/RAM/disks/NICs and registers back to CIM, which creates an Agent CR.' },
+        { step: 4, sourceBoxId: 'hi-register', targetBoxId: 'hi-approve',
+          description: 'You review the inventory and approve the Agent (spec.approved=true), optionally labelling it so a NodePool can select it.' },
+        { step: 5, sourceBoxId: 'hi-approve', targetBoxId: 'hi-create',
+          description: 'With hosts waiting in the pool, you run `hcp create cluster agent`, pointing --agent-namespace at where the approved Agents live.' },
+        { step: 6, sourceBoxId: 'hi-create', targetBoxId: 'hi-cp-pods',
+          description: 'The HyperShift Operator reconciles the HostedCluster and stamps out the HostedControlPlane Pods (etcd, kube-apiserver, …) in the control-plane namespace.' },
+        { step: 7, sourceBoxId: 'hi-cp-pods', targetBoxId: 'hi-nodepool',
+          description: 'Part of that control plane is the NodePool and its Cluster API stack, including the cluster-api-provider-agent that will claim Agents.' },
+        { step: 8, sourceBoxId: 'hi-nodepool', targetBoxId: 'hi-bind',
+          description: 'You scale the NodePool; the agent CAPI provider picks free approved Agents matching the selector and binds each one to an AgentMachine.' },
+        { step: 9, sourceBoxId: 'hi-bind', targetBoxId: 'hi-write',
+          description: 'Binding hands the Agent an install spec; the Assisted Installer writes RHCOS to the host’s disk and lays down the Ignition pointing at the HCP Ignition endpoint.' },
+        { step: 10, sourceBoxId: 'hi-write', targetBoxId: 'hi-join',
+          description: 'The host reboots off its disk into RHCOS; kubelet starts, sends a CSR to the hosted API server, the machine-approver approves it, and the Node goes Ready.' },
+      ],
+    },
+  ],
+  zones: [
+    {
+      id: 'hi-prereq',
+      label: 'Prerequisites · Management Hub',
+      colorVar: 'k-purple',
+      dashed: true,
+      boxes: [
+        {
+          id: 'hi-mce',
+          title: 'MultiCluster Engine (MCE)',
+          typePrefix: 'PREREQ 1',
+          subtitle: 'the operator that ships HyperShift + Assisted Installer',
+          detail: {
+            role: 'PREREQUISITE · PLATFORM',
+            summary:
+              'Everything below is delivered by the MultiCluster Engine operator on the management (hub) cluster. MCE bundles both the HyperShift component (hosted control planes) and the Infrastructure Operator (the Assisted Installer / Central Infrastructure Management). Install it from OperatorHub, then enable those two components in the MultiClusterEngine CR.',
+            sections: [
+              {
+                heading: 'What it provides',
+                facts: [
+                  { k: 'hypershift', v: 'the component that runs the HyperShift Operator + hosted-cluster CRDs' },
+                  { k: 'assisted-service', v: 'the Infrastructure Operator behind CIM / the Agent platform' },
+                  { k: 'local-cluster', v: 'the hub registered as a managed cluster (ManagedCluster)' },
+                ],
+                tags: ['hub-side', 'OperatorHub', 'one per management cluster'],
+              },
+              {
+                heading: 'Also need on the hub',
+                bullets: [
+                  'A default StorageClass — the AgentServiceConfig PVCs and control-plane etcd bind against it.',
+                  'A pull secret and an SSH public key (reused by the InfraEnv and the hosted cluster).',
+                  'DNS for the hosted cluster: api.<name>.<base-domain> (+ api-int) and *.apps.<name>.<base-domain>.',
+                  'On bare metal, a way to reach the API/ingress VIPs — typically MetalLB in L2 mode.',
+                ],
+              },
+              {
+                heading: 'Explore',
+                commands: [
+                  '# Is MCE healthy and which components are on?\noc get multiclusterengine -o yaml | grep -A40 status',
+                  '# The hub registered as a managed cluster\noc get managedcluster local-cluster',
+                ],
+              },
+            ],
+          },
+        },
+        {
+          id: 'hi-hypershift',
+          title: 'HyperShift Operator',
+          typePrefix: 'PREREQ 2',
+          subtitle: 'reconciles HostedCluster / NodePool',
+          detail: {
+            role: 'PREREQUISITE · CONTROL-PLANE ENGINE',
+            summary:
+              'Enabling MCE’s hypershift component installs the HyperShift Operator (the hypershift-addon on local-cluster). It runs in the `hypershift` namespace as a cluster-wide singleton and watches every HostedCluster / NodePool: when you create one, it stamps out the hosted control-plane Pods and wires up Cluster API. Nothing about hosted clusters works until it is Running.',
+            sections: [
+              {
+                heading: 'Role',
+                tags: ['singleton', 'namespace: hypershift', 'watches HostedCluster + NodePool', 'creates HostedControlPlane'],
+              },
+              {
+                heading: 'See also',
+                body: 'The cluster topology this operator builds — the per-HCP control-plane Pods in the guest namespace — is the subject of the Architecture Overview tab. This deep dive only covers getting it created.',
+              },
+              {
+                heading: 'Explore',
+                commands: [
+                  '# The operator itself\noc get pods -n hypershift',
+                  '# Confirm the hosted-cluster CRDs are installed\noc get crd hostedclusters.hypershift.openshift.io nodepools.hypershift.openshift.io',
+                ],
+              },
+            ],
+          },
+        },
+        {
+          id: 'hi-cim',
+          title: 'Central Infrastructure Management',
+          typePrefix: 'PREREQ 3',
+          subtitle: 'AgentServiceConfig → the Assisted Service',
+          detail: {
+            role: 'PREREQUISITE · HOST PROVISIONING',
+            summary:
+              'CIM is the Assisted Installer running on the hub, deployed by MCE’s Infrastructure Operator. You turn it on by creating a single AgentServiceConfig (named "agent"), which gives the assisted-service its storage and the list of RHCOS images it may serve. Once it is up, CIM is what turns an InfraEnv into a bootable discovery ISO and later drives each host’s installation.',
+            sections: [
+              {
+                heading: 'The AgentServiceConfig',
+                tags: ['singleton named "agent"', 'databaseStorage', 'filesystemStorage', 'imageStorage', 'osImages'],
+                manifest: { kind: 'YAML', body: AGENT_SERVICE_CONFIG },
+              },
+              {
+                heading: 'What CIM does for you',
+                facts: [
+                  { k: 'Discovery', v: 'mints a per-InfraEnv RHCOS discovery ISO' },
+                  { k: 'Inventory', v: 'receives each host’s hardware report from the agent binary' },
+                  { k: 'Validation', v: 'runs pre-flight checks (disk, CPU, network) before install' },
+                  { k: 'Install', v: 'drives coreos-installer to write RHCOS to the chosen disk' },
+                ],
+              },
+              {
+                heading: 'Explore',
+                commands: [
+                  '# Is the Assisted Service up?\noc get pods -n multicluster-engine | grep assisted-service',
+                  '# Its config and the images it will serve\noc get agentserviceconfig agent -o yaml',
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'hi-discovery',
+      label: 'Phase 1 · Host Discovery & Inventory',
+      colorVar: 'k-cyan',
+      boxes: [
+        {
+          id: 'hi-infraenv',
+          title: 'InfraEnv → Discovery ISO',
+          typePrefix: 'STEP 1',
+          subtitle: 'mint a bootable image for a namespace of hosts',
+          detail: {
+            role: 'STEP · CREATE THE ISO',
+            summary:
+              'An InfraEnv is a small CR that ties a pull secret + SSH key to a namespace of future hosts. When CIM reconciles it, it bakes those into an RHCOS discovery ISO and publishes a download URL on the InfraEnv’s status. Created without a clusterRef, the hosts that boot it register with "late binding" — unattached until a NodePool claims them.',
+            sections: [
+              {
+                heading: 'The InfraEnv',
+                tags: ['namespaced', 'pullSecretRef', 'sshAuthorizedKey', 'late binding (no clusterRef)'],
+                manifest: { kind: 'YAML', body: INFRAENV },
+              },
+              {
+                heading: 'The namespace matters',
+                body: 'The namespace you create the InfraEnv in is the "agent namespace": every host that boots this ISO produces an Agent CR here, and it is exactly what you later point `hcp create cluster agent --agent-namespace` at.',
+              },
+              {
+                heading: 'Explore',
+                commands: [
+                  '# Grab the freshly-minted ISO URL\noc get infraenv my-infraenv -n my-hosts -o jsonpath=\'{.status.isoDownloadURL}\'',
+                ],
+              },
+            ],
+          },
+        },
+        {
+          id: 'hi-boot',
+          title: 'Host boots the ISO',
+          typePrefix: 'STEP 2',
+          subtitle: 'manual · virtual media · BareMetalHost + BMC',
+          detail: {
+            role: 'STEP · POWER ON',
+            summary:
+              'The physical (or virtual) machine boots the discovery ISO. It runs a full RHCOS *live* environment in RAM — nothing is written to disk yet. You can boot it three ways: burn/attach the ISO by hand, mount it as virtual media over the BMC, or declare a BareMetalHost CR with BMC credentials so Metal³ powers the host on and attaches the image for you.',
+            sections: [
+              {
+                heading: 'Boot options',
+                facts: [
+                  { k: 'Manual', v: 'write the ISO to USB / attach in the hypervisor' },
+                  { k: 'Virtual media', v: 'mount the ISO via the BMC (Redfish/iDRAC/iLO)' },
+                  { k: 'BareMetalHost', v: 'a CR + BMC secret; Metal³ boots & attaches automatically' },
+                ],
+                tags: ['RHCOS live', 'runs in RAM', 'disk untouched'],
+              },
+              {
+                heading: 'Explore',
+                commands: [
+                  '# If you declared BareMetalHosts, watch them power on\noc get bmh -n my-hosts',
+                ],
+              },
+            ],
+          },
+        },
+        {
+          id: 'hi-register',
+          title: 'Agent registers',
+          typePrefix: 'STEP 3',
+          subtitle: 'inventory phoned home → Agent CR appears',
+          detail: {
+            role: 'STEP · DISCOVERY',
+            summary:
+              'Inside the live environment the assisted-installer-agent starts, takes a full hardware inventory — CPU, memory, disks, NICs, and connectivity checks — and registers back to CIM over the network. CIM creates an Agent CR in the InfraEnv’s namespace carrying that inventory. The host is now "known" to the hub but not yet approved or assigned.',
+            sections: [
+              {
+                heading: 'Agent vs. Agent CR',
+                facts: [
+                  { k: 'The agent', v: 'assisted-installer-agent — a binary in the RHCOS live env' },
+                  { k: 'The Agent CR', v: 'the Kubernetes object CIM creates from its registration' },
+                  { k: 'State now', v: 'approved=false, bound to no cluster (late binding)' },
+                ],
+                tags: ['hardware inventory', 'connectivity checks', 'unapproved'],
+              },
+              {
+                heading: 'Explore',
+                commands: [
+                  '# New agents show up here as hosts finish discovery\noc get agents -n my-hosts',
+                  '# Inspect one host’s reported inventory\noc get agent <id> -n my-hosts -o jsonpath=\'{.status.inventory}\'',
+                ],
+              },
+            ],
+          },
+        },
+        {
+          id: 'hi-approve',
+          title: 'Approve & label Agents',
+          typePrefix: 'STEP 4',
+          subtitle: 'spec.approved=true · add selector labels',
+          detail: {
+            role: 'STEP · ADMIT THE HOST',
+            summary:
+              'Discovery is deliberately not auto-trusted: a freshly-registered Agent sits unapproved until you admit it. Patch spec.approved=true (after sanity-checking its inventory), and add any labels you want a NodePool to select on. Approved, labelled, unbound Agents form the pool the hosted cluster will draw workers from.',
+            sections: [
+              {
+                heading: 'What approval gates',
+                tags: ['spec.approved=true', 'selector labels', 'optional hostname/role', 'still unbound'],
+              },
+              {
+                heading: 'Explore',
+                commands: [
+                  '# Approve a discovered host\noc patch agent <id> -n my-hosts --type merge -p \'{"spec":{"approved":true}}\'',
+                  '# Label it so a NodePool can select it\noc label agent <id> -n my-hosts mypool=true',
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'hi-create-zone',
+      label: 'Phase 2 · Create the Hosted Control Plane',
+      colorVar: 'k-blue',
+      boxes: [
+        {
+          id: 'hi-create',
+          title: 'hcp create cluster agent',
+          typePrefix: 'STEP 5',
+          subtitle: 'declare HostedCluster + NodePool',
+          detail: {
+            role: 'STEP · DECLARE THE CLUSTER',
+            summary:
+              'With a pool of approved Agents waiting, you create the hosted cluster. The `hcp` CLI writes a HostedCluster (and a starter NodePool) onto the *management* API server. The key flag is --agent-namespace: it tells HyperShift which namespace’s Agents this cluster may consume. Start with --node-pool-replicas 0 so the control plane comes up before any host is claimed.',
+            sections: [
+              {
+                heading: 'The command',
+                tags: ['--agent-namespace', '--base-domain', '--api-server-address', '--release-image', '--node-pool-replicas 0'],
+                manifest: { kind: 'CLI', body: HCP_CREATE_AGENT },
+              },
+              {
+                heading: 'Where it lands',
+                body: 'HostedCluster/NodePool are records in the management cluster’s API server (the hosted API server does not exist yet). This is the same modeling invariant as the rest of the app: `oc apply` of these hits the management hub, not the guest.',
+              },
+              {
+                heading: 'Explore',
+                commands: [
+                  '# The hosted cluster and its pool\noc get hostedcluster,nodepool -n clusters',
+                ],
+              },
+            ],
+          },
+        },
+        {
+          id: 'hi-cp-pods',
+          title: 'HostedControlPlane Pods',
+          typePrefix: 'STEP 6',
+          subtitle: 'etcd · kube-apiserver · CAPI come up',
+          detail: {
+            role: 'STEP · CONTROL PLANE UP',
+            summary:
+              'The HyperShift Operator reconciles the HostedCluster into a HostedControlPlane and the Control Plane Operator fills the control-plane namespace with the guest cluster’s control plane as ordinary Pods — etcd, kube-apiserver, controller-manager, scheduler, OAuth, Konnectivity, the Ignition server, and the Cluster API stack. The hosted API server becomes reachable at the address you gave.',
+            sections: [
+              {
+                heading: 'What appears',
+                tags: ['etcd', 'kube-apiserver', 'oauth', 'konnectivity', 'ignition-server', 'cluster-api + capi-provider-agent'],
+              },
+              {
+                heading: 'See also',
+                body: 'The full set of control-plane Pods and how they relate is exactly the Architecture Overview tab — this step is the moment that topology is created.',
+              },
+              {
+                heading: 'Explore',
+                commands: [
+                  '# Control-plane namespace is clusters-<name>\noc get pods -n clusters-my-hosted',
+                  '# Watch the HostedCluster march to Available\noc get hostedcluster my-hosted -n clusters -w',
+                ],
+              },
+            ],
+          },
+        },
+        {
+          id: 'hi-nodepool',
+          title: 'NodePool + agent CAPI provider',
+          typePrefix: 'STEP 7',
+          subtitle: 'agentLabelSelector · ready to claim hosts',
+          detail: {
+            role: 'STEP · THE WORKER POOL',
+            summary:
+              'The NodePool is the declared worker pool. On the agent platform it carries an agentLabelSelector and is backed by Cluster API objects in the control-plane namespace, driven by the cluster-api-provider-agent (CAPI agent provider). At replicas 0 it claims nothing; it is now armed and waiting for you to scale it.',
+            sections: [
+              {
+                heading: 'How it picks hosts',
+                facts: [
+                  { k: 'agentLabelSelector', v: 'only Agents carrying these labels are eligible' },
+                  { k: 'capi-provider-agent', v: 'the controller that binds free Agents to AgentMachines' },
+                  { k: 'replicas', v: 'how many Agents to claim — drives the next step' },
+                ],
+                tags: ['Cluster API', 'AgentMachine', 'late binding resolved here'],
+              },
+              {
+                heading: 'Explore',
+                commands: [
+                  '# The pool and its current replica/ready counts\noc get nodepool my-hosted -n clusters',
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'hi-join-zone',
+      label: 'Phase 3 · Bind, Install & Join',
+      colorVar: 'k-green',
+      boxes: [
+        {
+          id: 'hi-bind',
+          title: 'Scale → bind Agents',
+          typePrefix: 'STEP 8',
+          subtitle: 'free Agent → AgentMachine',
+          detail: {
+            role: 'STEP · CLAIM A HOST',
+            summary:
+              'Scaling the NodePool is the trigger. Cluster API asks for N machines; the cluster-api-provider-agent finds approved, unbound Agents matching the selector and binds each to an AgentMachine — setting the Agent’s clusterDeploymentName so CIM knows which cluster it now belongs to. This is the moment a "discovered host" becomes "this cluster’s worker".',
+            sections: [
+              {
+                heading: 'What binding does',
+                tags: ['oc scale nodepool', 'Agent.spec.clusterDeploymentName set', 'AgentMachine created', 'no longer claimable by others'],
+              },
+              {
+                heading: 'Explore',
+                commands: [
+                  '# Scale the pool to claim two hosts\noc scale nodepool my-hosted -n clusters --replicas 2',
+                  '# Agents flip from unbound to bound\noc get agents -n my-hosts',
+                ],
+              },
+            ],
+          },
+        },
+        {
+          id: 'hi-write',
+          title: 'Assisted Installer writes RHCOS',
+          typePrefix: 'STEP 9',
+          subtitle: 'coreos-installer to disk + Ignition pointer',
+          detail: {
+            role: 'STEP · INSTALL TO DISK',
+            summary:
+              'Once bound, CIM hands the still-live host an install spec and the Assisted Installer takes over: it writes RHCOS to the selected disk with coreos-installer and lays down a small Ignition that points at the HostedControlPlane’s Ignition server. That pointer is how the installed node will fetch its real worker config (kubelet config, pull secret, CA, MCO content) on first boot.',
+            sections: [
+              {
+                heading: 'What gets written',
+                facts: [
+                  { k: 'coreos-installer', v: 'streams the RHCOS image onto the host disk' },
+                  { k: 'Ignition pointer', v: 'tiny config → the HCP ignition-server URL' },
+                  { k: 'On first boot', v: 'the node pulls kubelet config, pull secret, CA, kargs' },
+                ],
+                tags: ['disk now written', 'reboot pending', 'links to the HCP node-boot deep dive'],
+              },
+              {
+                heading: 'See also',
+                body: 'What happens *after* the reboot — Ignition applying config in the initramfs, switch_root, kubelet starting — is the "How an OpenShift / HCP worker node boots" deep dive. This step is the bare-metal equivalent of its Ignition-apply stage.',
+              },
+              {
+                heading: 'Explore',
+                commands: [
+                  '# Per-host install progress / debug info\noc get agent <id> -n my-hosts -o jsonpath=\'{.status.progress}\'',
+                ],
+              },
+            ],
+          },
+        },
+        {
+          id: 'hi-join',
+          title: 'Reboot → Node Ready',
+          typePrefix: 'STEP 10',
+          subtitle: 'kubelet → CSR → approved → joins',
+          detail: {
+            role: 'STEP · JOIN THE CLUSTER',
+            summary:
+              'The host reboots off its own disk into the installed RHCOS. systemd reaches multi-user.target and starts kubelet, which contacts the hosted cluster’s API server and submits a CSR. The machine-approver (running in the control plane) approves it, the Node registers and the CNI wires pod networking — and the host flips to Ready, a real worker of the hosted cluster. The NodePool’s ready count ticks up.',
+            sections: [
+              {
+                heading: 'The join handshake',
+                facts: [
+                  { k: 'kubelet', v: 'starts after switch_root, talks to the hosted API server' },
+                  { k: 'CSR', v: 'kubelet requests a client cert; machine-approver approves it' },
+                  { k: 'Node Ready', v: 'CNI wires networking, the Node registers and goes Ready' },
+                ],
+                tags: ['multi-user.target', 'machine-approver', 'NodePool ready++'],
+              },
+              {
+                heading: 'Explore',
+                commands: [
+                  '# Against the HOSTED cluster: watch the node arrive\noc --kubeconfig my-hosted.kubeconfig get nodes -w',
+                  '# Any CSRs still pending approval\noc --kubeconfig my-hosted.kubeconfig get csr | grep -i pending',
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    },
+  ],
+}
+
+export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL]
 
 export const findDeepDive = (topicId) =>
   DEEP_DIVES.find((t) => t.topicId === topicId) || null
