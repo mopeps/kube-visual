@@ -112,6 +112,7 @@ const VERB_KIND = {
   renders: 'create', render: 'create', rendered: 'create',
   realises: 'create', realise: 'create', realised: 'create',
   realizes: 'create', realize: 'create', realized: 'create',
+  implements: 'create', implement: 'create',
   triggers: 'create', trigger: 'create', triggered: 'create',
   instantiates: 'create', instantiate: 'create',
 

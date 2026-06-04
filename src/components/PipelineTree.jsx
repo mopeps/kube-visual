@@ -64,8 +64,8 @@ function BandIcon({ name }) {
 // The revealed detail under a node, shown beneath the definition callout. Its
 // content is rendered in the same visual language as the detail-modal Interactions
 // section so the two read as one:
-//   • lines   → any supplementary prose (e.g. the socket a daemon listens on),
-//               set white as body prose;
+//   • lines   → any supplementary prose with no leading verb to classify,
+//               set white as body prose (no kind-glyph / keyword);
 //   • bullets → the row's mechanics, each an interaction-style row (kind-icon
 //               chip + emphasised verb + sentence) via the shared InteractionRow —
 //               they're verb-led interaction sentences from the same source as
