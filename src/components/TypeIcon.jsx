@@ -94,3 +94,27 @@ export default function TypeIcon() {
 export function hasTypeGlyph(typePrefix) {
   return Boolean(TYPE_GLYPHS[TYPE_GLYPH_KEY[typePrefix]])
 }
+
+// Opt-in glyph renderer. The default TypeIcon above is suppressed app-wide, but a
+// few views (e.g. the Packet Flow route chips) deliberately *do* want the type
+// glyph drawn — they call this directly. 1em / currentColor, matching the other
+// chip glyphs; renders nothing for a prefix with no glyph (graceful no-op).
+export function TypeGlyph({ typePrefix }) {
+  const glyph = TYPE_GLYPHS[TYPE_GLYPH_KEY[typePrefix]]
+  if (!glyph) return null
+  return (
+    <svg
+      width="1em"
+      height="1em"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {glyph}
+    </svg>
+  )
+}

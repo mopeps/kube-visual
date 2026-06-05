@@ -6,25 +6,37 @@ import { hopPoints } from '../data/hop-kinds'
 import ObjectSelect from './ObjectSelect'
 import ObjectText from './ObjectText'
 import ExploreCommands from './ExploreCommands'
-import TypeIcon from './TypeIcon'
+import { TypeGlyph } from './TypeIcon'
 import HopIcon from './HopIcon'
 
 const hopCount = (n) => `${n} hop${n === 1 ? '' : 's'}`
 
-// The source → target route line, with each node fronted by its type glyph (the
+// One route endpoint — its type glyph in a bordered chip (matching the bullet
+// glyph chips so every glyph on the card reads the same way) followed by the
+// node's name. A node whose type has no glyph just shows its name.
+function RouteNode({ component, fallbackId }) {
+  return (
+    <span className="hop-route-node">
+      {component?.typePrefix && (
+        <span className="hop-route-ic" aria-hidden>
+          <TypeGlyph typePrefix={component.typePrefix} />
+        </span>
+      )}
+      {component?.displayName || fallbackId}
+    </span>
+  )
+}
+
+// The source → target route line, each node fronted by its boxed type glyph (the
 // same backbone glyphs the Object Map and Hop Inspector use). When `onJump` is
 // set the whole route is a button that reveals the target on the overview canvas.
 function HopRoute({ step, source, target, color, onJump }) {
   const inner = (
     <>
-      <span className="hop-route-node">
-        <TypeIcon typePrefix={source?.typePrefix} className="type-icon" title={source?.typePrefix} />
-        {source?.displayName || step.sourceComponentId}
-      </span>
+      <RouteNode component={source} fallbackId={step.sourceComponentId} />
       <span className="hop-route-arrow" aria-hidden>→</span>
-      <span className="hop-route-node" style={{ color }}>
-        <TypeIcon typePrefix={target?.typePrefix} className="type-icon" title={target?.typePrefix} />
-        {target?.displayName || step.targetComponentId}
+      <span style={{ color }}>
+        <RouteNode component={target} fallbackId={step.targetComponentId} />
       </span>
     </>
   )
@@ -76,7 +88,7 @@ function Hop({ step, isOpen, isSelected, onToggle, onJump, onSelectComponent }) 
           <li key={i} className="hop-point">
             <span
               className="hop-point-ic"
-              style={{ color: p.accent, borderColor: `${p.accent}55` }}
+              style={{ color: p.accent, borderColor: `color-mix(in srgb, ${p.accent} 55%, transparent)` }}
               aria-hidden
             >
               <HopIcon name={p.icon} />
