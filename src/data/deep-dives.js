@@ -1896,142 +1896,117 @@ const HCP_INSTALL = {
 // Why a window rename survives an identity switch the *control* channel forbids.
 // You start tmux as `bongo`, then `sudo -iu oracle` inside a pane. oracle cannot
 // reach tmux's control socket (a 0700 dir owned by bongo) — yet it can still
-// rename the window, by writing an escape sequence to its own stdout, because
-// that byte stream flows straight into the pty tmux is already reading. The whole
-// trick is **control path vs. data path**: a socket connect is permission-checked
-// at connect time (denied); the pty fd was permission-checked at open() time and
-// merely inherited across fork/setuid/execve (allowed).
+// rename the window by writing an escape sequence to its own stdout, because that
+// byte stream flows straight into the pty tmux is already reading. The crux is
+// **control path vs. data path**: a socket connect is permission-checked at
+// connect time (denied); the pty fd was checked at open() time and merely
+// inherited across fork/setuid/execve (allowed).
 //
-// Modelled with the standard deep-dive primitives — labelled zones of clickable
-// boxes + selectable trace flows — so each of the four ideas is a steppable
-// section without inventing any new visual language:
-//   · the nested-pty communication chain (remote → local)   → "Follow a byte"
-//   · control path vs data path (the crux)                  → "Control vs data"
-//   · escape sequences as a parser state machine            → "Parse the sequence"
-//   · fd inheritance across sudo -iu                        → "Inherit the fd"
+// Laid out as ONE clear top-to-bottom journey (oracle's shell → your terminal),
+// with the two ways to ask for the rename shown as parallel side-by-side boxes
+// (data path vs control path — you take the left, not the right), plus two
+// clearly separated "zoom-in" sections that each stay inside their own zone:
+//   · the journey                              → "Follow the rename" flow (spine)
+//   · control vs data                          → parallel boxes (no crossing arrows)
+//   · how tmux reads the byte                  → "Parse the byte" flow (FSM zoom-in)
+//   · how oracle got the handle                → "Inherit the fd" flow (sudo zoom-in)
 // Factual backbone: docs/tmux-window-naming.md.
-
-// The remote→local byte path, drawn as an ASCII ladder for the chain overview.
-const CHAIN_ASCII = `oracle's bash
-   |  write(1, "\\033koracle\\033\\\\", 10)   ── fd 1
-   v
-/dev/pts/7   ── pty SLAVE   ┐
-   v                        │  both ptys are
-pty MASTER ── tmux server   │  REMOTE-LOCAL only
-   |  consumes \\033k…, sets name,
-   |  RENDERS its own screen
-   v                        │
-/dev/pts/3   ── pty SLAVE   │  (never cross
-   v                        │   the network)
-pty MASTER ── sshd          ┘
-   |  encrypt → TCP
-   v
-=========  SSH (encrypted byte stream)  =========
-   v
-local ssh client   ── decrypt
-   v
-local terminal parser   ── draw glyphs`
-
 const TMUX_SUDO = {
   topicId: 'tmux-sudo',
   title: 'tmux window naming across sudo -iu',
   tagline:
-    'You run tmux as bongo, then `sudo -iu oracle` inside a pane. oracle is locked out of tmux’s control socket — yet it can still rename the window, by writing an escape sequence to its own stdout. That byte flows into the pty tmux is already reading. The whole trick is control path vs. data path: a socket connect is permission-checked at connect time (denied); the pty fd was checked at open() time and merely inherited (allowed). Four steppable flows: follow a byte remote→local, the control-vs-data crux, the terminal parser state machine, and fd inheritance across fork/setuid/execve.',
+    'You run tmux as bongo, then `sudo -iu oracle` inside a pane. oracle is locked out of tmux’s control socket — yet it can still rename the window by writing an escape sequence to its own stdout, which flows into the pty tmux is already reading. The crux is control path vs. data path: a socket connect is permission-checked at connect time (denied); the pty fd was checked at open() time and merely inherited (allowed). Read it as one journey from the shell to your terminal; the two zoom-ins explain how tmux reads the byte and how oracle got the handle.',
   colorVar: 'k-teal',
   flows: [
     {
-      flowId: 'tx-follow-byte',
-      flowName: 'Follow a rename byte (remote → local)',
+      flowId: 'tx-journey',
+      flowName: 'Follow the rename · shell → your terminal',
       description:
-        'A single rename sequence leaves oracle’s shell and is traced all the way to a glyph on your laptop. Watch where it is *consumed* (tmux’s pty, remote-side) versus where bytes merely *pass through* (sshd, the network). The pty never crosses the wire — only the SSH byte stream does, and by then the rename is already done.',
+        'One rename byte, traced top to bottom from oracle’s shell to a glyph on your laptop. It leaves on the data path (the left box of step 2, not the control socket on the right), lands on the pane’s pty, and is consumed by tmux — which renders its own screen and sends THAT out over SSH. The pty never crosses the network; only the SSH byte stream does, and by then the rename is already done.',
       steps: [
-        { step: 1, sourceBoxId: 'tx-bash', targetBoxId: 'tx-pts7',
-          description: 'oracle’s bash runs its PROMPT_COMMAND and does write(1, "\\033koracle\\033\\\\", 10) — the rename sequence goes to fd 1, which points at the pty slave /dev/pts/7.' },
-        { step: 2, sourceBoxId: 'tx-pts7', targetBoxId: 'tx-tmux',
-          description: 'The pty carries the bytes to its master end, held by the tmux server. tmux is the program pretending to be oracle’s terminal, so it is the one reading here.' },
-        { step: 3, sourceBoxId: 'tx-tmux', targetBoxId: 'tx-pts3',
-          description: 'tmux’s parser CONSUMES \\033k…\\033\\\\ (it never travels further), sets the window name, then RENDERS its own screen — status bar + panes — as a fresh stream of its own escape sequences, written to tmux’s stdout on /dev/pts/3.' },
-        { step: 4, sourceBoxId: 'tx-pts3', targetBoxId: 'tx-sshd',
-          description: 'That second pty (the one sshd handed your login shell) carries tmux’s rendered output to its master end, held by sshd. Two ptys are now nested on the one remote host.' },
-        { step: 5, sourceBoxId: 'tx-sshd', targetBoxId: 'tx-net',
-          description: 'sshd encrypts the bytes into the TCP stream. It is a dumb encrypted pipe, not a terminal parser — it does not interpret anything, it just forwards.' },
-        { step: 6, sourceBoxId: 'tx-net', targetBoxId: 'tx-ssh-client',
-          description: 'The encrypted SSH byte stream crosses the network and the local ssh client decrypts it. The rename already completed remote-side long before this point.' },
-        { step: 7, sourceBoxId: 'tx-ssh-client', targetBoxId: 'tx-term',
-          description: 'Your local terminal’s parser interprets tmux’s rendered output and draws glyphs — including “oracle” in the status bar. It never saw /dev/pts/7 or the raw \\033k…; it only ever sees what tmux already turned that into.' },
-      ],
-    },
-    {
-      flowId: 'tx-control-data',
-      flowName: 'Control path vs data path (the crux)',
-      description:
-        'The same goal — rename the window — attempted two ways. The control path asks tmux over its Unix socket and is rejected for oracle; the data path writes the escape sequence to oracle’s own stdout and succeeds. The difference is *when* permission is checked: a fresh socket connect is checked at connect time (denied); a write to an inherited pty fd was checked back at open() time and never re-checked.',
-      steps: [
-        { step: 1, sourceBoxId: 'tx-rename', targetBoxId: 'tx-socket',
-          description: 'CONTROL PATH — `tmux rename-window oracle` opens a fresh connect() to the server socket /tmp/tmux-1000/default. The kernel permission-checks that connect against the 0700 directory bongo owns → oracle is DENIED. No rename.' },
-        { step: 2, sourceBoxId: 'tx-printf', targetBoxId: 'tx-pts7',
-          description: 'DATA PATH — `printf \\047\\033koracle\\033\\\\\\047` is just write(1, …) to fd 1. That fd is the pty slave oracle inherited; writing it needs no privilege, so there is nothing to deny.' },
+        { step: 1, sourceBoxId: 'tx-bash', targetBoxId: 'tx-data',
+          description: 'oracle’s bash runs its PROMPT_COMMAND: write(1, "\\033koracle\\033\\\\", 10). It takes the data path — its own stdout — not the control socket beside it.' },
+        { step: 2, sourceBoxId: 'tx-data', targetBoxId: 'tx-pts7',
+          description: 'The write lands on the pane’s pty slave, /dev/pts/7 — the terminal handle oracle inherited across sudo. No new open, so no permission check.' },
         { step: 3, sourceBoxId: 'tx-pts7', targetBoxId: 'tx-tmux',
-          description: 'tmux is already reading that pty’s master end. The escape sequence arrives as ordinary terminal input, its parser acts on it, and the window is renamed — same result the control path was refused, over the one channel that crosses the privilege boundary for free.' },
+          description: 'tmux holds the master end of that pty, so it reads the bytes oracle wrote — as ordinary terminal input.' },
+        { step: 4, sourceBoxId: 'tx-tmux', targetBoxId: 'tx-pts3',
+          description: 'tmux’s parser consumes \\033koracle\\033\\\\ (it stops here), sets the window name, then renders its whole screen as its OWN escape sequences onto its stdout, /dev/pts/3.' },
+        { step: 5, sourceBoxId: 'tx-pts3', targetBoxId: 'tx-sshd',
+          description: 'That second pty is the one sshd handed your login shell. sshd holds its master end and reads tmux’s rendered output. Two ptys are now nested on the one remote host.' },
+        { step: 6, sourceBoxId: 'tx-sshd', targetBoxId: 'tx-net',
+          description: 'sshd encrypts the bytes into the TCP stream — a dumb pipe, not a parser. It neither knows nor cares that a rename happened.' },
+        { step: 7, sourceBoxId: 'tx-net', targetBoxId: 'tx-ssh',
+          description: 'The encrypted SSH stream crosses the network to your laptop, where your local ssh client decrypts it.' },
+        { step: 8, sourceBoxId: 'tx-ssh', targetBoxId: 'tx-term',
+          description: 'Your terminal’s own parser draws tmux’s rendered output — including “oracle” in the status bar. It never saw /dev/pts/7 or the raw \\033k…, only what tmux already turned it into.' },
       ],
     },
     {
       flowId: 'tx-parse',
-      flowName: 'Parse the escape sequence (parser FSM)',
+      flowName: 'Zoom-in · how tmux reads the byte (parser FSM)',
       description:
-        'How tmux’s parser turns the byte stream \\033 k o r a c l e \\033 \\\\ into the action “set window name = oracle”. A terminal parser is a finite state machine: most bytes are drawn as text (ground state); ESC is the door into command state. Step the machine through the rename sequence and watch it leave ground, collect a name, and act on the terminator.',
+        'What step 4 actually does. A terminal parser is a finite state machine: in ground state every byte is drawn as text; ESC is the one byte that means “a command follows”. Step it through \\033 k o r a c l e \\033 \\\\ and watch it leave ground, collect a name, act on the terminator, and return to ground. This zoom-in stays entirely inside its own zone.',
       steps: [
         { step: 1, sourceBoxId: 'tx-ground', targetBoxId: 'tx-escape',
-          description: 'Reading ESC (0x1B). In ground state every other byte would be drawn as a glyph; ESC is the one byte that means “a command follows” — so the machine leaves ground for the escape state.' },
+          description: 'Reads ESC (0x1B). In ground every other byte is drawn as a glyph; ESC is the door into command state, so the machine leaves ground.' },
         { step: 2, sourceBoxId: 'tx-escape', targetBoxId: 'tx-collect',
-          description: 'Reading “k”. The byte after ESC selects the family. ESC [ would be CSI (cursor/colour); ESC ] would be OSC (titles/clipboard); ESC k is the tmux/screen set-name string — so the machine opens a string and starts collecting.' },
+          description: 'Reads “k”. The byte after ESC picks the family: ESC [ = CSI (cursor/colour), ESC ] = OSC (titles), ESC k = the tmux/screen set-name string — so it opens a string and starts collecting.' },
         { step: 3, sourceBoxId: 'tx-collect', targetBoxId: 'tx-act',
-          description: 'Reading “o,r,a,c,l,e” then ESC \\\\. While collecting, the letters are NOT drawn — they are appended to the name buffer. ESC \\\\ (ST, the String Terminator) closes the string, so the parser knows the name ended and applies it: window name = oracle.' },
+          description: 'Reads “o,r,a,c,l,e” then ESC \\\\. While collecting, the letters are buffered as the NAME, not drawn. ESC \\\\ (ST, the string terminator) closes the string.' },
         { step: 4, sourceBoxId: 'tx-act', targetBoxId: 'tx-ground',
-          description: 'Back to ground. With the command complete the machine returns to ground state; the very next printable byte is drawn as an ordinary glyph again. Visible text is just the machine sitting in ground.' },
+          description: 'Applies the name (window = oracle) and returns to ground — the next printable byte is an ordinary glyph again.' },
       ],
     },
     {
       flowId: 'tx-inherit',
-      flowName: 'Inherit the pty fd across sudo -iu',
+      flowName: 'Zoom-in · how oracle got the handle (sudo -iu)',
       description:
-        'Why oracle ends up holding a usable handle to bongo’s terminal that it could never have opened itself. `sudo -iu oracle` does not allocate a new pty — it forks, changes uid, and execs, and the open file descriptors ride along untouched the whole way. Permission was checked once, at open() time, by bongo; oracle inherits the result.',
+        'Why oracle’s write in step 2 is allowed at all. `sudo -iu oracle` does not allocate a new pty — it forks, changes uid, and execs, and the open file descriptors ride along untouched. Permission was checked once, at open() time, by bongo; oracle inherits the result. This zoom-in stays entirely inside its own zone.',
       steps: [
         { step: 1, sourceBoxId: 'tx-fork', targetBoxId: 'tx-setuid',
-          description: 'fork(). The child is a copy of the parent — including a copy of its fd table. fd 0/1/2 in the child still point at the very same open file description for /dev/pts/7. No device was re-opened.' },
+          description: 'fork() — the child gets a COPY of the fd table, so fd 0/1/2 still point at the same open file description for /dev/pts/7. Nothing is re-opened.' },
         { step: 2, sourceBoxId: 'tx-setuid', targetBoxId: 'tx-execve',
-          description: 'setuid(1001). Becoming oracle changes the process credentials only. The fd table is not part of credentials, so it is left completely untouched — the already-open pts/7 handles remain valid.' },
+          description: 'setuid(1001) — becoming oracle changes credentials only. The fd table is not part of credentials, so the open pts/7 handles are left untouched.' },
         { step: 3, sourceBoxId: 'tx-execve', targetBoxId: 'tx-fdtable',
-          description: 'execve(/bin/bash). exec replaces the program image but PRESERVES open fds (0/1/2 are not close-on-exec). oracle’s bash is born already wired to pts/7 — it can write(1, …) immediately, no open() required.' },
-        { step: 4, sourceBoxId: 'tx-fdtable', targetBoxId: 'tx-socket',
-          description: 'The contrast that makes the trick work: writing the inherited pts/7 fd is never re-checked, but reaching tmux’s socket means a FRESH connect() — a new open that IS permission-checked, and fails for oracle. Inherited handle: allowed. New connection: denied.' },
+          description: 'execve(/bin/bash) — exec preserves open fds (0/1/2 are not close-on-exec), so oracle’s bash is born already wired to pts/7. A bare write() is all it needs.' },
       ],
     },
   ],
   zones: [
     {
-      id: 'tx-remote',
-      label: 'Remote host · the two nested ptys',
+      id: 'tx-z-shell',
+      label: '1 · oracle’s shell · remote host (inside the tmux pane)',
       colorVar: 'k-green',
       boxes: [
         {
           id: 'tx-bash',
           title: 'oracle’s bash',
-          typePrefix: 'PROC',
-          subtitle: 'PROMPT_COMMAND → write(1, "\\033koracle\\033\\\\")',
+          typePrefix: 'SHELL · uid 1001',
+          subtitle: 'every prompt: write(1, "\\033koracle\\033\\\\")',
           detail: {
             role: 'THE EMITTER',
             summary:
-              'The shell you landed in after `sudo -iu oracle`, running as uid 1001. On every prompt redraw its PROMPT_COMMAND runs __tmux_name, which does a single write() of the rename sequence to fd 1. It is not talking to tmux — it is just printing to its own stdout, which happens to be a pty tmux is reading.',
+              'The shell you land in after `sudo -iu oracle`. On every prompt it does one write() of the rename sequence to its own stdout — it is not talking to tmux, just printing.',
             sections: [
               {
-                heading: 'What it actually does',
-                facts: [
-                  { k: 'Trigger', v: 'PROMPT_COMMAND — runs on every prompt redraw (not preexec)' },
-                  { k: 'Call', v: 'write(1, "\\033koracle\\033\\\\", 10) — an ordinary write to fd 1' },
-                  { k: 'Name', v: 'id -un (effective user), or $KUBE_PS1_CLUSTER_NAME if set' },
+                heading: 'At a glance',
+                tags: ['uid 1001', 'PROMPT_COMMAND', 'no tmux client', 'no socket', 'just stdout'],
+              },
+              {
+                heading: 'What it does each prompt',
+                bullets: [
+                  'Reads the name: id -un (effective user), or $KUBE_PS1_CLUSTER_NAME if set.',
+                  'Writes "\\033koracle\\033\\\\" to fd 1 — an ordinary write to its own stdout.',
+                  'Renders nothing itself — tmux, reading the pty, acts on the bytes.',
                 ],
-                tags: ['no tmux client', 'no socket', 'just stdout', 'fires per prompt'],
+              },
+              {
+                heading: 'Why PROMPT_COMMAND, not a preexec hook',
+                facts: [
+                  { k: 'preexec', v: 'would capture the running command, but in bash needs a DEBUG trap that can wedge the shell' },
+                  { k: 'PROMPT_COMMAND', v: 'runs on prompt redraw only — cannot wedge anything (the command suffix is dropped on purpose)' },
+                ],
               },
               {
                 heading: 'The bashrc block',
@@ -2053,10 +2028,6 @@ esac`,
                 },
               },
               {
-                heading: 'Why PROMPT_COMMAND, not a preexec hook',
-                body: 'Capturing the running command (a bongo_vim suffix) would need a preexec hook firing before each command — in bash a DEBUG trap, which can collide with starship / oh-my-bash and wedge the shell. PROMPT_COMMAND alone cannot wedge anything, so the command suffix is deliberately dropped. Worst case is a stale title that self-corrects at the next prompt.',
-              },
-              {
                 heading: 'Explore',
                 commands: [
                   '# Fire a rename by hand (run inside tmux)\nprintf \'\\033kTEST\\033\\\\\'',
@@ -2066,30 +2037,131 @@ esac`,
             ],
           },
         },
+      ],
+    },
+    {
+      id: 'tx-z-fork',
+      label: '2 · Two ways to ask for the rename · take the left, not the right',
+      colorVar: 'k-orange',
+      dashed: true,
+      boxes: [
+        {
+          id: 'tx-data',
+          title: 'Data path · printf',
+          typePrefix: 'WORKS ✓',
+          subtitle: 'write() to your own stdout (the inherited pty fd)',
+          badges: [
+            { label: 'inherited fd', kind: 'concept' },
+            { label: 'no check → through', kind: 'concept' },
+          ],
+          detail: {
+            role: 'DATA PATH · ALLOWED',
+            summary:
+              'The escape sequence rides the one channel that crosses the privilege boundary for free: oracle’s own stdout. You are not asking tmux for anything — you emit a signal it already happens to be reading on the pty.',
+            sections: [
+              {
+                heading: 'Why it goes through',
+                states: [
+                  { label: 'write(1, …)', tone: 'ok', meaning: 'to an fd oracle already holds → no new open → no check → allowed' },
+                ],
+                facts: [
+                  { k: 'Reaches tmux via', v: 'the pane’s pty — oracle’s stdout, fd 1' },
+                  { k: 'Needs', v: 'a write to an inherited fd · no privilege' },
+                ],
+                tags: ['inherited handle', 'open-time check already passed', 'rename succeeds'],
+              },
+              {
+                heading: 'Not a security bypass',
+                bullets: [
+                  'Sets the title — any process in the pane can; it is orientation, not an authenticated indicator.',
+                  'Uses a handle oracle legitimately inherited to its own terminal — no escalation.',
+                ],
+              },
+              {
+                heading: 'See also',
+                facts: [
+                  { k: 'How the fd got here', v: 'the “Inherit the fd” zoom-in below (fork → setuid → execve)' },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          id: 'tx-control',
+          title: 'Control path · rename-window',
+          typePrefix: 'REJECTED ✗',
+          subtitle: 'tmux rename-window → control socket → denied',
+          badges: [
+            { label: 'fresh connect()', kind: 'static' },
+            { label: '0700 → denied', kind: 'static' },
+          ],
+          detail: {
+            role: 'CONTROL PATH · DENIED',
+            summary:
+              'The “proper” way: a tmux client connects to the server’s Unix socket and issues a command. Fine as bongo; refused as oracle — not by tmux policy, but by when the kernel checks permission.',
+            sections: [
+              {
+                heading: 'Why it is refused',
+                states: [
+                  { label: 'connect()', tone: 'bad', meaning: 'a fresh open → permission-checked now → oracle is a different uid → denied' },
+                ],
+                facts: [
+                  { k: 'Reaches tmux via', v: 'Unix socket /tmp/tmux-1000/default' },
+                  { k: 'Guard', v: 'the socket dir is mode 0700, owned by bongo (uid 1000)' },
+                ],
+                tags: ['fresh connect', 'checked at connect time', 'cross-uid denied'],
+              },
+              {
+                heading: 'Data vs control, side by side',
+                facts: [
+                  { k: 'Control (this box)', v: 'fresh connect() → checked now → DENIED for oracle' },
+                  { k: 'Data (left box)', v: 'write() to an inherited fd → never re-checked → ALLOWED' },
+                ],
+                tags: ['same boundary', 'opposite outcome', 'it’s about WHEN the check happens'],
+              },
+              {
+                heading: 'Explore',
+                commands: [
+                  '# As oracle, pointed at bongo’s socket → permission denied\ntmux rename-window oracle',
+                  '# The 0700 directory that locks oracle out\nls -ld /tmp/tmux-1000',
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'tx-z-pty',
+      label: '3 · The pane’s pty · remote host (/dev/pts/7)',
+      colorVar: 'k-teal',
+      boxes: [
         {
           id: 'tx-pts7',
           title: '/dev/pts/7 · pty slave',
-          typePrefix: 'PTY',
-          subtitle: 'oracle’s shell terminal — the INNER pty (tmux’s)',
-          badges: [{ label: 'inherited fd', kind: 'concept' }],
+          typePrefix: 'PTY · inner',
+          subtitle: 'oracle’s terminal — the handle it inherited',
+          badges: [{ label: 'inherited handle', kind: 'concept' }],
           detail: {
             role: 'INNER PTY · SLAVE',
             summary:
-              'The pseudo-terminal slave that oracle’s bash has open as fds 0/1/2. A pty has two ends: the slave (/dev/pts/N) a program treats as its terminal, and the master held by whatever pretends to be the terminal — here, tmux. Bytes written to the slave surface at the master for tmux to read.',
+              'The pseudo-terminal slave oracle’s bash holds as fds 0/1/2. A pty has two ends: the slave (/dev/pts/N) a program treats as its terminal, and the master held by whatever pretends to be it — here, tmux. Bytes written to the slave surface at tmux’s master.',
             sections: [
               {
                 heading: 'Two ends, one local pipe',
                 facts: [
                   { k: 'slave', v: '/dev/pts/7 — what oracle’s bash opened as its terminal' },
                   { k: 'master', v: 'the other end, held by the tmux server' },
-                  { k: 'scope', v: 'entirely local to this host — a pty never crosses the network' },
                 ],
-                tags: ['slave ↔ master', 'local only', 'tmux holds the master'],
+                tags: ['slave ↔ master', 'local only — never crosses the network', 'tmux holds the master'],
               },
               {
-                heading: 'It is genuinely the same terminal',
-                body: 'Because oracle inherited the *same* open file description (not a copy), the oracle shell shares the controlling terminal, session, and job control with pts/7. On exit, oracle’s fd copies close, bongo’s originals survive, and you drop back to bongo’s prompt on the same pts/7.',
-                tags: ['same open file description', 'shared session', 'controlling terminal'],
+                heading: 'Genuinely the same terminal',
+                bullets: [
+                  'Receives the same open file description bongo opened — not a copy.',
+                  'Shares the controlling terminal, session and job control with pts/7.',
+                  'Reverts on exit: oracle’s fd copies close, bongo’s originals survive on the same pts/7.',
+                ],
               },
               {
                 heading: 'Confirm the nesting',
@@ -2101,23 +2173,30 @@ esac`,
             ],
           },
         },
+      ],
+    },
+    {
+      id: 'tx-z-tmux',
+      label: '4 · tmux server · remote host',
+      colorVar: 'k-teal',
+      boxes: [
         {
           id: 'tx-tmux',
           title: 'tmux server',
-          typePrefix: 'PROC',
-          subtitle: 'holds pts/7 master · consumes \\033k… · renders its screen',
+          typePrefix: 'READS THE PTY',
+          subtitle: 'consumes \\033k… · sets name · renders its screen',
           badges: [{ label: 'parser here', kind: 'concept' }],
           detail: {
             role: 'THE CONSUMER',
             summary:
-              'The long-lived tmux server holds the master end of oracle’s pty and reads everything written to it. Its parser interprets the rename sequence, sets the window name, and then renders its own screen image (status bar + panes) as a brand-new stream of escape sequences — which is what flows onward. The raw \\033k… stops here; it never travels further.',
+              'The long-lived server holds the master end of oracle’s pty. Its parser interprets the rename sequence, sets the window name, then renders its whole screen (status bar + panes) as a brand-new stream of its own escape sequences — which is what flows onward. The raw \\033k… stops here.',
             sections: [
               {
-                heading: 'What happens to the bytes',
+                heading: 'What it does to the bytes',
                 bullets: [
-                  'Reads \\033koracle\\033\\\\ off the pty master.',
+                  'Reads "\\033koracle\\033\\\\" off the pty master.',
                   'Consumes the sequence — sets this window’s name to “oracle”.',
-                  'Renders its full screen as its OWN escape sequences and writes that to its stdout.',
+                  'Renders its full screen as its OWN escape sequences onto its stdout.',
                 ],
               },
               {
@@ -2125,13 +2204,23 @@ esac`,
                 facts: [
                   { k: 'allow-rename on', v: 'lets the \\033k escape sequence set the name at all' },
                   { k: 'automatic-rename off', v: 'stops tmux overwriting your name with pane_current_command' },
-                  { k: 'scope', v: 'both are server-global — they affect every window in the server' },
                 ],
-                tags: ['~/.tmux.conf', 'server-global'],
+                tags: ['~/.tmux.conf', 'both server-global', 'affect every window'],
               },
               {
                 heading: 'Each layer parses its child’s stream',
-                body: 'tmux’s parser (remote) interprets oracle’s \\033k…; your local terminal’s parser (laptop) interprets tmux’s rendered output. sshd in between is not a parser at all — it is a dumb encrypted pipe. The rename completes entirely remote-side, before SSH is involved, so network latency and local terminal capabilities are irrelevant to whether it works.',
+                facts: [
+                  { k: 'tmux (remote)', v: 'interprets oracle’s \\033k… and consumes it' },
+                  { k: 'your terminal (local)', v: 'interprets tmux’s rendered output' },
+                  { k: 'sshd (between)', v: 'not a parser — a dumb encrypted pipe' },
+                ],
+                tags: ['rename completes remote-side', 'before SSH', 'latency irrelevant'],
+              },
+              {
+                heading: 'See also',
+                facts: [
+                  { k: 'How this parse works', v: 'the “Parse the byte” zoom-in below (ground → escape → collecting → act)' },
+                ],
               },
               {
                 heading: 'Explore',
@@ -2143,29 +2232,30 @@ esac`,
             ],
           },
         },
+      ],
+    },
+    {
+      id: 'tx-z-ssh',
+      label: '5 · Back out over SSH · remote host → your laptop',
+      colorVar: 'k-cyan',
+      boxes: [
         {
           id: 'tx-pts3',
           title: '/dev/pts/3 · pty slave',
-          typePrefix: 'PTY',
-          subtitle: 'tmux’s own terminal — the OUTER pty (sshd’s)',
+          typePrefix: 'PTY · outer',
+          subtitle: 'tmux’s own terminal — the pty sshd gave your login shell',
           detail: {
             role: 'OUTER PTY · SLAVE',
             summary:
-              'The second pty, nested around the first. tmux’s stdout is /dev/pts/3 — the pty slave sshd handed your login shell when you connected. So on this one remote host there are two ptys stacked: oracle’s shell lives in tmux’s pty, and tmux lives in sshd’s pty.',
+              'The second pty, nested around the first. tmux’s stdout is /dev/pts/3 — the slave sshd handed your login shell when you connected. So on one remote host two ptys are stacked.',
             sections: [
               {
                 heading: 'The nesting, stated plainly',
                 facts: [
                   { k: 'inner', v: 'oracle’s bash → /dev/pts/7 (master held by tmux)' },
                   { k: 'outer', v: 'tmux → /dev/pts/3 (master held by sshd)' },
-                  { k: 'rule', v: 'each layer reads its child’s pty, interprets what it understands, re-emits upward' },
                 ],
-                tags: ['two nested ptys', 'one host', 'forwarders, not parsers (sshd)'],
-              },
-              {
-                heading: 'The whole chain, end to end',
-                body: 'One rename byte from oracle’s shell to a glyph on your laptop. Note the two nested ptys on the remote host and that the pty never crosses the network — only the SSH byte stream does.',
-                ascii: CHAIN_ASCII,
+                tags: ['two nested ptys', 'one host', 'each layer re-emits upward'],
               },
             ],
           },
@@ -2173,40 +2263,36 @@ esac`,
         {
           id: 'tx-sshd',
           title: 'sshd',
-          typePrefix: 'PROC',
-          subtitle: 'holds pts/3 master · encrypts → TCP (a dumb pipe)',
+          typePrefix: 'ENCRYPTS',
+          subtitle: 'reads pts/3 master · encrypts into TCP (a dumb pipe)',
           detail: {
             role: 'THE FORWARDER',
             summary:
-              'sshd holds the master end of the outer pty and forwards whatever tmux renders into the encrypted TCP stream. Crucially it does not parse terminal sequences — it neither knows nor cares that a rename happened. It is a stacked forwarder, exactly like tmux is for the inner pty, but without the interpreting step.',
+              'sshd holds the master end of the outer pty and forwards whatever tmux renders into the encrypted TCP stream. It does not parse terminal sequences — a stacked forwarder like tmux, but without the interpreting step.',
             sections: [
               {
-                heading: 'Bytes get out by being read & forwarded',
-                body: 'Nothing about the pty travels. A pty is local plumbing; what leaves the host is the SSH byte stream. tmux and sshd are two stacked programs that each read a master end and forward the bytes onward — that is the only way anything reaches your laptop.',
-                tags: ['pty stays local', 'SSH stream travels', 'encrypt & forward', 'no parsing'],
+                heading: 'How bytes leave the host',
+                bullets: [
+                  'Reads tmux’s rendered output off the outer pty master.',
+                  'Forwards it as an encrypted byte stream — nothing about the pty travels.',
+                ],
+                tags: ['pty stays local', 'SSH stream travels', 'no parsing'],
               },
             ],
           },
         },
-      ],
-    },
-    {
-      id: 'tx-local',
-      label: 'Network & local host',
-      colorVar: 'k-cyan',
-      boxes: [
         {
           id: 'tx-net',
-          title: 'SSH byte stream',
-          typePrefix: 'TCP',
-          subtitle: 'encrypted — the pty never crosses, only these bytes do',
+          title: 'SSH stream',
+          typePrefix: 'NETWORK',
+          subtitle: 'encrypted — only these bytes cross, never the pty',
           detail: {
             role: 'THE WIRE',
             summary:
-              'The encrypted TCP stream between the two hosts. This is the only thing that crosses the network. By the time bytes reach it, tmux has already consumed the rename and re-rendered its screen — so what travels is tmux’s output, never the raw \\033koracle\\033\\\\ and never the pty itself.',
+              'The encrypted TCP stream between the two hosts — the only thing that crosses the network. By now tmux has already consumed the rename and re-rendered, so what travels is tmux’s output, never the raw \\033k… and never the pty.',
             sections: [
               {
-                heading: 'What is and isn’t on the wire',
+                heading: 'On the wire vs not',
                 facts: [
                   { k: 'on the wire', v: 'tmux’s rendered screen, as its own escape sequences, encrypted' },
                   { k: 'NOT on the wire', v: 'the pty (local plumbing) and the raw \\033k… (consumed remote-side)' },
@@ -2217,148 +2303,60 @@ esac`,
           },
         },
         {
-          id: 'tx-ssh-client',
+          id: 'tx-ssh',
           title: 'local ssh client',
-          typePrefix: 'PROC',
-          subtitle: 'decrypts the stream on your laptop',
+          typePrefix: 'DECRYPTS',
+          subtitle: 'on your laptop — hands bytes to the terminal',
           detail: {
             role: 'DECRYPT',
             summary:
-              'Your local ssh process decrypts the TCP stream and writes the recovered bytes to your local terminal. Like sshd, it is a forwarder, not a terminal parser — it hands tmux’s rendered output to the terminal emulator that drew this window.',
+              'Your local ssh process decrypts the TCP stream and hands tmux’s rendered output to your terminal emulator. Like sshd, a forwarder, not a parser.',
             sections: [
               {
                 heading: 'Mirror of the remote side',
-                tags: ['decrypt', 'forward to terminal', 'not a parser'],
+                bullets: [
+                  'Receives the encrypted stream and decrypts it.',
+                  'Forwards the bytes to the local terminal — does not interpret them.',
+                ],
+                tags: ['decrypt', 'forward', 'not a parser'],
               },
             ],
           },
         },
+      ],
+    },
+    {
+      id: 'tx-z-term',
+      label: '6 · Your terminal · local laptop',
+      colorVar: 'k-blue',
+      boxes: [
         {
           id: 'tx-term',
-          title: 'local terminal parser',
-          typePrefix: 'PARSER',
-          subtitle: 'draws glyphs — incl. “oracle” in the status bar',
+          title: 'terminal parser',
+          typePrefix: 'DRAWS',
+          subtitle: 'paints tmux’s output — “oracle” in the status bar',
+          badges: [{ label: 'shows “oracle”', kind: 'concept' }],
           detail: {
             role: 'THE RENDERER',
             summary:
-              'Your terminal emulator’s own parser interprets tmux’s rendered output and paints pixels. It is a second, independent finite state machine — but it never sees /dev/pts/7 or the raw rename sequence. It only ever receives what tmux already turned that into: instructions to draw the status bar with the word “oracle” in it.',
+              'Your terminal emulator’s own parser interprets tmux’s rendered output and paints pixels — a second, independent state machine. It never sees /dev/pts/7 or the raw rename sequence, only what tmux already turned that into.',
             sections: [
               {
                 heading: 'Two parsers, two streams',
                 facts: [
-                  { k: 'tmux parser', v: 'remote — interprets oracle’s \\033k… and consumes it' },
-                  { k: 'your terminal', v: 'local — interprets tmux’s rendered output and draws it' },
+                  { k: 'tmux parser (remote)', v: 'interprets oracle’s \\033k… and consumes it' },
+                  { k: 'your terminal (local)', v: 'interprets tmux’s rendered output and draws it' },
                 ],
                 tags: ['second FSM', 'sees only tmux’s output', 'never the raw sequence'],
               },
-              {
-                heading: 'See also',
-                body: 'The “Parse the escape sequence” flow steps a parser FSM through exactly the kind of input tmux receives.',
-              },
             ],
           },
         },
       ],
     },
     {
-      id: 'tx-crux',
-      label: 'The crux · control path vs data path',
-      colorVar: 'k-orange',
-      dashed: true,
-      boxes: [
-        {
-          id: 'tx-rename',
-          title: 'tmux rename-window',
-          typePrefix: 'CONTROL',
-          subtitle: 'asks the server over its socket — a fresh connect()',
-          detail: {
-            role: 'CONTROL PATH',
-            summary:
-              'The “proper” way to rename a window: a tmux client connects to the server’s Unix socket and issues a command. It works fine as bongo. As oracle it fails — and the reason is purely about when the kernel checks permission, not about tmux policy.',
-            sections: [
-              {
-                heading: 'Why it is refused for oracle',
-                facts: [
-                  { k: 'Reaches tmux via', v: 'Unix socket /tmp/tmux-1000/default' },
-                  { k: 'Requires', v: 'a fresh connect() — permission-checked at connect time' },
-                  { k: 'Result', v: 'oracle is locked out: the socket dir is 0700, owned by bongo' },
-                ],
-                tags: ['fresh connect', 'checked now', 'denied for oracle'],
-              },
-              {
-                heading: 'Try it (and watch it fail as oracle)',
-                commands: [
-                  '# As oracle, pointed at bongo’s socket → permission denied\ntmux rename-window oracle',
-                  '# The 0700 directory that locks oracle out\nls -ld /tmp/tmux-1000',
-                ],
-              },
-            ],
-          },
-        },
-        {
-          id: 'tx-socket',
-          title: 'tmux control socket',
-          typePrefix: 'SOCKET',
-          subtitle: '/tmp/tmux-1000/default — dir 0700, owned by bongo',
-          badges: [{ label: '0700 → denied', kind: 'static' }],
-          detail: {
-            role: 'THE LOCKED DOOR',
-            summary:
-              'tmux’s server listens on a Unix domain socket inside a per-user directory mode 0700, owned by the user who started the server (bongo). Connecting to it is a fresh open/connect, so the kernel permission-checks it every time — and oracle, a different uid, cannot even enter the directory. This is the door the data path simply walks around.',
-            sections: [
-              {
-                heading: 'Connect = a new open = a new check',
-                facts: [
-                  { k: 'Object', v: 'AF_UNIX socket in /tmp/tmux-<uid>/' },
-                  { k: 'Guard', v: 'directory mode 0700, owned by bongo (uid 1000)' },
-                  { k: 'Check', v: 'performed at connect() — oracle (uid 1001) is denied entry' },
-                ],
-                tags: ['fresh connect', 'permission-checked', 'cross-uid denied'],
-              },
-              {
-                heading: 'Contrast with the inherited pty fd',
-                body: 'A pty write is to an fd oracle already holds — opened by bongo, inherited across sudo, never re-checked. A socket connect is a brand-new operation with a brand-new check. Same privilege boundary, opposite outcome — because of *when* the check happens, not *who* you are at write time.',
-                tags: ['open-time check (denied)', 'vs inherited fd (allowed)'],
-              },
-            ],
-          },
-        },
-        {
-          id: 'tx-printf',
-          title: 'printf \'\\033k…\'',
-          typePrefix: 'DATA',
-          subtitle: 'writes the sequence to oracle’s own stdout — no privilege',
-          detail: {
-            role: 'DATA PATH',
-            summary:
-              'The escape sequence rides the one channel that crosses the privilege boundary for free: oracle’s own stdout. `printf` does write(1, "\\033koracle\\033\\\\", 10) to an fd oracle already holds. You are not asking tmux for anything — you are emitting a signal tmux already happens to be listening for on the pty.',
-            sections: [
-              {
-                heading: 'Why it is allowed for oracle',
-                facts: [
-                  { k: 'Reaches tmux via', v: 'the pane’s pty (oracle’s stdout, fd 1)' },
-                  { k: 'Requires', v: 'a write to an inherited fd — no new open, so no check' },
-                  { k: 'Result', v: 'works: writing your own stdout needs no privilege' },
-                ],
-                tags: ['inherited fd', 'no new check', 'rename succeeds'],
-              },
-              {
-                heading: 'Not a security bypass',
-                body: 'This is not privilege escalation. Any process in the pane can set the title; the displayed user is orientation, not an authenticated indicator. oracle isn’t gaining access to tmux — it’s using a handle it legitimately inherited to its own terminal.',
-                tags: ['orientation only', 'not authenticated', 'no escalation'],
-              },
-              {
-                heading: 'The mental model',
-                body: 'Control is checked at connect time and oracle is locked out; data is checked at open time and oracle inherited an already-open handle — so a bare write() of an escape sequence to your own stdout reaches the tmux parser that’s already reading the pty, no privilege required.',
-              },
-            ],
-          },
-        },
-      ],
-    },
-    {
-      id: 'tx-fsm',
-      label: 'Escape sequences · the terminal parser FSM',
+      id: 'tx-z-fsm',
+      label: 'Zoom-in · how tmux reads the byte (step 4 · parser FSM)',
       colorVar: 'k-purple',
       dashed: true,
       boxes: [
@@ -2366,16 +2364,24 @@ esac`,
           id: 'tx-ground',
           title: 'GROUND',
           typePrefix: 'STATE',
-          subtitle: 'printable bytes → draw glyphs',
+          subtitle: 'printable bytes → drawn as glyphs',
           detail: {
             role: 'STATE · GROUND',
             summary:
-              'The resting state. Every byte read here is an ordinary character to be drawn on screen — “h”, “i”, a space. Visible text is simply the parser sitting in ground state. One byte breaks the spell: ESC (0x1B), the single toggle that means “a command follows”.',
+              'The resting state. Every byte read here is an ordinary character to draw. Visible text is just the parser sitting in ground. One byte breaks the spell: ESC (0x1B), the toggle into command state.',
             sections: [
               {
                 heading: 'The one idea behind terminal control',
-                body: 'A terminal is a byte stream with no separate control channel — control and content share one pipe. Most bytes mean “draw this character”; ESC is the door between ground (printing) and command state. This single fact explains the screen-garbage when a binary is catted: random bytes trip the parser into reading content as commands.',
-                tags: ['one byte stream', 'no side channel', 'ESC = the door'],
+                states: [
+                  { label: 'ground', tone: 'idle', meaning: 'printable bytes are drawn as glyphs' },
+                ],
+                tags: ['one byte stream', 'no separate control channel', 'ESC = the door'],
+              },
+              {
+                heading: 'Why catting a binary garbles the screen',
+                bullets: [
+                  'Reads random bytes as if they were commands — tripping the parser out of ground.',
+                ],
               },
             ],
           },
@@ -2384,25 +2390,28 @@ esac`,
           id: 'tx-escape',
           title: 'ESCAPE',
           typePrefix: 'STATE',
-          subtitle: 'saw ESC (0x1B) — next byte selects the family',
+          subtitle: 'saw ESC — next byte selects the family',
           detail: {
             role: 'STATE · ESCAPE',
             summary:
-              'The parser saw ESC and is now waiting for the next byte, which decides what kind of sequence this is. This is the moment to untangle “escape sequence” from “control sequence”: a control sequence (CSI) is just one *family* of escape sequence, not a synonym.',
+              'The parser saw ESC and waits for the next byte, which decides the kind of sequence. The moment to untangle “escape sequence” from “control sequence”: a control sequence (CSI) is one family of escape sequence, not a synonym.',
             sections: [
               {
                 heading: 'The byte after ESC picks a family',
                 facts: [
-                  { k: 'ESC [', v: 'CSI — cursor moves, colours, clears (e.g. ESC[31m = red). The “control sequence”.' },
-                  { k: 'ESC ]', v: 'OSC — operating-system commands: window titles, clipboard, hyperlinks.' },
+                  { k: 'ESC [', v: 'CSI — cursor, colour, clear (e.g. ESC[31m = red). The “control sequence”.' },
+                  { k: 'ESC ]', v: 'OSC — window titles, clipboard, hyperlinks.' },
                   { k: 'ESC k', v: 'a tmux/screen string: “set this window’s name”. The one used here.' },
-                  { k: 'ESC <byte>', v: 'short two-byte forms (e.g. ESC \\\\ = ST, the string terminator).' },
+                  { k: 'ESC \\\\', v: 'ST — the string terminator, a short two-byte form.' },
                 ],
                 tags: ['CSI ⊂ escape sequences', 'not a synonym', 'ESC k = tmux/screen'],
               },
               {
-                heading: 'Escape sequence vs control sequence',
-                body: 'All CSI sequences are escape sequences (they start with ESC); not all escape sequences are CSI. ESC k is an escape sequence but NOT a CSI — it is a screen/tmux string control. People conflate the two because CSI (ESC [ …) is the family they see most.',
+                heading: 'Escape vs control sequence',
+                states: [
+                  { label: 'escape sequence', tone: 'busy', meaning: 'anything starting with ESC — the whole family' },
+                  { label: 'control sequence (CSI)', tone: 'busy', meaning: 'only the ESC [ … subset; ESC k is NOT one' },
+                ],
               },
             ],
           },
@@ -2415,19 +2424,22 @@ esac`,
           detail: {
             role: 'STATE · COLLECTING THE STRING',
             summary:
-              'ESC k opened a string, so the parser is now accumulating bytes into a name buffer instead of drawing them. “o”, “r”, “a”, “c”, “l”, “e” are appended, not painted. It stays here until it sees the terminator — which is why both delimiters exist: ESC k opens, ESC \\\\ closes, so the parser knows exactly where the name ends.',
+              'ESC k opened a string, so the parser accumulates bytes into a name buffer instead of drawing them. It stays here until the terminator — which is why both delimiters exist: ESC k opens, ESC \\\\ closes.',
             sections: [
               {
                 heading: 'Same bytes, different meaning',
-                facts: [
-                  { k: 'in GROUND', v: '“oracle” would be six glyphs drawn on screen' },
-                  { k: 'in COLLECTING', v: 'the identical bytes are the NAME — buffered, not drawn' },
+                states: [
+                  { label: 'in GROUND', tone: 'idle', meaning: '“oracle” would be six glyphs drawn on screen' },
+                  { label: 'in COLLECTING', tone: 'busy', meaning: 'the identical bytes are the NAME — buffered, not drawn' },
                 ],
                 tags: ['state decides meaning', 'buffer, don’t draw', 'awaiting ST'],
               },
               {
                 heading: 'Why two delimiters',
-                body: 'A name can be any length, so the grammar needs an explicit start and end. ESC k marks the start; ESC \\\\ (ST, String Terminator) marks the end. Without the terminator the parser couldn’t tell where the name stops and ordinary text resumes.',
+                facts: [
+                  { k: 'ESC k', v: 'marks the start of the name' },
+                  { k: 'ESC \\\\ (ST)', v: 'marks the end — without it the parser couldn’t tell where the name stops' },
+                ],
               },
             ],
           },
@@ -2436,17 +2448,17 @@ esac`,
           id: 'tx-act',
           title: 'ACT · set window name',
           typePrefix: 'ACTION',
-          subtitle: 'ESC \\\\ (ST) terminates → apply “oracle”',
+          subtitle: 'ESC \\\\ terminates → apply “oracle” → back to ground',
           detail: {
             role: 'ACTION · COMMIT',
             summary:
-              'The terminator ESC \\\\ arrives, the string is complete, and the parser acts: window name = “oracle”. This is the difference between an escape sequence (control — it changed state) and ordinary printable content (which would merely have been drawn). Then the machine returns to ground.',
+              'The terminator arrives, the string is complete, the parser acts: window name = “oracle”. That is the difference between an escape sequence (control — it changed state) and printable content (merely drawn). Then it returns to ground.',
             sections: [
               {
                 heading: 'Control vs content, made concrete',
-                facts: [
-                  { k: 'escape sequence', v: 'ESC k oracle ESC \\\\ → an action: rename the window' },
-                  { k: 'printable content', v: 'the bytes “oracle” in ground → six drawn glyphs' },
+                states: [
+                  { label: 'escape sequence', tone: 'ok', meaning: 'ESC k oracle ESC \\\\ → an action: rename the window' },
+                  { label: 'printable content', tone: 'idle', meaning: 'the bytes “oracle” in ground → six drawn glyphs' },
                 ],
                 tags: ['acted, not drawn', 'then → GROUND'],
               },
@@ -2462,9 +2474,9 @@ esac`,
       ],
     },
     {
-      id: 'tx-sudo',
-      label: 'sudo -iu oracle · how the fd is inherited',
-      colorVar: 'k-blue',
+      id: 'tx-z-sudo',
+      label: 'Zoom-in · how oracle got the handle (step 2 · sudo -iu)',
+      colorVar: 'k-sky',
       dashed: true,
       boxes: [
         {
@@ -2475,14 +2487,13 @@ esac`,
           detail: {
             role: 'STEP 1 · FORK',
             summary:
-              'sudo forks the process that will become oracle’s shell. The child inherits a copy of the parent’s file-descriptor table, so fd 0/1/2 in the child point at the exact same underlying open file description for /dev/pts/7. No device is re-opened — the handle is duplicated, not recreated.',
+              'sudo forks the process that will become oracle’s shell. The child inherits a copy of the parent’s fd table, so fd 0/1/2 point at the very same open file description for /dev/pts/7. Nothing is re-opened.',
             sections: [
               {
                 heading: 'What an fd actually is',
                 facts: [
                   { k: 'fd', v: 'a small integer indexing a per-process table' },
                   { k: 'entry', v: 'points at a shared kernel “open file description”' },
-                  { k: 'fork', v: 'copies the table → both processes reference the same open file description' },
                 ],
                 tags: ['fd = integer + table', 'fork copies the table', 'same pts/7 underneath'],
               },
@@ -2497,12 +2508,15 @@ esac`,
           detail: {
             role: 'STEP 2 · CHANGE UID',
             summary:
-              'sudo changes the process credentials to oracle (uid 1001). This is the pivotal non-event: changing uid does not touch the fd table. The already-open pts/7 handles remain perfectly valid — the kernel does not revisit past open() decisions when your identity changes.',
+              'sudo changes credentials to oracle (uid 1001). The pivotal non-event: changing uid does not touch the fd table, so the open pts/7 handles stay valid. The kernel never revisits past open() decisions when identity changes.',
             sections: [
               {
                 heading: 'The pivotal rule',
-                body: 'Permission is checked at open() time, not at every write(). bongo opened pts/7 and had permission then. oracle merely inherited the handle — it never opens the device, so there is nothing to deny. Identity at write time is irrelevant; the check already happened, under bongo.',
-                tags: ['checked at open()', 'NOT at write()', 'uid change ≠ fd change'],
+                states: [
+                  { label: 'checked at open()', tone: 'ok', meaning: 'bongo opened pts/7 and had permission then' },
+                  { label: 'NOT checked at write()', tone: 'ok', meaning: 'oracle inherited the handle — nothing to deny' },
+                ],
+                tags: ['uid change ≠ fd change', 'identity at write time is irrelevant'],
               },
             ],
           },
@@ -2515,14 +2529,13 @@ esac`,
           detail: {
             role: 'STEP 3 · EXEC',
             summary:
-              'exec replaces the program image with bash, but preserves open fds — 0/1/2 are not marked close-on-exec, so they cross the exec boundary intact. oracle’s bash starts life already wired to pts/7 and can write(1, …) immediately, with no open() of its own.',
+              'exec replaces the program image with bash but preserves open fds — 0/1/2 are not close-on-exec, so they cross the exec boundary intact. oracle’s bash starts already wired to pts/7.',
             sections: [
               {
                 heading: 'Why the fds survive',
                 facts: [
                   { k: 'execve', v: 'overlays a new program but keeps the fd table' },
                   { k: 'FD_CLOEXEC', v: 'not set on 0/1/2, so they are NOT closed on exec' },
-                  { k: 'result', v: 'bash is born holding pts/7 — a write is all it needs' },
                 ],
                 tags: ['exec preserves fds', 'no re-open', 'born wired to pts/7'],
               },
@@ -2533,18 +2546,18 @@ esac`,
           id: 'tx-fdtable',
           title: 'fd 1 → /dev/pts/7',
           typePrefix: 'FD',
-          subtitle: 'same open file description bongo opened',
+          subtitle: 'the inherited handle · the whole reason data works',
           badges: [{ label: 'no write-time check', kind: 'concept' }],
           detail: {
             role: 'THE INHERITED HANDLE',
             summary:
-              'After fork → setuid → execve, oracle’s bash holds fd 1 pointing at the very open file description bongo opened for /dev/pts/7. Writing it — write(1, "\\033koracle\\033\\\\", 10) — is an ordinary write to a borrowed handle. No privilege escalation, no re-opening, no fresh check. That is the entire reason the data path works where the control path can’t.',
+              'After fork → setuid → execve, oracle’s bash holds fd 1 pointing at the open file description bongo opened for /dev/pts/7. Writing it is an ordinary write to a borrowed handle — no escalation, no re-opening, no fresh check. That is exactly why the data path works where control can’t.',
             sections: [
               {
                 heading: 'Inherited handle vs fresh connection',
-                facts: [
-                  { k: 'pty write', v: 'inherited fd → no new open() → no check → ALLOWED' },
-                  { k: 'socket connect', v: 'fresh connect() → new open → checked → DENIED for oracle' },
+                states: [
+                  { label: 'pty write', tone: 'ok', meaning: 'inherited fd → no new open() → no check → ALLOWED' },
+                  { label: 'socket connect', tone: 'bad', meaning: 'fresh connect() → new open → checked → DENIED for oracle' },
                 ],
                 tags: ['inherited = allowed', 'fresh = checked', 'this is the trick'],
               },
@@ -2552,7 +2565,7 @@ esac`,
                 heading: 'See it directly',
                 commands: [
                   '# Before and after sudo -iu oracle: fds 0/1/2 symlink to the SAME pts\nls -l /proc/$$/fd',
-                  '# The robust fix so the $TMUX check survives sudo (edit only with visudo)\n# /etc/sudoers.d/tmux:\nDefaults env_keep += "TMUX TMUX_PANE"',
+                  '# Robust fix so the $TMUX check survives sudo (edit only with visudo)\n# /etc/sudoers.d/tmux:\nDefaults env_keep += "TMUX TMUX_PANE"',
                 ],
               },
             ],
