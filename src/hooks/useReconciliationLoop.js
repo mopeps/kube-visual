@@ -57,6 +57,7 @@ const MAIN_STEPS = [
   },
   {
     phase: 'sweep', procs: 'swept', title: 'Sweep children', tag: 'reconciling',
+    edge: 'sweep', signal: 'kill cgroup',
     narration:
       'Only now — and only because systemd decided to recover — does the sweep happen, and systemd does it, never the kernel. With KillMode=control-group it reads the unit’s cgroup.procs (the kernel’s exact membership list) and signals every PID still in it (SIGTERM, then SIGKILL), so no orphaned child survives into the new generation. The kernel never sweeps on its own and never acts ahead of this decision.',
   },
@@ -140,8 +141,9 @@ const STOP_STEPS = [
   },
   {
     phase: 'stop-sweep', procs: 'swept', title: 'Sweep cgroup', tag: 'reconciling',
+    edge: 'sweep', signal: 'kill cgroup',
     narration:
-      'systemd reads the unit’s cgroup.procs and kills every PID still listed, so no trapped child survives the stop.',
+      'systemd reads the unit’s cgroup.procs and kills every PID still listed (a kill() per PID, or one write to cgroup.kill), so no trapped child survives the stop.',
   },
   {
     phase: 'inactive', procs: 'empty', title: 'UNIT_INACTIVE', tag: 'reconciled',

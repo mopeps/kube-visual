@@ -144,6 +144,9 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
 
       {paths.map((p) => {
         const live = activeEdgeId && p.id === activeEdgeId
+        // Transient edges (e.g. the cleanup sweep) are part of no steady-state
+        // loop — draw them only while they are the active edge.
+        if (p.transient && !live) return null
         const lines = p.label.split('\n')
         // A chip is clickable when its edge carries detail and a handler exists —
         // then it opens the edge's popup (same affordance as clicking a box).
@@ -185,7 +188,7 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
                   onClick={open}
                   onKeyDown={(e) => { if (clickable && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open() } }}
                 >
-                  <span className="recon-edge-chip-num">{p.step}</span>
+                  {p.step !== '' && <span className="recon-edge-chip-num">{p.step}</span>}
                   <span className="recon-edge-chip-label">
                     {lines.map((ln, i) => (
                       <span key={i} className="recon-edge-chip-line">{ln}</span>
