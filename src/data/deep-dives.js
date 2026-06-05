@@ -380,20 +380,25 @@ const SYSTEMD = {
         detail: {
           role: 'EDGE 2 · READ DESIRED → DRIFT',
           summary:
-            'Woken by the SIGCHLD, the engine reads the unit’s desired state off the DAG (UNIT_ACTIVE) and compares it to what just happened. A dead main PID means desired ≠ actual — so the engine marks the unit UNIT_FAILED back in the DAG and consults Restart=. This read is the formal moment drift is detected and the restart rules become eligible to fire. (The arrow points DAG → engine because the engine is reading desired state out of the graph here.)',
+            'Woken by the SIGCHLD, the engine reads the unit’s desired state off the DAG (UNIT_ACTIVE) and compares it to what just happened. A dead main PID means desired ≠ actual — so the engine marks the unit UNIT_FAILED back in the DAG and consults Restart=. This read is the formal moment drift is detected and the restart rules become eligible to fire.',
           sections: [
             {
-              heading: 'What crosses this edge',
-              facts: [
-                { k: 'From', v: 'Compiled DAG — the unit’s desired state (UNIT_ACTIVE) the engine reads' },
-                { k: 'To', v: 'The Engine — PID 1’s epoll loop, just woken by SIGCHLD' },
-                { k: 'Decision', v: 'desired == actual? if not, mark UNIT_FAILED and consult Restart=' },
-              ],
-              tags: ['read desired vs actual', 'mark UNIT_FAILED', 'Restart=always → recover'],
+              heading: 'Same process — not two things talking',
+              body: 'The DAG and the Engine are NOT separate programs exchanging messages. They are two faces of the one systemd process (PID 1): the Engine is the code, the DAG is its own in-memory data — a graph of C Unit structs in PID 1’s heap. So this “edge” is the engine dereferencing a pointer into its own memory and reading a flag: a plain memory access, not inter-process communication. It is drawn as an arrow only to show which way the information flows (out of the graph, into the code) — which is why both boxes sit inside the one “systemd · PID 1” zone.',
+              tags: ['one process', 'DAG = its heap data', 'engine = its code', 'memory read, not IPC'],
             },
             {
-              heading: 'It is a memory read + flag write, not a process',
-              body: 'Nothing executes here — the engine reads the desired flag from the DAG and, on drift, sets UNIT_FAILED on the same heap struct, then follows the unit’s pointers to decide the next action. The DAG is the single source of truth it reasons over.',
+              heading: 'And it does not poll the table',
+              body: 'systemd never spins watching the DAG. It is event-driven: it sleeps on epoll/signalfd and the kernel wakes it (the SIGCHLD edge). Only once woken does it read the desired flag from the heap, compare, mark UNIT_FAILED on drift, and decide the next action — then it goes back to sleep. The thing it “watches” is a set of file descriptors, not the table.',
+            },
+            {
+              heading: 'What this read involves',
+              facts: [
+                { k: 'From', v: 'Compiled DAG — the unit’s desired state (UNIT_ACTIVE), a field in a heap struct' },
+                { k: 'To', v: 'The Engine — PID 1’s epoll loop, just woken by SIGCHLD' },
+                { k: 'Decision', v: 'desired == actual? if not, write UNIT_FAILED back to the struct and consult Restart=' },
+              ],
+              tags: ['read desired vs actual', 'mark UNIT_FAILED', 'Restart=always → recover'],
             },
             {
               heading: 'Explore',
