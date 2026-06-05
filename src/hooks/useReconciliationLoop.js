@@ -53,13 +53,12 @@ const MAIN_STEPS = [
     phase: 'failed', procs: 'mainDead', title: 'UNIT_FAILED', tag: 'drift detected',
     edge: 'evaluate',
     narration:
-      'PID 1’s epoll loop wakes, matches the dead PID to its unit, and flips the DAG node to UNIT_FAILED. Desired ≠ actual: systemd has detected drift.',
+      'PID 1’s epoll loop wakes and reads the unit’s desired state (UNIT_ACTIVE) from the DAG. The main PID is dead, so desired ≠ actual — the engine marks the unit UNIT_FAILED. Drift detected.',
   },
   {
     phase: 'sweep', procs: 'swept', title: 'Sweep children', tag: 'reconciling',
-    edge: 'pin',
     narration:
-      'The restart policy says recover. systemd sweeps the trapped children out of the cgroup first, so no stale process survives into the new generation.',
+      'Restart=always says recover, so systemd cleans the cgroup first. It knows exactly which processes to kill because the kernel keeps the unit’s full membership in cgroup.procs — systemd reads that list and kills every PID still in it, so no orphaned child survives into the new generation.',
   },
   {
     phase: 'restart', procs: 'empty', title: 'fork() / execve()', tag: 'enforcing',
@@ -141,9 +140,8 @@ const STOP_STEPS = [
   },
   {
     phase: 'stop-sweep', procs: 'swept', title: 'Sweep cgroup', tag: 'reconciling',
-    edge: 'pin',
     narration:
-      'systemd sweeps any trapped children out of the cgroup so nothing survives the stop.',
+      'systemd reads the unit’s cgroup.procs and kills every PID still listed, so no trapped child survives the stop.',
   },
   {
     phase: 'inactive', procs: 'empty', title: 'UNIT_INACTIVE', tag: 'reconciled',
