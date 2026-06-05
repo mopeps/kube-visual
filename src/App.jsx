@@ -7,6 +7,7 @@ import OverviewTab from './components/OverviewTab'
 import PacketFlowTab from './components/PacketFlowTab'
 import DeepDiveTab from './components/DeepDiveTab'
 import AncestryModal from './components/AncestryModal'
+import SearchPalette from './components/SearchPalette'
 import HopInspector from './components/HopInspector'
 import DeepDiveHopInspector from './components/DeepDiveHopInspector'
 import ReconControls from './components/ReconControls'
@@ -37,6 +38,11 @@ export default function App() {
   const [tab, setTab] = useState('overview')
   // Which in-depth page the Deep Dive tab is showing (null = the topic index).
   const [deepTopic, setDeepTopic] = useState(null)
+  // A deep-dive box the tab should auto-open (set when a search result for a box
+  // routes here); consumed by DeepDiveTab once its topic resolves.
+  const [deepTarget, setDeepTarget] = useState(null)
+  // The global fuzzy-search command palette.
+  const [searchOpen, setSearchOpen] = useState(false)
   const {
     activeEvent,
     activeComponentId,
@@ -46,6 +52,7 @@ export default function App() {
     selectEvent,
     clearEvent,
     selectComponent,
+    focusComponent,
     clearComponent,
     revealComponent,
     clearHighlight,
@@ -176,11 +183,49 @@ export default function App() {
   // Deep-link entry from a [systemd] node's detail popup: close the popup,
   // surface the Deep Dive tab, and open the requested page. Mirrors the
   // revealInOverview jump.
-  const openDeepDive = (topicId) => {
+  const openDeepDive = (topicId, boxId = null) => {
     scrollPositions.current[tab] = window.scrollY
     clearComponent()
     setDeepTopic(topicId)
+    setDeepTarget(boxId)
     setTab('deepdive')
+  }
+
+  // Global fuzzy search: ⌘K / Ctrl+K (or `/` when not already typing) opens the
+  // palette; it floats over whatever tab is showing.
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+        return
+      }
+      if (e.key === '/' && !searchOpen) {
+        const el = document.activeElement
+        const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+        if (!typing) { e.preventDefault(); setSearchOpen(true) }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [searchOpen])
+
+  // Route a chosen search result to its home: open a component's detail sheet,
+  // surface a trace on the packet-flow tab, open a deep-dive topic, or open a
+  // specific deep-dive box (topic + auto-opened popup).
+  const onSearchSelect = (rec) => {
+    setSearchOpen(false)
+    if (rec.kind === 'component') {
+      focusComponent(rec.id)
+    } else if (rec.kind === 'event') {
+      clearEvent()
+      selectEvent(rec.event)
+      setTab(docked ? 'overview' : 'packetflow')
+    } else if (rec.kind === 'topic') {
+      openDeepDive(rec.id)
+    } else if (rec.kind === 'box') {
+      openDeepDive(rec.topicId, rec.id)
+    }
   }
 
   // Resolve the open topic + its box index once, for the deep-dive hop inspector
@@ -272,6 +317,8 @@ export default function App() {
       onClearFlow={clearFlow}
       onSelectFlowStep={selectFlowStep}
       loop={reconLoop}
+      targetBoxId={deepTarget}
+      onConsumeTarget={() => setDeepTarget(null)}
     />
   )
   const panelFor = (id) => {
@@ -286,6 +333,17 @@ export default function App() {
 
       <div className="tabs-row">
         <Tabs tabs={visibleTabs} active={tab} onSelect={changeTab} />
+        <button
+          type="button"
+          className="search-trigger"
+          onClick={() => setSearchOpen(true)}
+          title="Search objects & technologies (⌘K)"
+          aria-label="Search"
+        >
+          <span aria-hidden>⌕</span>
+          <span className="search-trigger-text">Search</span>
+          <kbd className="search-trigger-kbd" aria-hidden>⌘K</kbd>
+        </button>
         {isWide && (
           <button
             type="button"
@@ -369,6 +427,12 @@ export default function App() {
           </>
         )}
       </div>
+
+      <SearchPalette
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        onSelect={onSearchSelect}
+      />
 
       <AncestryModal
         componentId={activeComponentId}

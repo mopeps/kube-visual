@@ -141,6 +141,8 @@ export default function DeepDiveTab({
   onClearFlow,
   onSelectFlowStep,
   loop,
+  targetBoxId,        // a box id to auto-open (a search result landed here)
+  onConsumeTarget,    // clear that request once honored
 }) {
   const [selectedBoxId, setSelectedBoxId] = useState(null)
   const [selectedEdgeId, setSelectedEdgeId] = useState(null)
@@ -159,6 +161,21 @@ export default function DeepDiveTab({
 
   // Switching topics drops any open popup.
   useEffect(() => { setSelectedBoxId(null); setSelectedEdgeId(null) }, [activeTopic])
+
+  // A search result asked to open a specific box on this topic: honor it once
+  // the topic (and its box index) are resolved, then clear the request so a
+  // later manual close stays closed. Runs after the topic-change reset above,
+  // so the requested box wins. Also scrolls it into view on the canvas.
+  useEffect(() => {
+    if (!targetBoxId || !boxIndex[targetBoxId]) return
+    setSelectedEdgeId(null)
+    setSelectedBoxId(targetBoxId)
+    const raf = requestAnimationFrame(() => {
+      scrollIntoUpperThird(document.getElementById(`dd-${targetBoxId}`))
+    })
+    onConsumeTarget?.()
+    return () => cancelAnimationFrame(raf)
+  }, [targetBoxId, boxIndex, onConsumeTarget])
 
   // Follow the trace: when a hop is focused, bring its target box into the upper
   // third of whatever scrolls the canvas (mirrors the Overview's trace-follow).
