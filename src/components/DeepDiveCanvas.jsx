@@ -41,7 +41,7 @@ function CgroupBox({ box, accent, subtitle, highlight, procs, locked, onKillMain
       {subtitle && <div className="node-subtitle">{subtitle}</div>}
 
       <div className="cgroup-frame">
-        <span className="cgroup-frame-label">cgroup.procs · kernel-pinned</span>
+        <span className="cgroup-frame-label" title="The PIDs the kernel tracks inside this unit’s cgroup (the cgroup.procs file)">cgroup.procs</span>
         <div className="cgroup-procs">
           {procs.length === 0 && (
             <span className="cgroup-empty">swept — re-execing fresh process…</span>

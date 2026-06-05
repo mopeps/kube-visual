@@ -374,26 +374,26 @@ const SYSTEMD = {
           ],
         },
       },
-      { id: 'evaluate', from: 'sd-engine', to: 'sd-dag', step: '2',
-        label: 'read desired\n→ UNIT_FAILED', accent: 'k-amber', phase: 'failed',
-        title: 'evaluate — read desired, set UNIT_FAILED',
+      { id: 'evaluate', from: 'sd-dag', to: 'sd-engine', step: '2',
+        label: 'read desired\n→ detect drift', accent: 'k-amber', phase: 'failed',
+        title: 'evaluate — read desired, detect drift',
         detail: {
-          role: 'EDGE 2 · EVALUATE → DRIFT',
+          role: 'EDGE 2 · READ DESIRED → DRIFT',
           summary:
-            'When the engine wakes, it reads the desired state off the DAG and compares it to what just happened. A dead main PID means desired (UNIT_ACTIVE) ≠ actual — so the engine flips the unit’s node to UNIT_FAILED. That flag flip is the formal moment drift is detected and the restart rules become eligible to fire.',
+            'Woken by the SIGCHLD, the engine reads the unit’s desired state off the DAG (UNIT_ACTIVE) and compares it to what just happened. A dead main PID means desired ≠ actual — so the engine marks the unit UNIT_FAILED back in the DAG and consults Restart=. This read is the formal moment drift is detected and the restart rules become eligible to fire. (The arrow points DAG → engine because the engine is reading desired state out of the graph here.)',
           sections: [
             {
               heading: 'What crosses this edge',
               facts: [
-                { k: 'From', v: 'The Engine — PID 1’s epoll loop, just woken by SIGCHLD' },
-                { k: 'To', v: 'Compiled DAG — the unit’s ACTIVE flag is flipped in place' },
+                { k: 'From', v: 'Compiled DAG — the unit’s desired state (UNIT_ACTIVE) the engine reads' },
+                { k: 'To', v: 'The Engine — PID 1’s epoll loop, just woken by SIGCHLD' },
                 { k: 'Decision', v: 'desired == actual? if not, mark UNIT_FAILED and consult Restart=' },
               ],
-              tags: ['compare desired vs actual', 'atomic flag flip', 'Restart=always → recover'],
+              tags: ['read desired vs actual', 'mark UNIT_FAILED', 'Restart=always → recover'],
             },
             {
-              heading: 'It is a memory write, not a process',
-              body: 'Nothing executes here — the engine just sets a status flag on a heap struct and follows the unit’s pointers to decide the next action. The DAG is the single source of truth it reasons over.',
+              heading: 'It is a memory read + flag write, not a process',
+              body: 'Nothing executes here — the engine reads the desired flag from the DAG and, on drift, sets UNIT_FAILED on the same heap struct, then follows the unit’s pointers to decide the next action. The DAG is the single source of truth it reasons over.',
             },
             {
               heading: 'Explore',
