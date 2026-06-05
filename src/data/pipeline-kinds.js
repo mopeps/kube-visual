@@ -39,7 +39,7 @@ export const PIPELINE_ACTIONS = {
 // labels is a safe default for the rare case one appears outside the intent band.
 const RULES = [
   [/PersistentVolumeClaim|PersistentVolume\b/i, 'mount'],
-  [/ConfigMap|Secret/i, 'mount'],
+  [/ConfigMap|Secret|Projected|DownwardAPI|EmptyDir/i, 'mount'],
   [/tmpfs|kernel mount/i, 'mount'],
   [/EndpointSlice/i, 'route'],
   [/ClusterIP|MetalLB|L2 VIP|router-default LB|LoadBalancer|vhost/i, 'route'],
