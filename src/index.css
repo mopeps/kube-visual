@@ -2093,6 +2093,34 @@ body::after {
   color: var(--tx);
 }
 
+/* Deep-dive popups open with a compact lead instead of the big filled callout:
+   one short "key" (the role chip) over a single de-emphasised summary line, so
+   the glyph bullets / keyword facts below carry the visual explanation. The
+   Overview's AncestryModal keeps the .why-callout treatment above. */
+.dd-lead { margin-bottom: 2px; }
+.dd-lead-key {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border: 1px solid;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+/* Scoped through .dd-lead so it out-specifies the shared `.detail-section p`
+   (0,1,1) rule that would otherwise force the body size/line-height in. */
+.dd-lead .dd-lead-text {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--tx-muted);
+}
+/* Glyph bullets reuse the interaction-row look; give the list a touch more top
+   margin under a heading so the icon chips don't crowd it. */
+.dd-bullets { margin-top: 6px; }
+
 /* ── Interactions (relationship rows) ──────────────────────────────── */
 /* Rendered headingless directly under the why-callout, as a continuation of
    the same point. The divider + spacing separate the rows from the callout
