@@ -4,6 +4,8 @@ import { ManifestBlock } from './Manifest'
 import ExploreCommands from './ExploreCommands'
 import UnitGallery from './UnitGallery'
 import DeepTree from './DeepTree'
+import { KindIcon } from './InteractionRow'
+import { classifyInteraction } from '../data/interaction-kinds'
 
 // A detail popup for a deep-dive box. Shares AncestryModal's look, gestures and
 // CSS classes (.ancestry-overlay / .ancestry-modal / grip-resize / swipe-dismiss
@@ -194,18 +196,14 @@ export default function DeepDiveModal({ content, onClose }) {
 
           {subtitle && <div className="deep-detail-subtitle">{subtitle}</div>}
 
-          {detail?.summary && (
-            <div className="detail-section">
-              <div className="why-callout" style={{ borderColor: `${accent}59`, background: `${accent}12` }}>
-                <div className="why-body">
-                  {detail.role && (
-                    <span className="why-role" style={{ color: accent, borderColor: `${accent}66`, background: `${accent}1a` }}>
-                      {detail.role}
-                    </span>
-                  )}
-                  <p className="why-text">{detail.summary}</p>
-                </div>
-              </div>
+          {(detail?.role || detail?.summary) && (
+            <div className="detail-section dd-lead">
+              {detail.role && (
+                <span className="dd-lead-key" style={{ color: accent, borderColor: `${accent}66`, background: `${accent}1a` }}>
+                  {detail.role}
+                </span>
+              )}
+              {detail.summary && <p className="dd-lead-text">{detail.summary}</p>}
             </div>
           )}
 
@@ -252,9 +250,33 @@ export default function DeepDiveModal({ content, onClose }) {
                 </div>
               )}
 
+              {/* Bullets render as glyph rows — a kind icon + emphasised lead
+                  keyword + short sentence — the same visual language as the
+                  Overview's Interactions and the pipeline tree's detail. */}
               {sec.bullets?.length > 0 && (
-                <ul className="deep-bullets" style={{ '--tag-accent': accent }}>
-                  {sec.bullets.map((b, j) => <li key={j}>{b}</li>)}
+                <ul className="interaction-list dd-bullets">
+                  {sec.bullets.map((b, j) => {
+                    const r = classifyInteraction(b)
+                    return (
+                      <li key={j} className="interaction-row">
+                        <span
+                          className="interaction-icon"
+                          style={{ color: r.kindMeta.accent, borderColor: `${r.kindMeta.accent}55` }}
+                          aria-hidden="true"
+                        >
+                          <KindIcon name={r.kindMeta.icon} />
+                        </span>
+                        <span className="interaction-text">
+                          {r.verb && (
+                            <span className="interaction-verb" style={{ color: r.kindMeta.accent }}>
+                              {r.verb}{' '}
+                            </span>
+                          )}
+                          {r.rest}
+                        </span>
+                      </li>
+                    )
+                  })}
                 </ul>
               )}
               {sec.kv?.length > 0 && (
