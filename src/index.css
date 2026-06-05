@@ -1448,6 +1448,20 @@ body::after {
   flex-direction: column;
   line-height: 1.25;
 }
+/* Edge-kind marker: names whether this connector is a real boundary crossing
+   (syscall / signal) or an actor touching its own data (memory). */
+.recon-edge-chip-kind {
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+  opacity: 0.9;
+}
+.recon-edge-chip-kind--syscall { color: var(--edge-color); }
+.recon-edge-chip-kind--signal  { color: var(--edge-color); }
+/* Internal memory edges read muted — they aren't real communication. */
+.recon-edge-chip-kind--memory  { color: var(--tx-dim); opacity: 0.85; }
 .recon-edge-chip-line {
   color: var(--tx-muted);
   font-size: 0.64rem;

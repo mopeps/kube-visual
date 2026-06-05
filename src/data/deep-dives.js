@@ -343,7 +343,7 @@ const SYSTEMD = {
     //                  connector explains what actually crosses it (parse,
     //                  evaluate, syscall, pin, feedback signal).
     edges: [
-      { id: 'compile', from: 'sd-units', to: 'sd-dag', step: '1',
+      { id: 'compile', from: 'sd-units', to: 'sd-dag', step: '1', kind: 'syscall',
         label: 'daemon-reload\n→ compile DAG', accent: 'k-purple',
         title: 'daemon-reload — compile the DAG',
         detail: {
@@ -374,7 +374,7 @@ const SYSTEMD = {
           ],
         },
       },
-      { id: 'evaluate', from: 'sd-dag', to: 'sd-engine', step: '2',
+      { id: 'evaluate', from: 'sd-dag', to: 'sd-engine', step: '2', kind: 'memory',
         label: 'read desired\n→ detect drift', accent: 'k-amber', phase: 'failed',
         title: 'evaluate — read desired, detect drift',
         detail: {
@@ -410,7 +410,7 @@ const SYSTEMD = {
           ],
         },
       },
-      { id: 'enforce', from: 'sd-engine', to: 'sd-reality', step: '3', bias: 'left', labelT: 0.12, labelDX: -82,
+      { id: 'enforce', from: 'sd-engine', to: 'sd-reality', step: '3', kind: 'syscall', bias: 'left', labelT: 0.12, labelDX: -82,
         label: 'ExecStart\nfork() / execve()', accent: 'k-green', phase: 'restart',
         title: 'enforce — ExecStart via fork() / execve()',
         detail: {
@@ -445,7 +445,7 @@ const SYSTEMD = {
           ],
         },
       },
-      { id: 'pin', from: 'sd-reality', to: 'sd-cgroup', step: '4',
+      { id: 'pin', from: 'sd-reality', to: 'sd-cgroup', step: '4', kind: 'memory',
         label: 'pin PIDs →\ncgroup.procs', accent: 'k-green',
         title: 'pin — write PIDs into cgroup.procs',
         detail: {
@@ -481,7 +481,7 @@ const SYSTEMD = {
           ],
         },
       },
-      { id: 'notify', from: 'sd-reality', to: 'sd-engine', step: '5', bias: 'right', labelT: 0.88, labelDX: 82,
+      { id: 'notify', from: 'sd-reality', to: 'sd-engine', step: '5', kind: 'signal', bias: 'right', labelT: 0.88, labelDX: 82,
         label: 'SIGCHLD\n→ wake engine', accent: 'packet', phase: 'sigchld',
         title: 'notify — SIGCHLD wakes the engine',
         detail: {
@@ -516,7 +516,7 @@ const SYSTEMD = {
       // not part of the steady-state loop, so it would clutter the resting view).
       // It makes the systemd → kernel push visible: PID 1 issues the kill
       // syscalls for the unit's cgroup. The kernel never watches systemd.
-      { id: 'sweep', from: 'sd-engine', to: 'sd-cgroup', step: '', transient: true,
+      { id: 'sweep', from: 'sd-engine', to: 'sd-cgroup', step: '', transient: true, kind: 'syscall',
         bias: 'right', labelT: 0.5, labelDX: -10,
         label: 'kill the cgroup\nkill() / cgroup.kill', accent: 'k-amber',
         title: 'sweep — systemd tells the kernel to kill the cgroup',
