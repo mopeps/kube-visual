@@ -502,6 +502,42 @@ const SYSTEMD = {
           ],
         },
       },
+      // Transient cleanup edge — drawn ONLY while the sweep step is active (it is
+      // not part of the steady-state loop, so it would clutter the resting view).
+      // It makes the systemd → kernel push visible: PID 1 issues the kill
+      // syscalls for the unit's cgroup. The kernel never watches systemd.
+      { id: 'sweep', from: 'sd-engine', to: 'sd-cgroup', step: '', transient: true,
+        bias: 'right', labelT: 0.5, labelDX: -10,
+        label: 'kill the cgroup\nkill() / cgroup.kill', accent: 'k-amber',
+        title: 'sweep — systemd tells the kernel to kill the cgroup',
+        detail: {
+          role: 'CLEANUP · SYSCALL PUSH',
+          summary:
+            'systemd pushes the cleanup to the kernel — the kernel never watches systemd or acts on its own. Having decided to recover, PID 1 issues kill syscalls for the unit’s cgroup: either a kill() per PID listed in cgroup.procs, or a single write of “1” to cgroup.kill (cgroup v2) to take out the whole group at once. The kernel then delivers SIGTERM, and SIGKILL after the timeout, to every process in the group.',
+          sections: [
+            {
+              heading: 'Who tells whom',
+              facts: [
+                { k: 'Direction', v: 'systemd (PID 1, user space) → kernel — a push, not a watch' },
+                { k: 'Mechanism', v: 'kill(pid, SIG…) per cgroup.procs entry, or write “1” > cgroup.kill (v2)' },
+                { k: 'Kernel role', v: 'executes the signals; it never decides to sweep on its own' },
+              ],
+              tags: ['syscall push', 'cgroup.kill (v2)', 'SIGTERM → SIGKILL', 'KillMode=control-group'],
+            },
+            {
+              heading: 'Why a push, not a watch',
+              body: 'The kernel has no idea what “the unit failed” means — that is systemd’s policy. systemd holds the desired state and the Restart= rules, so it is the one that decides, then commands the kernel to carry the decision out.',
+            },
+            {
+              heading: 'Explore',
+              commands: [
+                '# Kill an entire cgroup at once (cgroup v2)\necho 1 > /sys/fs/cgroup/system.slice/ovnkube-node.service/cgroup.kill',
+                '# Watch PID 1 issue the kill syscalls as a unit is swept\nstrace -f -e trace=kill,write -p 1',
+              ],
+            },
+          ],
+        },
+      },
     ],
   },
   zones: [
