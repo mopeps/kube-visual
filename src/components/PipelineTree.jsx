@@ -31,6 +31,7 @@ const BAND_GLYPHS = {
 // reason" mark the detail modal's opening why-callout uses (DetailSections.jsx),
 // so a revealed pipeline row leads with the identical visual cue as the object's
 // first section, just one level in. Drawn at 1em to track the chip's font-size.
+// Used as the fallback when a row carries a definition but no classified action.
 function KeyGlyph() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor"
@@ -41,6 +42,45 @@ function KeyGlyph() {
     </svg>
   )
 }
+
+// Glyph for the row's *action keyword* (Declared / Mounted / Routed / Built …),
+// keyed by the `icon` each entry in PIPELINE_ACTIONS declares. So the mark that
+// leads a reveal matches what the keyword says happens at that step, instead of a
+// generic key. Same drawing conventions as HopIcon / KindIcon (16-unit viewBox,
+// ~1.6 stroke, currentColor), sized 15px to match KeyGlyph. The shared shapes
+// (document/loop/disk/cube/route/run) mirror HopIcon so the whole app reads in
+// one visual language; mount/shield/build/isolate are added here.
+function ActionGlyph({ name }) {
+  const common = {
+    width: 15, height: 15, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor',
+    strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true,
+  }
+  switch (name) {
+    case 'document': // Declared — a manifest page
+      return (<svg {...common}><path d="M4 2.2h5l3 3v8.6H4z" /><path d="M9 2.2v3h3" /><path d="M6 8.5h4M6 10.8h4" /></svg>)
+    case 'loop': // Reconciles — circular arrows
+      return (<svg {...common}><path d="M13 7a5 5 0 0 0-9-2" /><path d="M3 9a5 5 0 0 0 9 2" /><path d="M4 2.5V5h2.5" /><path d="M12 13.5V11H9.5" /></svg>)
+    case 'disk': // Stored — a database cylinder
+      return (<svg {...common}><ellipse cx="8" cy="3.8" rx="5" ry="1.8" /><path d="M3 3.8v8.4c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V3.8" /><path d="M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8" /></svg>)
+    case 'cube': // Scheduled — a packaged object placed
+      return (<svg {...common}><path d="M8 2 14 5v6l-6 3-6-3V5z" /><path d="m2 5 6 3 6-3" /><path d="M8 8v6" /></svg>)
+    case 'mount': // Mounted — an arrow seated down onto a mount point
+      return (<svg {...common}><path d="M8 2v5.5" /><path d="M5.5 5 8 7.5 10.5 5" /><path d="M2.5 10.5h11" /><path d="M4.5 10.5v2.5M11.5 10.5v2.5" /></svg>)
+    case 'route': // Routed — a path branching to a node
+      return (<svg {...common}><circle cx="3" cy="8" r="1.4" /><circle cx="13" cy="3.6" r="1.4" /><circle cx="13" cy="12.4" r="1.4" /><path d="M4.4 8h3.2M11.6 4.4 8 6.2 11.6 11.6" /></svg>)
+    case 'shield': // Filtered — a shield guarding traffic
+      return (<svg {...common}><path d="M8 2.2 13 4.2v3.9c0 3-2.1 4.9-5 5.7-2.9-.8-5-2.7-5-5.7V4.2z" /><path d="M5.9 7.9 7.4 9.4 10.3 6.3" /></svg>)
+    case 'build': // Built — stacked layers assembled into a bundle
+      return (<svg {...common}><rect x="2.6" y="8.6" width="10.8" height="3.4" rx="0.6" /><rect x="4.6" y="4.6" width="6.8" height="3.4" rx="0.6" /></svg>)
+    case 'run': // Runs — a play triangle
+      return (<svg {...common}><path d="M5 3.2 12.5 8 5 12.8z" /></svg>)
+    case 'isolate': // Isolated — a boundary enclosing a contained inner space
+      return (<svg {...common}><rect x="2.4" y="2.4" width="11.2" height="11.2" rx="2.2" /><rect x="6" y="6" width="4" height="4" rx="0.9" /></svg>)
+    default:
+      return <KeyGlyph />
+  }
+}
+
 
 function BandIcon({ name }) {
   const glyph = BAND_GLYPHS[name]
@@ -156,7 +196,13 @@ function Node({ node, bandColor, layerId, onSelectComponent, selfId }) {
         <div className="tree-reveal" style={{ '--row-color': color }}>
           {(definition || action) && (
             <div className="tree-why">
-              <span className="tree-why-icon" aria-hidden="true"><KeyGlyph /></span>
+              <span
+                className="tree-why-icon"
+                aria-hidden="true"
+                style={action ? { color: action.accent, borderColor: action.accent } : undefined}
+              >
+                {action ? <ActionGlyph name={action.icon} /> : <KeyGlyph />}
+              </span>
               <div className="tree-why-body">
                 <p className="tree-why-text">
                   {action && (
