@@ -198,6 +198,9 @@ export default function DeepDiveTab({
           title: selectedEdge.title || selectedEdge.label?.replace(/\n/g, ' '),
           accent: `var(--${selectedEdge.accent || 'k-cyan'})`,
           detail: selectedEdge.detail,
+          // Arrow/edge popups open as a fixed ~1/3-height bottom sheet (the grip
+          // still resizes it) instead of a short content-hugging modal.
+          peekDefault: 0.34,
         }
       : null
 

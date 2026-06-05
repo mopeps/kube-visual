@@ -68,6 +68,19 @@ export default function DeepDiveModal({ content, onClose }) {
     }
   }, [key, peek])
 
+  // Arrow/edge popups (content.peekDefault set) open as a fixed bottom sheet at
+  // a fraction of the viewport — resizable by the grip — instead of a short
+  // content-hugging floating modal. Box popups resume their last height (or full).
+  useEffect(() => {
+    if (!key) return
+    if (content?.peekDefault) {
+      setSheetHeight((h) => (h == null ? Math.round(window.innerHeight * content.peekDefault) : h))
+    } else {
+      setSheetHeight(lastSheetHeight)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key])
+
   useEffect(() => {
     if (!key || !peek) return
     const root = document.documentElement
