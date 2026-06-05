@@ -41,7 +41,7 @@ const MAIN_STEPS = [
   {
     phase: 'killed', procs: 'mainDead', title: 'Main PID killed', tag: 'process dies',
     narration:
-      'You killed the main PID. It dies on the CPU. Its children are now orphaned, but the kernel keeps them trapped inside the unit’s cgroup — they cannot escape.',
+      'You killed the main PID; it dies on the CPU. Its children are now orphaned — but the kernel does NOT kill them. It only keeps them trapped in the unit’s cgroup so they can’t escape. Left alone they would keep running; whether they live or die is systemd’s decision, taken later — never the kernel’s.',
   },
   {
     phase: 'sigchld', procs: 'mainDead', title: 'Kernel fires SIGCHLD', tag: 'feedback',
@@ -53,12 +53,12 @@ const MAIN_STEPS = [
     phase: 'failed', procs: 'mainDead', title: 'UNIT_FAILED', tag: 'drift detected',
     edge: 'evaluate',
     narration:
-      'PID 1’s epoll loop wakes and reads the unit’s desired state (UNIT_ACTIVE) from the DAG. The main PID is dead, so desired ≠ actual — the engine marks the unit UNIT_FAILED. Drift detected.',
+      'PID 1’s epoll loop wakes and reads the unit’s desired state (UNIT_ACTIVE) from the DAG. The main PID is dead, so desired ≠ actual — the engine marks the unit UNIT_FAILED and, because Restart=always, decides to recover. That decision is what triggers the cleanup next.',
   },
   {
     phase: 'sweep', procs: 'swept', title: 'Sweep children', tag: 'reconciling',
     narration:
-      'Restart=always says recover, so systemd cleans the cgroup first. It knows exactly which processes to kill because the kernel keeps the unit’s full membership in cgroup.procs — systemd reads that list and kills every PID still in it, so no orphaned child survives into the new generation.',
+      'Only now — and only because systemd decided to recover — does the sweep happen, and systemd does it, never the kernel. With KillMode=control-group it reads the unit’s cgroup.procs (the kernel’s exact membership list) and signals every PID still in it (SIGTERM, then SIGKILL), so no orphaned child survives into the new generation. The kernel never sweeps on its own and never acts ahead of this decision.',
   },
   {
     phase: 'restart', procs: 'empty', title: 'fork() / execve()', tag: 'enforcing',
