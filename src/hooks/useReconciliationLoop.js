@@ -294,7 +294,11 @@ export default function useReconciliationLoop(recon) {
   const overlays = {
     [recon.dagBoxId]: {
       subtitle: `${recon.unit} — ${dagState}`,
-      accent: failed ? RED : inactive ? undefined : stopping ? 'var(--k-amber)' : GREEN,
+      // The green/amber/red here is LIVE STATUS (UNIT_ACTIVE / deactivating /
+      // UNIT_FAILED), shown only while a scenario is armed. At rest the box wears
+      // its own zone colour (amber, the systemd · PID 1 zone) so the green never
+      // reads as kernel-zone membership.
+      accent: !armed ? undefined : failed ? RED : inactive ? undefined : stopping ? 'var(--k-amber)' : GREEN,
       highlight: phase === 'failed' || phase === 'reload' || phase === 'inactive',
     },
     [recon.engineBoxId]: {
@@ -314,7 +318,7 @@ export default function useReconciliationLoop(recon) {
     },
     [recon.cgroupBoxId]: {
       subtitle: 'system.slice/ovnkube-node.service',
-      accent: phase === 'restart' || phase === 'active' ? GREEN : undefined,
+      accent: armed && (phase === 'restart' || phase === 'active') ? GREEN : undefined,
       highlight: phase === 'sweep' || phase === 'restart' || phase === 'stop-sweep',
     },
     [recon.realityBoxId]: {
@@ -327,7 +331,7 @@ export default function useReconciliationLoop(recon) {
         : mainDead ? 'main dead — children trapped in cgroup'
         : childPath ? `child ${target} died — reaped, main alive`
         : `PID ${liveMainPid} running`,
-      accent: phase === 'killed' || phase === 'child-killed' || phase === 'stopping' ? RED : undefined,
+      accent: armed && (phase === 'killed' || phase === 'child-killed' || phase === 'stopping') ? RED : undefined,
       highlight:
         phase === 'killed' || phase === 'sigchld' || phase === 'child-killed'
         || phase === 'stopping' || phase === 'stop-sigchld',
