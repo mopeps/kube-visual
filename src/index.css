@@ -2470,6 +2470,24 @@ button.object-tag:hover {
   border-color: var(--tx-muted);
 }
 .hop-inspector-nav:disabled { opacity: 0.3; cursor: default; }
+/* Keep the close button clear of the back/forward controls so a thumb reaching
+   for prev/next doesn't land on close — true on the hop inspectors and the
+   reconciliation navigator (which share these classes). */
+.hop-inspector-close { margin-left: 12px; }
+/* Bigger, better-spaced touch targets on mobile, where the controls dock under
+   the thumb and the close button is easy to hit by accident. */
+@media (max-width: 640px) {
+  .hop-inspector-nav,
+  .hop-inspector-close,
+  .recon-nav-play {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    font-size: 1.15rem;
+  }
+  .hop-inspector-close { margin-left: 16px; }
+  .recon-nav-controls { gap: 8px; }
+}
 .hop-inspector-layers {
   display: flex;
   flex-wrap: wrap;
