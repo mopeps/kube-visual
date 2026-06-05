@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { findComponent } from '../data/components-index'
 import events from '../data/events.json'
 import { COMPONENT_COLOR } from '../data/zones'
-import { classifyHop } from '../data/hop-kinds'
+import { hopPoints } from '../data/hop-kinds'
 import ObjectSelect from './ObjectSelect'
 import ObjectText from './ObjectText'
 import ExploreCommands from './ExploreCommands'
@@ -43,16 +43,17 @@ function HopRoute({ step, source, target, color, onJump }) {
 }
 
 // One hop, rendered in the same icon+keyword language as the detail-modal
-// Interactions section and the systemd deep-dive popups: the step number is
-// baked into the card (no left rail / indent), an accent-tinted keyword chip
-// with a glyph names what the hop *does* (Resolves / Routes / Terminates …),
-// and the description lifts object references into the shared inline chips so a
-// named component is one click from its own detail popup.
+// Interactions section and the systemd deep-dive popups: the step number and the
+// source → target route head the card (no left rail / indent), and the detail is
+// a short list of glyph + keyword bullets — one per sentence of the step, each
+// classified into its action (Resolves / Routes / Terminates …) — instead of one
+// long paragraph. Object references throughout lift into the shared inline chips,
+// so a named component is one click from its own detail popup.
 function Hop({ step, isOpen, isSelected, onToggle, onJump, onSelectComponent }) {
   const target = findComponent(step.targetComponentId)
   const source = findComponent(step.sourceComponentId)
   const color = COMPONENT_COLOR[step.targetComponentId] || 'var(--k-cyan)'
-  const kind = classifyHop(step.description)
+  const points = hopPoints(step.description)
   const hasCommands = target?.explorationCommands?.length > 0
 
   return (
@@ -64,27 +65,33 @@ function Hop({ step, isOpen, isSelected, onToggle, onJump, onSelectComponent }) 
     >
       <div className="hop-card-head">
         <span className="hop-step">{step.step}</span>
-        <span
-          className="hop-kind"
-          style={{ color: kind.accent, borderColor: `${kind.accent}55`, background: `${kind.accent}1a` }}
-        >
-          <span className="hop-kind-ic"><HopIcon name={kind.icon} /></span>
-          {kind.label}
-        </span>
+        <HopRoute step={step} source={source} target={target} color={color} onJump={onJump} />
         {hasCommands && (
           <span className={`hop-card-chevron ${isOpen ? 'is-open' : ''}`} aria-hidden>⌄</span>
         )}
       </div>
 
-      <HopRoute step={step} source={source} target={target} color={color} onJump={onJump} />
-
-      <p className="hop-card-desc">
-        <ObjectText
-          text={step.description}
-          onSelectComponent={onSelectComponent}
-          selfId={step.targetComponentId}
-        />
-      </p>
+      <ul className="hop-points">
+        {points.map((p, i) => (
+          <li key={i} className="hop-point">
+            <span
+              className="hop-point-ic"
+              style={{ color: p.accent, borderColor: `${p.accent}55` }}
+              aria-hidden
+            >
+              <HopIcon name={p.icon} />
+            </span>
+            <span className="hop-point-text">
+              <span className="hop-point-kw" style={{ color: p.accent }}>{p.label} </span>
+              <ObjectText
+                text={p.text}
+                onSelectComponent={onSelectComponent}
+                selfId={step.targetComponentId}
+              />
+            </span>
+          </li>
+        ))}
+      </ul>
 
       {hasCommands && (
         <div className={`hop-card-detail ${isOpen ? 'is-open' : ''}`}>

@@ -51,7 +51,7 @@ src/
     deep-dives.js            # Deep Dive tab topics (systemd loop, Linux boot, HCP node boot) as zone trees of clickable boxes (mirrors the ZONES shape)
     pipeline-model.js        # builds a component's pipeline-tree band model
     interaction-kinds.js     # classifies interaction sentences (icon + accent)
-    hop-kinds.js             # classifies a packet-flow step into an action keyword + glyph (Resolves/Routes/Terminates…)
+    hop-kinds.js             # classifies a packet-flow step/sentence into an action keyword + glyph (Resolves/Routes/Terminates…); hopPoints() splits a step into per-sentence bullets
     object-tags.js           # turns object names in prose into clickable chips
     badge-glossary.js        # explanations shown when a badge chip is clicked
   hooks/
@@ -75,7 +75,7 @@ src/
     ArrowOverlay.jsx         # Overview adapter: maps event hops → ArrowLines steps
     DeepDiveArrowOverlay.jsx # Deep Dive adapter: maps flow hops (dd-<boxId>) → ArrowLines steps
     OverviewTab.jsx          # recursively renders ZONES tree + ArrowOverlay
-    PacketFlowTab.jsx        # expandable hop cards for active event (number baked in, keyword+glyph chip, object-chip prose)
+    PacketFlowTab.jsx        # expandable hop cards for active event (number + route header, per-sentence glyph+keyword bullets, object chips)
     HopIcon.jsx              # monochrome line glyphs for the hop keywords (hop-kinds.js)
     DeepDiveTab.jsx          # Deep Dive tab: topic index + switcher → an Overview-style canvas; owns the box-popup selection
     DeepDiveCanvas.jsx       # renders a deep-dive topic's zone/box tree (reuses Zone/NodeCard) + the systemd reconciliation loop
