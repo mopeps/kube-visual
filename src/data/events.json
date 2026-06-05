@@ -562,5 +562,78 @@
         "description": "The Guest API Server comes back up and resumes serving; the hosted control plane is healthy again."
       }
     ]
+  },
+  {
+    "eventId": "configmap-update-rollout",
+    "eventName": "ConfigMap Update → Live in a Pod",
+    "description": "Tracing what really happens after 'oc apply -f configmap.yaml'. There is NO bespoke operator that rolls a plain ConfigMap edit into a running Pod: the apply only rewrites the ConfigMap record in guest etcd. Volume-mounted ConfigMaps are refreshed in place by the guest kubelet (but the app must re-read the file), while env-var and subPath consumers see nothing until the Pod is recreated. To make the new config actually live you change the desired Pod state — 'oc rollout restart' (or a config-hash annotation) bumps the Deployment's pod template, and the Deployment controller inside the Guest Controller Manager then rolls a fresh Pod that reads the updated ConfigMap at startup.",
+    "steps": [
+      {
+        "step": 1,
+        "sourceComponentId": "external-client",
+        "targetComponentId": "guest-api-server",
+        "description": "A developer edits the ConfigMap and runs 'oc apply -f configmap.yaml' against the hosted cluster. The Guest API Server validates the object and increments its resourceVersion — but updating a ConfigMap does not, by itself, touch any Pod or Deployment."
+      },
+      {
+        "step": 2,
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "guest-etcd",
+        "description": "The API Server persists the new ConfigMap revision to guest etcd. This is the ONLY thing a bare ConfigMap apply changes: no controller in the Guest Controller Manager watches plain ConfigMaps to restart workloads, so nothing reconciles a Pod from this write alone."
+      },
+      {
+        "step": 3,
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "kubelet-guest",
+        "description": "For Pods that mount the ConfigMap as a VOLUME, the guest kubelet's configmap-and-secret manager notices the changed object on its next sync (~1 min + cache TTL) and atomically swaps the projected files in the Pod's volume. The container now sees new file contents — but the application process must re-read them itself (a file watcher or SIGHUP); a process that loaded config only at startup, and every env-var or subPath consumer, still runs the OLD values."
+      },
+      {
+        "step": 4,
+        "sourceComponentId": "external-client",
+        "targetComponentId": "guest-api-server",
+        "description": "To force the new config live (the only option for env-var / subPath consumers, and the clean option for everyone else), the developer mutates the workload's DESIRED state: 'oc rollout restart deployment/<app>' — or bumping a checksum/config-hash annotation on the pod template. This patch to the Deployment is the actual desired-state change the question is about."
+      },
+      {
+        "step": 5,
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "guest-controller-manager",
+        "description": "The Deployment controller (a reconcile loop inside the Guest Controller Manager — not a standalone operator) sees the pod-template hash changed and creates a new ReplicaSet; the ReplicaSet controller then scales the new ReplicaSet up and the old one down per the rollout strategy."
+      },
+      {
+        "step": 6,
+        "sourceComponentId": "guest-controller-manager",
+        "targetComponentId": "guest-api-server",
+        "description": "The controllers write the new ReplicaSet and its Pod objects back to the API Server. The freshly desired Pods reference the updated pod template, so when they start they will pull the current ConfigMap revision from step 2."
+      },
+      {
+        "step": 7,
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "guest-kube-scheduler",
+        "description": "The new Pod has no node assignment, so the Guest Scheduler evaluates guest worker capacity and affinity and selects a Guest Worker Node VM for it."
+      },
+      {
+        "step": 8,
+        "sourceComponentId": "guest-kube-scheduler",
+        "targetComponentId": "guest-api-server",
+        "description": "The Scheduler writes a Binding back to the Guest API Server, assigning the replacement Pod to the chosen guest worker node."
+      },
+      {
+        "step": 9,
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "kubelet-guest",
+        "description": "The guest kubelet observes the newly bound Pod on its own outbound watch of the Guest API Server (not via the Konnectivity tunnel, which only carries API-Server-initiated traffic such as exec/logs)."
+      },
+      {
+        "step": 10,
+        "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "crio-guest",
+        "description": "Kubelet issues RunPodSandbox / CreateContainer calls to guest CRI-O. CRI-O mounts the ConfigMap volume and injects any ConfigMap-sourced env vars from the CURRENT revision, so the new container is built around the updated config."
+      },
+      {
+        "step": 11,
+        "sourceComponentId": "crio-guest",
+        "targetComponentId": "frontend-application-pod",
+        "description": "CRI-O starts the container via runc; the application reads the updated ConfigMap at startup and goes Running with the new config live. Once it is Ready the old Pod is terminated and the rollout is complete."
+      }
+    ]
   }
 ]
