@@ -148,6 +148,11 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
         // loop — draw them only while they are the active edge.
         if (p.transient && !live) return null
         const lines = p.label.split('\n')
+        // Internal "memory" edges (an actor reading/writing its OWN data —
+        // evaluate inside systemd, pin inside the kernel) are not real
+        // communication, so they read as a faint dotted line. The syscall /
+        // signal crossings stay a bolder dash. The kind tag on the chip names it.
+        const internal = p.kind === 'memory'
         // A chip is clickable when its edge carries detail and a handler exists —
         // then it opens the edge's popup (same affordance as clicking a box).
         const clickable = !!(p.detail && onSelectEdge)
@@ -159,9 +164,9 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
               d={p.d}
               fill="none"
               stroke={p.color}
-              strokeWidth={live ? 2.4 : 1.5}
-              strokeOpacity={live ? 1 : 0.7}
-              strokeDasharray="6 4"
+              strokeWidth={live ? 2.4 : internal ? 1.2 : 1.5}
+              strokeOpacity={live ? 1 : internal ? 0.42 : 0.7}
+              strokeDasharray={internal ? '1.5 5' : '6 4'}
               markerEnd={`url(#recon-arrow-${p.id})`}
             />
             {/* The "little box" the user asked for: a solid step-numbered chip
@@ -190,6 +195,11 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
                 >
                   {p.step !== '' && <span className="recon-edge-chip-num">{p.step}</span>}
                   <span className="recon-edge-chip-label">
+                    {p.kind && (
+                      <span className={`recon-edge-chip-kind recon-edge-chip-kind--${p.kind}`}>
+                        {p.kind === 'memory' ? '⌑ memory' : p.kind === 'signal' ? '⚡ signal' : '↳ syscall'}
+                      </span>
+                    )}
                     {lines.map((ln, i) => (
                       <span key={i} className="recon-edge-chip-line">{ln}</span>
                     ))}
