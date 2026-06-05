@@ -1981,6 +1981,21 @@
         "hostPath": ".../volumes/kubernetes.io~configmap/"
       },
       {
+        "apiObject": "[Projected] kube-api-access (SA token · CA bundle · namespace)",
+        "linuxPrimitive": "[tmpfs]",
+        "hostPath": ".../volumes/kubernetes.io~projected/"
+      },
+      {
+        "apiObject": "[DownwardAPI] pod-metadata (labels · annotations)",
+        "linuxPrimitive": "[tmpfs]",
+        "hostPath": ".../volumes/kubernetes.io~downward-api/"
+      },
+      {
+        "apiObject": "[EmptyDir] cache-scratch (medium: Memory)",
+        "linuxPrimitive": "[tmpfs]",
+        "hostPath": ".../volumes/kubernetes.io~empty-dir/"
+      },
+      {
         "apiObject": "[PersistentVolumeClaim] pvc-frontend-assets",
         "linuxPrimitive": "[kernel mount]",
         "hostPath": "/dev/vdb → /sys/block/vdb/",
@@ -2067,6 +2082,21 @@
         "apiObject": "[ConfigMap] backend-env-config",
         "linuxPrimitive": "[tmpfs]",
         "hostPath": ".../volumes/kubernetes.io~configmap/"
+      },
+      {
+        "apiObject": "[Projected] kube-api-access (SA token · CA bundle · namespace)",
+        "linuxPrimitive": "[tmpfs]",
+        "hostPath": ".../volumes/kubernetes.io~projected/"
+      },
+      {
+        "apiObject": "[DownwardAPI] pod-metadata (labels · annotations)",
+        "linuxPrimitive": "[tmpfs]",
+        "hostPath": ".../volumes/kubernetes.io~downward-api/"
+      },
+      {
+        "apiObject": "[EmptyDir] tmp-uploads (medium: Memory)",
+        "linuxPrimitive": "[tmpfs]",
+        "hostPath": ".../volumes/kubernetes.io~empty-dir/"
       },
       {
         "apiObject": "[PersistentVolumeClaim] pvc-backend-data",
