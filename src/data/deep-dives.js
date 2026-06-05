@@ -1223,31 +1223,49 @@ const HCP_INSTALL = {
           id: 'hi-mgmt-plan',
           title: 'Plan the bare-metal hub',
           typePrefix: 'DAY-0 1',
-          subtitle: 'hosts · DNS · API/ingress VIPs · NTP',
+          subtitle: 'what to prepare — the hosts start blank, no OS needed',
           detail: {
             role: 'DAY-0 · FOUNDATION',
             summary:
-              'Before any OpenShift bits exist, the bare-metal hub needs its physical and network foundation: the control-plane (and optional worker) hosts, DNS for the cluster, the two virtual IPs the platform floats for the API and ingress, and reliable time. Get these wrong and the install stalls at bootstrap.',
+              'Blank hosts are fine — the agent ISO carries the OS. You just prepare the network, DNS, VIPs and time around them.',
             sections: [
               {
-                heading: 'What you must have ready',
+                heading: 'Prepare these',
                 facts: [
-                  { k: 'Hosts', v: '3 control-plane for HA (or 1 for single-node OpenShift) + any workers' },
-                  { k: 'DNS', v: 'api.<cluster>.<base-domain>, api-int.<…>, and *.apps.<…>' },
-                  { k: 'API/Ingress VIPs', v: 'two free IPs on the machine network — on the baremetal platform an on-cluster keepalived owns them (no external LB)' },
-                  { k: 'NTP', v: 'clocks in sync — etcd is unforgiving of skew' },
+                  { k: 'Hosts', v: '3 control-plane (or 1 for single-node OpenShift) + workers — blank, no OS' },
+                  { k: 'Install disk', v: 'one usable disk per host; picked via rootDeviceHints' },
+                  { k: 'Boot path', v: 'BMC virtual media, a USB stick, or (optional) PXE/iPXE' },
+                  { k: 'Per-host IP', v: 'DHCP or a static NMState address — neither is mandatory' },
+                  { k: 'Two VIPs', v: 'API + ingress, floated by the cluster’s keepalived (no external LB)' },
+                  { k: 'DNS', v: 'api, api-int, *.apps → the two VIPs' },
+                  { k: 'Time + pull', v: 'NTP on every host; registry pull access (or a mirror)' },
+                  { k: 'Secrets', v: 'a Red Hat pull secret + an SSH public key' },
                 ],
-                tags: ['bare metal', 'no cloud LB', 'static or DHCP', 'reachable BMCs optional'],
+              },
+              {
+                heading: 'The questions everyone asks',
+                facts: [
+                  { k: 'Need an OS first?', v: 'No — hosts boot blank; the ISO’s live RHCOS installs itself to disk' },
+                  { k: 'Boot into rescue?', v: 'No — boot the ISO once; the agent inventories, installs, reboots' },
+                  { k: 'Where’s the image?', v: 'It IS the agent ISO (DAY-0 3) — RHCOS is baked in, nothing fetched at boot' },
+                  { k: 'PXE required?', v: 'No — virtual media or USB work; PXE is just one option' },
+                  { k: 'DHCP required?', v: 'No — static NMState IPs work just as well' },
+                  { k: 'Provisioning net?', v: 'No — unlike bare-metal IPI, none is needed' },
+                ],
+                tags: ['blank hosts', 'no OS', 'no rescue', 'no PXE required', 'no DHCP required'],
               },
               {
                 heading: 'Why this becomes the hub',
-                body: 'This cluster is not the product — it is the management/hub cluster that everything below (MCE, HyperShift, CIM, and every hosted control plane) installs onto. It must be a healthy, supported OpenShift cluster in its own right first.',
+                bullets: [
+                  'Not the product — it is the hub MCE, HyperShift and every hosted control plane install onto.',
+                  'Must be a healthy, supported OpenShift cluster in its own right first.',
+                ],
               },
               {
                 heading: 'Explore',
                 commands: [
-                  '# Sanity-check forward + reverse DNS for the API VIP\ndig +short api.mgmt-hub.example.com',
-                  '# Wildcard apps record\ndig +short test.apps.mgmt-hub.example.com',
+                  '# Sanity-check DNS for the API + a wildcard apps name\ndig +short api.mgmt-hub.example.com\ndig +short test.apps.mgmt-hub.example.com',
+                  '# If you use BMCs, confirm each responds before you start\ncurl -sk https://<bmc-host>/redfish/v1/ | head',
                 ],
               },
             ],
@@ -1261,7 +1279,7 @@ const HCP_INSTALL = {
           detail: {
             role: 'DAY-0 · DECLARE',
             summary:
-              'The Agent-based Installer takes two YAML files. install-config.yaml is the familiar cluster shape — baseDomain, control-plane/compute replicas, the baremetal platform with its apiVIPs/ingressVIPs, networking and the pull secret + SSH key. agent-config.yaml is what makes it agent-based: it names the rendezvousIP (the host that bootstraps in place) and gives each host its role, root disk, and NMState network config.',
+              'Two YAML files describe the cluster: install-config.yaml (the shape) and agent-config.yaml (per-host network + the rendezvousIP that bootstraps in place).',
             sections: [
               {
                 heading: 'install-config.yaml · the cluster shape',
@@ -1296,7 +1314,7 @@ const HCP_INSTALL = {
           detail: {
             role: 'DAY-0 · BUILD THE ISO',
             summary:
-              '`openshift-install agent create image` folds both YAML files, the RHCOS rootfs, and a full copy of assisted-service into a single bootable ISO. This is the standalone cousin of CIM: the very same Assisted Installer engine, but packaged offline so it needs no external provisioning service, no PXE infrastructure, and no internet at boot time.',
+              'One command folds both YAMLs, the RHCOS rootfs and assisted-service into a single bootable ISO — the offline, standalone cousin of CIM.',
             sections: [
               {
                 heading: 'The command',
@@ -1324,12 +1342,21 @@ const HCP_INSTALL = {
           id: 'hi-mgmt-boot',
           title: 'Boot every host off the ISO',
           typePrefix: 'DAY-0 4',
-          subtitle: 'rendezvous host elects itself · others register',
+          subtitle: 'one ISO, every host · rendezvous node elects itself',
           detail: {
             role: 'DAY-0 · POWER ON',
             summary:
-              'Boot all of the hosts — control plane and workers — off the same agent ISO (USB, virtual media, or BMC). Each runs RHCOS live in RAM and inventories its hardware. The node whose IP matches rendezvousIP elects itself, starts assisted-service, and the rest register to it. Pre-flight validations (disk, CPU, network, DNS, NTP) run before anything touches disk.',
+              'Point every host at the same ISO and power on — no OS needed. It boots live RHCOS in RAM; the rendezvous node runs assisted-service and the rest register to it.',
             sections: [
+              {
+                heading: 'Three ways to attach the ISO',
+                facts: [
+                  { k: 'Virtual media', v: 'mount agent.iso over the BMC (Redfish / iDRAC / iLO) and set a one-time boot — best for remote/lights-out' },
+                  { k: 'USB stick', v: 'write the ISO with dd / balenaEtcher and boot from it — simplest for hands-on hosts' },
+                  { k: 'PXE / iPXE', v: 'optional: serve the kernel/initramfs/rootfs from `agent create pxe-files` over your existing PXE setup' },
+                ],
+                tags: ['no OS needed', 'boots live in RAM', 'disk untouched until validated'],
+              },
               {
                 heading: 'What happens at boot',
                 facts: [
@@ -1337,11 +1364,11 @@ const HCP_INSTALL = {
                   { k: 'Other hosts', v: 'phone home to the rendezvous node and report inventory' },
                   { k: 'Validations', v: 'must pass before install begins (same checks as CIM)' },
                 ],
-                tags: ['RHCOS live', 'runs in RAM', 'disk untouched until validated'],
               },
               {
                 heading: 'Explore',
                 commands: [
+                  '# (Optional) generate PXE artifacts instead of an ISO\nopenshift-install agent create pxe-files --dir ./mgmt-hub',
                   '# Watch bootstrap progress from your workstation\nopenshift-install agent wait-for bootstrap-complete --dir ./mgmt-hub --log-level info',
                 ],
               },
@@ -1356,7 +1383,7 @@ const HCP_INSTALL = {
           detail: {
             role: 'DAY-0 · BOOTSTRAP',
             summary:
-              'Once validations pass, the Assisted Installer writes RHCOS to each host’s disk and orchestrates an in-place bootstrap. A temporary control plane runs on the rendezvous node just long enough for etcd and the kube-apiserver to come up on the real control-plane nodes; then the bootstrap control plane tears itself down and the permanent control plane takes over. No throwaway bootstrap host is ever needed.',
+              'The installer writes RHCOS to each disk, then bootstraps in place: a temporary control plane on the rendezvous node hands etcd + kube-apiserver to the real nodes and exits.',
             sections: [
               {
                 heading: 'The hand-off',
@@ -1384,7 +1411,7 @@ const HCP_INSTALL = {
           detail: {
             role: 'DAY-0 · INSTALL COMPLETE',
             summary:
-              'The Cluster Version Operator rolls out every second-level cluster operator (ingress, DNS, authentication, image-registry, …). `wait-for install-complete` returns the kubeconfig, the kubeadmin password, and the console URL. You now have a fully-supported bare-metal OpenShift cluster — and it is this cluster that becomes the management hub for everything that follows.',
+              'The CVO rolls out every cluster operator; wait-for install-complete returns a kubeconfig and console URL. The bare-metal hub is now a running OpenShift cluster.',
             sections: [
               {
                 heading: 'What “complete” means',
