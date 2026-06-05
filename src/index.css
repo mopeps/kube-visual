@@ -2903,3 +2903,201 @@ button.object-tag:hover {
   outline: 2px solid var(--k-cyan);
   outline-offset: 2px;
 }
+
+/* ── Global search ─────────────────────────────────────────────────────────
+   A "search the whole site" command palette (⌘K / Ctrl+K / `/`). The trigger
+   lives in the tabs row; the palette is a top-anchored portal over <body>. */
+.search-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  align-self: center;
+  margin-left: 4px;
+  padding: 7px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border-w);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--tx-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: color 0.18s, border-color 0.18s, box-shadow 0.18s, background 0.18s;
+}
+.search-trigger:hover,
+.search-trigger:focus-visible {
+  color: var(--tx-bright);
+  border-color: color-mix(in srgb, var(--k-cyan) 55%, var(--border-w));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--k-cyan) 25%, transparent),
+              0 0 18px color-mix(in srgb, var(--k-cyan) 12%, transparent);
+}
+.search-trigger > span[aria-hidden] { font-size: 0.9rem; line-height: 1; }
+.search-trigger-kbd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  padding: 2px 5px;
+  border-radius: 5px;
+  border: 1px solid var(--border-w);
+  color: var(--tx-muted);
+  background: rgba(255, 255, 255, 0.04);
+}
+/* On narrow widths the label/shortcut collapse to keep the icon compact. */
+@media (max-width: 520px) {
+  .search-trigger-text, .search-trigger-kbd { display: none; }
+  .search-trigger { padding: 7px 10px; }
+}
+
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12vh 16px 16px;
+  background: rgba(3, 6, 14, 0.72);
+  backdrop-filter: blur(4px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+.search-palette {
+  width: 100%;
+  max-width: 600px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--k-cyan) 35%, var(--border-w));
+  background: var(--bg-3);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--k-cyan) 18%, transparent),
+              0 28px 70px rgba(0, 0, 0, 0.66);
+  overflow: hidden;
+  animation: obj-select-pop 0.16s ease;
+}
+.search-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-w);
+}
+.search-input-icon {
+  font-size: 1.1rem;
+  color: var(--k-cyan);
+  line-height: 1;
+}
+.search-input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--tx-bright);
+  font-family: 'Syne', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.search-input::placeholder { color: var(--tx-dim); font-weight: 500; }
+.search-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--tx-dim);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: color 0.18s, background 0.18s;
+}
+.search-close:hover { color: var(--tx-bright); background: rgba(255, 255, 255, 0.06); }
+
+.search-results {
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.search-hint {
+  padding: 18px 12px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--tx-muted);
+  line-height: 1.6;
+}
+.search-hint-keys {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: var(--tx-dim);
+}
+.search-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.search-group-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tx-dim);
+  padding: 6px 10px 4px;
+}
+.search-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: none;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.search-option::before {
+  content: '';
+  flex-shrink: 0;
+  width: 3px;
+  align-self: stretch;
+  border-radius: 2px;
+  background: var(--opt-accent, var(--k-cyan));
+  opacity: 0.55;
+}
+.search-option.is-active {
+  background: color-mix(in srgb, var(--opt-accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--opt-accent) 45%, transparent);
+}
+.search-option.is-active::before { opacity: 1; }
+.search-option-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+.search-option-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--tx-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.search-option-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  color: var(--tx-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 1023px) {
+  .search-overlay { padding-top: 8vh; }
+}

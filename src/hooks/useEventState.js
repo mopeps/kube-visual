@@ -36,6 +36,11 @@ export default function useEventState() {
     setActiveComponentId(prev => prev === id ? null : id)
   }, [])
 
+  // Unconditionally open a component's detail sheet (no toggle) — used when
+  // jumping in from search, where the result should always open, never close
+  // an already-open sheet for the same id.
+  const focusComponent = useCallback((id) => setActiveComponentId(id), [])
+
   const clearComponent = useCallback(() => setActiveComponentId(null), [])
 
   // Spotlight a component on the overview, then forget it (the overview clears
@@ -59,6 +64,7 @@ export default function useEventState() {
     selectEvent,
     clearEvent,
     selectComponent,
+    focusComponent,
     clearComponent,
     revealComponent,
     clearHighlight,
