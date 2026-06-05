@@ -454,10 +454,15 @@ const SYSTEMD = {
             'The instant a process is forked, the kernel writes its PID into the unit’s cgroup.procs file, and every child it later spawns inherits the same cgroup. This is what makes systemd’s tracking exact: actual state is no longer a guess from a PID file — it is precisely whatever the cgroup tree says is inside it.',
           sections: [
             {
-              heading: 'What crosses this edge',
+              heading: 'One domain — the kernel’s own bookkeeping',
+              body: 'This is the kernel-side mirror of the engine reading its DAG. The cgroup Tree and the Running PIDs are not two things talking — they are both the one kernel’s state: the running PIDs are the ground truth (task structs the scheduler runs), and the cgroup tree is the kernel’s own index over them. So this edge is the kernel recording a task it just forked in its own membership table — not communication. The kernel keeps the two in sync automatically: fork adds the PID, exit removes it.',
+              tags: ['one kernel', 'PIDs = ground truth', 'cgroup = its index', 'kept in sync automatically'],
+            },
+            {
+              heading: 'What this records',
               facts: [
-                { k: 'From', v: 'Kernel Reality — the running PIDs on the CPU' },
-                { k: 'To', v: 'cgroup Tree — /sys/fs/cgroup/system.slice/ovnkube-node.service/' },
+                { k: 'Ground truth', v: 'Kernel Reality — the running PIDs (task structs) on the CPU' },
+                { k: 'Index', v: 'cgroup Tree — /sys/fs/cgroup/system.slice/ovnkube-node.service/' },
                 { k: 'Mechanism', v: 'the kernel records each PID in cgroup.procs; children inherit it' },
               ],
               tags: ['cgroups v2', 'kernel-enforced', 'no escape', 'exact membership'],
