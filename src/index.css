@@ -1132,9 +1132,22 @@ body::after {
 .hop-route-node {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
-.hop-route-node .type-icon { font-size: 0.9em; opacity: 0.85; }
+/* The route endpoint's type glyph, in a bordered chip that matches the bullet
+   glyph chips (.hop-point-ic). Border + glyph use currentColor, so the source
+   reads in the text colour and the target picks up its accent. */
+.hop-route-ic {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
 .hop-route-arrow { color: var(--tx-dim); }
 .hop-route-go {
   font-size: 0.78em;
