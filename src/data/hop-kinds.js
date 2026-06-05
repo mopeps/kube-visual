@@ -68,7 +68,7 @@ const RULES = [
 
   // TLS / auth — terminating TLS or authenticating a request. Above `route` so a
   // DNAT hop that "terminates TLS" reads Secures (the notable act) over Routes.
-  [/\b(terminates? TLS|over TLS|authenticat|\bTLS\b)\b/i, 'secure'],
+  [/(\bterminates? TLS|\bover TLS|authenticat\w*|\bTLS\b)/i, 'secure'],
 
   // Persistence — writing desired state into etcd.
   [/\b(persist(?:s|ed)?|etcd record|records? the (?:new|lower)|writes? the new .*(?:revision|ReplicaSet))\b/i, 'store'],
@@ -76,8 +76,9 @@ const RULES = [
   // Routing — DNAT / OVS / OVN / bridges / load-balancer flows.
   [/\b(DNATs?|routes?|routing|\bOVS\b|br-int|\bOVN\b|flow rules?|load-balancer flows|MetalLB|bridge|matches the .*LoadBalancer|enters the .*bridge)\b/i, 'route'],
 
-  // Delivery — handing the packet to a NIC / endpoint / the final Pod.
-  [/\b(delivers?|virtio-net|\bNIC\b|to a ready .* endpoint|hands the packet)\b/i, 'deliver'],
+  // Delivery — handing the packet to a NIC / endpoint / the final Pod, or the
+  // endpoint accepting the connection and answering.
+  [/\b(delivers?|virtio-net|\bNIC\b|to a ready .* endpoint|hands the packet|accepts the connection|returns (?:a|its) response|serves it)\b/i, 'deliver'],
 
   // Reconcile — a controller driving observed state toward desired.
   [/\b(reconcil\w*|drives? .*(?:to create|Cluster API)|closing the loop)\b/i, 'reconcile'],
@@ -129,4 +130,25 @@ export function classifyHop(description) {
   const text = stripAsides(description || '')
   const key = matchRules(leadSentence(text)) || matchRules(text) || 'flow'
   return { key, ...HOP_KINDS[key] }
+}
+
+// Break a step description into its component sentences, each paired with its own
+// action kind — so the Packet Flow tab can render a hop's detail as a short list
+// of glyph + keyword bullets instead of one long paragraph. Sentence boundaries
+// are a . ! or ? followed by whitespace and a capital / opening quote, which
+// keeps dotted identifiers (svc.cluster.local, api.<guest>) intact. The original
+// sentence text is preserved for display (asides/parens are only stripped inside
+// classifyHop for matching).
+export function hopPoints(description) {
+  const text = description || ''
+  const parts = []
+  const re = /([.!?])\s+(?=[A-Z'"‘“])/g
+  let last = 0
+  let m
+  while ((m = re.exec(text))) {
+    parts.push(text.slice(last, m.index + 1).trim())
+    last = m.index + m[0].length
+  }
+  if (last < text.length) parts.push(text.slice(last).trim())
+  return parts.filter(Boolean).map((sentence) => ({ text: sentence, ...classifyHop(sentence) }))
 }

@@ -1090,33 +1090,12 @@ body::after {
   border: 1px solid color-mix(in srgb, var(--hop-accent) 60%, transparent);
 }
 
-/* The action keyword chip — a glyph + label that names what the hop does
-   (Resolves / Routes / Terminates …). Colour/border/fill are set inline from the
-   kind accent; this matches the icon-led chips elsewhere (interaction legend,
-   badges). */
-.hop-kind {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  padding: 3px 9px 3px 7px;
-  border: 1px solid;
-  border-radius: 999px;
-  font-size: 0.64rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.hop-kind-ic {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.95rem;
-}
-
 /* Wordless expand/collapse hint, shown only when a hop has exploration
    commands. Sits at the far right of the header; rotates up when open. */
 .hop-card-chevron {
-  margin-left: auto;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 2px;
   font-size: 0.85rem;
   line-height: 1;
   color: var(--tx-dim);
@@ -1125,15 +1104,18 @@ body::after {
 .hop-card-chevron.is-open { transform: rotate(180deg); }
 .hop-card:hover .hop-card-chevron { color: var(--tx-muted); }
 
-/* The source → target route. Doubles as the "reveal in overview" affordance:
-   clicking jumps to the target on the architecture canvas. Reset to plain inline
-   text (it's a <button>) so it reads naturally; the ↗ glyph hints the jump. */
+/* The source → target route, the card's title. Doubles as the "reveal in
+   overview" affordance: clicking jumps to the target on the architecture canvas.
+   Reset to plain inline text (it's a <button>) so it reads naturally; the ↗ glyph
+   hints the jump. Takes the header's free space so the chevron sits at the end. */
 .hop-route {
+  flex: 1;
+  min-width: 0;
   appearance: none;
   background: none;
   border: none;
   padding: 0;
-  margin: 0 0 6px;
+  margin: 0;
   font: inherit;
   text-align: left;
   color: var(--tx-bright);
@@ -1162,10 +1144,42 @@ body::after {
 .hop-route:hover .hop-route-go { opacity: 1; }
 .hop-route:not(.is-static):hover .hop-route-node { text-decoration: underline; }
 
-.hop-card-desc {
+/* The hop's detail, as a short list of glyph + keyword bullets (one per sentence
+   of the step). Mirrors the detail-modal interaction rows: an accent-bordered
+   icon chip, an emphasised keyword lead, then the sentence with object chips. */
+.hop-points {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hop-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+.hop-point-ic {
+  flex-shrink: 0;
+  width: 23px;
+  height: 23px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid;
+  border-radius: 7px;
+  font-size: 0.9rem;
+  margin-top: 1px;
+}
+.hop-point-text {
   font-size: 0.76rem;
+  line-height: 1.6;
   color: var(--tx-muted);
-  line-height: 1.65;
+  padding-top: 2px;
+}
+.hop-point-kw {
+  font-weight: 600;
 }
 
 .hop-card-detail {
