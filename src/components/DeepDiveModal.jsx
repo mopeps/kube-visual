@@ -150,7 +150,7 @@ export default function DeepDiveModal({ content, onClose }) {
 
   return createPortal(
     <div
-      className={`ancestry-overlay animate-fade-in${peek ? ' is-peek' : ''}${resizing ? ' is-resizing' : ''}`}
+      className={`ancestry-overlay dd-overlay animate-fade-in${peek ? ' is-peek' : ''}${resizing ? ' is-resizing' : ''}`}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div

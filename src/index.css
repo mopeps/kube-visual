@@ -2222,6 +2222,14 @@ button.object-tag:hover {
   overscroll-behavior: contain;
   transition: background 0.18s ease, backdrop-filter 0.18s ease;
 }
+/* Deep-dive popups keep the canvas behind them visible — no dim, no blur — so a
+   box detail reads against the topology it belongs to. The sheet still has its
+   own solid background + shadow to stand out, and the (now-transparent) overlay
+   keeps capturing the outside-click that closes it. */
+.ancestry-overlay.dd-overlay:not(.is-peek) {
+  background: transparent;
+  backdrop-filter: none;
+}
 /* Peek mode (sheet resized to an explicit, reduced height): the overlay drops
    its dimming/blur and lets pointer events fall through so the overview behind
    stays visible and scrollable. The sheet itself re-captures pointer events and
