@@ -1039,127 +1039,149 @@ body::after {
 }
 
 /* ── Hop list ──────────────────────────────────────────────────────── */
-.hop {
-  display: flex;
-  align-items: stretch;
+/* ── Packet-Flow hop card ────────────────────────────────────────────────
+   Each hop is a self-contained card: the step number is baked into its header
+   (no left rail / indent), an accent spine on the left ties the card to its
+   target's zone colour, and the body reads in the same icon+keyword language as
+   the detail-modal Interactions section. The whole card is clickable to reveal
+   its exploration commands. `--hop-accent` is the target component's colour, set
+   inline per card. */
+.hop-card {
   cursor: pointer;
-}
-
-.hop-num-col {
-  width: 50px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.hop-num {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Syne', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 700;
-  flex-shrink: 0;
-  margin-top: 14px;
-  z-index: 1;
-}
-
-.hop-line {
-  width: 2px;
-  flex: 1;
-  min-height: 18px;
-}
-
-.hop-body {
-  flex: 1;
-  padding: 14px 16px;
+  padding: 12px 14px 13px;
+  margin-bottom: 8px;
   border: 1px solid var(--border-w);
-  border-radius: 8px;
-  margin: 6px 0 6px 10px;
+  border-left: 2px solid color-mix(in srgb, var(--hop-accent) 55%, transparent);
+  border-radius: 9px;
   background: rgba(0, 0, 0, 0.25);
   transition: background 0.2s, border-color 0.2s;
 }
-.hop:hover .hop-body { background: rgba(255, 255, 255, 0.03); }
+.hop-card:hover { background: rgba(255, 255, 255, 0.03); }
 /* The hop whose arrow is highlighted in the overview (docked mode). */
-.hop.is-selected .hop-body { background: rgba(255, 255, 255, 0.05); }
+.hop-card.is-selected {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: color-mix(in srgb, var(--hop-accent) 55%, var(--border-w));
+  border-left-color: var(--hop-accent);
+}
 
-.hop-body h3 {
-  font-family: 'Syne', sans-serif;
-  font-size: 0.92rem;
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: var(--tx-bright);
+.hop-card-head {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.hop-meta {
-  font-size: 0.62rem;
-  color: var(--tx-muted);
   margin-bottom: 8px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  letter-spacing: 0.05em;
 }
 
-.hop-body p {
-  font-size: 0.74rem;
-  color: var(--tx-muted);
-  line-height: 1.65;
+/* The step number, baked into the card header — a rounded-square chip tinted
+   with the hop accent (replacing the old free-standing circle in a left rail). */
+.hop-step {
+  flex-shrink: 0;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--hop-accent);
+  background: color-mix(in srgb, var(--hop-accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hop-accent) 60%, transparent);
 }
 
-/* The hop title doubles as the "reveal in overview" affordance: clicking the
-   object name jumps to it on the architecture canvas. Styled as inline text
-   (not a button) so it reads naturally; the ↗ glyph hints it's a jump. */
-.hop-link {
-  appearance: none;
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  font: inherit;
-  text-align: left;
-  color: inherit;
-  cursor: pointer;
+/* The action keyword chip — a glyph + label that names what the hop does
+   (Resolves / Routes / Terminates …). Colour/border/fill are set inline from the
+   kind accent; this matches the icon-led chips elsewhere (interaction legend,
+   badges). */
+.hop-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 3px 9px 3px 7px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
-.hop-link .hop-link-src { color: var(--tx-bright); }
-.hop-link .hop-link-go {
-  margin-left: 6px;
-  font-size: 0.78em;
-  opacity: 0;
-  transition: opacity 0.18s;
+.hop-kind-ic {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.95rem;
 }
-.hop-link:hover .hop-link-go { opacity: 1; }
-.hop-link:hover .hop-link-src,
-.hop-link:hover .hop-link-tgt { text-decoration: underline; }
 
 /* Wordless expand/collapse hint, shown only when a hop has exploration
-   commands. Rotates to point up when its detail is open. */
-.hop-chevron {
-  display: block;
-  margin-top: 6px;
+   commands. Sits at the far right of the header; rotates up when open. */
+.hop-card-chevron {
+  margin-left: auto;
   font-size: 0.85rem;
   line-height: 1;
   color: var(--tx-dim);
   transition: transform 0.18s, color 0.18s;
 }
-.hop-chevron.is-open { transform: rotate(180deg); }
-.hop:hover .hop-chevron { color: var(--tx-muted); }
+.hop-card-chevron.is-open { transform: rotate(180deg); }
+.hop-card:hover .hop-card-chevron { color: var(--tx-muted); }
 
-.hop-detail {
-  display: none;
-  margin-top: 12px;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 6px;
-  padding: 12px;
+/* The source → target route. Doubles as the "reveal in overview" affordance:
+   clicking jumps to the target on the architecture canvas. Reset to plain inline
+   text (it's a <button>) so it reads naturally; the ↗ glyph hints the jump. */
+.hop-route {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0 0 6px;
+  font: inherit;
+  text-align: left;
+  color: var(--tx-bright);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
 }
-.hop-detail.is-open { display: block; }
+.hop-route.is-static { cursor: default; }
+.hop-route-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.hop-route-node .type-icon { font-size: 0.9em; opacity: 0.85; }
+.hop-route-arrow { color: var(--tx-dim); }
+.hop-route-go {
+  font-size: 0.78em;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+.hop-route:hover .hop-route-go { opacity: 1; }
+.hop-route:not(.is-static):hover .hop-route-node { text-decoration: underline; }
+
+.hop-card-desc {
+  font-size: 0.76rem;
+  color: var(--tx-muted);
+  line-height: 1.65;
+}
+
+.hop-card-detail {
+  display: none;
+  margin-top: 11px;
+  padding-top: 11px;
+  border-top: 1px solid var(--border-w);
+}
+.hop-card-detail.is-open { display: block; }
+.hop-card-detail-key {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--tx-muted);
+  margin-bottom: 9px;
+}
 
 /* ── Deep Dive tab ──────────────────────────────────────────────────────
    The index + switcher reuse .event-gallery / .event-card / .flow-switcher.

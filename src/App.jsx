@@ -257,6 +257,7 @@ export default function App() {
       activeStep={activeStep}
       onFocusStep={focusStep}
       onJumpToStep={jumpToStep}
+      onSelectComponent={selectComponent}
     />
   )
   const deepDivePanel = (
@@ -353,6 +354,7 @@ export default function App() {
                   activeStep={activeStep}
                   onFocusStep={focusStep}
                   onJumpToStep={jumpToStep}
+                  onSelectComponent={selectComponent}
                   followSelected
                 />
               </div>

@@ -2,83 +2,98 @@ import { useState, useEffect, useRef } from 'react'
 import { findComponent } from '../data/components-index'
 import events from '../data/events.json'
 import { COMPONENT_COLOR } from '../data/zones'
+import { classifyHop } from '../data/hop-kinds'
 import ObjectSelect from './ObjectSelect'
+import ObjectText from './ObjectText'
 import ExploreCommands from './ExploreCommands'
+import TypeIcon from './TypeIcon'
+import HopIcon from './HopIcon'
 
 const hopCount = (n) => `${n} hop${n === 1 ? '' : 's'}`
 
-function Hop({ step, isOpen, isSelected, onToggle, onJump, isFinal }) {
+// The source → target route line, with each node fronted by its type glyph (the
+// same backbone glyphs the Object Map and Hop Inspector use). When `onJump` is
+// set the whole route is a button that reveals the target on the overview canvas.
+function HopRoute({ step, source, target, color, onJump }) {
+  const inner = (
+    <>
+      <span className="hop-route-node">
+        <TypeIcon typePrefix={source?.typePrefix} className="type-icon" title={source?.typePrefix} />
+        {source?.displayName || step.sourceComponentId}
+      </span>
+      <span className="hop-route-arrow" aria-hidden>→</span>
+      <span className="hop-route-node" style={{ color }}>
+        <TypeIcon typePrefix={target?.typePrefix} className="type-icon" title={target?.typePrefix} />
+        {target?.displayName || step.targetComponentId}
+      </span>
+    </>
+  )
+  if (!onJump) return <span className="hop-route is-static">{inner}</span>
+  return (
+    <button
+      type="button"
+      className="hop-route"
+      onClick={(e) => { e.stopPropagation(); onJump(step.step) }}
+      title="Reveal this object in the architecture overview"
+    >
+      {inner}
+      <span className="hop-route-go" aria-hidden style={{ color }}>↗</span>
+    </button>
+  )
+}
+
+// One hop, rendered in the same icon+keyword language as the detail-modal
+// Interactions section and the systemd deep-dive popups: the step number is
+// baked into the card (no left rail / indent), an accent-tinted keyword chip
+// with a glyph names what the hop *does* (Resolves / Routes / Terminates …),
+// and the description lifts object references into the shared inline chips so a
+// named component is one click from its own detail popup.
+function Hop({ step, isOpen, isSelected, onToggle, onJump, onSelectComponent }) {
   const target = findComponent(step.targetComponentId)
   const source = findComponent(step.sourceComponentId)
   const color = COMPONENT_COLOR[step.targetComponentId] || 'var(--k-cyan)'
-  const sourceColor = COMPONENT_COLOR[step.sourceComponentId] || color
+  const kind = classifyHop(step.description)
+  const hasCommands = target?.explorationCommands?.length > 0
 
   return (
-    <div className={`hop ${isSelected ? 'is-selected' : ''}`} data-step={step.step} onClick={onToggle}>
-      <div className="hop-num-col">
-        <div
-          className="hop-num"
-          style={{
-            background: `${color}26`,
-            border: `1px solid ${color}`,
-            color,
-          }}
+    <div
+      className={`hop-card ${isSelected ? 'is-selected' : ''}`}
+      data-step={step.step}
+      style={{ '--hop-accent': color }}
+      onClick={onToggle}
+    >
+      <div className="hop-card-head">
+        <span className="hop-step">{step.step}</span>
+        <span
+          className="hop-kind"
+          style={{ color: kind.accent, borderColor: `${kind.accent}55`, background: `${kind.accent}1a` }}
         >
-          {step.step}
-        </div>
-        {!isFinal && (
-          <div
-            className="hop-line"
-            style={{ background: `linear-gradient(${color}, ${color}33)` }}
-          />
+          <span className="hop-kind-ic"><HopIcon name={kind.icon} /></span>
+          {kind.label}
+        </span>
+        {hasCommands && (
+          <span className={`hop-card-chevron ${isOpen ? 'is-open' : ''}`} aria-hidden>⌄</span>
         )}
       </div>
-      <div
-        className="hop-body"
-        style={{ borderColor: isSelected ? color : `${color}40` }}
-      >
-        <h3>
-          {onJump ? (
-            <button
-              type="button"
-              className="hop-link"
-              onClick={(e) => { e.stopPropagation(); onJump(step.step) }}
-              title="Reveal this object in the architecture overview"
-            >
-              <span className="hop-link-src">{source?.displayName || step.sourceComponentId}</span>
-              <span style={{ color: 'var(--tx-dim)', margin: '0 8px' }}>→</span>
-              <span className="hop-link-tgt" style={{ color }}>{target?.displayName || step.targetComponentId}</span>
-              <span className="hop-link-go" aria-hidden style={{ color }}>↗</span>
-            </button>
-          ) : (
-            <span>
-              {source?.displayName || step.sourceComponentId}
-              <span style={{ color: 'var(--tx-dim)', margin: '0 8px' }}>→</span>
-              <span style={{ color }}>{target?.displayName || step.targetComponentId}</span>
-            </span>
-          )}
-        </h3>
-        <div className="hop-meta">
-          <span style={{ color: sourceColor }}>{source?.layer || ''}</span>
-          <span style={{ color: 'var(--tx-dim)' }}>→</span>
-          <span style={{ color }}>{target?.layer || ''}</span>
+
+      <HopRoute step={step} source={source} target={target} color={color} onJump={onJump} />
+
+      <p className="hop-card-desc">
+        <ObjectText
+          text={step.description}
+          onSelectComponent={onSelectComponent}
+          selfId={step.targetComponentId}
+        />
+      </p>
+
+      {hasCommands && (
+        <div className={`hop-card-detail ${isOpen ? 'is-open' : ''}`}>
+          <div className="hop-card-detail-key">
+            Explore the target ({target.displayName})
+          </div>
+          <ExploreCommands commands={target.explorationCommands} color={color} />
         </div>
-        <p>{step.description}</p>
-        {target?.explorationCommands?.length > 0 && (
-          <>
-            <div className={`hop-detail ${isOpen ? 'is-open' : ''}`}>
-              <div
-                className="text-[0.6rem] uppercase tracking-[0.14em] mb-2"
-                style={{ color: 'var(--tx-muted)' }}
-              >
-                Explore the target ({target.displayName})
-              </div>
-              <ExploreCommands commands={target.explorationCommands} color={color} />
-            </div>
-            <span className={`hop-chevron ${isOpen ? 'is-open' : ''}`} aria-hidden>⌄</span>
-          </>
-        )}
-      </div>
+      )}
     </div>
   )
 }
@@ -138,6 +153,7 @@ export default function PacketFlowTab({
   activeStep,
   onFocusStep,
   onJumpToStep,
+  onSelectComponent,
   followSelected = false,
 }) {
   const [open, setOpen] = useState(new Set())
@@ -194,7 +210,7 @@ export default function PacketFlowTab({
         </p>
       </div>
       <div ref={listRef}>
-        {activeEvent.steps.map((step, i) => (
+        {activeEvent.steps.map((step) => (
           <Hop
             key={step.step}
             step={step}
@@ -202,7 +218,7 @@ export default function PacketFlowTab({
             isSelected={activeStep === step.step}
             onToggle={() => toggle(step.step)}
             onJump={onJumpToStep}
-            isFinal={i === activeEvent.steps.length - 1}
+            onSelectComponent={onSelectComponent}
           />
         ))}
       </div>
