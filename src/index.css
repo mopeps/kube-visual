@@ -2837,6 +2837,13 @@ button.object-tag:hover {
    left indent; here we only tune the vertical rhythm so the rows sit snugly
    under the lead line within the reveal rail. */
 .tree-detail-interactions { gap: 7px; }
+/* The icon-less detail rows (kv facts, lead lines) carry no chip of their own, so
+   on their own they'd start at the reveal's left edge — under the why-callout's
+   glyph, left of its prose. Indent them by the glyph-chip column (.tree-why-icon
+   width + .tree-why gap) so their text lines up under the definition sentence and
+   the icon-led interaction bullets, giving the reveal one clean prose column. */
+.tree-detail-kv,
+.tree-detail-line { padding-left: calc(26px + 9px); }
 .tree-detail-kv {
   display: flex;
   gap: 8px;
