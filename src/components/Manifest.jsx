@@ -46,7 +46,7 @@ export function ManifestBlock({ body, kind = 'MANIFEST', color }) {
       .catch(() => {})
   }
   return (
-    <div className="manifest-block">
+    <div className="manifest-block" style={{ '--code-accent': color }}>
       <div className="manifest-block-head">
         <span className="manifest-block-lang">{lang} · minimal example</span>
         <button

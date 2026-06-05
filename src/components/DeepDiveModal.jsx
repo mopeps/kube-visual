@@ -314,7 +314,7 @@ export default function DeepDiveModal({ content, onClose }) {
                   <ExploreCommands commands={sec.commands} color={accent} />
                 </div>
               )}
-              {sec.ascii && <pre className="code-block deep-ascii">{sec.ascii}</pre>}
+              {sec.ascii && <pre className="code-block deep-ascii" style={{ '--code-accent': accent }}>{sec.ascii}</pre>}
             </div>
           ))}
 

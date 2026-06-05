@@ -3,6 +3,7 @@ import { findComponent } from '../data/components-index'
 import events from '../data/events.json'
 import { COMPONENT_COLOR } from '../data/zones'
 import ObjectSelect from './ObjectSelect'
+import ExploreCommands from './ExploreCommands'
 
 const hopCount = (n) => `${n} hop${n === 1 ? '' : 's'}`
 
@@ -72,9 +73,7 @@ function Hop({ step, isOpen, isSelected, onToggle, onJump, isFinal }) {
               >
                 Explore the target ({target.displayName})
               </div>
-              {target.explorationCommands.map((cmd, i) => (
-                <pre key={i} className="code-block mb-2">{cmd}</pre>
-              ))}
+              <ExploreCommands commands={target.explorationCommands} color={color} />
             </div>
             <span className={`hop-chevron ${isOpen ? 'is-open' : ''}`} aria-hidden>⌄</span>
           </>

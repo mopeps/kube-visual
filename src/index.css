@@ -1876,14 +1876,19 @@ body::after {
   background: color-mix(in srgb, var(--unit-accent, var(--k-cyan)) 10%, transparent);
 }
 
+/* The generic code block now shares the explore-command pane look: an accent
+   left spine over a navy ground (not the old lime-on-black terminal). The
+   accent is driven by --code-accent (defaults to cyan) so manifest / ascii
+   blocks can tint it to their component colour. */
 .code-block {
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid var(--border-w);
-  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid color-mix(in srgb, var(--code-accent, var(--k-cyan)) 26%, transparent);
+  border-left: 2px solid var(--code-accent, var(--k-cyan));
+  border-radius: 8px;
   padding: 12px 14px;
   font-size: 0.7rem;
   line-height: 1.65;
-  color: #a8ff78;
+  color: var(--tx);
   overflow-x: auto;
   font-family: 'JetBrains Mono', monospace;
   white-space: pre-wrap;
@@ -2368,9 +2373,10 @@ button.object-tag:hover {
    node's expanded detail; both reveal this code block. */
 .manifest-block {
   margin-top: 10px;
-  border: 1px solid var(--border-w);
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid color-mix(in srgb, var(--code-accent, var(--k-cyan)) 26%, transparent);
+  border-left: 2px solid var(--code-accent, var(--k-cyan));
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
   overflow: hidden;
 }
 .manifest-block-head {
@@ -2395,7 +2401,9 @@ button.object-tag:hover {
   cursor: pointer;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
-.manifest-code { border: none; border-radius: 0; margin: 0; }
+/* The frame (accent spine + ground) lives on .manifest-block, so the inner
+   code pre sits flush and transparent inside it — no doubled spine. */
+.manifest-code { border: none; border-left: none; border-radius: 0; margin: 0; background: transparent; }
 /* The manifest tag + its revealed block, nested inside a pipeline node detail. */
 .tree-manifest { margin-top: 8px; }
 .tree-manifest .manifest-block { margin-top: 8px; }
