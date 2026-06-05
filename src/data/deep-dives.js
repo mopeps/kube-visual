@@ -194,7 +194,6 @@ WantedBy=multi-user.target`,
 // unit's pinned PIDs in place.
 const CGROUP_TREE = {
   caption: 'systemd-cgls · the unified cgroup v2 tree',
-  cgroupMarks: true,
   nodes: [
     {
       label: '/ · root cgroup', kind: 'root',
@@ -246,8 +245,6 @@ const CGROUP_TREE = {
     },
   ],
   legend: [
-    { marker: 'cg', meaning: 'a cgroup — every slice, service & scope is one (a directory in /sys/fs/cgroup)' },
-    { marker: 'proc', meaning: 'a process — pinned inside a cgroup, but not a cgroup itself' },
     { kind: 'slice', meaning: 'a grouping cgroup (no process of its own) for accounting & limits' },
     { kind: 'service', meaning: 'a cgroup holding the processes systemd forked from a unit' },
     { kind: 'scope', meaning: 'a cgroup of externally-forked processes systemd only adopts (sessions, VMs)' },
