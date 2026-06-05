@@ -1746,7 +1746,7 @@ body::after {
   font-family: 'JetBrains Mono', monospace;
 }
 .deep-tree-caption {
-  font-size: 0.6rem;
+  font-size: 0.64rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-bottom: 10px;
@@ -1787,7 +1787,7 @@ body::after {
 }
 .deep-tree-kind {
   flex: none;
-  font-size: 0.52rem;
+  font-size: 0.58rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 1px 6px;
@@ -1795,8 +1795,18 @@ body::after {
   border: 1px solid;
   background: color-mix(in srgb, currentColor 14%, transparent);
 }
-.deep-tree-label { font-size: 0.68rem; color: var(--tx-bright); }
-.deep-tree-sub { font-size: 0.62rem; color: var(--tx-dim); }
+/* cgroup marker — ◆ on every directory node (root/slice/service/scope), dimmed
+   to a hollow look on processes so the grouping reads at a glance. */
+.deep-tree-cg {
+  flex: none;
+  font-size: 0.6rem;
+  line-height: 1;
+  color: var(--k-cyan);
+  opacity: 0.9;
+}
+.deep-tree-cg--off { color: var(--tx-dim); opacity: 0.35; }
+.deep-tree-label { font-size: 0.78rem; color: var(--tx-bright); }
+.deep-tree-sub { font-size: 0.72rem; color: var(--tx-dim); }
 .deep-tree-legend {
   display: flex;
   flex-wrap: wrap;
@@ -1809,7 +1819,7 @@ body::after {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   line-height: 1.5;
   color: var(--tx-muted);
 }
