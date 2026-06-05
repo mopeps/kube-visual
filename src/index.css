@@ -1509,6 +1509,14 @@ body::after {
 /* The interactive cgroup box: a NodeCard-styled container whose body is the
    kernel-pinned process list. Wider than a plain box to fit the table. */
 .deep-cgroup-box { min-width: 230px; max-width: 360px; }
+/* On narrow screens the two kernel-space boxes stack. Put Kernel Reality (the
+   running processes) ABOVE the cgroup index, and let both take the full width so
+   it reads as a clean top-down stack instead of a lonely half-width card. */
+@media (max-width: 640px) {
+  #dd-sd-reality { order: -1; }
+  #dd-sd-reality,
+  #dd-sd-cgroup { flex-basis: 100%; max-width: none; }
+}
 .cgroup-frame {
   margin-top: 10px;
   border: 1px dashed color-mix(in srgb, var(--node-accent) 45%, transparent);
