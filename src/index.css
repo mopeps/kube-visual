@@ -2771,12 +2771,16 @@ button.object-tag:hover {
 
 /* The note + deeper detail revealed when a row is expanded. Styled to read as
    prose — like the why-callout / interaction rows — rather than a dark code
-   block: no filled background and no left rail/indent, so the detail runs flush
-   beneath its row down the same left margin, with text at the same size/colour
-   the interaction sentences use. */
+   block: no filled background, no left rail. The content is indented to line up
+   under the parent row's *label* (clearing the caret + gap that precede it), so
+   the revealed detail reads as nested under its row rather than hanging back at
+   the caret/trunk edge. Text stays the same size/colour as the interaction
+   sentences. */
 .tree-reveal {
   margin: 2px 0 6px;
-  padding: 2px 0 3px;
+  /* left pad = .tree-caret width (0.7em @ its 0.62rem font) + .tree-row-head gap,
+     so the reveal's content edge aligns with the label text above it. */
+  padding: 2px 0 3px calc(0.7 * 0.62rem + 6px);
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -2890,7 +2894,8 @@ button.object-tag:hover {
   }
   .tree-children > .tree-node::after { width: 7px; }
   .tree-reveal {
-    padding-left: 5px;
+    /* same label alignment as desktop — the caret + gap are width-independent */
+    padding-left: calc(0.7 * 0.62rem + 6px);
   }
 }
 
