@@ -98,7 +98,6 @@ function Hop({ step, isOpen, isSelected, onToggle, onJump, onSelectComponent }) 
               <ObjectText
                 text={p.text}
                 onSelectComponent={onSelectComponent}
-                selfId={step.targetComponentId}
               />
             </span>
           </li>
