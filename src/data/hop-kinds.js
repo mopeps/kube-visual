@@ -54,8 +54,13 @@ const RULES = [
   // command that "runs … back up the tunnel" reads as Runs, not Tunnels.
   [/\b(\brunc\b|PID 1|becomes PID|executes?|runs the command|enters the container)\b/i, 'run'],
 
-  // Tunnels — Konnectivity and any explicit tunnel/dial-out.
-  [/\b(konnectivity|tunnel|dials? out|exec stream|persistent tunnel|encapsulat)\b/i, 'tunnel'],
+  // Tunnels — an explicit tunnel/dial-out *act*. Matched on the behaviour
+  // (dial out, exec stream, ride the persistent tunnel, encapsulate), NOT on the
+  // bare "Konnectivity"/"tunnel" nouns: those appear as product names in lists
+  // ("…OAuth, Konnectivity Server, Ignition…") and inside negations ("does not
+  // use the Konnectivity tunnel"), where leading with a Tunnels glyph misreads
+  // the hop.
+  [/\b(dials? out|exec stream|persistent tunnel|through the tunnel|encapsulat)\b/i, 'tunnel'],
 
   // Forward — proxying / handing off / issuing an onward call. Above `fetch` so a
   // kubelet that "issues … calls to CRI-O, which pulls the image" reads Forwards.
@@ -83,13 +88,18 @@ const RULES = [
   // Reconcile — a controller driving observed state toward desired.
   [/\b(reconcil\w*|drives? .*(?:to create|Cluster API)|closing the loop)\b/i, 'reconcile'],
 
-  // Schedule — placing a Pod/Machine on a node (Binding, capacity eval).
-  [/\b(schedul\w*|unscheduled|binds?\b|writes? a Binding|placing the|node assignment|node capacity)\b/i, 'schedule'],
-
-  // Create — deploy / spawn / boot / start something new.
+  // Create — deploy / spawn / boot / start something new. Ordered ABOVE schedule
+  // so a hop that leads with the creation ("CAPK creates a VirtualMachine … which
+  // the scheduler places on a worker") reads Creates, not Schedules — keeping the
+  // four parallel "CAPK/virt-controller creates the launcher Pod" steps labelled
+  // consistently. A step that is purely a placement (no create verb) still falls
+  // through to schedule below.
   // (no bare "launch\w*" — it would catch the noun "virt-launcher"; the launcher
   // steps are covered by starts / boots / creates instead.)
   [/\b(creates?|deploys?|spawns?|provisions?|boots?|starts?|launch(?:es|ed|ing)\b|brings? up|comes? back up|asks? .* for a (?:fresh|new)|signals? .* to boot)\b/i, 'create'],
+
+  // Schedule — placing a Pod/Machine on a node (Binding, capacity eval).
+  [/\b(schedul\w*|unscheduled|binds?\b|writes? a Binding|placing the|node assignment|node capacity)\b/i, 'schedule'],
 
   // Report — surfacing status back up the control plane.
   [/\b(reports?|updates? .*status|status to Failed|surfaces?|goes Ready|registers?)\b/i, 'report'],
@@ -105,6 +115,15 @@ const RULES = [
 // ("(a Konnectivity-tunnelled connection)", "(api.<guest>)") that shouldn't sway
 // the hop's headline action.
 const stripAsides = (text) => text.replace(/\([^)]*\)/g, ' ')
+
+// Blank out negated clauses before matching so a hop never leads with a glyph for
+// the very thing the prose is *denying* ("does not use the Konnectivity tunnel",
+// "nothing reconciles a Pod from this write alone"). A negation marker swallows
+// the rest of its clause up to the next boundary. Bare "no"/"without" are left
+// alone on purpose — they are usually determiners ("no node assignment", "no
+// cloud LB") whose following words are still meaningful to classify.
+const stripNegations = (text) =>
+  text.replace(/\b(?:not|never|cannot|can't|don't|doesn't|won't|nothing|no longer)\b[^,;.!?—–]*/gi, ' ')
 
 // Split off the leading sentence so classification weights the hop's *primary*
 // action over incidental mentions later in the prose (e.g. a trailing "scheduled
@@ -127,7 +146,7 @@ function matchRules(text) {
 // headline action wins; only if it's silent do we scan the whole description.
 // Falls back to `flow` (a neutral "carries on" arrow) when nothing matches.
 export function classifyHop(description) {
-  const text = stripAsides(description || '')
+  const text = stripNegations(stripAsides(description || ''))
   const key = matchRules(leadSentence(text)) || matchRules(text) || 'flow'
   return { key, ...HOP_KINDS[key] }
 }
