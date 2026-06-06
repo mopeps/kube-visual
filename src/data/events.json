@@ -112,7 +112,7 @@
         "step": 4,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "kubelet-guest",
-        "description": "The guest kubelet maintains its own outbound watch on the Guest API Server (via the exposed apiserver endpoint) and observes the newly bound Pod assigned to its node. The kubelet pulls its application — the API Server never pushes to it, and this path does not use the Konnectivity tunnel (that tunnel only carries API-Server-initiated traffic such as exec/logs/port-forward)."
+        "description": "The guest kubelet maintains its own outbound watch on the Guest API Server (via the exposed apiserver endpoint) and observes the newly bound Pod assigned to its node. The kubelet pulls its application over that same outbound watch — the API Server never pushes the assignment to it. (Konnectivity is not involved here; that tunnel only carries API-Server-initiated traffic such as exec/logs/port-forward.)"
       },
       {
         "step": 5,
@@ -578,7 +578,7 @@
         "step": 2,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "guest-etcd",
-        "description": "The API Server persists the new ConfigMap revision to guest etcd. This is the ONLY thing a bare ConfigMap apply changes: no controller in the Guest Controller Manager watches plain ConfigMaps to restart workloads, so nothing reconciles a Pod from this write alone."
+        "description": "The API Server persists the new ConfigMap revision to guest etcd. This is the ONLY change a bare ConfigMap update makes: the Guest Controller Manager runs no loop that restarts workloads on a plain ConfigMap edit, so this write by itself leaves every running Pod untouched."
       },
       {
         "step": 3,
@@ -596,7 +596,7 @@
         "step": 5,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "guest-controller-manager",
-        "description": "The Deployment controller (a reconcile loop inside the Guest Controller Manager — not a standalone operator) sees the pod-template hash changed and creates a new ReplicaSet; the ReplicaSet controller then scales the new ReplicaSet up and the old one down per the rollout strategy."
+        "description": "The Deployment controller (a reconcile loop inside the Guest Controller Manager — not a standalone operator) sees the pod-template hash changed and creates a new ReplicaSet; the ReplicaSet controller then rolls that new ReplicaSet out, bringing its replicas up while retiring the old ones per the rollout strategy."
       },
       {
         "step": 6,

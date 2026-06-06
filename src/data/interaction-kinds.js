@@ -97,6 +97,9 @@ const VERB_KIND = {
   applies: 'outbound', apply: 'outbound',
   pushes: 'outbound', push: 'outbound',
   injects: 'outbound', inject: 'outbound',
+  // registering yourself with an API server / kubelet is an outbound announcement,
+  // not the creation of a new object
+  registers: 'outbound', register: 'outbound',
 
   // create — brings a new object/process into existence (vs. manage, which is
   // upkeep of something that already exists)
@@ -107,7 +110,6 @@ const VERB_KIND = {
   scales: 'create', scaling: 'create', scale: 'create',
   starts: 'create', start: 'create', started: 'create',
   authored: 'create', authors: 'create', author: 'create',
-  registers: 'create', register: 'create', registered: 'create',
   owns: 'create', own: 'create', owned: 'create',
   renders: 'create', render: 'create', rendered: 'create',
   realises: 'create', realise: 'create', realised: 'create',
@@ -149,6 +151,25 @@ function leadingVerb(text) {
   return m ? m[1] : ''
 }
 
+// A sentence that opens with a past participle and names its agent with "by"
+// ("Authored by the admin…", "Created and reconciled by the CCM…", "Deployed …
+// by the Control Plane Operator") is passive: this component is the *object*
+// being acted upon, so it reads as an inbound relationship — not as the thing
+// doing the creating/deploying. Without this, "Created by X" would borrow the
+// active Creates glyph and point the arrow the wrong way.
+function isPassiveByAgent(text) {
+  return /^[A-Za-z-]+ed\b[^.;:]*\bby\b/.test(text.trim())
+}
+
+// "Runs as a Pod / Runs in the HCP namespace / Runs control-plane-side …" states
+// where and how a component runs — a placement/identity fact, not an act of
+// creation. Only "Runs the <…> controller/loop" is an active create. Everything
+// else under "Runs" falls through to the neutral note rather than the Creates
+// spark, which otherwise lit up ~30 descriptive rows.
+function isPlacementRuns(verbLower, text) {
+  return (verbLower === 'runs' || verbLower === 'run') && !/^runs?\s+the\b/i.test(text.trim())
+}
+
 // Classify an interaction string. Returns { kind, kindMeta, verb, rest } where
 // `verb` is the emphasised lead-in word and `rest` is the remainder. When the
 // verb is unknown we fall back to `note` and DON'T split off a verb (the whole
@@ -156,11 +177,21 @@ function leadingVerb(text) {
 // read naturally instead of bolding an arbitrary first word.
 export function classifyInteraction(text) {
   const verb = leadingVerb(text)
-  const kind = VERB_KIND[verb.toLowerCase()] || 'note'
+  const verbLower = verb.toLowerCase()
+  let kind = VERB_KIND[verbLower] || 'note'
+
+  // Passive "…ed by <agent>" — this component is acted upon, so it reads inbound
+  // regardless of the participle's own (active) mapping.
+  if (isPassiveByAgent(text)) kind = 'inbound'
+  // "Runs as / in / control-plane-side …" is placement, not creation.
+  else if (isPlacementRuns(verbLower, text)) kind = 'note'
+
   const kindMeta = INTERACTION_KINDS[kind]
   if (kind === 'note') {
     return { kind, kindMeta, verb: '', rest: text.trim() }
   }
+  // When we re-classed a passive participle as inbound, keep the participle as
+  // the emphasised lead-in ("Created", "Deployed") and split off the remainder.
   const rest = text.trim().slice(verb.length).replace(/^\s+/, '')
   return { kind, kindMeta, verb, rest }
 }

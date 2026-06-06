@@ -846,7 +846,7 @@
     "linuxPrimitive": "oauth-server binary",
     "problemSolved": "Issues the tokens that authenticate users to the guest cluster.",
     "interactions": [
-      "Validates identity provider credentials and issues OAuth tokens.",
+      "Issues OAuth tokens to users after validating their identity-provider credentials.",
       "Integrates with the Guest API Server for RBAC enforcement.",
       "Persists OAuth access/authorize tokens as objects in the guest cluster's own etcd (the guest Etcd StatefulSet), not the management cluster's etcd.",
       "Runs as a Pod in the management cluster, isolated from the guest node infrastructure."
