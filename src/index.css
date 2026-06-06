@@ -1294,7 +1294,10 @@ body::after {
   bottom: max(16px, env(safe-area-inset-bottom));
   width: calc(100% - 24px);
   max-width: 720px;
-  max-height: 52vh;
+  /* Grip-resizable (height set inline by useDockPanel, default ≈ a third of the
+     viewport); the narration takes the slack and the timeline stays pinned. */
+  min-height: 150px;
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1305,10 +1308,13 @@ body::after {
   border: 1px solid var(--border-w);
   border-top: 2px solid var(--k-amber);
   border-radius: 12px;
-  padding: 14px 16px 16px;
+  padding: 0 16px 16px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(8px);
 }
+/* The reconciliation navigator's grip sits flush at the top; cancel the column
+   gap beneath it so it hugs the bar. */
+.recon-nav .hop-inspector-grip { margin-bottom: -4px; }
 .recon-nav-bar {
   display: flex;
   align-items: center;
@@ -2463,12 +2469,12 @@ button.object-tag:hover {
   transform: translateX(-50%);
   bottom: max(16px, env(safe-area-inset-bottom));
   width: calc(100% - 24px);
-  max-width: 640px;
-  /* Fixed size so the navigator holds its shape as you step through hops
-     instead of resizing per hop. It's a flex column: the bar and layers stay
-     pinned and the description scrolls within when a hop runs long. */
-  height: 200px;
-  max-height: 50vh;
+  max-width: 680px;
+  /* Height is grip-resizable (set inline by useDockPanel, default ≈ a third of
+     the viewport). It's a flex column: the grip, bar, route and layers stay
+     pinned and the glyph-bullet detail scrolls within when a hop runs long. */
+  min-height: 150px;
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2478,13 +2484,42 @@ button.object-tag:hover {
   border: 1px solid var(--border-w);
   border-top: 2px solid var(--hop-accent, var(--k-cyan));
   border-radius: 12px;
-  padding: 14px 16px 16px;
+  padding: 0 16px 16px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(8px);
 }
+/* While the grip is dragged, height tracks the pointer 1:1 with no transition. */
+.hop-inspector.is-resizing,
+.recon-nav.is-resizing { transition: none; }
+/* The top bar doubles as a resize handle: drag to set the panel height,
+   double-click to reset to the default third-of-screen. Shared by the hop
+   inspectors and the reconciliation navigator. It bleeds over the panel's side
+   padding so the full top edge is a grab target. */
+.hop-inspector-grip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  margin: 0 -16px 2px;
+  cursor: ns-resize;
+  touch-action: none; /* let the pointer drag the grip instead of scrolling */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.hop-inspector-grip-bar {
+  width: 52px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.26);
+  transition: background 0.18s;
+}
+.hop-inspector-grip:hover .hop-inspector-grip-bar,
+.hop-inspector-grip:active .hop-inspector-grip-bar { background: rgba(255, 255, 255, 0.5); }
 .hop-inspector-bar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   flex: 0 0 auto;
 }
@@ -2505,11 +2540,14 @@ button.object-tag:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  flex: 1 1 auto;
-  min-width: 0;
+  gap: 4px 8px;
+  /* Its own full-width row beneath the controls, so long node names wrap freely
+     without squeezing the prev/next/close buttons (the mobile pain point). */
+  flex: 0 0 auto;
+  width: 100%;
+  margin-top: 10px;
   font-family: 'Syne', sans-serif;
-  font-size: 0.82rem;
+  font-size: 0.86rem;
   font-weight: 600;
   color: var(--tx-bright);
 }
@@ -2585,15 +2623,16 @@ button.object-tag:hover {
   letter-spacing: 0.1em;
   color: var(--tx-muted);
 }
-.hop-inspector-desc {
-  margin-top: 8px;
+/* The step detail, as the same glyph + keyword bullets the Packet Flow cards use
+   (one per sentence) rather than a wall of prose. Takes the panel's slack and
+   scrolls within when a hop runs long. */
+.hop-inspector-points {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  font-size: 0.78rem;
-  line-height: 1.55;
-  color: var(--tx-muted);
+  margin-top: 12px;
+  padding-right: 4px;
 }
 /* ── Manifest → Kernel pipeline ─────────────────────────────────────── */
 /* A clean stack of accent bands threaded by a single vertical spine. Each row
