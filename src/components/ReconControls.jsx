@@ -1,18 +1,20 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
+import { useDockPanel } from '../hooks/useDockPanel'
 
 // The reconciliation-loop walkthrough navigator for the systemd Deep Dive.
 // Bottom-docked and fixed to the viewport — exactly like the Overview's
 // HopInspector / the deep-dive trace inspector — so the canvas behind it stays
-// visible while you step the loop. It is armed from the "Scenario" dropdown (or
-// by clicking a PID in the cgroup box); this panel only appears once a scenario
-// is running. Each step is narrated in plain English, shown in a clickable
+// visible while you step the loop. It shares the grip-resizable panel behaviour
+// (defaults to a third of the viewport) via useDockPanel. It is armed from the
+// "Scenario" dropdown (or by clicking a PID in the cgroup box); this panel only
+// appears once a scenario is running. Each step is narrated, shown in a clickable
 // timeline, and lights up the matching edge + boxes on the canvas.
 //
 // Mounted at App root (next to the hop inspectors) so its `position: fixed`
 // anchors to the viewport rather than a transformed swipe pane.
 export default function ReconControls({ loop }) {
   const { armed, scenarioName, steps, index, step, playing, canPrev, canNext, atEnd } = loop
-  const panelRef = useRef(null)
+  const { panelRef, height, resizing, gripProps } = useDockPanel([index])
 
   // Esc resets (disarms), ← / → walk between steps.
   useEffect(() => {
@@ -27,28 +29,23 @@ export default function ReconControls({ loop }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [armed, index])
 
-  // Publish the panel height as --hop-inset so the canvas tail spacer reserves
-  // room to scroll the bottom box clear of this fixed panel (mirrors HopInspector).
-  useEffect(() => {
-    const el = panelRef.current
-    if (!el) return
-    const root = document.documentElement
-    const apply = () => {
-      root.style.setProperty('--hop-inset', `${Math.round(el.offsetHeight) + 24}px`)
-    }
-    apply()
-    const ro = new ResizeObserver(apply)
-    ro.observe(el)
-    return () => {
-      ro.disconnect()
-      root.style.removeProperty('--hop-inset')
-    }
-  }, [armed, index])
-
   if (!armed) return null
 
   return (
-    <div ref={panelRef} className="recon-nav animate-fade-in" data-noswipe>
+    <div
+      ref={panelRef}
+      className={`recon-nav animate-fade-in${resizing ? ' is-resizing' : ''}`}
+      data-noswipe
+      style={{ height: height != null ? `${height}px` : undefined }}
+    >
+      <div
+        className="hop-inspector-grip"
+        role="separator"
+        aria-label="Drag to resize · double-click to reset"
+        {...gripProps}
+      >
+        <span className="hop-inspector-grip-bar" />
+      </div>
       <div className="recon-nav-bar">
         <span className="recon-nav-tag">{step.tag}</span>
         <span className="recon-nav-title">{scenarioName}</span>

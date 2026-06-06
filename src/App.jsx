@@ -450,6 +450,7 @@ export default function App() {
           activeStep={activeStep}
           onSelectStep={selectStep}
           onClose={clearStep}
+          onSelectComponent={selectComponent}
         />
       )}
 
