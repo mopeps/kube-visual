@@ -9,7 +9,17 @@ import { useState, useLayoutEffect, useEffect, useRef } from 'react'
 //   idPrefix: namespaces the SVG <marker>/<filter> ids so two overlays can live
 //             in the DOM at once (the compact swipe pager renders every pane).
 
-export function buildPath(srcEl, tgtEl, canvasEl, edge = false) {
+// Evaluate a cubic bezier at parameter t — lets the step badge ride the actual
+// curve (important once an edge is bowed sideways; for a straight S-curve this
+// returns the plain midpoint, so non-bowed Overview/Deep-Dive edges are unchanged).
+function bezier(t, p0, p1, p2, p3) {
+  const u = 1 - t
+  return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3
+}
+
+// `bow` bows the curve sideways by N px (perpendicular to its dominant axis) so a
+// "road not taken" edge arcs clear of the straight journey spine. 0 = no bow.
+export function buildPath(srcEl, tgtEl, canvasEl, edge = false, bow = 0) {
   const canvasRect = canvasEl.getBoundingClientRect()
   const sr = srcEl.getBoundingClientRect()
   const tr = tgtEl.getBoundingClientRect()
@@ -44,17 +54,21 @@ export function buildPath(srcEl, tgtEl, canvasEl, edge = false) {
   const dy = ty - sy
   let cx1, cy1, cx2, cy2
   if (Math.abs(dy) >= Math.abs(dx)) {
-    cx1 = sx;            cy1 = sy + dy * 0.5
-    cx2 = tx;            cy2 = ty - dy * 0.5
+    cx1 = sx + bow;      cy1 = sy + dy * 0.5
+    cx2 = tx + bow;      cy2 = ty - dy * 0.5
   } else {
-    cx1 = sx + dx * 0.5; cy1 = sy
-    cx2 = tx - dx * 0.5; cy2 = ty
+    cx1 = sx + dx * 0.5; cy1 = sy + bow
+    cx2 = tx - dx * 0.5; cy2 = ty + bow
   }
 
-  const midX = (sx + tx) / 2
-  const midY = (sy + ty) / 2
+  // Ride the actual curve so a bowed edge's badge follows the arc, not the chord.
+  const midX = bezier(0.5, sx, cx1, cx2, tx)
+  const midY = bezier(0.5, sy, cy1, cy2, ty)
 
-  return { d: `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${tx} ${ty}`, midX, midY }
+  // Source point too — a denied edge anchors its ✕/label just below the box it
+  // *departs* (where the refused connect() is attempted), which always sits in
+  // an empty inter-zone gap, so it never collides with a box it bows past.
+  return { d: `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${tx} ${ty}`, midX, midY, sx, sy }
 }
 
 export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep, idPrefix = 'ov', edgeAnchor = false }) {
@@ -70,7 +84,16 @@ export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep,
       const srcEl = document.getElementById(s.sourceId)
       const tgtEl = document.getElementById(s.targetId)
       if (!srcEl || !tgtEl) continue
-      newPaths.push({ step: s.step, color: s.color || 'var(--k-cyan)', ...buildPath(srcEl, tgtEl, canvas, edgeAnchor) })
+      newPaths.push({
+        step: s.step,
+        color: s.color || 'var(--k-cyan)',
+        // Carried through for "road not taken" edges (the deep-dive control path):
+        // denied draws the refused styling, label/onClick make the badge a popup link.
+        denied: s.denied,
+        label: s.label,
+        onClick: s.onClick,
+        ...buildPath(srcEl, tgtEl, canvas, edgeAnchor, s.bow || 0),
+      })
     }
     setPaths(newPaths)
   }
@@ -115,6 +138,7 @@ export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep,
 
   const markerId = (step) => `arrow-${idPrefix}-${step}`
   const glowId = `arrow-glow-${idPrefix}`
+  const blockedId = `arrow-blocked-${idPrefix}`
 
   return (
     <svg
@@ -150,43 +174,60 @@ export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep,
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
+        {/* The denied edge ends in a ⊘ (circle-slash) cap instead of an arrowhead,
+            so it reads as "blocked before arrival", never "delivered". */}
+        <marker id={blockedId} markerWidth="13" markerHeight="13" refX="6.5" refY="6.5" orient="auto">
+          <circle cx="6.5" cy="6.5" r="5" fill="var(--bg-2)" stroke="var(--packet)" strokeWidth="1.4" />
+          <path d="M3.3,3.3 L9.7,9.7" stroke="var(--packet)" strokeWidth="1.4" />
+        </marker>
       </defs>
 
       {paths.map(p => {
         const isSelected = activeStep === p.step
         // When a hop is selected, fade the others so the chosen one stands out.
         const dimmed = activeStep != null && !isSelected
+        // The badge opens whatever the step wants: a denied edge points at a box
+        // popup (its own onClick); a normal hop inspects itself via onSelectStep.
+        const badgeClick = p.onClick || (onSelectStep ? () => onSelectStep(p.step) : undefined)
+        // Denied edge: park the badge in the gap just below the source box; a
+        // normal hop badge rides the curve midpoint.
+        const bx = p.denied ? p.sx + 44 : p.midX
+        const by = p.denied ? p.sy + 21 : p.midY
         return (
           <g key={p.step} opacity={dimmed ? 0.28 : 1} style={{ transition: 'opacity 0.2s' }}>
-            {/* glow layer */}
-            <path
-              d={p.d}
-              fill="none"
-              stroke={p.color}
-              strokeWidth={isSelected ? 6 : 4}
-              strokeOpacity={isSelected ? 0.32 : 0.18}
-              filter={`url(#${glowId})`}
-            />
+            {/* glow layer — skipped for the denied edge so it reads as a thin,
+                refused dashed line rather than a lit-up part of the flow. */}
+            {!p.denied && (
+              <path
+                d={p.d}
+                fill="none"
+                stroke={p.color}
+                strokeWidth={isSelected ? 6 : 4}
+                strokeOpacity={isSelected ? 0.32 : 0.18}
+                filter={`url(#${glowId})`}
+              />
+            )}
             {/* main connector */}
             <path
               d={p.d}
               fill="none"
               stroke={p.color}
-              strokeWidth={isSelected ? 2.4 : 1.5}
-              strokeOpacity={isSelected ? 1 : 0.75}
-              strokeDasharray="6 3"
-              markerEnd={`url(#${markerId(p.step)})`}
+              strokeWidth={p.denied ? 1.4 : isSelected ? 2.4 : 1.5}
+              strokeOpacity={p.denied ? 0.85 : isSelected ? 1 : 0.75}
+              strokeDasharray={p.denied ? '4 4' : '6 3'}
+              markerEnd={p.denied ? `url(#${blockedId})` : `url(#${markerId(p.step)})`}
             />
-            {/* step badge — clickable to inspect this hop */}
+            {/* badge — a numbered step, or a ✕ for the denied edge (with a short
+                label so the refused route is legible without opening the popup). */}
             <g
-              style={{ cursor: onSelectStep ? 'pointer' : 'default', pointerEvents: 'auto' }}
-              onClick={onSelectStep ? () => onSelectStep(p.step) : undefined}
+              style={{ cursor: badgeClick ? 'pointer' : 'default', pointerEvents: 'auto' }}
+              onClick={badgeClick}
             >
               {/* enlarged transparent hit target for easier tapping on mobile */}
-              <circle cx={p.midX} cy={p.midY} r="16" fill="transparent" />
+              <circle cx={bx} cy={by} r="16" fill="transparent" />
               <circle
-                cx={p.midX}
-                cy={p.midY}
+                cx={bx}
+                cy={by}
                 r={isSelected ? 13 : 11}
                 fill="var(--bg-2)"
                 stroke={p.color}
@@ -194,17 +235,35 @@ export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep,
                 strokeOpacity={isSelected ? 1 : 0.8}
               />
               <text
-                x={p.midX}
-                y={p.midY}
+                x={bx}
+                y={by}
                 textAnchor="middle"
                 dominantBaseline="central"
-                fontSize="9"
+                fontSize={p.denied ? 11 : 9}
                 fontWeight="700"
                 fill={p.color}
                 style={{ fontFamily: 'var(--font-mono, monospace)' }}
               >
-                {p.step}
+                {p.denied ? '✕' : p.step}
               </text>
+              {p.denied && p.label && p.label.split('\n').map((ln, i) => (
+                <text
+                  key={i}
+                  x={bx + 16}
+                  y={by + 1 + i * 12}
+                  textAnchor="start"
+                  dominantBaseline="central"
+                  fontSize="8.5"
+                  fontWeight="600"
+                  fill={p.color}
+                  style={{
+                    fontFamily: 'var(--font-mono, monospace)',
+                    paintOrder: 'stroke', stroke: 'var(--bg)', strokeWidth: 3, strokeLinejoin: 'round',
+                  }}
+                >
+                  {ln}
+                </text>
+              ))}
             </g>
           </g>
         )
