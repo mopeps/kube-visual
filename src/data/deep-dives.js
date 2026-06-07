@@ -2041,6 +2041,9 @@ esac`,
       label: '2 · Two ways to ask for the rename · take the left, not the right',
       colorVar: 'k-orange',
       dashed: true,
+      // The two boxes are competing alternatives (data path vs control path), not
+      // a sequence — keep them side by side as parallel columns at every width.
+      parallel: true,
       boxes: [
         {
           id: 'tx-data',
