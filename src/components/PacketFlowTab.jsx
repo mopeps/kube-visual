@@ -30,10 +30,12 @@ function RouteNode({ component, fallbackId }) {
 // The source → target route line, each node fronted by its boxed type glyph (the
 // same backbone glyphs the Object Map and Hop Inspector use). When `onJump` is
 // set the whole route is a button that reveals the target on the overview canvas.
-function HopRoute({ step, source, target, color, onJump }) {
+function HopRoute({ step, source, target, color, sourceColor, onJump }) {
   const inner = (
     <>
-      <RouteNode component={source} fallbackId={step.sourceComponentId} />
+      <span style={{ color: sourceColor }}>
+        <RouteNode component={source} fallbackId={step.sourceComponentId} />
+      </span>
       <span className="hop-route-arrow" aria-hidden>→</span>
       <span style={{ color }}>
         <RouteNode component={target} fallbackId={step.targetComponentId} />
@@ -65,6 +67,7 @@ function Hop({ step, isOpen, isSelected, onToggle, onJump, onSelectComponent }) 
   const target = findComponent(step.targetComponentId)
   const source = findComponent(step.sourceComponentId)
   const color = COMPONENT_COLOR[step.targetComponentId] || 'var(--k-cyan)'
+  const sourceColor = COMPONENT_COLOR[step.sourceComponentId] || 'var(--k-cyan)'
   const points = hopPoints(step.description)
   const hasCommands = target?.explorationCommands?.length > 0
 
@@ -77,7 +80,7 @@ function Hop({ step, isOpen, isSelected, onToggle, onJump, onSelectComponent }) 
     >
       <div className="hop-card-head">
         <span className="hop-step">{step.step}</span>
-        <HopRoute step={step} source={source} target={target} color={color} onJump={onJump} />
+        <HopRoute step={step} source={source} target={target} color={color} sourceColor={sourceColor} onJump={onJump} />
         {hasCommands && (
           <span className={`hop-card-chevron ${isOpen ? 'is-open' : ''}`} aria-hidden>⌄</span>
         )}
