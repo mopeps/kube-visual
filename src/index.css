@@ -1268,6 +1268,17 @@ body::after {
     flex: 1 1 100%;
     max-width: 100%;
   }
+
+  /* Parallel-path zones keep their boxes as side-by-side columns even on the
+     narrowest screens — the whole point is that the paths run in parallel, so
+     they must read as columns racing each other, never as a vertical sequence.
+     min-width:0 lets the columns shrink below the resting 150px so two always
+     fit the row instead of wrapping back into a stack; badges wrap inside. */
+  .deep-dive-canvas .zone--parallel .node {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+    max-width: calc(50% - 4px);
+  }
 }
 
 /* Two distinct dependency dimensions: a hard structural Requires= (solid, with
