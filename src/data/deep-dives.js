@@ -1900,8 +1900,9 @@ const HCP_INSTALL = {
 // inherited across fork/setuid/execve (allowed).
 //
 // Laid out as ONE clear top-to-bottom journey (oracle's shell → your terminal).
-// Zones are real environments ONLY — the shell, the pane's pty, the tmux server,
-// the SSH hop back out, your terminal. The "data path vs control path" split is
+// Zones are real environments ONLY — the shell; the host's nested terminal stack
+// (the two ptys with tmux bridging between them — inner pty → tmux → outer pty);
+// the SSH hop back out; your terminal. The "data path vs control path" split is
 // modelled as EDGES, not a zone: the data path is the journey's first hop
 // (shell → pty, allowed); the control path is a refused edge (shell → tmux's
 // control socket, denied) drawn dashed-red alongside it. Two "zoom-in" sections
@@ -2047,7 +2048,7 @@ esac`,
     },
     {
       id: 'tx-z-pty',
-      label: '2 · The pane’s pty · remote host (/dev/pts/7)',
+      label: '2 · Remote host · the nested terminal stack (inner pty → tmux → outer pty)',
       colorVar: 'k-teal',
       boxes: [
         {
@@ -2101,18 +2102,11 @@ esac`,
             ],
           },
         },
-      ],
-    },
-    {
-      id: 'tx-z-tmux',
-      label: '3 · tmux server · remote host',
-      colorVar: 'k-teal',
-      boxes: [
         {
           id: 'tx-tmux',
           title: 'tmux server',
-          typePrefix: 'READS THE PTY',
-          subtitle: 'consumes \\033k… · sets name · renders its screen',
+          typePrefix: 'THE BRIDGE',
+          subtitle: 'reads the inner pty · consumes \\033k… · renders onto the outer pty',
           badges: [
             { label: 'parser here', kind: 'concept' },
             { label: 'control path · denied', kind: 'static' },
@@ -2120,7 +2114,7 @@ esac`,
           detail: {
             role: 'THE CONSUMER',
             summary:
-              'The long-lived server holds the master end of oracle’s pty. Its parser interprets the rename sequence, sets the window name, then renders its whole screen (status bar + panes) as a brand-new stream of its own escape sequences — which is what flows onward. The raw \\033k… stops here. It also owns the control socket the CONTROL path tries — and fails — to reach.',
+              'The long-lived server bridges the two ptys: it holds the master end of oracle’s inner pty (/dev/pts/7) and renders onto its own outer pty (/dev/pts/3). Its parser interprets the rename sequence, sets the window name, then renders its whole screen (status bar + panes) as a brand-new stream of its own escape sequences — which is what flows onward. The raw \\033k… stops here. It also owns the control socket the CONTROL path tries — and fails — to reach.',
             sections: [
               {
                 heading: 'The control path is refused — why',
@@ -2175,13 +2169,6 @@ esac`,
             ],
           },
         },
-      ],
-    },
-    {
-      id: 'tx-z-ssh',
-      label: '4 · Back out over SSH · remote host → your laptop',
-      colorVar: 'k-cyan',
-      boxes: [
         {
           id: 'tx-pts3',
           title: '/dev/pts/3 · pty slave',
@@ -2190,7 +2177,7 @@ esac`,
           detail: {
             role: 'OUTER PTY · SLAVE',
             summary:
-              'The second pty, nested around the first. tmux’s stdout is /dev/pts/3 — the slave sshd handed your login shell when you connected. So on one remote host two ptys are stacked.',
+              'The second pty, nested around the first. tmux’s stdout is /dev/pts/3 — the slave sshd handed your login shell when you connected. So on one remote host two ptys are stacked, with tmux bridging them: it reads the inner pty and renders onto this outer one.',
             sections: [
               {
                 heading: 'The nesting, stated plainly',
@@ -2203,6 +2190,13 @@ esac`,
             ],
           },
         },
+      ],
+    },
+    {
+      id: 'tx-z-ssh',
+      label: '3 · Back out over SSH · remote host → your laptop',
+      colorVar: 'k-cyan',
+      boxes: [
         {
           id: 'tx-sshd',
           title: 'sshd',
@@ -2270,7 +2264,7 @@ esac`,
     },
     {
       id: 'tx-z-term',
-      label: '5 · Your terminal · local laptop',
+      label: '4 · Your terminal · local laptop',
       colorVar: 'k-blue',
       boxes: [
         {
