@@ -157,7 +157,6 @@ export default function DeepDiveCanvas({
       label={zone.label}
       color={accentOf(zone, topic)}
       dashed={zone.dashed}
-      parallel={zone.parallel}
       depth={depth}
     >
       {zone.boxes?.map((box) => renderBox(box, zone))}
@@ -186,6 +185,7 @@ export default function DeepDiveCanvas({
             canvasRef={stackRef}
             activeStep={activeFlowStep}
             onSelectStep={onSelectFlowStep}
+            onSelectBox={onSelectBox}
             colorOf={colorOf}
           />
         )}

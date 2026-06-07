@@ -2,11 +2,6 @@ export default function Zone({
   label,
   color,
   dashed = false,
-  // When true, the zone's boxes stay laid out as side-by-side columns at every
-  // width (they do NOT collapse into a vertical stack on mobile). Used for
-  // "parallel path" zones where the point is that the boxes are alternatives
-  // racing in parallel — stacking them would read as sequence, not choice.
-  parallel = false,
   depth = 0,
   children,
   // When a zone doubles as a component (e.g. the VM), these wire its label up
@@ -28,7 +23,7 @@ export default function Zone({
 
   return (
     <div
-      className={`zone ${dashed ? 'zone--dashed' : ''} ${depth > 0 ? 'zone--nested' : ''} ${parallel ? 'zone--parallel' : ''}`}
+      className={`zone ${dashed ? 'zone--dashed' : ''} ${depth > 0 ? 'zone--nested' : ''}`}
       style={{
         background: fill,
         '--zone-depth': depth,
