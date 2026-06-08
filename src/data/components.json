@@ -1971,6 +1971,11 @@
     },
     "consumedResources": [
       {
+        "apiObject": "[ContainerRootFS] writable layer · default, no volume needed",
+        "linuxPrimitive": "[overlayfs]",
+        "hostPath": "/var/lib/containers/storage/overlay/<id>/merged"
+      },
+      {
         "apiObject": "[Secret] frontend-tls-certs",
         "linuxPrimitive": "[tmpfs]",
         "hostPath": ".../volumes/kubernetes.io~secret/"
@@ -2073,6 +2078,11 @@
       "podName": "backend-6d8a2f-q7p4m"
     },
     "consumedResources": [
+      {
+        "apiObject": "[ContainerRootFS] writable layer · default, no volume needed",
+        "linuxPrimitive": "[overlayfs]",
+        "hostPath": "/var/lib/containers/storage/overlay/<id>/merged"
+      },
       {
         "apiObject": "[Secret] backend-db-credentials",
         "linuxPrimitive": "[tmpfs]",
