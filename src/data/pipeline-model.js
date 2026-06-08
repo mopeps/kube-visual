@@ -20,6 +20,7 @@ const PURPLE = 'var(--k-purple)'
 function primitiveNote(p) {
   if (/overlayfs/i.test(p)) return 'overlayfs container rootfs · image layers + writable upperdir'
   if (/tmpfs/i.test(p)) return 'tmpfs RAM-disk mount · volatile'
+  if (/node disk/i.test(p)) return 'node-disk directory bind-mounted in · cleared on Pod delete'
   if (/kernel mount/i.test(p)) return 'XFS/Ext4 block-device mount'
   return 'host-backed mount'
 }
