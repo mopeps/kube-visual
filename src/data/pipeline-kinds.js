@@ -40,6 +40,7 @@ export const PIPELINE_ACTIONS = {
 const RULES = [
   [/PersistentVolumeClaim|PersistentVolume\b/i, 'mount'],
   [/ConfigMap|Secret|Projected|DownwardAPI|EmptyDir/i, 'mount'],
+  [/ContainerRootFS|overlayfs/i, 'mount'],
   [/tmpfs|kernel mount/i, 'mount'],
   [/EndpointSlice/i, 'route'],
   [/ClusterIP|MetalLB|L2 VIP|router-default LB|LoadBalancer|vhost/i, 'route'],
