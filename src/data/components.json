@@ -1996,9 +1996,9 @@
         "hostPath": ".../volumes/kubernetes.io~downward-api/"
       },
       {
-        "apiObject": "[EmptyDir] cache-scratch (medium: Memory)",
-        "linuxPrimitive": "[tmpfs]",
-        "hostPath": ".../volumes/kubernetes.io~empty-dir/"
+        "apiObject": "[EmptyDir] cache-scratch (default medium)",
+        "linuxPrimitive": "[node disk]",
+        "hostPath": "/var/lib/kubelet/pods/<uid>/volumes/kubernetes.io~empty-dir/"
       },
       {
         "apiObject": "[PersistentVolumeClaim] pvc-frontend-assets",
@@ -2104,9 +2104,9 @@
         "hostPath": ".../volumes/kubernetes.io~downward-api/"
       },
       {
-        "apiObject": "[EmptyDir] tmp-uploads (medium: Memory)",
-        "linuxPrimitive": "[tmpfs]",
-        "hostPath": ".../volumes/kubernetes.io~empty-dir/"
+        "apiObject": "[EmptyDir] tmp-uploads (default medium)",
+        "linuxPrimitive": "[node disk]",
+        "hostPath": "/var/lib/kubelet/pods/<uid>/volumes/kubernetes.io~empty-dir/"
       },
       {
         "apiObject": "[PersistentVolumeClaim] pvc-backend-data",
