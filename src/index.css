@@ -523,6 +523,73 @@ body::after {
   color: var(--tx-dim);
 }
 
+/* ── Deep-dive reveal-in-place card ───────────────────────────────────
+   The tmux deep dive's two former "Zoom-in" zones now reveal inside the box
+   they describe (the tmux parser FSM inside the tmux box; the sudo fd
+   inheritance inside oracle's bash), mirroring the etcd intent store. Reuses
+   the .intent-store-expanded shell; the sub-steps are an ordered sequence
+   (numbered, arrow-linked) rather than the intent store's unordered records. */
+.dd-reveal .dd-reveal-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.dd-reveal-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+.dd-reveal-arrow {
+  align-self: center;
+  color: var(--tx-dim);
+  font-size: 0.9rem;
+  line-height: 1;
+}
+/* Each step reuses the .intent-object look but stacks its label + subtitle and
+   carries an ordinal badge, so the sequence reads 1 → 2 → 3 → 4. */
+.dd-reveal-step {
+  position: relative;
+  flex: 1 1 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-style: solid;
+}
+.dd-reveal-step-num {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #000;
+  background: var(--node-accent, var(--k-cyan));
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.dd-reveal-step .node-title { margin-bottom: 0; }
+.dd-reveal-step-sub {
+  font-size: 0.62rem;
+  line-height: 1.45;
+  color: var(--tx-muted);
+}
+@media (max-width: 640px) {
+  /* Stack the steps full-width on mobile; the inline arrows would dangle, so
+     drop them — the ordinal badges still carry the sequence. */
+  .dd-reveal-step { flex-basis: 100%; }
+  .dd-reveal-arrow { display: none; }
+}
+
 /* ── Controller-manager controller set ────────────────────────────────
    Reuses the etcd intent-store layout above (.intent-store*, .intent-object) —
    both are expandable "store" cards. Controllers are active reconcile loops,

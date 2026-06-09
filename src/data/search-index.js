@@ -66,24 +66,28 @@ for (const topic of DEEP_DIVES) {
     hay: lc([topic.title, topic.topicId, topic.tagline]),
   })
 
+  const pushBox = (box) => {
+    boxRecords.push({
+      kind: 'box',
+      id: box.id,
+      topicId: topic.topicId,
+      title: box.title,
+      subtitle: `${box.typePrefix ? `[${box.typePrefix}] · ` : ''}in ${topic.title}`,
+      hay: lc([
+        box.title,
+        box.subtitle,
+        box.typePrefix,
+        box.detail?.role,
+        box.detail?.summary,
+      ]),
+    })
+    // Reveal-in-place sub-steps are real boxes too (their own detail popup) —
+    // index them so a search can deep-link straight to one.
+    box.reveal?.boxes?.forEach(pushBox)
+  }
   const walk = (zones) => {
     for (const zone of zones || []) {
-      for (const box of zone.boxes || []) {
-        boxRecords.push({
-          kind: 'box',
-          id: box.id,
-          topicId: topic.topicId,
-          title: box.title,
-          subtitle: `${box.typePrefix ? `[${box.typePrefix}] · ` : ''}in ${topic.title}`,
-          hay: lc([
-            box.title,
-            box.subtitle,
-            box.typePrefix,
-            box.detail?.role,
-            box.detail?.summary,
-          ]),
-        })
-      }
+      for (const box of zone.boxes || []) pushBox(box)
       if (zone.zones) walk(zone.zones)
     }
   }

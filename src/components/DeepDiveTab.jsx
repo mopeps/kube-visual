@@ -246,6 +246,7 @@ export default function DeepDiveTab({
         loop={loop}
         onSelectBox={selectBox}
         onSelectEdge={selectEdge}
+        selectedBoxId={selectedBoxId}
         activeFlow={activeFlow}
         activeFlowStep={activeFlowStep}
         onSelectFlowStep={onSelectFlowStep}

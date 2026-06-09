@@ -24,6 +24,11 @@
 //   box   = {
 //     id, title, typePrefix?, subtitle?,
 //     badges?: [{ label, kind:'requires'|'after'|'stat' }],
+//     // Reveal-in-place: a box can hold an ordered sequence of sub-step boxes
+//     // that expand *inside* it on the canvas (like the etcd intent store),
+//     // instead of living in a separate zone. Each sub-step is itself a full
+//     // box (its own detail popup). Used for the tmux deep dive's two zoom-ins.
+//     reveal?: { hint, caption, boxes: [box] },
 //     detail: {
 //       role?, summary,
 //       // Sections render keyword-first (mirrors the Overview's chip/tag look):
@@ -1905,12 +1910,13 @@ const HCP_INSTALL = {
 // the SSH hop back out; your terminal. The "data path vs control path" split is
 // modelled as EDGES, not a zone: the data path is the journey's first hop
 // (shell → pty, allowed); the control path is a refused edge (shell → tmux's
-// control socket, denied) drawn dashed-red alongside it. Two "zoom-in" sections
-// each stay inside their own zone:
+// control socket, denied) drawn dashed-red alongside it. The two "zoom-ins" are
+// NOT separate zones — they reveal in place *inside the object they describe*
+// (like the etcd intent store), via that box's `reveal`:
 //   · the journey                              → "Follow the rename" flow (spine)
 //   · data path (taken) vs control (refused)   → step 1 + the dashed-red edge
-//   · how tmux reads the byte                  → "Parse the byte" flow (FSM zoom-in)
-//   · how oracle got the handle                → "Inherit the fd" flow (sudo zoom-in)
+//   · how tmux reads the byte (parser FSM)     → revealed inside the tmux box
+//   · how oracle got the handle (sudo -iu)     → revealed inside oracle's bash
 // Factual backbone: docs/tmux-window-naming.md.
 const TMUX_SUDO = {
   topicId: 'tmux-sudo',
@@ -1947,36 +1953,6 @@ const TMUX_SUDO = {
       rejectedEdges: [
         { sourceBoxId: 'tx-bash', targetBoxId: 'tx-tmux',
           label: 'control path\nconnect() → denied', openBoxId: 'tx-tmux' },
-      ],
-    },
-    {
-      flowId: 'tx-parse',
-      flowName: 'Zoom-in · how tmux reads the byte (parser FSM)',
-      description:
-        'What step 3 actually does. A terminal parser is a finite state machine: in ground state every byte is drawn as text; ESC is the one byte that means “a command follows”. Step it through \\033 k o r a c l e \\033 \\\\ and watch it leave ground, collect a name, act on the terminator, and return to ground. This zoom-in stays entirely inside its own zone.',
-      steps: [
-        { step: 1, sourceBoxId: 'tx-ground', targetBoxId: 'tx-escape',
-          description: 'Reads ESC (0x1B). In ground every other byte is drawn as a glyph; ESC is the door into command state, so the machine leaves ground.' },
-        { step: 2, sourceBoxId: 'tx-escape', targetBoxId: 'tx-collect',
-          description: 'Reads “k”. The byte after ESC picks the family: ESC [ = CSI (cursor/colour), ESC ] = OSC (titles), ESC k = the tmux/screen set-name string — so it opens a string and starts collecting.' },
-        { step: 3, sourceBoxId: 'tx-collect', targetBoxId: 'tx-act',
-          description: 'Reads “o,r,a,c,l,e” then ESC \\\\. While collecting, the letters are buffered as the NAME, not drawn. ESC \\\\ (ST, the string terminator) closes the string.' },
-        { step: 4, sourceBoxId: 'tx-act', targetBoxId: 'tx-ground',
-          description: 'Applies the name (window = oracle) and returns to ground — the next printable byte is an ordinary glyph again.' },
-      ],
-    },
-    {
-      flowId: 'tx-inherit',
-      flowName: 'Zoom-in · how oracle got the handle (sudo -iu)',
-      description:
-        'Why oracle’s write in step 1 is allowed at all. `sudo -iu oracle` does not allocate a new pty — it forks, changes uid, and execs, and the open file descriptors ride along untouched. Permission was checked once, at open() time, by bongo; oracle inherits the result. This zoom-in stays entirely inside its own zone.',
-      steps: [
-        { step: 1, sourceBoxId: 'tx-fork', targetBoxId: 'tx-setuid',
-          description: 'fork() — the child gets a COPY of the fd table, so fd 0/1/2 still point at the same open file description for /dev/pts/7. Nothing is re-opened.' },
-        { step: 2, sourceBoxId: 'tx-setuid', targetBoxId: 'tx-execve',
-          description: 'setuid(1001) — becoming oracle changes credentials only. The fd table is not part of credentials, so the open pts/7 handles are left untouched.' },
-        { step: 3, sourceBoxId: 'tx-execve', targetBoxId: 'tx-fdtable',
-          description: 'execve(/bin/bash) — exec preserves open fds (0/1/2 are not close-on-exec), so oracle’s bash is born already wired to pts/7. A bare write() is all it needs.' },
       ],
     },
   ],
@@ -2040,6 +2016,108 @@ esac`,
                   '# Fire a rename by hand (run inside tmux)\nprintf \'\\033kTEST\\033\\\\\'',
                   '# See ESC rendered as ^[ so the sequence is visible\nprintf \'\\033koracle\\033\\\\\' | cat -v',
                 ],
+              },
+            ],
+          },
+          // Zoom-in revealed in place: how this shell came to hold fd 1 → pts/7.
+          // `sudo -iu` allocates no new pty — fork → setuid → execve carry the
+          // inherited handle across, so a bare write() just works.
+          reveal: {
+            hint: 'how it got fd 1 · sudo -iu',
+            caption:
+              '`sudo -iu oracle` allocates no new pty — it forks, changes uid, and execs, and the open file descriptors ride along untouched. Permission was checked once, at open() time, by bongo; oracle simply inherits the result. Click a step to read it.',
+            boxes: [
+              {
+                id: 'tx-fork',
+                title: 'fork()',
+                typePrefix: 'SYSCALL',
+                subtitle: 'child gets a COPY of the fd table',
+                detail: {
+                  role: 'STEP 1 · FORK',
+                  summary:
+                    'sudo forks the process that will become oracle’s shell. The child inherits a copy of the parent’s fd table, so fd 0/1/2 point at the very same open file description for /dev/pts/7. Nothing is re-opened.',
+                  sections: [
+                    {
+                      heading: 'What an fd actually is',
+                      facts: [
+                        { k: 'fd', v: 'a small integer indexing a per-process table' },
+                        { k: 'entry', v: 'points at a shared kernel “open file description”' },
+                      ],
+                      tags: ['fd = integer + table', 'fork copies the table', 'same pts/7 underneath'],
+                    },
+                  ],
+                },
+              },
+              {
+                id: 'tx-setuid',
+                title: 'setuid(1001)',
+                typePrefix: 'SYSCALL',
+                subtitle: 'become oracle — fd table untouched',
+                detail: {
+                  role: 'STEP 2 · CHANGE UID',
+                  summary:
+                    'sudo changes credentials to oracle (uid 1001). The pivotal non-event: changing uid does not touch the fd table, so the open pts/7 handles stay valid. The kernel never revisits past open() decisions when identity changes.',
+                  sections: [
+                    {
+                      heading: 'The pivotal rule',
+                      states: [
+                        { label: 'checked at open()', tone: 'ok', meaning: 'bongo opened pts/7 and had permission then' },
+                        { label: 'NOT checked at write()', tone: 'ok', meaning: 'oracle inherited the handle — nothing to deny' },
+                      ],
+                      tags: ['uid change ≠ fd change', 'identity at write time is irrelevant'],
+                    },
+                  ],
+                },
+              },
+              {
+                id: 'tx-execve',
+                title: 'execve(/bin/bash)',
+                typePrefix: 'SYSCALL',
+                subtitle: 'fds 0/1/2 survive exec (not close-on-exec)',
+                detail: {
+                  role: 'STEP 3 · EXEC',
+                  summary:
+                    'exec replaces the program image with bash but preserves open fds — 0/1/2 are not close-on-exec, so they cross the exec boundary intact. oracle’s bash starts already wired to pts/7.',
+                  sections: [
+                    {
+                      heading: 'Why the fds survive',
+                      facts: [
+                        { k: 'execve', v: 'overlays a new program but keeps the fd table' },
+                        { k: 'FD_CLOEXEC', v: 'not set on 0/1/2, so they are NOT closed on exec' },
+                      ],
+                      tags: ['exec preserves fds', 'no re-open', 'born wired to pts/7'],
+                    },
+                  ],
+                },
+              },
+              {
+                id: 'tx-fdtable',
+                title: 'fd 1 → /dev/pts/7',
+                typePrefix: 'FD',
+                subtitle: 'the inherited handle · the whole reason data works',
+                badges: [{ label: 'no write-time check', kind: 'concept' }],
+                detail: {
+                  role: 'THE INHERITED HANDLE',
+                  summary:
+                    'After fork → setuid → execve, oracle’s bash holds fd 1 pointing at the open file description bongo opened for /dev/pts/7. Writing it is an ordinary write to a borrowed handle — no escalation, no re-opening, no fresh check. That is exactly why the data path works where control can’t.',
+                  sections: [
+                    {
+                      heading: 'Inherited handle vs fresh connection',
+                      states: [
+                        { label: 'pty write', tone: 'ok', meaning: 'inherited fd → no new open() → no check → ALLOWED' },
+                        { label: 'socket connect', tone: 'bad', meaning: 'fresh connect() → new open → checked → DENIED for oracle' },
+                      ],
+                      tags: ['inherited = allowed', 'fresh = checked', 'this is the trick'],
+                    },
+                    {
+                      heading: 'See it directly',
+                      commands: [
+                        '# Before and after sudo -iu oracle: fds 0/1/2 symlink to the SAME pts\nls -l /proc/$$/fd',
+                        '# Robust fix so the $TMUX check survives sudo (edit only with visudo)\n# /etc/sudoers.d/tmux:\nDefaults env_keep += "TMUX TMUX_PANE"',
+                      ],
+                    },
+                  ],
+                },
               },
             ],
           },
@@ -2155,7 +2233,7 @@ esac`,
               {
                 heading: 'See also',
                 facts: [
-                  { k: 'How this parse works', v: 'the “Parse the byte” zoom-in below (ground → escape → collecting → act)' },
+                  { k: 'How this parse works', v: 'revealed inside this box — open it to step the FSM (ground → escape → collecting → act)' },
                 ],
               },
               {
@@ -2165,6 +2243,127 @@ esac`,
                   '# The control socket the DATA path deliberately avoids\nls -la /tmp/tmux-$(id -u)/',
                   '# As oracle, pointed at bongo’s socket → the CONTROL path is denied\ntmux rename-window oracle',
                 ],
+              },
+            ],
+          },
+          // Zoom-in revealed in place: how tmux’s parser reads the rename byte.
+          // A terminal parser is a finite state machine — these are its states,
+          // stepped through \033 k o r a c l e \033 \\ (step 3 of the journey).
+          reveal: {
+            hint: 'parser FSM · how it reads the byte',
+            caption:
+              'A terminal parser is a finite state machine: in ground state every byte is drawn as text; ESC is the one byte that means “a command follows”. Step through \\033 k o r a c l e \\033 \\\\ — leave ground, collect a name, act on the terminator, return to ground. Click a state to read it.',
+            boxes: [
+              {
+                id: 'tx-ground',
+                title: 'GROUND',
+                typePrefix: 'STATE',
+                subtitle: 'printable bytes → drawn as glyphs',
+                detail: {
+                  role: 'STATE · GROUND',
+                  summary:
+                    'The resting state. Every byte read here is an ordinary character to draw. Visible text is just the parser sitting in ground. One byte breaks the spell: ESC (0x1B), the toggle into command state.',
+                  sections: [
+                    {
+                      heading: 'The one idea behind terminal control',
+                      states: [
+                        { label: 'ground', tone: 'idle', meaning: 'printable bytes are drawn as glyphs' },
+                      ],
+                      tags: ['one byte stream', 'no separate control channel', 'ESC = the door'],
+                    },
+                    {
+                      heading: 'Why catting a binary garbles the screen',
+                      bullets: [
+                        'Reads random bytes as if they were commands — tripping the parser out of ground.',
+                      ],
+                    },
+                  ],
+                },
+              },
+              {
+                id: 'tx-escape',
+                title: 'ESCAPE',
+                typePrefix: 'STATE',
+                subtitle: 'saw ESC — next byte selects the family',
+                detail: {
+                  role: 'STATE · ESCAPE',
+                  summary:
+                    'The parser saw ESC and waits for the next byte, which decides the kind of sequence. The moment to untangle “escape sequence” from “control sequence”: a control sequence (CSI) is one family of escape sequence, not a synonym.',
+                  sections: [
+                    {
+                      heading: 'The byte after ESC picks a family',
+                      facts: [
+                        { k: 'ESC [', v: 'CSI — cursor, colour, clear (e.g. ESC[31m = red). The “control sequence”.' },
+                        { k: 'ESC ]', v: 'OSC — window titles, clipboard, hyperlinks.' },
+                        { k: 'ESC k', v: 'a tmux/screen string: “set this window’s name”. The one used here.' },
+                        { k: 'ESC \\\\', v: 'ST — the string terminator, a short two-byte form.' },
+                      ],
+                      tags: ['CSI ⊂ escape sequences', 'not a synonym', 'ESC k = tmux/screen'],
+                    },
+                    {
+                      heading: 'Escape vs control sequence',
+                      states: [
+                        { label: 'escape sequence', tone: 'busy', meaning: 'anything starting with ESC — the whole family' },
+                        { label: 'control sequence (CSI)', tone: 'busy', meaning: 'only the ESC [ … subset; ESC k is NOT one' },
+                      ],
+                    },
+                  ],
+                },
+              },
+              {
+                id: 'tx-collect',
+                title: 'COLLECTING',
+                typePrefix: 'STATE',
+                subtitle: 'ESC k opened a string — accumulate the name',
+                detail: {
+                  role: 'STATE · COLLECTING THE STRING',
+                  summary:
+                    'ESC k opened a string, so the parser accumulates bytes into a name buffer instead of drawing them. It stays here until the terminator — which is why both delimiters exist: ESC k opens, ESC \\\\ closes.',
+                  sections: [
+                    {
+                      heading: 'Same bytes, different meaning',
+                      states: [
+                        { label: 'in GROUND', tone: 'idle', meaning: '“oracle” would be six glyphs drawn on screen' },
+                        { label: 'in COLLECTING', tone: 'busy', meaning: 'the identical bytes are the NAME — buffered, not drawn' },
+                      ],
+                      tags: ['state decides meaning', 'buffer, don’t draw', 'awaiting ST'],
+                    },
+                    {
+                      heading: 'Why two delimiters',
+                      facts: [
+                        { k: 'ESC k', v: 'marks the start of the name' },
+                        { k: 'ESC \\\\ (ST)', v: 'marks the end — without it the parser couldn’t tell where the name stops' },
+                      ],
+                    },
+                  ],
+                },
+              },
+              {
+                id: 'tx-act',
+                title: 'ACT · set window name',
+                typePrefix: 'ACTION',
+                subtitle: 'ESC \\\\ terminates → apply “oracle” → back to ground',
+                detail: {
+                  role: 'ACTION · COMMIT',
+                  summary:
+                    'The terminator arrives, the string is complete, the parser acts: window name = “oracle”. That is the difference between an escape sequence (control — it changed state) and printable content (merely drawn). Then it returns to ground.',
+                  sections: [
+                    {
+                      heading: 'Control vs content, made concrete',
+                      states: [
+                        { label: 'escape sequence', tone: 'ok', meaning: 'ESC k oracle ESC \\\\ → an action: rename the window' },
+                        { label: 'printable content', tone: 'idle', meaning: 'the bytes “oracle” in ground → six drawn glyphs' },
+                      ],
+                      tags: ['acted, not drawn', 'then → GROUND'],
+                    },
+                    {
+                      heading: 'Watch a real parser',
+                      commands: [
+                        '# Render ESC as ^[ so you can see the control bytes\nprintf \'\\033koracle\\033\\\\\' | cat -v   # ^[koracle^[\\\\',
+                      ],
+                    },
+                  ],
+                },
               },
             ],
           },
@@ -2291,225 +2490,6 @@ esac`,
         },
       ],
     },
-    {
-      id: 'tx-z-fsm',
-      label: 'Zoom-in · how tmux reads the byte (step 3 · parser FSM)',
-      colorVar: 'k-purple',
-      dashed: true,
-      boxes: [
-        {
-          id: 'tx-ground',
-          title: 'GROUND',
-          typePrefix: 'STATE',
-          subtitle: 'printable bytes → drawn as glyphs',
-          detail: {
-            role: 'STATE · GROUND',
-            summary:
-              'The resting state. Every byte read here is an ordinary character to draw. Visible text is just the parser sitting in ground. One byte breaks the spell: ESC (0x1B), the toggle into command state.',
-            sections: [
-              {
-                heading: 'The one idea behind terminal control',
-                states: [
-                  { label: 'ground', tone: 'idle', meaning: 'printable bytes are drawn as glyphs' },
-                ],
-                tags: ['one byte stream', 'no separate control channel', 'ESC = the door'],
-              },
-              {
-                heading: 'Why catting a binary garbles the screen',
-                bullets: [
-                  'Reads random bytes as if they were commands — tripping the parser out of ground.',
-                ],
-              },
-            ],
-          },
-        },
-        {
-          id: 'tx-escape',
-          title: 'ESCAPE',
-          typePrefix: 'STATE',
-          subtitle: 'saw ESC — next byte selects the family',
-          detail: {
-            role: 'STATE · ESCAPE',
-            summary:
-              'The parser saw ESC and waits for the next byte, which decides the kind of sequence. The moment to untangle “escape sequence” from “control sequence”: a control sequence (CSI) is one family of escape sequence, not a synonym.',
-            sections: [
-              {
-                heading: 'The byte after ESC picks a family',
-                facts: [
-                  { k: 'ESC [', v: 'CSI — cursor, colour, clear (e.g. ESC[31m = red). The “control sequence”.' },
-                  { k: 'ESC ]', v: 'OSC — window titles, clipboard, hyperlinks.' },
-                  { k: 'ESC k', v: 'a tmux/screen string: “set this window’s name”. The one used here.' },
-                  { k: 'ESC \\\\', v: 'ST — the string terminator, a short two-byte form.' },
-                ],
-                tags: ['CSI ⊂ escape sequences', 'not a synonym', 'ESC k = tmux/screen'],
-              },
-              {
-                heading: 'Escape vs control sequence',
-                states: [
-                  { label: 'escape sequence', tone: 'busy', meaning: 'anything starting with ESC — the whole family' },
-                  { label: 'control sequence (CSI)', tone: 'busy', meaning: 'only the ESC [ … subset; ESC k is NOT one' },
-                ],
-              },
-            ],
-          },
-        },
-        {
-          id: 'tx-collect',
-          title: 'COLLECTING',
-          typePrefix: 'STATE',
-          subtitle: 'ESC k opened a string — accumulate the name',
-          detail: {
-            role: 'STATE · COLLECTING THE STRING',
-            summary:
-              'ESC k opened a string, so the parser accumulates bytes into a name buffer instead of drawing them. It stays here until the terminator — which is why both delimiters exist: ESC k opens, ESC \\\\ closes.',
-            sections: [
-              {
-                heading: 'Same bytes, different meaning',
-                states: [
-                  { label: 'in GROUND', tone: 'idle', meaning: '“oracle” would be six glyphs drawn on screen' },
-                  { label: 'in COLLECTING', tone: 'busy', meaning: 'the identical bytes are the NAME — buffered, not drawn' },
-                ],
-                tags: ['state decides meaning', 'buffer, don’t draw', 'awaiting ST'],
-              },
-              {
-                heading: 'Why two delimiters',
-                facts: [
-                  { k: 'ESC k', v: 'marks the start of the name' },
-                  { k: 'ESC \\\\ (ST)', v: 'marks the end — without it the parser couldn’t tell where the name stops' },
-                ],
-              },
-            ],
-          },
-        },
-        {
-          id: 'tx-act',
-          title: 'ACT · set window name',
-          typePrefix: 'ACTION',
-          subtitle: 'ESC \\\\ terminates → apply “oracle” → back to ground',
-          detail: {
-            role: 'ACTION · COMMIT',
-            summary:
-              'The terminator arrives, the string is complete, the parser acts: window name = “oracle”. That is the difference between an escape sequence (control — it changed state) and printable content (merely drawn). Then it returns to ground.',
-            sections: [
-              {
-                heading: 'Control vs content, made concrete',
-                states: [
-                  { label: 'escape sequence', tone: 'ok', meaning: 'ESC k oracle ESC \\\\ → an action: rename the window' },
-                  { label: 'printable content', tone: 'idle', meaning: 'the bytes “oracle” in ground → six drawn glyphs' },
-                ],
-                tags: ['acted, not drawn', 'then → GROUND'],
-              },
-              {
-                heading: 'Watch a real parser',
-                commands: [
-                  '# Render ESC as ^[ so you can see the control bytes\nprintf \'\\033koracle\\033\\\\\' | cat -v   # ^[koracle^[\\\\',
-                ],
-              },
-            ],
-          },
-        },
-      ],
-    },
-    {
-      id: 'tx-z-sudo',
-      label: 'Zoom-in · how oracle got the handle (step 1 · sudo -iu)',
-      colorVar: 'k-sky',
-      dashed: true,
-      boxes: [
-        {
-          id: 'tx-fork',
-          title: 'fork()',
-          typePrefix: 'SYSCALL',
-          subtitle: 'child gets a COPY of the fd table',
-          detail: {
-            role: 'STEP 1 · FORK',
-            summary:
-              'sudo forks the process that will become oracle’s shell. The child inherits a copy of the parent’s fd table, so fd 0/1/2 point at the very same open file description for /dev/pts/7. Nothing is re-opened.',
-            sections: [
-              {
-                heading: 'What an fd actually is',
-                facts: [
-                  { k: 'fd', v: 'a small integer indexing a per-process table' },
-                  { k: 'entry', v: 'points at a shared kernel “open file description”' },
-                ],
-                tags: ['fd = integer + table', 'fork copies the table', 'same pts/7 underneath'],
-              },
-            ],
-          },
-        },
-        {
-          id: 'tx-setuid',
-          title: 'setuid(1001)',
-          typePrefix: 'SYSCALL',
-          subtitle: 'become oracle — fd table untouched',
-          detail: {
-            role: 'STEP 2 · CHANGE UID',
-            summary:
-              'sudo changes credentials to oracle (uid 1001). The pivotal non-event: changing uid does not touch the fd table, so the open pts/7 handles stay valid. The kernel never revisits past open() decisions when identity changes.',
-            sections: [
-              {
-                heading: 'The pivotal rule',
-                states: [
-                  { label: 'checked at open()', tone: 'ok', meaning: 'bongo opened pts/7 and had permission then' },
-                  { label: 'NOT checked at write()', tone: 'ok', meaning: 'oracle inherited the handle — nothing to deny' },
-                ],
-                tags: ['uid change ≠ fd change', 'identity at write time is irrelevant'],
-              },
-            ],
-          },
-        },
-        {
-          id: 'tx-execve',
-          title: 'execve(/bin/bash)',
-          typePrefix: 'SYSCALL',
-          subtitle: 'fds 0/1/2 survive exec (not close-on-exec)',
-          detail: {
-            role: 'STEP 3 · EXEC',
-            summary:
-              'exec replaces the program image with bash but preserves open fds — 0/1/2 are not close-on-exec, so they cross the exec boundary intact. oracle’s bash starts already wired to pts/7.',
-            sections: [
-              {
-                heading: 'Why the fds survive',
-                facts: [
-                  { k: 'execve', v: 'overlays a new program but keeps the fd table' },
-                  { k: 'FD_CLOEXEC', v: 'not set on 0/1/2, so they are NOT closed on exec' },
-                ],
-                tags: ['exec preserves fds', 'no re-open', 'born wired to pts/7'],
-              },
-            ],
-          },
-        },
-        {
-          id: 'tx-fdtable',
-          title: 'fd 1 → /dev/pts/7',
-          typePrefix: 'FD',
-          subtitle: 'the inherited handle · the whole reason data works',
-          badges: [{ label: 'no write-time check', kind: 'concept' }],
-          detail: {
-            role: 'THE INHERITED HANDLE',
-            summary:
-              'After fork → setuid → execve, oracle’s bash holds fd 1 pointing at the open file description bongo opened for /dev/pts/7. Writing it is an ordinary write to a borrowed handle — no escalation, no re-opening, no fresh check. That is exactly why the data path works where control can’t.',
-            sections: [
-              {
-                heading: 'Inherited handle vs fresh connection',
-                states: [
-                  { label: 'pty write', tone: 'ok', meaning: 'inherited fd → no new open() → no check → ALLOWED' },
-                  { label: 'socket connect', tone: 'bad', meaning: 'fresh connect() → new open → checked → DENIED for oracle' },
-                ],
-                tags: ['inherited = allowed', 'fresh = checked', 'this is the trick'],
-              },
-              {
-                heading: 'See it directly',
-                commands: [
-                  '# Before and after sudo -iu oracle: fds 0/1/2 symlink to the SAME pts\nls -l /proc/$$/fd',
-                  '# Robust fix so the $TMUX check survives sudo (edit only with visudo)\n# /etc/sudoers.d/tmux:\nDefaults env_keep += "TMUX TMUX_PANE"',
-                ],
-              },
-            ],
-          },
-        },
-      ],
-    },
   ],
 }
 
@@ -2522,10 +2502,16 @@ export const findDeepDive = (topicId) =>
 // can resolve a clicked box id to its detail + colour without re-walking.
 export function indexTopicBoxes(topic) {
   const out = {}
+  const add = (box, accent, zone, parentId) => {
+    out[box.id] = { box, accent, zone, parentId }
+    // Reveal-in-place sub-steps share their parent's zone accent and resolve
+    // here too, so clicking one opens its detail popup like any other box.
+    box.reveal?.boxes?.forEach((child) => add(child, accent, zone, box.id))
+  }
   const walk = (zones) => {
     for (const zone of zones) {
       const accent = `var(--${zone.colorVar || topic.colorVar || 'k-cyan'})`
-      zone.boxes?.forEach((box) => { out[box.id] = { box, accent, zone } })
+      zone.boxes?.forEach((box) => add(box, accent, zone))
       if (zone.zones) walk(zone.zones)
     }
   }
