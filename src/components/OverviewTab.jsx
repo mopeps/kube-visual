@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { ZONES, INTENT_OBJECT_STORE, CONTROLLER_PARENT, OPERATOR_PARENT } from '../data/zones'
+import { ZONES, INTENT_OBJECT_STORE, CONTROLLER_PARENT, OPERATOR_PARENT, FLOW_PARENT } from '../data/zones'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
 import IntentStoreCard from './IntentStoreCard'
 import ControllerManagerCard from './ControllerManagerCard'
 import OperatorSetCard from './OperatorSetCard'
+import RealizedFlowsCard from './RealizedFlowsCard'
 import ServicePair from './ServicePair'
 import ArrowOverlay from './ArrowOverlay'
 import { scrollIntoUpperThird } from '../lib/scroll'
@@ -56,7 +57,8 @@ export default function OverviewTab({
     const storeId =
       INTENT_OBJECT_STORE[highlightId] ||
       CONTROLLER_PARENT[highlightId] ||
-      OPERATOR_PARENT[highlightId]
+      OPERATOR_PARENT[highlightId] ||
+      FLOW_PARENT[highlightId]
     if (storeId) setExpandedStoreId(storeId)
     // Two frames so the scroll measures the post-expand layout when a store
     // had to open to reveal the target.
@@ -73,6 +75,24 @@ export default function OverviewTab({
       clearTimeout(clear)
     }
   }, [highlightId, onClearHighlight])
+
+  // When an active trace references an object nested inside an expand-in-place
+  // store (an intent CR, a controller loop, an operator Pod, or a realized
+  // flow), expand that store so the hop's arrow endpoint has a DOM node to
+  // anchor to — otherwise ArrowLines silently drops the step. Keyed on the
+  // memoized id set, so it fires only when the active event changes, never
+  // re-expanding after a manual collapse mid-trace.
+  useEffect(() => {
+    if (!activeComponentIds || activeComponentIds.size === 0) return
+    for (const id of activeComponentIds) {
+      const storeId =
+        INTENT_OBJECT_STORE[id] ||
+        CONTROLLER_PARENT[id] ||
+        OPERATOR_PARENT[id] ||
+        FLOW_PARENT[id]
+      if (storeId) { setExpandedStoreId(storeId); break }
+    }
+  }, [activeComponentIds])
 
   // Trace-only zones (e.g. the external Client) stay hidden until an active
   // trace flow actually references a node inside them.
@@ -141,6 +161,25 @@ export default function OverviewTab({
         />
       )
     }
+    // An Open vSwitch node carrying `realizes` renders as the same expand-in-place
+    // card, revealing the Services / NetworkPolicies it realizes as br-int flows.
+    if (node.realizes) {
+      return (
+        <RealizedFlowsCard
+          key={node.id}
+          node={node}
+          color={zone.color}
+          stepNum={stepNums.get(node.id)}
+          isActive={isActive}
+          isDimmed={hasActive && !isActive}
+          isHighlighted={node.id === highlightId}
+          highlightId={highlightId}
+          isExpanded={expandedStoreId === node.id}
+          onToggle={() => setExpandedStoreId(prev => prev === node.id ? null : node.id)}
+          onSelectComponent={onSelectComponent}
+        />
+      )
+    }
     return (
       <NodeCard
         key={node.id}
@@ -157,27 +196,34 @@ export default function OverviewTab({
     )
   }
 
-  // Render a zone's nodes, collapsing each Service that `exposes` an in-zone
-  // target into a single stacked ServicePair (Service on top, target below). A
-  // target only gets absorbed when its Service lives in the same zone; an
-  // orphaned `exposes` (cross-zone target) falls through to normal rendering.
+  // Render a zone's nodes, collapsing a node that points at an in-zone sibling
+  // into a single stacked ServicePair (carrier on top, target below). Two
+  // relations stack this way:
+  //   • `exposes`  — a Service fronts the workload it load-balances
+  //   • `programs` — an OVN-K8s Node configures the Open vSwitch data plane
+  // The target only gets absorbed when its carrier lives in the same zone; an
+  // orphaned reference (cross-zone target) falls through to normal rendering.
   function renderZoneNodes(zone) {
     const nodes = zone.nodes ?? []
     const byId = new Map(nodes.map(n => [n.id, n]))
+    // Either relation references its target by id; the target renders inside the
+    // pair, not standalone.
+    const targetOf = (n) => n.exposes || n.programs
     const pairedTargets = new Set(
-      nodes.filter(n => n.exposes && byId.has(n.exposes)).map(n => n.exposes)
+      nodes.filter(n => targetOf(n) && byId.has(targetOf(n))).map(n => targetOf(n))
     )
     const out = []
     for (const node of nodes) {
-      // The target Pod is rendered inside its Service's pair, not standalone.
       if (pairedTargets.has(node.id)) continue
-      if (node.exposes && byId.has(node.exposes)) {
+      const target = targetOf(node)
+      if (target && byId.has(target)) {
         out.push(
           <ServicePair
             key={node.id}
             color={zone.color}
+            relation={node.programs ? 'programs' : 'exposes'}
             service={renderNode(node, zone)}
-            target={renderNode(byId.get(node.exposes), zone)}
+            target={renderNode(byId.get(target), zone)}
           />
         )
         continue

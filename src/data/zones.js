@@ -66,6 +66,8 @@ export const ZONES = [
             id: 'ovn-node-master',
             title: 'OVN-K8s Node',
             typePrefix: 'Pod',
+            // Stacks above the Open vSwitch it programs (see ServicePair).
+            programs: 'ovs-master',
             badges: [{ label: 'CNI', color: 'var(--k-blue)' }],
           },
           // The management (bare metal) cluster's OWN control plane, run by the
@@ -732,6 +734,8 @@ export const ZONES = [
             id: 'ovn-node-host',
             title: 'OVN-K8s Node',
             typePrefix: 'Pod',
+            // Stacks above the Open vSwitch it programs (see ServicePair).
+            programs: 'ovs-host',
             badges: [{ label: 'CNI', color: 'var(--k-blue-worker)' }],
           },
           {
@@ -796,11 +800,49 @@ export const ZONES = [
                       { label: 'br-int', color: 'var(--k-green)' },
                       { label: 'virtio-net', color: 'var(--k-green)' },
                     ],
+                    // ClusterIP Services and the NetworkPolicy have no datapath of
+                    // their own — OVN-Kubernetes compiles them into load-balancer /
+                    // ACL OpenFlow rules installed on this switch's br-int. They are
+                    // nested here as the flows they're realized as (expand-in-place,
+                    // like the etcd intent store), not as standalone cards.
+                    realizes: [
+                      {
+                        id: 'svc-frontend',
+                        title: 'Front-End Service',
+                        typePrefix: 'Service',
+                        badges: [
+                          { label: 'ClusterIP', color: 'var(--k-green)' },
+                          { label: 'e-commerce-prod', color: 'var(--k-green)' },
+                        ],
+                      },
+                      {
+                        id: 'svc-backend',
+                        title: 'Back-End Service',
+                        typePrefix: 'Service',
+                        badges: [
+                          { label: 'ClusterIP', color: 'var(--k-green)' },
+                          { label: 'e-commerce-prod', color: 'var(--k-green)' },
+                        ],
+                      },
+                      {
+                        id: 'netpol-ecommerce',
+                        title: 'E-Commerce Network Policy',
+                        typePrefix: 'NWPOLICY',
+                        badges: [
+                          { label: 'frontend → backend', color: 'var(--k-green)' },
+                          { label: 'OVN ACL', color: 'var(--k-green)' },
+                        ],
+                      },
+                    ],
                   },
                   {
                     id: 'ovn-node-guest',
                     title: 'OVN-K8s Node',
                     typePrefix: 'Pod',
+                    // Stacks directly above the Open vSwitch it programs (see
+                    // ServicePair): the CNI/ovn-controller is the control plane that
+                    // installs br-int flows on the data-plane switch below.
+                    programs: 'ovs-guest',
                     badges: [{ label: 'CNI', color: 'var(--k-green)' }],
                   },
                   {
@@ -882,6 +924,10 @@ export const ZONES = [
                       { label: 'kubevirt CCM', color: 'var(--k-green)' },
                     ],
                   },
+                  // The e-commerce application Pods. Their ClusterIP Services and
+                  // NetworkPolicy aren't standalone cards here — they live inside
+                  // the Open vSwitch node above, as the br-int flows they're
+                  // realized as (see `ovs-guest.realizes`).
                   {
                     id: 'frontend-application-pod',
                     title: 'Front-End Application',
@@ -891,18 +937,6 @@ export const ZONES = [
                       { label: ':8080', color: 'var(--k-green)' },
                     ],
                   },
-                  // ClusterIP Service giving the front-end Pods a stable in-cluster
-                  // VIP (realized as OVN load-balancer flows / DNAT).
-                  {
-                    id: 'svc-frontend',
-                    title: 'Front-End Service',
-                    typePrefix: 'Service',
-                    exposes: 'frontend-application-pod',
-                    badges: [
-                      { label: 'ClusterIP', color: 'var(--k-green)' },
-                      { label: 'e-commerce-prod', color: 'var(--k-green)' },
-                    ],
-                  },
                   {
                     id: 'backend-application-pod',
                     title: 'Back-End Application',
@@ -910,35 +944,6 @@ export const ZONES = [
                     badges: [
                       { label: 'e-commerce-prod', color: 'var(--k-green)' },
                       { label: ':3000', color: 'var(--k-green)' },
-                    ],
-                  },
-                  // ClusterIP Service the front-end calls east-west to reach the
-                  // back-end Pods (stable VIP backed by OVN load-balancer flows).
-                  {
-                    id: 'svc-backend',
-                    title: 'Back-End Service',
-                    typePrefix: 'Service',
-                    exposes: 'backend-application-pod',
-                    badges: [
-                      { label: 'ClusterIP', color: 'var(--k-green)' },
-                      { label: 'e-commerce-prod', color: 'var(--k-green)' },
-                    ],
-                  },
-                  // Namespaced NetworkPolicy gating east-west traffic in
-                  // e-commerce-prod: it denies ingress to the back-end Pods
-                  // except from the front-end. Like a Service it is a
-                  // declarative object, but it has a concrete data-plane
-                  // realization — OVN compiles it into ACLs / allow-drop
-                  // OpenFlow rules on the guest br-int — so it earns a card on
-                  // the overview next to the applications it guards (per the 4th
-                  // category of the First Overview rendering rule, §1).
-                  {
-                    id: 'netpol-ecommerce',
-                    title: 'E-Commerce Network Policy',
-                    typePrefix: 'NWPOLICY',
-                    badges: [
-                      { label: 'frontend → backend', color: 'var(--k-green)' },
-                      { label: 'OVN ACL', color: 'var(--k-green)' },
                     ],
                   },
                   {
@@ -986,6 +991,12 @@ function collectNodes(zones, result = []) {
         // resolved here for the DetailPanel and trace highlighting.
         if (node.operators) {
           for (const op of node.operators) result.push({ node: op, zone })
+        }
+        // Realized flows (Services / NetworkPolicies nested inside an Open vSwitch
+        // node as the br-int flows they compile to) only render once the switch
+        // expands, but still need color / zone / badge lookups for their popups.
+        if (node.realizes) {
+          for (const obj of node.realizes) result.push({ node: obj, zone })
         }
       }
     }
@@ -1055,6 +1066,23 @@ export const OPERATOR_PARENT = (() => {
     for (const zone of zones) {
       zone.nodes?.forEach((n) =>
         n.operators?.forEach((o) => { map[o.id] = n.id })
+      )
+      if (zone.zones) walk(zone.zones)
+    }
+  }
+  walk(ZONES)
+  return map
+})()
+
+// Map realized-flow id → the id of the Open vSwitch node that realizes it. Same
+// role as the maps above: a nested Service / NetworkPolicy only gains a DOM id
+// once its switch expands, so spotlighting one means expanding the switch first.
+export const FLOW_PARENT = (() => {
+  const map = {}
+  const walk = (zones) => {
+    for (const zone of zones) {
+      zone.nodes?.forEach((n) =>
+        n.realizes?.forEach((o) => { map[o.id] = n.id })
       )
       if (zone.zones) walk(zone.zones)
     }
