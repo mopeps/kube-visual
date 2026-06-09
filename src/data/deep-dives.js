@@ -2501,38 +2501,6 @@ const LINUX_FDS = {
   tagline:
     'A file descriptor is the one handle Linux hands a process for every kind of open thing — a file, a pipe, a socket, a device — so the same read()/write() moves bytes through all of them. A socket is a special fd built for two-way, addressed communication. Together they are how processes talk. (For the permission/inheritance angle, see the tmux deep dive.)',
   colorVar: 'k-purple',
-  flows: [
-    {
-      flowId: 'fd-flow-handshake',
-      flowName: 'Open a connection · client meets server',
-      description:
-        'The five syscalls that turn two nameless sockets into a connected pair. The server names and listens; the client connects; accept() mints a fresh per-client fd. After that it is just read()/write().',
-      steps: [
-        { step: 1, sourceBoxId: 'fd-sk-socket', targetBoxId: 'fd-sk-bind',
-          description: 'The server creates a socket fd with socket(), then bind() attaches a name to it — a filesystem path for AF_UNIX, or an IP:port for AF_INET.' },
-        { step: 2, sourceBoxId: 'fd-sk-bind', targetBoxId: 'fd-sk-listen',
-          description: 'listen() flips that socket into passive mode; the kernel begins queuing incoming connections in its backlog. The listening socket will never carry data itself.' },
-        { step: 3, sourceBoxId: 'fd-sk-connect', targetBoxId: 'fd-sk-listen',
-          description: 'Meanwhile the client creates its own socket and calls connect() toward the server’s name; the request lands in the listen backlog (for TCP, the SYN handshake completes here).' },
-        { step: 4, sourceBoxId: 'fd-sk-listen', targetBoxId: 'fd-sk-accept',
-          description: 'The server calls accept(), which pulls one completed connection off the backlog. The listening fd stays open to take the next client.' },
-        { step: 5, sourceBoxId: 'fd-sk-accept', targetBoxId: 'fd-sk-connect',
-          description: 'accept() returns a NEW fd dedicated to this one peer. Both ends now hold a connected fd, and plain read()/write() carries data between them.' },
-      ],
-    },
-    {
-      flowId: 'fd-flow-pipe',
-      flowName: 'A byte through a pipe',
-      description:
-        'A pipe is just a kernel buffer between two fds. Watch a byte cross it — and meet the back-pressure that blocks whichever side gets ahead.',
-      steps: [
-        { step: 1, sourceBoxId: 'fd-pipe-writer', targetBoxId: 'fd-pipe-buf',
-          description: 'The writer calls write() on the pipe’s write end; the kernel copies the bytes into the pipe’s in-memory ring buffer. If the buffer is full, write() blocks until space frees up.' },
-        { step: 2, sourceBoxId: 'fd-pipe-buf', targetBoxId: 'fd-pipe-reader',
-          description: 'The reader calls read() on the read end; the kernel copies bytes out in FIFO order. An empty buffer blocks the reader; once all write ends close and the buffer drains, read() returns 0 — EOF.' },
-      ],
-    },
-  ],
   zones: [
     {
       id: 'fd-z-core',
@@ -2756,14 +2724,40 @@ const LINUX_FDS = {
             ],
           },
         },
-      ],
-    },
-    {
-      id: 'fd-z-handshake',
-      label: 'Zoom-in · opening a connection (the socket handshake)',
-      colorVar: 'k-sky',
-      dashed: true,
-      boxes: [
+        {
+          id: 'fd-sk-handshake',
+          title: 'Opening a connection · the handshake',
+          typePrefix: 'LIFECYCLE',
+          subtitle: 'socket → bind → listen → accept / connect',
+          detail: {
+            role: 'THE SOCKET LIFECYCLE',
+            summary:
+              'A connection is built by a fixed sequence of syscalls. The server side creates a socket, gives it a name, marks it passive, then accepts; the client creates a socket and connects. Expand this box to walk each step.',
+            sections: [
+              { heading: 'Two sides',
+                facts: [
+                  { k: 'server', v: 'socket() → bind() → listen() → accept() (loops per client)' },
+                  { k: 'client', v: 'socket() → connect()' },
+                ] },
+              { heading: 'The sequence',
+                ascii: `  server                      client
+  --------                    --------
+  socket()                    socket()
+  bind(name)                     |
+  listen()                       |
+     ^------- connect() ---------+
+  accept()
+     |
+  new per-client fd  <====>  connected fd
+     |
+  (loop for the next client)` },
+            ],
+          },
+          reveal: {
+            hint: 'the socket handshake · socket → … → accept',
+            caption:
+              'The syscalls that turn two nameless sockets into a connected pair — the server names and listens, the client connects, and accept() mints a fresh per-client fd. Click any step for detail.',
+            boxes: [
         {
           id: 'fd-sk-socket',
           title: 'socket()',
@@ -2858,6 +2852,9 @@ const LINUX_FDS = {
             ],
           },
         },
+            ],
+          },
+        },
       ],
     },
     {
@@ -2883,6 +2880,69 @@ const LINUX_FDS = {
                 ] },
               { heading: 'See it',
                 commands: ['# the shell builds a pipe between these two\nls | wc -l'] },
+            ],
+          },
+          reveal: {
+            hint: 'a byte through the pipe · write → buffer → read',
+            caption:
+              'A pipe is just a kernel buffer between two fds. Walk a byte across it — and meet the back-pressure that blocks whichever side gets ahead. Click a step for detail.',
+            boxes: [
+            {
+              id: 'fd-pipe-writer',
+              title: 'write(fd[1], …)',
+              typePrefix: 'WRITER',
+              subtitle: 'copy bytes into the kernel buffer',
+              detail: {
+                role: 'STEP · WRITE',
+                summary:
+                  'The writing process calls write() on the pipe’s write end. The kernel copies the bytes into an in-memory ring buffer attached to the pipe. No disk, no addressing, no peer lookup — the bytes just sit in the buffer waiting to be read.',
+                sections: [
+                  { heading: 'Back-pressure',
+                    states: [
+                      { label: 'buffer has room', tone: 'ok', meaning: 'write() returns immediately' },
+                      { label: 'buffer full', tone: 'busy', meaning: 'write() blocks until the reader drains it — built-in flow control' },
+                    ] },
+                ],
+              },
+            },
+            {
+              id: 'fd-pipe-buf',
+              title: 'kernel pipe buffer',
+              typePrefix: 'BUFFER',
+              subtitle: 'a small in-memory ring (~64 KiB)',
+              detail: {
+                role: 'THE BUFFER',
+                summary:
+                  'The pipe itself is just this kernel-side ring buffer between the two fds. It preserves order (first in, first out) and bounds memory: writers fill it, readers drain it, and the kernel blocks whichever side gets ahead. Nothing here is ever named or written to disk.',
+                sections: [
+                  { heading: 'Properties',
+                    facts: [
+                      { k: 'ordering', v: 'FIFO — bytes come out in the order written' },
+                      { k: 'size', v: 'bounded (default ~64 KiB) — the source of back-pressure' },
+                    ] },
+                ],
+              },
+            },
+            {
+              id: 'fd-pipe-reader',
+              title: 'read(fd[0], …)',
+              typePrefix: 'READER',
+              subtitle: 'drain the buffer · EOF when writers close',
+              detail: {
+                role: 'STEP · READ',
+                summary:
+                  'The reading process calls read() on the read end and the kernel copies bytes out of the buffer in order. An empty buffer blocks the reader until more arrives; when every write end is closed and the buffer is drained, read() returns 0 — end of file. That EOF is how the reader knows the writer is done.',
+                sections: [
+                  { heading: 'Edge cases',
+                    states: [
+                      { label: 'buffer empty', tone: 'busy', meaning: 'read() blocks, waiting for a writer' },
+                      { label: 'all write ends closed', tone: 'idle', meaning: 'read() returns 0 (EOF)' },
+                    ] },
+                  { heading: 'Gotcha',
+                    tags: ['write to a pipe with no readers → SIGPIPE', 'that is why `yes | head` ends cleanly'] },
+                ],
+              },
+            },
             ],
           },
         },
@@ -3032,70 +3092,6 @@ const LINUX_FDS = {
                   { k: 'bulk / lowest latency', v: 'shared memory + your own locks' },
                   { k: 'just “wake up” / “done”', v: 'signal or eventfd' },
                 ] },
-            ],
-          },
-        },
-      ],
-    },
-    {
-      id: 'fd-z-pipe',
-      label: 'Zoom-in · a byte through a pipe',
-      colorVar: 'k-orange',
-      dashed: true,
-      boxes: [
-        {
-          id: 'fd-pipe-writer',
-          title: 'write(fd[1], …)',
-          typePrefix: 'WRITER',
-          subtitle: 'copy bytes into the kernel buffer',
-          detail: {
-            role: 'STEP · WRITE',
-            summary:
-              'The writing process calls write() on the pipe’s write end. The kernel copies the bytes into an in-memory ring buffer attached to the pipe. No disk, no addressing, no peer lookup — the bytes just sit in the buffer waiting to be read.',
-            sections: [
-              { heading: 'Back-pressure',
-                states: [
-                  { label: 'buffer has room', tone: 'ok', meaning: 'write() returns immediately' },
-                  { label: 'buffer full', tone: 'busy', meaning: 'write() blocks until the reader drains it — built-in flow control' },
-                ] },
-            ],
-          },
-        },
-        {
-          id: 'fd-pipe-buf',
-          title: 'kernel pipe buffer',
-          typePrefix: 'BUFFER',
-          subtitle: 'a small in-memory ring (~64 KiB)',
-          detail: {
-            role: 'THE BUFFER',
-            summary:
-              'The pipe itself is just this kernel-side ring buffer between the two fds. It preserves order (first in, first out) and bounds memory: writers fill it, readers drain it, and the kernel blocks whichever side gets ahead. Nothing here is ever named or written to disk.',
-            sections: [
-              { heading: 'Properties',
-                facts: [
-                  { k: 'ordering', v: 'FIFO — bytes come out in the order written' },
-                  { k: 'size', v: 'bounded (default ~64 KiB) — the source of back-pressure' },
-                ] },
-            ],
-          },
-        },
-        {
-          id: 'fd-pipe-reader',
-          title: 'read(fd[0], …)',
-          typePrefix: 'READER',
-          subtitle: 'drain the buffer · EOF when writers close',
-          detail: {
-            role: 'STEP · READ',
-            summary:
-              'The reading process calls read() on the read end and the kernel copies bytes out of the buffer in order. An empty buffer blocks the reader until more arrives; when every write end is closed and the buffer is drained, read() returns 0 — end of file. That EOF is how the reader knows the writer is done.',
-            sections: [
-              { heading: 'Edge cases',
-                states: [
-                  { label: 'buffer empty', tone: 'busy', meaning: 'read() blocks, waiting for a writer' },
-                  { label: 'all write ends closed', tone: 'idle', meaning: 'read() returns 0 (EOF)' },
-                ] },
-              { heading: 'Gotcha',
-                tags: ['write to a pipe with no readers → SIGPIPE', 'that is why `yes | head` ends cleanly'] },
             ],
           },
         },
