@@ -2495,7 +2495,616 @@ esac`,
   ],
 }
 
-export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, TMUX_SUDO]
+const LINUX_FDS = {
+  topicId: 'linux-fds-sockets',
+  title: 'File descriptors, sockets & how Linux talks',
+  tagline:
+    'A file descriptor is the one handle Linux hands a process for every kind of open thing — a file, a pipe, a socket, a device — so the same read()/write() moves bytes through all of them. A socket is a special fd built for two-way, addressed communication. Together they are how processes talk. (For the permission/inheritance angle, see the tmux deep dive.)',
+  colorVar: 'k-purple',
+  flows: [
+    {
+      flowId: 'fd-flow-handshake',
+      flowName: 'Open a connection · client meets server',
+      description:
+        'The five syscalls that turn two nameless sockets into a connected pair. The server names and listens; the client connects; accept() mints a fresh per-client fd. After that it is just read()/write().',
+      steps: [
+        { step: 1, sourceBoxId: 'fd-sk-socket', targetBoxId: 'fd-sk-bind',
+          description: 'The server creates a socket fd with socket(), then bind() attaches a name to it — a filesystem path for AF_UNIX, or an IP:port for AF_INET.' },
+        { step: 2, sourceBoxId: 'fd-sk-bind', targetBoxId: 'fd-sk-listen',
+          description: 'listen() flips that socket into passive mode; the kernel begins queuing incoming connections in its backlog. The listening socket will never carry data itself.' },
+        { step: 3, sourceBoxId: 'fd-sk-connect', targetBoxId: 'fd-sk-listen',
+          description: 'Meanwhile the client creates its own socket and calls connect() toward the server’s name; the request lands in the listen backlog (for TCP, the SYN handshake completes here).' },
+        { step: 4, sourceBoxId: 'fd-sk-listen', targetBoxId: 'fd-sk-accept',
+          description: 'The server calls accept(), which pulls one completed connection off the backlog. The listening fd stays open to take the next client.' },
+        { step: 5, sourceBoxId: 'fd-sk-accept', targetBoxId: 'fd-sk-connect',
+          description: 'accept() returns a NEW fd dedicated to this one peer. Both ends now hold a connected fd, and plain read()/write() carries data between them.' },
+      ],
+    },
+    {
+      flowId: 'fd-flow-pipe',
+      flowName: 'A byte through a pipe',
+      description:
+        'A pipe is just a kernel buffer between two fds. Watch a byte cross it — and meet the back-pressure that blocks whichever side gets ahead.',
+      steps: [
+        { step: 1, sourceBoxId: 'fd-pipe-writer', targetBoxId: 'fd-pipe-buf',
+          description: 'The writer calls write() on the pipe’s write end; the kernel copies the bytes into the pipe’s in-memory ring buffer. If the buffer is full, write() blocks until space frees up.' },
+        { step: 2, sourceBoxId: 'fd-pipe-buf', targetBoxId: 'fd-pipe-reader',
+          description: 'The reader calls read() on the read end; the kernel copies bytes out in FIFO order. An empty buffer blocks the reader; once all write ends close and the buffer drains, read() returns 0 — EOF.' },
+      ],
+    },
+  ],
+  zones: [
+    {
+      id: 'fd-z-core',
+      label: '1 · The file descriptor',
+      colorVar: 'k-purple',
+      boxes: [
+        {
+          id: 'fd-what',
+          title: 'What a file descriptor is',
+          typePrefix: 'CONCEPT',
+          subtitle: 'a small integer — your handle to a kernel object',
+          detail: {
+            role: 'THE HANDLE',
+            summary:
+              'A file descriptor is a small non-negative integer the kernel hands back when you open something. It indexes a table the kernel keeps per process; you pass the integer to read()/write()/close() and the kernel looks up the real object behind it. You never touch the object directly — only its number.',
+            sections: [
+              { heading: 'At a glance',
+                tags: ['small integer', 'per-process', 'opaque handle', 'kernel-managed'] },
+              { heading: 'What the integer indexes',
+                facts: [
+                  { k: 'fd', v: 'an index into this process’s open-file table' },
+                  { k: 'table slot', v: 'points at a kernel open file description — the real state' },
+                  { k: 'lowest free', v: 'open() returns the lowest unused number — why 0/1/2 are stdin/out/err' },
+                ] },
+              { heading: 'See it',
+                commands: ['# every fd this shell holds, as symlinks to what it points at\nls -l /proc/$$/fd'] },
+            ],
+          },
+        },
+        {
+          id: 'fd-three-level',
+          title: 'fd → open file description → inode',
+          typePrefix: 'MODEL',
+          subtitle: 'three layers, and why the offset lives in the middle one',
+          detail: {
+            role: 'THE THREE LEVELS',
+            summary:
+              'There are three layers, not one. The fd (per process) points at an open file description (system-wide — it holds the read/write offset and status flags), which points at an inode (the actual file/pipe/socket). dup() and fork() copy the fd but SHARE the description, so the offset is shared too; two separate open()s of one path get independent descriptions.',
+            sections: [
+              { heading: 'The layout',
+                ascii: `  per-process            system-wide              kernel object
+  fd table               open file table          inode
+  +----------+           +----------------+        +--------------+
+  | 0 stdin  |           | descr #12      |        | inode: file, |
+  | 1 stdout |---------->|  offset = 4096 |------->| pipe, socket |
+  | 2 stderr |           |  flags  = O_WR |        | or device    |
+  | 3 -------|---+       +----------------+        +--------------+
+  +----------+   |       +----------------+
+                 +------>| descr #19      |------> (same inode,
+                         |  offset = 0    |         own offset)
+                         +----------------+` },
+              { heading: 'Who owns what',
+                facts: [
+                  { k: 'fd table', v: 'per process — fork() copies it, exec keeps it' },
+                  { k: 'open file description', v: 'holds the offset + status flags; dup()/fork() share one' },
+                  { k: 'inode', v: 'the actual object; many descriptions can point at it' },
+                ] },
+              { heading: 'Why it matters',
+                bullets: [
+                  'dup2(fd, 1) makes stdout point at the same description — that is all redirection is.',
+                  'fork() children share the offset, so parent and child writing one fd append in order.',
+                  'Two independent open()s of one file get separate offsets — they clobber each other.',
+                ] },
+            ],
+          },
+        },
+        {
+          id: 'fd-everything',
+          title: '“Everything is a file”',
+          typePrefix: 'UNIX',
+          subtitle: 'one set of verbs over every kind of object',
+          detail: {
+            role: 'THE UNIFORM INTERFACE',
+            summary:
+              'The payoff of the fd abstraction: the same handful of syscalls — read(), write(), close() and friends — work on almost everything. A regular file, a pipe, a socket, a terminal, a block device, even kernel event objects all answer to the same verbs. Code that moves bytes does not care what is on the other end.',
+            sections: [
+              { heading: 'Same verbs, many objects',
+                facts: [
+                  { k: 'read()/write()', v: 'files, pipes, sockets, ttys, devices — all the same call' },
+                  { k: 'close()', v: 'releases the slot for any of them' },
+                  { k: 'poll()/select()', v: 'wait on a mix of fd types at once' },
+                ] },
+              { heading: 'Why this is powerful',
+                bullets: [
+                  'Shell pipelines: a program’s stdout is an fd; it has no idea it feeds another program.',
+                  'Redirection: < and > just point fd 0/1 at a file instead of the terminal.',
+                  'Testability: hand a program a pipe or socket where it expected a file — it can’t tell.',
+                ] },
+              { heading: 'The not-quite-everything caveat',
+                tags: ['lseek fails on pipes/sockets', 'sockets add send/recv', 'ioctl() for device knobs'] },
+            ],
+          },
+        },
+        {
+          id: 'fd-stdio',
+          title: 'fd 0, 1, 2 — stdin / stdout / stderr',
+          typePrefix: 'FD 0/1/2',
+          subtitle: 'the three every process is born holding',
+          detail: {
+            role: 'THE STANDARD STREAMS',
+            summary:
+              'By convention every process starts with three fds already open: 0 = standard input, 1 = standard output, 2 = standard error. The shell wires them up before exec; redirection and pipes are just the shell rewriting these slots with dup2() before handing control to your program.',
+            sections: [
+              { heading: 'The three',
+                facts: [
+                  { k: '0 · stdin', v: 'where input is read from (keyboard, file, or pipe)' },
+                  { k: '1 · stdout', v: 'normal output' },
+                  { k: '2 · stderr', v: 'errors — kept separate so logs survive a redirected stdout' },
+                ] },
+              { heading: 'Redirection is just dup2()',
+                bullets: [
+                  'cmd > out.txt: open out.txt, dup2 it onto fd 1, then exec cmd.',
+                  'cmd 2>&1: dup2 fd 1 onto fd 2 so both point at the same description.',
+                  'a | b: a pipe’s write end becomes a’s fd 1, its read end becomes b’s fd 0.',
+                ] },
+              { heading: 'See it',
+                commands: ['# what your shell’s 0/1/2 currently point at\nls -l /proc/$$/fd/0 /proc/$$/fd/1 /proc/$$/fd/2'] },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'fd-z-socket',
+      label: '2 · Sockets — a different kind of fd',
+      colorVar: 'k-cyan',
+      boxes: [
+        {
+          id: 'fd-sk-what',
+          title: 'What makes a socket a socket',
+          typePrefix: 'CONCEPT',
+          subtitle: 'still an fd — but born for two-way, addressed talk',
+          detail: {
+            role: 'A SPECIAL FD',
+            summary:
+              'A socket is an fd like any other — but it is created by socket(domain, type, protocol), not open(path), and it carries things a file never does: an address family, a transport type, a peer, and (for streams) a connection state machine. You still read()/write() it, but it is built for communication, not storage.',
+            sections: [
+              { heading: 'Three choices at creation',
+                facts: [
+                  { k: 'domain', v: 'AF_UNIX (same host) / AF_INET / AF_INET6 (network)' },
+                  { k: 'type', v: 'SOCK_STREAM (ordered, reliable) / SOCK_DGRAM (messages)' },
+                  { k: 'protocol', v: 'usually 0 — let the family pick (TCP for stream, UDP for dgram)' },
+                ] },
+              { heading: 'What a file never has',
+                tags: ['a peer address', 'two directions', 'a connection state', 'send()/recv() flags'] },
+            ],
+          },
+        },
+        {
+          id: 'fd-sk-vs-file',
+          title: 'Socket fd vs file fd',
+          typePrefix: 'COMPARE',
+          subtitle: 'same handle, very different object behind it',
+          detail: {
+            role: 'THE DIFFERENCE',
+            summary:
+              'Both are fds you read() and write(); what differs is the object behind the number. A file is a seekable, byte-addressable store you open by path. A socket is a non-seekable communication channel you create, then name or connect — often full-duplex, with two independent buffers and a peer on the far end.',
+            sections: [
+              { heading: 'Side by side',
+                facts: [
+                  { k: 'created by', v: 'file: open(path) · socket: socket() + bind()/connect()' },
+                  { k: 'addressing', v: 'file: a path · socket: a path or IP:port, plus a peer' },
+                  { k: 'seekable', v: 'file: yes (lseek) · socket: no — a moving stream' },
+                  { k: 'direction', v: 'file: one offset · socket: usually full-duplex, two buffers' },
+                  { k: 'extra verbs', v: 'socket adds send/recv, shutdown, setsockopt, accept/connect' },
+                ] },
+              { heading: 'The same, though',
+                tags: ['both are fds', 'both do read()/write()/close()', 'both work in poll()/epoll()'] },
+              { heading: 'Peek at both',
+                commands: [
+                  '# open sockets on the box, with the owning process\nss -tulpn',
+                  '# watch a process’s socket syscalls\nstrace -e trace=network -p <pid>',
+                ] },
+            ],
+          },
+        },
+        {
+          id: 'fd-sk-families',
+          title: 'AF_UNIX vs AF_INET — local vs networked',
+          typePrefix: 'AF_*',
+          subtitle: 'same API, different reach',
+          detail: {
+            role: 'ADDRESS FAMILIES',
+            summary:
+              'The domain you pass to socket() decides how far it reaches and how it is named. AF_UNIX sockets live on one host, addressed by a filesystem path, and never touch the network stack — fast, and able to pass fds and credentials between processes. AF_INET/AF_INET6 sockets are addressed by IP:port and go through TCP/IP, so they can span machines.',
+            sections: [
+              { heading: 'The two you meet most',
+                facts: [
+                  { k: 'AF_UNIX', v: 'a path like /run/docker.sock · same host only · can pass fds (SCM_RIGHTS) + peer creds' },
+                  { k: 'AF_INET / AF_INET6', v: 'IP:port · across the network · through the TCP/IP stack' },
+                ] },
+              { heading: 'Stream vs datagram',
+                facts: [
+                  { k: 'SOCK_STREAM', v: 'a reliable, ordered byte stream (TCP, or a local unix stream)' },
+                  { k: 'SOCK_DGRAM', v: 'discrete messages, no connection guarantees (UDP, or local unix datagram)' },
+                ] },
+              { heading: 'Who uses AF_UNIX',
+                tags: ['Docker /run/docker.sock', 'systemd journald', 'X11', 'the tmux control socket'] },
+              { heading: 'See them',
+                commands: ['# list unix-domain sockets and who holds them\nss -xl'] },
+            ],
+          },
+        },
+        {
+          id: 'fd-seealso',
+          title: 'See also · the tmux deep dive',
+          typePrefix: 'CROSS-REF',
+          subtitle: 'where this fd-vs-socket split decides a permission',
+          detail: {
+            role: 'WHERE THIS SHOWS UP',
+            summary:
+              'The “tmux window naming across sudo -iu” deep dive is this machinery with stakes attached. There, the difference between an inherited pty fd (a write — allowed) and a fresh socket connect() (checked now — denied) is exactly what lets a cross-uid process rename a window but not command the server. Read it next for the control-path-vs-data-path angle this topic leaves out.',
+            sections: [
+              { heading: 'The link in one line',
+                facts: [
+                  { k: 'this topic', v: 'what fds and sockets ARE' },
+                  { k: 'tmux topic', v: 'how inherited-fd vs fresh-connect decides who is allowed' },
+                ] },
+              { heading: 'The crux there',
+                tags: ['inherited fd → checked at open() → allowed', 'fresh connect() → checked now → denied', 'same boundary, opposite outcome'] },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'fd-z-handshake',
+      label: 'Zoom-in · opening a connection (the socket handshake)',
+      colorVar: 'k-sky',
+      dashed: true,
+      boxes: [
+        {
+          id: 'fd-sk-socket',
+          title: 'socket()',
+          typePrefix: 'SYSCALL',
+          subtitle: 'create an unbound, unconnected fd',
+          detail: {
+            role: 'STEP · CREATE',
+            summary:
+              'Both ends start here. socket(domain, type, protocol) allocates a new fd backed by a fresh, nameless, peerless socket object. Nothing is reachable yet — it has neither an address nor a connection.',
+            sections: [
+              { heading: 'What you get back',
+                facts: [
+                  { k: 'returns', v: 'a new fd in the unconnected state' },
+                  { k: 'not yet', v: 'no name (bind), no peer (connect/accept)' },
+                ] },
+            ],
+          },
+        },
+        {
+          id: 'fd-sk-bind',
+          title: 'bind()',
+          typePrefix: 'SYSCALL',
+          subtitle: 'give the server fd a name',
+          detail: {
+            role: 'STEP · NAME · server',
+            summary:
+              'The server attaches an address to its socket so clients can find it: a filesystem path for AF_UNIX, or an IP:port for AF_INET. Clients usually skip this — the kernel auto-assigns them an ephemeral local address at connect() time.',
+            sections: [
+              { heading: 'The name',
+                facts: [
+                  { k: 'AF_UNIX', v: 'a path, e.g. /run/app.sock (created on the filesystem)' },
+                  { k: 'AF_INET', v: 'an IP:port, e.g. 0.0.0.0:8080' },
+                ] },
+              { heading: 'See it',
+                commands: ['# the listening addresses bind() produced\nss -ltnp'] },
+            ],
+          },
+        },
+        {
+          id: 'fd-sk-listen',
+          title: 'listen()',
+          typePrefix: 'SYSCALL',
+          subtitle: 'mark it passive · start a backlog',
+          detail: {
+            role: 'STEP · PASSIVE · server',
+            summary:
+              'listen() flips the bound socket into passive mode and tells the kernel to start queuing incoming connections in a backlog. This socket will now never send data itself — it only manufactures connected sockets via accept().',
+            sections: [
+              { heading: 'What changes',
+                facts: [
+                  { k: 'state', v: '→ LISTEN' },
+                  { k: 'backlog', v: 'how many completed connections may wait for accept()' },
+                ] },
+            ],
+          },
+        },
+        {
+          id: 'fd-sk-accept',
+          title: 'accept()',
+          typePrefix: 'SYSCALL',
+          subtitle: 'pull one connection off the queue → a NEW fd',
+          detail: {
+            role: 'STEP · ACCEPT · server',
+            summary:
+              'accept() removes one completed connection from the backlog and returns a brand-new fd dedicated to that single client. The listening fd stays open to take the next one. This is the moment one server fd becomes many connected fds.',
+            sections: [
+              { heading: 'The key idea',
+                states: [
+                  { label: 'listening fd', tone: 'idle', meaning: 'stays in LISTEN — never carries data' },
+                  { label: 'accepted fd', tone: 'ok', meaning: 'a fresh connected socket for this one peer — read()/write() here' },
+                ] },
+            ],
+          },
+        },
+        {
+          id: 'fd-sk-connect',
+          title: 'connect()',
+          typePrefix: 'SYSCALL',
+          subtitle: 'client reaches the server’s name',
+          detail: {
+            role: 'STEP · CONNECT · client',
+            summary:
+              'The client points its fresh socket at the server’s address. For a unix socket this is the permission-checked moment (the path’s mode must allow it); for TCP it triggers the SYN handshake. On success both ends hold a connected fd and ordinary read()/write() moves data.',
+            sections: [
+              { heading: 'After it returns',
+                facts: [
+                  { k: 'client fd', v: 'now connected — read()/write() talk to the server’s accepted fd' },
+                  { k: 'permission', v: 'AF_UNIX: checked HERE, against the socket path’s mode' },
+                ] },
+              { heading: 'Try it',
+                commands: ['# a throwaway unix-socket echo, then connect to it\nsocat UNIX-LISTEN:/tmp/demo.sock - & socat - UNIX-CONNECT:/tmp/demo.sock'] },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'fd-z-ipc',
+      label: '3 · The IPC menu — how processes actually talk',
+      colorVar: 'k-green',
+      boxes: [
+        {
+          id: 'ipc-pipe',
+          title: 'Anonymous pipe',
+          typePrefix: 'pipe()',
+          subtitle: 'one-way stream between related processes',
+          detail: {
+            role: 'IPC · PIPE',
+            summary:
+              'pipe() returns two fds — a read end and a write end — joined by a kernel buffer. It is one-directional and nameless, so the only way to share it is to inherit it across fork(). This is exactly what a shell does for a | b.',
+            sections: [
+              { heading: 'Shape',
+                facts: [
+                  { k: 'returns', v: 'fd[0] read end, fd[1] write end' },
+                  { k: 'reach', v: 'related processes only (inherited via fork)' },
+                  { k: 'direction', v: 'one way; need two pipes for a conversation' },
+                ] },
+              { heading: 'See it',
+                commands: ['# the shell builds a pipe between these two\nls | wc -l'] },
+            ],
+          },
+        },
+        {
+          id: 'ipc-fifo',
+          title: 'Named pipe (FIFO)',
+          typePrefix: 'FIFO',
+          subtitle: 'a pipe with a filesystem name',
+          detail: {
+            role: 'IPC · FIFO',
+            summary:
+              'A FIFO is a pipe given a path with mkfifo, so unrelated processes — with no common parent — can rendezvous by opening the same name. The bytes still never hit disk; the path is just a meeting point. open() blocks until both a reader and a writer arrive.',
+            sections: [
+              { heading: 'vs anonymous pipe',
+                facts: [
+                  { k: 'naming', v: 'a path on the filesystem (mkfifo)' },
+                  { k: 'reach', v: 'any process that can open the path' },
+                ] },
+              { heading: 'Try it',
+                commands: [
+                  '# terminal one\nmkfifo /tmp/f && cat /tmp/f',
+                  '# terminal two\necho hello > /tmp/f',
+                ] },
+            ],
+          },
+        },
+        {
+          id: 'ipc-unix',
+          title: 'Unix-domain socket',
+          typePrefix: 'AF_UNIX',
+          subtitle: 'the local two-way workhorse',
+          detail: {
+            role: 'IPC · UNIX SOCKET',
+            summary:
+              'A full-duplex socket addressed by a filesystem path, staying entirely on one host. Bidirectional, connection-oriented (or datagram), and uniquely able to pass open fds and verified peer credentials between processes. The default for local client/server IPC.',
+            sections: [
+              { heading: 'Why it wins locally',
+                facts: [
+                  { k: 'duplex', v: 'two-way, unlike a pipe' },
+                  { k: 'fd passing', v: 'hand an open fd to another process (SCM_RIGHTS)' },
+                  { k: 'identity', v: 'kernel-verified peer uid/pid (SO_PEERCRED)' },
+                ] },
+              { heading: 'In the wild',
+                tags: ['/run/docker.sock', 'systemd / journald', 'the tmux control socket'] },
+            ],
+          },
+        },
+        {
+          id: 'ipc-tcp',
+          title: 'TCP / UDP socket',
+          typePrefix: 'AF_INET',
+          subtitle: 'the same API, across the network',
+          detail: {
+            role: 'IPC · NETWORK SOCKET',
+            summary:
+              'Swap the domain to AF_INET and the same socket calls now reach another machine through the TCP/IP stack. TCP gives a reliable ordered stream; UDP gives fire-and-forget messages. Identical verbs to a unix socket — only the address (IP:port) and the path through the kernel differ.',
+            sections: [
+              { heading: 'Two transports',
+                facts: [
+                  { k: 'TCP (SOCK_STREAM)', v: 'reliable, ordered, connection — handshake, then a byte stream' },
+                  { k: 'UDP (SOCK_DGRAM)', v: 'messages, no connection or delivery guarantee' },
+                ] },
+              { heading: 'Cost vs a unix socket',
+                tags: ['goes through the IP stack', 'checksums + copies', 'can cross hosts'] },
+            ],
+          },
+        },
+        {
+          id: 'ipc-shm',
+          title: 'Shared memory',
+          typePrefix: 'mmap/shm',
+          subtitle: 'fastest — but you bring the locks',
+          detail: {
+            role: 'IPC · SHARED MEMORY',
+            summary:
+              'Two processes map the same physical pages into their address spaces (shm_open + mmap, or MAP_SHARED). After setup there are no syscalls and no copies — both just read and write memory. The catch: nothing serializes access, so you must add your own synchronization (futexes, semaphores).',
+            sections: [
+              { heading: 'Trade-off',
+                states: [
+                  { label: 'throughput', tone: 'ok', meaning: 'zero-copy — the fastest IPC there is' },
+                  { label: 'safety', tone: 'bad', meaning: 'no built-in ordering — races unless you lock' },
+                ] },
+              { heading: 'How',
+                facts: [
+                  { k: 'set up', v: 'shm_open() → ftruncate() → mmap(MAP_SHARED)' },
+                  { k: 'synchronize', v: 'a futex / POSIX semaphore in the shared region' },
+                ] },
+            ],
+          },
+        },
+        {
+          id: 'ipc-signal',
+          title: 'Signals',
+          typePrefix: 'signal',
+          subtitle: 'a notification, not a channel',
+          detail: {
+            role: 'IPC · SIGNAL',
+            summary:
+              'A signal is an asynchronous nudge — a single number (SIGTERM, SIGCHLD, …) delivered to a process, interrupting it to run a handler. It carries no real payload (a little more with SIGINFO), so it is control, not data: “something happened”, not “here are the bytes”.',
+            sections: [
+              { heading: 'What it is good for',
+                facts: [
+                  { k: 'control', v: 'stop, reload, “your child exited” (SIGCHLD)' },
+                  { k: 'payload', v: 'essentially just the signal number' },
+                ] },
+              { heading: 'Not for moving data',
+                tags: ['async', 'tiny', 'interrupts the target', 'pair it with a real channel for data'] },
+            ],
+          },
+        },
+        {
+          id: 'ipc-ready',
+          title: 'epoll / eventfd',
+          typePrefix: 'epoll/eventfd',
+          subtitle: 'readiness, not transport',
+          detail: {
+            role: 'IPC · READINESS',
+            summary:
+              'These do not move payload — they tell you WHEN another fd is ready, so one thread can wait on thousands of connections at once. epoll watches a set of fds and reports which became readable/writable; eventfd is a tiny counter fd used as a wakeup between threads.',
+            sections: [
+              { heading: 'The two',
+                facts: [
+                  { k: 'epoll', v: 'wait on many fds; get back just the ready ones — the basis of async servers' },
+                  { k: 'eventfd', v: 'an 8-byte counter fd — write to it to wake a thread blocked in epoll' },
+                ] },
+              { heading: 'Why it exists',
+                tags: ['scales to many fds', 'everything is an fd, so they compose', 'poll/select are the older cousins'] },
+            ],
+          },
+        },
+        {
+          id: 'ipc-choose',
+          title: 'Which one do I use?',
+          typePrefix: 'WHICH?',
+          subtitle: 'a quick decision table',
+          detail: {
+            role: 'CHOOSING',
+            summary:
+              'They are not interchangeable — each trades reach for cost. Pick by where the other process is and what you are moving.',
+            sections: [
+              { heading: 'Rules of thumb',
+                facts: [
+                  { k: 'same host, client/server', v: 'unix-domain socket' },
+                  { k: 'related procs, simple stream', v: 'a pipe' },
+                  { k: 'unrelated procs, no network', v: 'a FIFO' },
+                  { k: 'across machines', v: 'TCP (or UDP for lossy/streaming)' },
+                  { k: 'bulk / lowest latency', v: 'shared memory + your own locks' },
+                  { k: 'just “wake up” / “done”', v: 'signal or eventfd' },
+                ] },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'fd-z-pipe',
+      label: 'Zoom-in · a byte through a pipe',
+      colorVar: 'k-orange',
+      dashed: true,
+      boxes: [
+        {
+          id: 'fd-pipe-writer',
+          title: 'write(fd[1], …)',
+          typePrefix: 'WRITER',
+          subtitle: 'copy bytes into the kernel buffer',
+          detail: {
+            role: 'STEP · WRITE',
+            summary:
+              'The writing process calls write() on the pipe’s write end. The kernel copies the bytes into an in-memory ring buffer attached to the pipe. No disk, no addressing, no peer lookup — the bytes just sit in the buffer waiting to be read.',
+            sections: [
+              { heading: 'Back-pressure',
+                states: [
+                  { label: 'buffer has room', tone: 'ok', meaning: 'write() returns immediately' },
+                  { label: 'buffer full', tone: 'busy', meaning: 'write() blocks until the reader drains it — built-in flow control' },
+                ] },
+            ],
+          },
+        },
+        {
+          id: 'fd-pipe-buf',
+          title: 'kernel pipe buffer',
+          typePrefix: 'BUFFER',
+          subtitle: 'a small in-memory ring (~64 KiB)',
+          detail: {
+            role: 'THE BUFFER',
+            summary:
+              'The pipe itself is just this kernel-side ring buffer between the two fds. It preserves order (first in, first out) and bounds memory: writers fill it, readers drain it, and the kernel blocks whichever side gets ahead. Nothing here is ever named or written to disk.',
+            sections: [
+              { heading: 'Properties',
+                facts: [
+                  { k: 'ordering', v: 'FIFO — bytes come out in the order written' },
+                  { k: 'size', v: 'bounded (default ~64 KiB) — the source of back-pressure' },
+                ] },
+            ],
+          },
+        },
+        {
+          id: 'fd-pipe-reader',
+          title: 'read(fd[0], …)',
+          typePrefix: 'READER',
+          subtitle: 'drain the buffer · EOF when writers close',
+          detail: {
+            role: 'STEP · READ',
+            summary:
+              'The reading process calls read() on the read end and the kernel copies bytes out of the buffer in order. An empty buffer blocks the reader until more arrives; when every write end is closed and the buffer is drained, read() returns 0 — end of file. That EOF is how the reader knows the writer is done.',
+            sections: [
+              { heading: 'Edge cases',
+                states: [
+                  { label: 'buffer empty', tone: 'busy', meaning: 'read() blocks, waiting for a writer' },
+                  { label: 'all write ends closed', tone: 'idle', meaning: 'read() returns 0 (EOF)' },
+                ] },
+              { heading: 'Gotcha',
+                tags: ['write to a pipe with no readers → SIGPIPE', 'that is why `yes | head` ends cleanly'] },
+            ],
+          },
+        },
+      ],
+    },
+  ],
+}
+
+export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, TMUX_SUDO, LINUX_FDS]
 
 export const findDeepDive = (topicId) =>
   DEEP_DIVES.find((t) => t.topicId === topicId) || null
