@@ -227,6 +227,21 @@ body::after {
 .service-pair:hover > .node { border-color: var(--node-accent); }
 .service-pair:hover > .service-pair-link { border-left-color: var(--node-accent); }
 
+/* A `programs` pair (OVN-K8s Node → Open vSwitch) reads as "control configures
+   data plane": a denser dash distinguishes it from the Service→workload tick. */
+.service-pair--programs > .service-pair-link {
+  border-left-style: dashed;
+  height: 14px;
+}
+/* When the Open vSwitch in a `programs` pair expands its realized flows, the
+   inner card needs the full row — let the pair break out of its fixed node
+   slot so the expanded switch isn't crushed into the 128px column. */
+.service-pair--programs:has(.intent-store-expanded) {
+  flex: 1 1 100%;
+  width: 100%;
+  max-width: none;
+}
+
 @media (max-width: 640px) {
   .service-pair {
     flex: 1 1 calc(50% - 4px);

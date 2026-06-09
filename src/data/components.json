@@ -1357,11 +1357,13 @@
     "role": "VIRTUAL SWITCH",
     "runtimeForm": "systemd unit · bare metal master node",
     "linuxPrimitive": "ovs-vswitchd + OpenFlow",
-    "problemSolved": "The host switch every control-plane Pod and the overlay uplink plug into on the master node.",
+    "problemSolved": "The host data-plane switch every control-plane Pod plugs into on the master node — its br-int flows are programmed by the OVN-K8s Node via OpenFlow.",
     "interactions": [
       "Manages the br-int OVS bridge and its port configuration on the master node.",
       "Receives OpenFlow rules from the local OVN controller.",
-      "Handles Geneve encapsulation for control-plane traffic to the other management cluster nodes."
+      "Forwards every packet on br-int according to those OpenFlow rules — it is the data plane, not the control plane.",
+      "Handles Geneve encapsulation for control-plane traffic to the other management cluster nodes.",
+      "Runs as a host systemd unit, not a Pod, so the switch is up before kubelet/CRI-O and survives independently of Kubernetes."
     ],
     "explorationCommands": [
       "# Show OVS bridge topology\novs-vsctl show",
@@ -1588,12 +1590,14 @@
     "role": "VIRTUAL SWITCH",
     "runtimeForm": "systemd unit · bare metal worker node",
     "linuxPrimitive": "ovs-vswitchd + OpenFlow",
-    "problemSolved": "The host switch that joins Pod veths, the overlay uplink, and the KubeVirt VM tap into one bridge.",
+    "problemSolved": "The host data-plane switch that joins Pod veths, the overlay uplink, and the KubeVirt VM tap into one br-int bridge — programmed by the OVN-K8s Node via OpenFlow.",
     "interactions": [
       "Manages the br-int OVS bridge and its port configuration.",
       "Receives OpenFlow rules from the local OVN controller.",
+      "Forwards every packet on br-int according to those OpenFlow rules — it is the data plane, not the control plane.",
       "Handles Geneve encapsulation for inter-node overlay traffic.",
-      "Connects the KubeVirt VM's tap interface to the overlay network."
+      "Connects the KubeVirt VM's tap interface to the overlay network.",
+      "Runs as a host systemd unit, not a Pod, so the switch is up before kubelet/CRI-O and survives independently of Kubernetes."
     ],
     "explorationCommands": [
       "# Show OVS bridge topology\novs-vsctl show",
@@ -1784,11 +1788,13 @@
     "role": "VIRTUAL SWITCH",
     "runtimeForm": "systemd unit · guest worker node (in VM)",
     "linuxPrimitive": "ovs-vswitchd (in VM)",
-    "problemSolved": "The in-VM switch that all guest application Pods plug into.",
+    "problemSolved": "The in-VM data-plane switch all guest application Pods plug into — its br-int flows (including the Service load-balancer and NetworkPolicy ACLs realized on it) are programmed by the guest OVN-K8s Node via OpenFlow.",
     "interactions": [
       "Manages the in-VM br-int OVS bridge for guest Pod networking.",
       "Receives OpenFlow rules from the guest OVN-Kubernetes node DaemonSet.",
-      "Traffic exits the VM through the virtio-net interface to the host tap0 device."
+      "Forwards every packet on br-int according to those OpenFlow rules — it is the data plane, not the control plane.",
+      "Traffic exits the VM through the virtio-net interface to the host tap0 device.",
+      "Runs as a host systemd unit inside the VM, not a Pod, so the switch is up before kubelet/CRI-O and survives independently of Kubernetes."
     ],
     "explorationCommands": [
       "# Show guest OVS topology\nvirtctl ssh core@<vmi> -- ovs-vsctl show",

@@ -21,8 +21,9 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │     │   // The master node's own host-resident node agents
   │     ├── [systemd Service] Kubelet (Host Resident Node Manager)
   │     ├── [systemd Service] CRI-O (Host Resident Container Engine)
-  │     ├── [systemd Service] Open vSwitch (Host Native Data Path)
+  │     │   // the OVN-K Node stacks above (programs) the Open vSwitch data plane
   │     ├── [Pod] OVN-Kubernetes Node Instance
+  │     ├── [systemd Service] Open vSwitch (Host Native Data Path)
   │     │
   │     │   // The management (bare metal) cluster's OWN control plane,
   │     │   // run by the master kubelet from /etc/kubernetes/manifests —
@@ -130,16 +131,23 @@ The workspace viewport canvas must render this exact structural hierarchy:
   └── [Management Worker Node Zone]
         ├── [systemd Service] Kubelet (Host Resident Node Manager)
         ├── [systemd Service] CRI-O (Host Resident Container Engine)
-        ├── [systemd Service] Open vSwitch (Host Native Data Path)
+        │   // the OVN-K Node stacks above (programs) the Open vSwitch data plane
         ├── [Pod] OVN-Kubernetes Node Instance
+        ├── [systemd Service] Open vSwitch (Host Native Data Path)
         ├── [Pod] KubeVirt virt-handler Instance (VMI node agent)
         │
         └── [Pod] KubeVirt Launcher Container
               └── [VirtualMachineInstance] Guest Worker Node
                     ├── [systemd Service] Kubelet (Guest Resident Node Manager)
                     ├── [systemd Service] CRI-O (Guest Resident Container Engine)
-                    ├── [systemd Service] Open vSwitch (Guest Native Data Path)
+                    │   // the OVN-K Node stacks above (programs) the Open vSwitch,
+                    │   // which expands in place to reveal the Service / NetworkPolicy
+                    │   // objects realized as br-int flows on it (not standalone cards):
                     ├── [Pod] OVN-Kubernetes Guest Node Instance
+                    ├── [systemd Service] Open vSwitch (Guest Native Data Path)
+                    │     ├── [Service · ClusterIP] Front-End Application Service
+                    │     ├── [Service · ClusterIP] Back-End Application Service
+                    │     └── [NWPOLICY] E-Commerce Network Policy (front-end → back-end ingress)
                     ├── [Pod] Konnectivity Agent Instance
                     ├── [Pod] CoreDNS Node Instance
                     │
@@ -154,12 +162,10 @@ The workspace viewport canvas must render this exact structural hierarchy:
                     ├── [Service · LoadBalancer] Ingress Router VIP (MetalLB L2)
                     ├── [Pod] Cluster Monitoring Instance (openshift-monitoring)
                     │
-                    │   // Application Instances (+ their ClusterIP Services) inside the VM
+                    │   // Application Instances inside the VM (their ClusterIP Services
+                    │   // and NetworkPolicy are nested in the Open vSwitch above)
                     ├── [Pod] Front-End Application Instance
-                    ├── [Service · ClusterIP] Front-End Application Service
-                    ├── [Pod] Back-End Application Instance
-                    ├── [Service · ClusterIP] Back-End Application Service
-                    └── [NWPOLICY] E-Commerce Network Policy (front-end → back-end ingress)
+                    └── [Pod] Back-End Application Instance
 
 ```
 
@@ -176,7 +182,10 @@ store, or a trace-only zone).
    `[Guest Worker Node VM]`.
 2. **The Active Enforcers (`systemd` Services)** — binary systems executing
    continuous loop cycles directly on a host OS or guest OS instance: `Kubelet`, `CRI-O`,
-   `Open vSwitch`, `virt-handler`.
+   `Open vSwitch`, `virt-handler`. `Open vSwitch` is the host's data-plane switch
+   (`ovs-vswitchd` owning `br-int`); it is stacked directly beneath the `OVN-Kubernetes
+   Node` Pod that *programs* its `br-int` flows — the same vertical pairing used for a
+   Service over the Pod it fronts (see §4), expressing "control plane configures data plane".
 3. **The Concrete Application / Data Plane Instances** — discrete compute packages running
    processes: `Pods`, `Static Pods`, `VirtualMachineInstances`.
 4. **The Networking / Policy Abstractions** — Kubernetes `Service` and `NetworkPolicy`
@@ -185,9 +194,14 @@ store, or a trace-only zone).
    load-balancer flows (DNAT), and a `LoadBalancer` (here, **MetalLB in L2 mode**) is an
    external VIP advertised over ARP/NDP. A `NetworkPolicy` is likewise declarative, but OVN
    compiles it into address sets + ACLs in the Northbound DB that become allow/drop
-   OpenFlow rules enforced on `br-int`. That data-plane footprint earns each one a card on
-   the canvas, next to the Pods it routes to or guards: `[Service]`, `[NWPOLICY]` (the
-   compact card prefix for the `NetworkPolicy` kind).
+   OpenFlow rules enforced on `br-int`. That data-plane footprint earns each one
+   representation on the canvas: `[Service]`, `[NWPOLICY]` (the compact card prefix for the
+   `NetworkPolicy` kind). A `LoadBalancer` Service stacks directly above the Pod it exposes
+   (a vertical pair). The objects with *no* identity apart from the flows they compile to —
+   the guest `ClusterIP` Services and the `NetworkPolicy` — are instead **nested inside the
+   `Open vSwitch` that realizes them**, which expands in place to reveal them as those
+   `br-int` flows (a progressive-disclosure grouping like the operator set in §2, not
+   standalone cards, since the switch *is* where they live in the data plane).
 
 This reinforces the **Default State** rule in §2: desired-state records that have *no*
 data-plane realization (the HCP and Cluster API Custom Resources, plus the guest cluster's
@@ -423,10 +437,14 @@ Adding a component touches several places — keep them in sync:
    the correct zone in the recursive `ZONES` tree. `COMPONENT_COLOR` / `COMPONENT_ZONE`
    derive automatically from the tree. To nest a component inside an expandable parent
    instead of giving it a sibling card, add it to the parent's `intentObjects` (etcd
-   records), `controllers` (controller-manager loops), or `operators` (operator Pods the
-   CPO/CVO own) array rather than the zone's `nodes`; the matching
-   `INTENT_OBJECT_STORE` / `CONTROLLER_PARENT` / `OPERATOR_PARENT` map is derived
-   automatically so trace highlighting can expand the parent first.
+   records), `controllers` (controller-manager loops), `operators` (operator Pods the
+   CPO/CVO own), or `realizes` (Services / NetworkPolicies an Open vSwitch realizes as
+   `br-int` flows) array rather than the zone's `nodes`; the matching
+   `INTENT_OBJECT_STORE` / `CONTROLLER_PARENT` / `OPERATOR_PARENT` / `FLOW_PARENT` map is
+   derived automatically so trace highlighting can expand the parent first. To stack one
+   node directly above another it relates to (joined by the dotted ServicePair link), give
+   the top node an `exposes` (Service → workload) or `programs` (OVN-K Node → Open vSwitch)
+   field naming the in-zone sibling below it.
 3. **`src/data/events.json`** — reference the new `componentId` in any flow steps that
    should highlight it and draw connectors to/from it.
 
