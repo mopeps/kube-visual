@@ -65,10 +65,30 @@ export function buildPath(srcEl, tgtEl, canvasEl, edge = false, bow = 0) {
   const midX = bezier(0.5, sx, cx1, cx2, tx)
   const midY = bezier(0.5, sy, cy1, cy2, ty)
 
+  // Badge anchor. For an edge-anchored vertical hop (the deep-dive spine), the
+  // geometric midpoint of a *cross-zone* hop lands on the next zone's header band
+  // — its label would sit on top of the header text. So instead of the midpoint,
+  // park the badge a short fixed distance down the curve from the source box
+  // edge, which lands in the source zone's empty bottom padding. Short *in-zone*
+  // hops keep the midpoint (the 0.5 cap), and non-edge curves (the Overview) are
+  // unchanged.
+  let badgeX = midX
+  let badgeY = midY
+  if (edge && vertical) {
+    // A *fixed* offset below the source box edge — not a fraction of the hop —
+    // so every cross-zone badge lands the same short distance into the source
+    // zone's bottom padding, independent of how tall (1- vs 2-line) the next
+    // zone's header is. Short in-zone hops fall back to the gap midpoint.
+    const dir = ty >= sy ? 1 : -1
+    const off = Math.min(11, Math.abs(ty - sy) / 2)
+    badgeX = sx // bow is 0 for numbered hops, so the curve is vertical here
+    badgeY = sy + dir * off
+  }
+
   // Source point too — a denied edge anchors its ✕/label just below the box it
   // *departs* (where the refused connect() is attempted), which always sits in
   // an empty inter-zone gap, so it never collides with a box it bows past.
-  return { d: `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${tx} ${ty}`, midX, midY, sx, sy }
+  return { d: `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${tx} ${ty}`, midX, midY, badgeX, badgeY, sx, sy }
 }
 
 export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep, idPrefix = 'ov', edgeAnchor = false }) {
@@ -189,10 +209,12 @@ export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep,
         // The badge opens whatever the step wants: a denied edge points at a box
         // popup (its own onClick); a normal hop inspects itself via onSelectStep.
         const badgeClick = p.onClick || (onSelectStep ? () => onSelectStep(p.step) : undefined)
-        // Denied edge: park the badge in the gap just below the source box; a
-        // normal hop badge rides the curve midpoint.
-        const bx = p.denied ? p.sx + 44 : p.midX
-        const by = p.denied ? p.sy + 21 : p.midY
+        // Denied edge: park the badge to the side, just below the source box (in
+        // its zone's empty bottom padding). A normal hop badge rides the curve at
+        // its gap-aware anchor (near the source edge for long cross-zone hops, the
+        // midpoint for short in-zone ones) so it never lands on a zone header.
+        const bx = p.denied ? p.sx + 40 : p.badgeX
+        const by = p.denied ? p.sy + 14 : p.badgeY
         return (
           <g key={p.step} opacity={dimmed ? 0.28 : 1} style={{ transition: 'opacity 0.2s' }}>
             {/* glow layer — skipped for the denied edge so it reads as a thin,
@@ -246,11 +268,16 @@ export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep,
               >
                 {p.denied ? '✕' : p.step}
               </text>
-              {p.denied && p.label && p.label.split('\n').map((ln, i) => (
+              {p.denied && p.label && (() => {
+                const lines = p.label.split('\n')
+                // Centre the label block vertically on the badge so a 2-line
+                // descriptor straddles it inside the source zone's padding,
+                // instead of dropping onto the next zone's header.
+                return lines.map((ln, i) => (
                 <text
                   key={i}
                   x={bx + 16}
-                  y={by + 1 + i * 12}
+                  y={by + (i - (lines.length - 1) / 2) * 12}
                   textAnchor="start"
                   dominantBaseline="central"
                   fontSize="8.5"
@@ -263,7 +290,8 @@ export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep,
                 >
                   {ln}
                 </text>
-              ))}
+              ))
+              })()}
             </g>
           </g>
         )

@@ -1,6 +1,7 @@
-import { useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
+import DeepDiveRevealCard from './DeepDiveRevealCard'
 import ReconLoopOverlay from './ReconLoopOverlay'
 import DeepDiveArrowOverlay from './DeepDiveArrowOverlay'
 
@@ -78,6 +79,7 @@ export default function DeepDiveCanvas({
   loop,
   onSelectBox,
   onSelectEdge,
+  selectedBoxId,
   activeFlow,
   activeFlowStep,
   onSelectFlowStep,
@@ -86,6 +88,40 @@ export default function DeepDiveCanvas({
   const overlays = loop.overlays
   const recon = topic.reconciliation
   const stackRef = useRef(null)
+
+  // Which reveal-in-place boxes are expanded (the tmux parser FSM, the sudo fd
+  // inheritance). Independent toggles, mirroring the etcd intent store.
+  const [expanded, setExpanded] = useState(() => new Set())
+  const toggleReveal = (id) => setExpanded((prev) => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+
+  // child-step id → owning reveal box id, so opening a sub-step (e.g. via search)
+  // can auto-expand its parent.
+  const parentOf = useMemo(() => {
+    const m = {}
+    const walk = (zones) => {
+      for (const z of zones || []) {
+        for (const b of z.boxes || []) {
+          for (const c of b.reveal?.boxes || []) m[c.id] = b.id
+        }
+        if (z.zones) walk(z.zones)
+      }
+    }
+    walk(topic.zones)
+    return m
+  }, [topic])
+
+  // Switching topics drops any expanded reveal cards.
+  useEffect(() => { setExpanded(new Set()) }, [topic])
+
+  // Opening a sub-step's popup expands its parent so the step is on screen.
+  useEffect(() => {
+    const parent = selectedBoxId && parentOf[selectedBoxId]
+    if (parent) setExpanded((prev) => (prev.has(parent) ? prev : new Set(prev).add(parent)))
+  }, [selectedBoxId, parentOf])
 
   // Figure/ground for the trace, mirroring the Overview: the packet-red highlight
   // is reserved for the *focused* hop's two boxes. With no hop focused the canvas
@@ -130,6 +166,25 @@ export default function DeepDiveCanvas({
           onKillMain={loop.killMain}
           onKillChild={loop.killChild}
           onOpen={() => onSelectBox(box.id)}
+        />
+      )
+    }
+
+    // A box that reveals its sub-steps in place (the tmux parser FSM, the sudo
+    // fd inheritance) — expands like the etcd intent store instead of opening a
+    // separate "Zoom-in" zone.
+    if (box.reveal) {
+      return (
+        <DeepDiveRevealCard
+          key={box.id}
+          box={box}
+          accent={accent}
+          isActive={isActive}
+          isDimmed={isDimmed}
+          isExpanded={expanded.has(box.id)}
+          highlightId={selectedBoxId}
+          onToggle={() => toggleReveal(box.id)}
+          onSelectBox={onSelectBox}
         />
       )
     }
