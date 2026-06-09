@@ -1915,7 +1915,8 @@ const HCP_INSTALL = {
 // (like the etcd intent store), via that box's `reveal`:
 //   · the journey                              → "Follow the rename" flow (spine)
 //   · data path (taken) vs control (refused)   → step 1 + the dashed-red edge
-//   · how tmux reads the byte (parser FSM)     → revealed inside the tmux box
+//   · the terminal-parser FSM (how a terminal  → revealed inside the "terminal
+//     reads bytes; tmux ran it on ESC k step 3)   parser" box (your local term)
 //   · how oracle got the handle (sudo -iu)     → revealed inside oracle's bash
 // Factual backbone: docs/tmux-window-naming.md.
 const TMUX_SUDO = {
@@ -2233,7 +2234,7 @@ esac`,
               {
                 heading: 'See also',
                 facts: [
-                  { k: 'How this parse works', v: 'revealed inside this box — open it to step the FSM (ground → escape → collecting → act)' },
+                  { k: 'How this parse works', v: 'a terminal parser is a finite state machine — stepped out inside the “terminal parser” box (ground → escape → collecting → act)' },
                 ],
               },
               {
@@ -2243,127 +2244,6 @@ esac`,
                   '# The control socket the DATA path deliberately avoids\nls -la /tmp/tmux-$(id -u)/',
                   '# As oracle, pointed at bongo’s socket → the CONTROL path is denied\ntmux rename-window oracle',
                 ],
-              },
-            ],
-          },
-          // Zoom-in revealed in place: how tmux’s parser reads the rename byte.
-          // A terminal parser is a finite state machine — these are its states,
-          // stepped through \033 k o r a c l e \033 \\ (step 3 of the journey).
-          reveal: {
-            hint: 'parser FSM · how it reads the byte',
-            caption:
-              'A terminal parser is a finite state machine: in ground state every byte is drawn as text; ESC is the one byte that means “a command follows”. Step through \\033 k o r a c l e \\033 \\\\ — leave ground, collect a name, act on the terminator, return to ground. Click a state to read it.',
-            boxes: [
-              {
-                id: 'tx-ground',
-                title: 'GROUND',
-                typePrefix: 'STATE',
-                subtitle: 'printable bytes → drawn as glyphs',
-                detail: {
-                  role: 'STATE · GROUND',
-                  summary:
-                    'The resting state. Every byte read here is an ordinary character to draw. Visible text is just the parser sitting in ground. One byte breaks the spell: ESC (0x1B), the toggle into command state.',
-                  sections: [
-                    {
-                      heading: 'The one idea behind terminal control',
-                      states: [
-                        { label: 'ground', tone: 'idle', meaning: 'printable bytes are drawn as glyphs' },
-                      ],
-                      tags: ['one byte stream', 'no separate control channel', 'ESC = the door'],
-                    },
-                    {
-                      heading: 'Why catting a binary garbles the screen',
-                      bullets: [
-                        'Reads random bytes as if they were commands — tripping the parser out of ground.',
-                      ],
-                    },
-                  ],
-                },
-              },
-              {
-                id: 'tx-escape',
-                title: 'ESCAPE',
-                typePrefix: 'STATE',
-                subtitle: 'saw ESC — next byte selects the family',
-                detail: {
-                  role: 'STATE · ESCAPE',
-                  summary:
-                    'The parser saw ESC and waits for the next byte, which decides the kind of sequence. The moment to untangle “escape sequence” from “control sequence”: a control sequence (CSI) is one family of escape sequence, not a synonym.',
-                  sections: [
-                    {
-                      heading: 'The byte after ESC picks a family',
-                      facts: [
-                        { k: 'ESC [', v: 'CSI — cursor, colour, clear (e.g. ESC[31m = red). The “control sequence”.' },
-                        { k: 'ESC ]', v: 'OSC — window titles, clipboard, hyperlinks.' },
-                        { k: 'ESC k', v: 'a tmux/screen string: “set this window’s name”. The one used here.' },
-                        { k: 'ESC \\\\', v: 'ST — the string terminator, a short two-byte form.' },
-                      ],
-                      tags: ['CSI ⊂ escape sequences', 'not a synonym', 'ESC k = tmux/screen'],
-                    },
-                    {
-                      heading: 'Escape vs control sequence',
-                      states: [
-                        { label: 'escape sequence', tone: 'busy', meaning: 'anything starting with ESC — the whole family' },
-                        { label: 'control sequence (CSI)', tone: 'busy', meaning: 'only the ESC [ … subset; ESC k is NOT one' },
-                      ],
-                    },
-                  ],
-                },
-              },
-              {
-                id: 'tx-collect',
-                title: 'COLLECTING',
-                typePrefix: 'STATE',
-                subtitle: 'ESC k opened a string — accumulate the name',
-                detail: {
-                  role: 'STATE · COLLECTING THE STRING',
-                  summary:
-                    'ESC k opened a string, so the parser accumulates bytes into a name buffer instead of drawing them. It stays here until the terminator — which is why both delimiters exist: ESC k opens, ESC \\\\ closes.',
-                  sections: [
-                    {
-                      heading: 'Same bytes, different meaning',
-                      states: [
-                        { label: 'in GROUND', tone: 'idle', meaning: '“oracle” would be six glyphs drawn on screen' },
-                        { label: 'in COLLECTING', tone: 'busy', meaning: 'the identical bytes are the NAME — buffered, not drawn' },
-                      ],
-                      tags: ['state decides meaning', 'buffer, don’t draw', 'awaiting ST'],
-                    },
-                    {
-                      heading: 'Why two delimiters',
-                      facts: [
-                        { k: 'ESC k', v: 'marks the start of the name' },
-                        { k: 'ESC \\\\ (ST)', v: 'marks the end — without it the parser couldn’t tell where the name stops' },
-                      ],
-                    },
-                  ],
-                },
-              },
-              {
-                id: 'tx-act',
-                title: 'ACT · set window name',
-                typePrefix: 'ACTION',
-                subtitle: 'ESC \\\\ terminates → apply “oracle” → back to ground',
-                detail: {
-                  role: 'ACTION · COMMIT',
-                  summary:
-                    'The terminator arrives, the string is complete, the parser acts: window name = “oracle”. That is the difference between an escape sequence (control — it changed state) and printable content (merely drawn). Then it returns to ground.',
-                  sections: [
-                    {
-                      heading: 'Control vs content, made concrete',
-                      states: [
-                        { label: 'escape sequence', tone: 'ok', meaning: 'ESC k oracle ESC \\\\ → an action: rename the window' },
-                        { label: 'printable content', tone: 'idle', meaning: 'the bytes “oracle” in ground → six drawn glyphs' },
-                      ],
-                      tags: ['acted, not drawn', 'then → GROUND'],
-                    },
-                    {
-                      heading: 'Watch a real parser',
-                      commands: [
-                        '# Render ESC as ^[ so you can see the control bytes\nprintf \'\\033koracle\\033\\\\\' | cat -v   # ^[koracle^[\\\\',
-                      ],
-                    },
-                  ],
-                },
               },
             ],
           },
@@ -2484,6 +2364,128 @@ esac`,
                   { k: 'your terminal (local)', v: 'interprets tmux’s rendered output and draws it' },
                 ],
                 tags: ['second FSM', 'sees only tmux’s output', 'never the raw sequence'],
+              },
+            ],
+          },
+          // Zoom-in revealed in place: what a terminal parser actually is. This
+          // box is "a second, independent state machine" — so the finite-state
+          // machine every terminal parser runs is stepped out here, using the
+          // rename sequence tmux handled back in step 3 as the worked example.
+          reveal: {
+            hint: 'parser FSM · how a terminal reads bytes',
+            caption:
+              'Every terminal parser — this one, and tmux back in step 3 — is the same finite state machine: in ground state each byte is drawn as text; ESC is the one byte that means “a command follows”. Step through the rename sequence \\033 k o r a c l e \\033 \\\\ to watch it leave ground, collect a name, act on the terminator, and return to ground. Click a state to read it.',
+            boxes: [
+              {
+                id: 'tx-ground',
+                title: 'GROUND',
+                typePrefix: 'STATE',
+                subtitle: 'printable bytes → drawn as glyphs',
+                detail: {
+                  role: 'STATE · GROUND',
+                  summary:
+                    'The resting state. Every byte read here is an ordinary character to draw. Visible text is just the parser sitting in ground. One byte breaks the spell: ESC (0x1B), the toggle into command state.',
+                  sections: [
+                    {
+                      heading: 'The one idea behind terminal control',
+                      states: [
+                        { label: 'ground', tone: 'idle', meaning: 'printable bytes are drawn as glyphs' },
+                      ],
+                      tags: ['one byte stream', 'no separate control channel', 'ESC = the door'],
+                    },
+                    {
+                      heading: 'Why catting a binary garbles the screen',
+                      bullets: [
+                        'Reads random bytes as if they were commands — tripping the parser out of ground.',
+                      ],
+                    },
+                  ],
+                },
+              },
+              {
+                id: 'tx-escape',
+                title: 'ESCAPE',
+                typePrefix: 'STATE',
+                subtitle: 'saw ESC — next byte selects the family',
+                detail: {
+                  role: 'STATE · ESCAPE',
+                  summary:
+                    'The parser saw ESC and waits for the next byte, which decides the kind of sequence. The moment to untangle “escape sequence” from “control sequence”: a control sequence (CSI) is one family of escape sequence, not a synonym.',
+                  sections: [
+                    {
+                      heading: 'The byte after ESC picks a family',
+                      facts: [
+                        { k: 'ESC [', v: 'CSI — cursor, colour, clear (e.g. ESC[31m = red). The “control sequence”.' },
+                        { k: 'ESC ]', v: 'OSC — window titles, clipboard, hyperlinks.' },
+                        { k: 'ESC k', v: 'a tmux/screen string: “set this window’s name”. The one used here.' },
+                        { k: 'ESC \\\\', v: 'ST — the string terminator, a short two-byte form.' },
+                      ],
+                      tags: ['CSI ⊂ escape sequences', 'not a synonym', 'ESC k = tmux/screen'],
+                    },
+                    {
+                      heading: 'Escape vs control sequence',
+                      states: [
+                        { label: 'escape sequence', tone: 'busy', meaning: 'anything starting with ESC — the whole family' },
+                        { label: 'control sequence (CSI)', tone: 'busy', meaning: 'only the ESC [ … subset; ESC k is NOT one' },
+                      ],
+                    },
+                  ],
+                },
+              },
+              {
+                id: 'tx-collect',
+                title: 'COLLECTING',
+                typePrefix: 'STATE',
+                subtitle: 'ESC k opened a string — accumulate the name',
+                detail: {
+                  role: 'STATE · COLLECTING THE STRING',
+                  summary:
+                    'ESC k opened a string, so the parser accumulates bytes into a name buffer instead of drawing them. It stays here until the terminator — which is why both delimiters exist: ESC k opens, ESC \\\\ closes.',
+                  sections: [
+                    {
+                      heading: 'Same bytes, different meaning',
+                      states: [
+                        { label: 'in GROUND', tone: 'idle', meaning: '“oracle” would be six glyphs drawn on screen' },
+                        { label: 'in COLLECTING', tone: 'busy', meaning: 'the identical bytes are the NAME — buffered, not drawn' },
+                      ],
+                      tags: ['state decides meaning', 'buffer, don’t draw', 'awaiting ST'],
+                    },
+                    {
+                      heading: 'Why two delimiters',
+                      facts: [
+                        { k: 'ESC k', v: 'marks the start of the name' },
+                        { k: 'ESC \\\\ (ST)', v: 'marks the end — without it the parser couldn’t tell where the name stops' },
+                      ],
+                    },
+                  ],
+                },
+              },
+              {
+                id: 'tx-act',
+                title: 'ACT · set window name',
+                typePrefix: 'ACTION',
+                subtitle: 'ESC \\\\ terminates → apply “oracle” → back to ground',
+                detail: {
+                  role: 'ACTION · COMMIT',
+                  summary:
+                    'The terminator arrives, the string is complete, the parser acts: window name = “oracle”. That is the difference between an escape sequence (control — it changed state) and printable content (merely drawn). Then it returns to ground.',
+                  sections: [
+                    {
+                      heading: 'Control vs content, made concrete',
+                      states: [
+                        { label: 'escape sequence', tone: 'ok', meaning: 'ESC k oracle ESC \\\\ → an action: rename the window' },
+                        { label: 'printable content', tone: 'idle', meaning: 'the bytes “oracle” in ground → six drawn glyphs' },
+                      ],
+                      tags: ['acted, not drawn', 'then → GROUND'],
+                    },
+                    {
+                      heading: 'Watch a real parser',
+                      commands: [
+                        '# Render ESC as ^[ so you can see the control bytes\nprintf \'\\033koracle\\033\\\\\' | cat -v   # ^[koracle^[\\\\',
+                      ],
+                    },
+                  ],
+                },
               },
             ],
           },
