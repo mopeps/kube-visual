@@ -216,7 +216,7 @@ export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep,
         const bx = p.denied ? p.sx + 40 : p.badgeX
         const by = p.denied ? p.sy + 14 : p.badgeY
         return (
-          <g key={p.step} opacity={dimmed ? 0.28 : 1} style={{ transition: 'opacity 0.2s' }}>
+          <g key={p.step} opacity={dimmed ? 0.4 : 1} style={{ transition: 'opacity 0.2s' }}>
             {/* glow layer — skipped for the denied edge so it reads as a thin,
                 refused dashed line rather than a lit-up part of the flow. */}
             {!p.denied && (

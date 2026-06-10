@@ -9,6 +9,7 @@ export default function Zone({
   componentId,
   stepNum,
   isActive = false,
+  isOnPath = false,
   isHighlighted = false,
   onClick,
 }) {
@@ -60,6 +61,10 @@ export default function Zone({
           cursor: isComponent ? 'pointer' : undefined,
           ...(isActive && {
             boxShadow: `inset 0 0 0 1px ${color}, 0 0 16px ${color}40`,
+          }),
+          // On the trace path but not the focused hop: a quieter inset ring.
+          ...(isOnPath && {
+            boxShadow: `inset 0 0 0 1px ${color}88`,
           }),
         }}
       >

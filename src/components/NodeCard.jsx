@@ -7,6 +7,7 @@ export default function NodeCard({
   color,
   stepNum,
   isActive,
+  isOnPath,
   isDimmed,
   isHighlighted,
   onClick,
@@ -30,7 +31,7 @@ export default function NodeCard({
           onClick?.(id)
         }
       }}
-      className={`node ${isActive ? 'is-active' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''}`}
+      className={`node ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''}`}
       style={{
         '--node-accent': color,
         background: isActive

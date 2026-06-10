@@ -19,6 +19,7 @@ export default function IntentStoreCard({
   color,
   stepNum,
   isActive,
+  isOnPath,
   isDimmed,
   isHighlighted,
   highlightId,
@@ -59,7 +60,7 @@ export default function IntentStoreCard({
             onToggle()
           }
         }}
-        className={`node intent-store ${isActive ? 'is-active' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''}`}
+        className={`node intent-store ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''}`}
         style={{ '--node-accent': color }}
         title="Open intent store"
       >
@@ -86,7 +87,7 @@ export default function IntentStoreCard({
       ref={ref}
       // Take a full row so the enlarged store doesn't crowd the static-pod cards.
       onClick={(e) => { e.stopPropagation(); onToggle() }}
-      className={`intent-store-expanded ${isActive ? 'is-active' : ''} ${isHighlighted ? 'is-highlighted' : ''}`}
+      className={`intent-store-expanded ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isHighlighted ? 'is-highlighted' : ''}`}
       style={{ '--node-accent': color, '--store-accent': color }}
     >
       {stepNum != null && (
