@@ -720,6 +720,17 @@ export const ZONES = [
                 typePrefix: 'Pod',
                 badges: [{ label: 'Tunnel :8091', color: 'var(--k-sky)' }],
               },
+              // Guest storage backend: provisions a management-cluster PVC
+              // behind every guest PVC and hotplugs it into the worker VMI.
+              {
+                id: 'kubevirt-csi-controller',
+                title: 'KubeVirt CSI Controller',
+                typePrefix: 'Pod',
+                badges: [
+                  { label: 'csi.kubevirt.io', color: 'var(--k-sky)' },
+                  { label: 'CreateVolume · hotplug', color: 'var(--k-sky)' },
+                ],
+              },
               {
                 id: 'ignition-server',
                 title: 'Ignition Server',
