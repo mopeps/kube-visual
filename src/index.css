@@ -255,6 +255,15 @@ body::after {
   box-shadow: 0 0 0 2px var(--packet), 0 0 24px rgba(255, 77, 109, 0.35);
 }
 .node.is-dimmed { opacity: 0.35; }
+/* On the active trace path but not the focused hop — keeps the rest of the
+   route readable (full opacity, faint packet tint) so it can't be confused
+   with unrelated .is-dimmed nodes while one hop wears the full red glow. */
+.node.is-on-path,
+.intent-store-expanded.is-on-path {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--packet) 45%, var(--border-w));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--packet) 30%, transparent);
+}
 
 /* Reveal spotlight — a transient pulse in the object's own zone accent, fired
    when the canvas is asked to "find" a component (e.g. via a detail popup's

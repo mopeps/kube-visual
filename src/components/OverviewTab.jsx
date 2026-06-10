@@ -47,6 +47,24 @@ export default function OverviewTab({
   const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
 
+  // Figure/ground for the trace: with a hop focused, the packet-red .is-active
+  // glow narrows to that hop's two endpoints while the rest of the route keeps
+  // an .is-on-path tint — distinct from unrelated .is-dimmed nodes. With no hop
+  // focused, the whole path glows (status quo).
+  const hopStep = activeEvent && activeStep != null
+    ? activeEvent.steps.find(s => s.step === activeStep)
+    : null
+  const hopIds = hopStep ? new Set([hopStep.sourceComponentId, hopStep.targetComponentId]) : null
+
+  function traceStates(id) {
+    const onPath = activeComponentIds?.has?.(id) || false
+    return {
+      isActive: hopIds ? hopIds.has(id) : onPath,
+      isOnPath: hopIds != null && onPath && !hopIds.has(id),
+      isDimmed: hasActive && !onPath,
+    }
+  }
+
   // Spotlight a component requested from elsewhere (e.g. a detail popup's
   // location badge): expand its parent store if it lives in one — an etcd
   // intent store or a controller-manager controller set — scroll the target
@@ -102,7 +120,7 @@ export default function OverviewTab({
   )
 
   function renderNode(node, zone) {
-    const isActive = activeComponentIds?.has?.(node.id)
+    const { isActive, isOnPath, isDimmed } = traceStates(node.id)
     // Nodes carrying intent objects (the etcd "intent store") render as an
     // expandable card instead of a plain box.
     if (node.intentObjects) {
@@ -113,7 +131,8 @@ export default function OverviewTab({
           color={zone.color}
           stepNum={stepNums.get(node.id)}
           isActive={isActive}
-          isDimmed={hasActive && !isActive}
+          isOnPath={isOnPath}
+          isDimmed={isDimmed}
           isHighlighted={node.id === highlightId}
           highlightId={highlightId}
           isExpanded={expandedStoreId === node.id}
@@ -132,7 +151,8 @@ export default function OverviewTab({
           color={zone.color}
           stepNum={stepNums.get(node.id)}
           isActive={isActive}
-          isDimmed={hasActive && !isActive}
+          isOnPath={isOnPath}
+          isDimmed={isDimmed}
           isHighlighted={node.id === highlightId}
           highlightId={highlightId}
           isExpanded={expandedStoreId === node.id}
@@ -152,7 +172,8 @@ export default function OverviewTab({
           color={zone.color}
           stepNum={stepNums.get(node.id)}
           isActive={isActive}
-          isDimmed={hasActive && !isActive}
+          isOnPath={isOnPath}
+          isDimmed={isDimmed}
           isHighlighted={node.id === highlightId}
           highlightId={highlightId}
           isExpanded={expandedStoreId === node.id}
@@ -171,7 +192,8 @@ export default function OverviewTab({
           color={zone.color}
           stepNum={stepNums.get(node.id)}
           isActive={isActive}
-          isDimmed={hasActive && !isActive}
+          isOnPath={isOnPath}
+          isDimmed={isDimmed}
           isHighlighted={node.id === highlightId}
           highlightId={highlightId}
           isExpanded={expandedStoreId === node.id}
@@ -189,7 +211,8 @@ export default function OverviewTab({
         color={zone.color}
         stepNum={stepNums.get(node.id)}
         isActive={isActive}
-        isDimmed={hasActive && !isActive}
+        isOnPath={isOnPath}
+        isDimmed={isDimmed}
         isHighlighted={node.id === highlightId}
         onClick={onSelectComponent}
       />
@@ -245,7 +268,8 @@ export default function OverviewTab({
         // so it can anchor arrows, highlight, and open the detail panel.
         componentId={zone.componentId}
         stepNum={zone.componentId ? stepNums.get(zone.componentId) : undefined}
-        isActive={zone.componentId ? activeComponentIds?.has?.(zone.componentId) : false}
+        isActive={zone.componentId ? traceStates(zone.componentId).isActive : false}
+        isOnPath={zone.componentId ? traceStates(zone.componentId).isOnPath : false}
         isHighlighted={zone.componentId ? zone.componentId === highlightId : false}
         onClick={onSelectComponent}
       >

@@ -135,6 +135,15 @@ export default function DeepDiveCanvas({
   const focusedIds = focusedStep
     ? new Set([focusedStep.sourceBoxId, focusedStep.targetBoxId])
     : null
+  // Every box the active flow touches — while a hop is focused, these keep an
+  // .is-on-path tint so the rest of the route stays readable against the
+  // dimmed off-path boxes (mirrors the Overview's figure/ground).
+  const flowIds = useMemo(() => {
+    if (!activeFlow) return null
+    const ids = new Set()
+    activeFlow.steps.forEach(s => { ids.add(s.sourceBoxId); ids.add(s.targetBoxId) })
+    return ids
+  }, [activeFlow])
 
   // Boxes carry only their heading on the canvas — the static descriptive
   // subtitle lives in the popup (DeepDiveModal) so the canvas stays uncluttered.
@@ -145,7 +154,8 @@ export default function DeepDiveCanvas({
     const ov = overlays[box.id]
     const accent = ov?.accent || accentOf(zone, topic)
     const isActive = focusedIds?.has(box.id) || false
-    const isDimmed = focusedIds ? !focusedIds.has(box.id) : false
+    const isOnPath = focusedIds != null && !isActive && (flowIds?.has(box.id) || false)
+    const isDimmed = focusedIds ? !isActive && !isOnPath : false
 
     // Static subtitles are hidden on the resting canvas for every topic; on the
     // systemd topic the overlay's live status line returns while armed.
@@ -180,6 +190,7 @@ export default function DeepDiveCanvas({
           box={box}
           accent={accent}
           isActive={isActive}
+          isOnPath={isOnPath}
           isDimmed={isDimmed}
           isExpanded={expanded.has(box.id)}
           highlightId={selectedBoxId}
@@ -199,6 +210,7 @@ export default function DeepDiveCanvas({
         subtitle={subtitle}
         badges={box.badges}
         isActive={isActive}
+        isOnPath={isOnPath}
         isDimmed={isDimmed}
         isHighlighted={ov?.highlight}
         onClick={() => onSelectBox(box.id)}

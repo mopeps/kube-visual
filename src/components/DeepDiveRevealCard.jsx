@@ -19,6 +19,7 @@ export default function DeepDiveRevealCard({
   box,
   accent,
   isActive,
+  isOnPath,
   isDimmed,
   isExpanded,
   highlightId,
@@ -60,7 +61,7 @@ export default function DeepDiveRevealCard({
             onToggle()
           }
         }}
-        className={`node dd-reveal ${isActive ? 'is-active' : ''} ${isDimmed ? 'is-dimmed' : ''}`}
+        className={`node dd-reveal ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''}`}
         style={{ '--node-accent': accent }}
         title={`Reveal ${reveal?.hint || 'the steps'}`}
       >
@@ -94,7 +95,7 @@ export default function DeepDiveRevealCard({
       ref={ref}
       // Take a full row so the revealed sequence doesn't crowd the sibling boxes.
       onClick={(e) => { e.stopPropagation(); onToggle() }}
-      className={`intent-store-expanded dd-reveal-expanded ${isActive ? 'is-active' : ''}`}
+      className={`intent-store-expanded dd-reveal-expanded ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''}`}
       style={{ '--node-accent': accent, '--store-accent': accent }}
     >
       <div className="intent-store-header">
