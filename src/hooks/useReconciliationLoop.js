@@ -155,11 +155,17 @@ const STOP_STEPS = [
 // The scenarios the Deep Dive "Scenario" dropdown offers, in order. `steps` is
 // the event sequence; `start` is the index the walkthrough lands on when armed
 // (1 = the triggering action itself, skipping the shared steady-state frame).
+// `lede` is the one-line "why this scenario teaches something" framing, shown
+// as a persistent caption in the walkthrough navigator while stepping.
 const SCENARIOS = [
-  { id: 'main',   name: 'Kill the main PID',      meta: 'restart',  steps: MAIN_STEPS,   start: 1 },
-  { id: 'child',  name: 'Kill a child PID',       meta: 'reaped',   steps: CHILD_STEPS,  start: 1 },
-  { id: 'reload', name: 'Edit unit + daemon-reload', meta: 'recompile', steps: RELOAD_STEPS, start: 1 },
-  { id: 'stop',   name: 'systemctl stop',         meta: 'inactive', steps: STOP_STEPS,   start: 1 },
+  { id: 'main',   name: 'Kill the main PID',      meta: 'restart',  steps: MAIN_STEPS,   start: 1,
+    lede: 'The main PID is what systemd tracks — its death is drift, so the unit restarts. Watch cgroup.procs empty out and repopulate with fresh PIDs.' },
+  { id: 'child',  name: 'Kill a child PID',       meta: 'reaped',   steps: CHILD_STEPS,  start: 1,
+    lede: 'A helper’s death is not drift — the main PID still matches desired state, so systemd only reaps the child. No restart.' },
+  { id: 'reload', name: 'Edit unit + daemon-reload', meta: 'recompile', steps: RELOAD_STEPS, start: 1,
+    lede: 'Editing a unit file changes nothing by itself — daemon-reload recompiles desired state (the DAG) without touching the running process.' },
+  { id: 'stop',   name: 'systemctl stop',         meta: 'inactive', steps: STOP_STEPS,   start: 1,
+    lede: 'The same SIGCHLD as a crash, the opposite outcome: desired state now says inactive, so the death is intended and nothing restarts.' },
 ]
 
 const scenarioById = (id) => SCENARIOS.find((s) => s.id === id) || null
@@ -263,7 +269,7 @@ export default function useReconciliationLoop(recon) {
 
   if (!recon) {
     return {
-      armed: false, scenario: null, scenarioName: null, scenarios: SCENARIOS,
+      armed: false, scenario: null, scenarioName: null, lede: null, scenarios: SCENARIOS,
       steps: [], index: 0, step: null, phase: 'idle',
       procs: [], overlays: {}, activeEdgeId: null, signal: null, playing: false,
       canPrev: false, canNext: false, atEnd: false,
@@ -347,6 +353,7 @@ export default function useReconciliationLoop(recon) {
     armed,
     scenario,
     scenarioName: active?.name || null,
+    lede: active?.lede || null,
     scenarios: SCENARIOS,
     steps,
     index,

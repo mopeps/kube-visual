@@ -20,7 +20,7 @@ const accentOf = (zone, topic) => `var(--${zone.colorVar || topic.colorVar || 'k
 // kernel pins inside the unit's cgroup. Clicking a PID kills it; clicking the
 // box background opens its detail popup. Children sit visibly trapped here until
 // systemd sweeps them.
-function CgroupBox({ box, accent, subtitle, highlight, procs, locked, onKillMain, onKillChild, onOpen }) {
+function CgroupBox({ box, accent, subtitle, highlight, hint, procs, locked, onKillMain, onKillChild, onOpen }) {
   const killProc = (e, p) => {
     e.stopPropagation()
     if (locked) return
@@ -70,6 +70,9 @@ function CgroupBox({ box, accent, subtitle, highlight, procs, locked, onKillMain
           ))}
         </div>
       </div>
+      {/* Why these PIDs are clickable — shown until a walkthrough is armed, at
+          which point the navigator's lede carries the framing instead. */}
+      {!locked && hint && <p className="cgroup-hint">{hint}</p>}
     </div>
   )
 }
@@ -171,6 +174,7 @@ export default function DeepDiveCanvas({
           accent={accent}
           subtitle={subtitle}
           highlight={ov?.highlight}
+          hint={recon.hint}
           procs={loop.procs}
           locked={loop.armed}
           onKillMain={loop.killMain}
