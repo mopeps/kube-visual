@@ -170,6 +170,22 @@ export const ZONES = [
                 typePrefix: 'Custom Resource',
                 badges: [{ label: 'kubevirt.io', color: 'var(--k-blue)' }],
               },
+              // metallb.io config CRs — pure desired state the MetalLB controller
+              // reconciles into VIP allocations and L2 advertisements. Namespaced
+              // in metallb-system but persisted here in management etcd, so they
+              // live in this intent store rather than as cards in that namespace.
+              {
+                id: 'metallb-ipaddresspool',
+                title: 'IPAddressPool',
+                typePrefix: 'Custom Resource',
+                badges: [{ label: 'metallb.io', color: 'var(--k-blue)' }],
+              },
+              {
+                id: 'metallb-l2advertisement',
+                title: 'L2Advertisement',
+                typePrefix: 'Custom Resource',
+                badges: [{ label: 'metallb.io', color: 'var(--k-blue)' }],
+              },
             ],
           },
           {
@@ -716,9 +732,11 @@ export const ZONES = [
           // guest). MetalLB is the bare-metal stand-in for a cloud LoadBalancer:
           // the guest is a "cloud-hosted" cluster whose cloud IS this management
           // cluster, so the guest's LoadBalancer Services are fulfilled here, not
-          // by a speaker inside the guest. The controller allocates VIPs from the
-          // IPAddressPool; the per-node speakers (on the node zones) advertise
-          // them via ARP/NDP in L2 mode.
+          // by a speaker inside the guest. The controller allocates VIPs and the
+          // per-node speakers (on the node zones) advertise them via ARP/NDP in
+          // L2 mode. Its config CRs (IPAddressPool / L2Advertisement) are pure
+          // desired state, so they live in the Management Etcd intent store above,
+          // not as standalone cards here.
           {
             id: 'metallb-system',
             label: 'metallb-system Namespace',
@@ -733,18 +751,6 @@ export const ZONES = [
                   { label: 'Deployment', color: 'var(--k-amber)' },
                   { label: 'IP allocation', color: 'var(--k-amber)' },
                 ],
-              },
-              {
-                id: 'metallb-ipaddresspool',
-                title: 'IPAddressPool',
-                typePrefix: 'Custom Resource',
-                badges: [{ label: 'metallb.io', color: 'var(--k-amber)' }],
-              },
-              {
-                id: 'metallb-l2advertisement',
-                title: 'L2Advertisement',
-                typePrefix: 'Custom Resource',
-                badges: [{ label: 'metallb.io', color: 'var(--k-amber)' }],
               },
             ],
           },
