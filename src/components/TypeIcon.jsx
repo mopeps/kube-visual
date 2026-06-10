@@ -81,13 +81,27 @@ const TYPE_GLYPHS = {
   ),
 }
 
-// Type glyphs are currently hidden across the app — the bracketed [typePrefix]
-// label carries the type on its own, so the icon is suppressed everywhere to cut
-// visual noise. This component is kept (with its glyph definitions above) as a
-// no-op so call sites can drop it in unconditionally; re-enable the icons by
-// restoring the original render body that looked up TYPE_GLYPHS[TYPE_GLYPH_KEY].
-export default function TypeIcon() {
-  return null
+// The glyph drawn next to a node's bracketed [typePrefix] label. Each runtime
+// form gets a distinct mark (Pod hexagon, systemd power symbol, VMI monitor…)
+// so the form is recognisable at a glance; the Overview legend explains the
+// vocabulary. Renders nothing for a prefix with no glyph (graceful no-op).
+export default function TypeIcon({ typePrefix, className }) {
+  const glyph = TYPE_GLYPHS[TYPE_GLYPH_KEY[typePrefix]]
+  if (!glyph) return null
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {glyph}
+    </svg>
+  )
 }
 
 // Exposed so other views (legends, etc.) can tell whether a prefix has a glyph.

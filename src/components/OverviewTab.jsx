@@ -8,6 +8,7 @@ import OperatorSetCard from './OperatorSetCard'
 import RealizedFlowsCard from './RealizedFlowsCard'
 import ServicePair from './ServicePair'
 import ArrowOverlay from './ArrowOverlay'
+import Legend from './Legend'
 import { scrollIntoUpperThird } from '../lib/scroll'
 
 // How long the reveal spotlight stays lit before it auto-clears. Kept in sync
@@ -283,6 +284,7 @@ export default function OverviewTab({
 
   return (
     <>
+      <Legend />
       <div
         ref={canvasRef}
         className="border border-border-w rounded-lg overflow-visible overview-canvas"
