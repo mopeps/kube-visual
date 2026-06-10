@@ -3103,7 +3103,230 @@ const LINUX_FDS = {
   ],
 }
 
-export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, TMUX_SUDO, LINUX_FDS]
+// ── Inside the API server · one request's journey ───────────────────────────
+const API_REQUEST_PATH = {
+  topicId: 'api-request-path',
+  title: 'Inside the API server — one request’s journey',
+  tagline:
+    'Every `oc apply`, controller write, and kubelet status update runs the same gauntlet inside kube-apiserver: authentication → authorization → mutating admission → validation → an etcd write → watch fan-out to every interested loop. In HCP the server running this chain is itself a Pod in the management cluster’s HCP namespace, and the admission webhooks it calls are Pods next door.',
+  colorVar: 'k-blue',
+  flows: [
+    {
+      flowId: 'api-write',
+      flowName: 'oc apply → etcd → watchers',
+      description:
+        'One write request, followed through the handler chain. The two dashed-red edges are the roads not taken: a request with no valid credential dies at authentication with 401; an authenticated user without an RBAC grant dies at authorization with 403. Everything that survives admission is persisted once in etcd, and the new revision fans out to every open watch — that fan-out, not polling, is what drives all the controllers on the Overview.',
+      steps: [
+        { step: 1, sourceBoxId: 'api-request', targetBoxId: 'api-authn',
+          description: 'The client opens TLS to the API endpoint and sends the request; the kubeconfig decides which credential rides along — a client certificate, a bearer token, or an OIDC token. Authentication runs first: the configured authenticators are tried in order and the first success wins, producing a user and group list.' },
+        { step: 2, sourceBoxId: 'api-authn', targetBoxId: 'api-authz',
+          description: 'The request now carries an identity (user, groups, extra attributes). Authorization asks one question: may THIS identity do THIS verb on THIS resource in THIS namespace? The RBAC authorizer walks RoleBindings and ClusterRoleBindings looking for a rule that allows it.' },
+        { step: 3, sourceBoxId: 'api-authz', targetBoxId: 'api-admission-mutate',
+          description: 'Authorized requests enter admission. Mutating admission runs first: compiled-in plugins (ServiceAccount injects the token volume, DefaultStorageClass fills an empty storageClassName), then every matching MutatingWebhookConfiguration webhook in order — each one an HTTPS call to a webhook Pod that may return a JSONPatch rewriting the object.' },
+        { step: 4, sourceBoxId: 'api-admission-mutate', targetBoxId: 'api-validate',
+          description: 'The MUTATED object is then validated: built-in schema/CEL validation first, then every matching ValidatingWebhookConfiguration webhook — called in parallel, none may change the object, any one veto fails the whole request. This is where the Multus Admission Controller on the Overview earns its place: it validates NetworkAttachmentDefinitions exactly here.' },
+        { step: 5, sourceBoxId: 'api-validate', targetBoxId: 'api-etcd-commit',
+          description: 'The surviving object is persisted: serialized to protobuf and written to etcd under its key, committed through Raft consensus (the etcd deep dive walks that part). The object’s resourceVersion is the etcd modification revision — it exists nowhere else.' },
+        { step: 6, sourceBoxId: 'api-etcd-commit', targetBoxId: 'api-watch-cache',
+          description: 'The API server’s watch cache observes the committed revision on its own etcd watch and appends the event to its in-memory ring — one etcd watch feeding thousands of client watches, so etcd is read once no matter how many controllers care.' },
+        { step: 7, sourceBoxId: 'api-watch-cache', targetBoxId: 'api-watchers',
+          description: 'The event streams out every open WATCH whose selector matches: controller informers, the scheduler, and each kubelet’s own outbound watch. Nothing is pushed to nodes — the kubelet dialled in and keeps the stream open, which is why a watch never needs the Konnectivity tunnel.' },
+      ],
+      // One denied edge, not two: the 403 road-not-taken from authorization
+      // straight past the rest of the chain. The 401 case stays on the
+      // Authentication box itself (its stat badge + popup) — a second short
+      // dashed edge between the adjacent filter boxes just collided with it.
+      rejectedEdges: [
+        { sourceBoxId: 'api-authz', targetBoxId: 'api-etcd-commit',
+          label: '403 Forbidden\nno RBAC grant', openBoxId: 'api-authz' },
+      ],
+    },
+  ],
+  zones: [
+    {
+      id: 'api-client-zone',
+      label: 'Client · the request',
+      colorVar: 'k-cyan',
+      boxes: [
+        {
+          id: 'api-request',
+          title: 'oc apply -f deploy.yaml',
+          typePrefix: 'HTTPS',
+          subtitle: 'TLS + a credential from the kubeconfig',
+          detail: {
+            role: 'THE REQUEST',
+            summary:
+              'Every interaction with Kubernetes is an HTTPS request to the API server — `oc` and `kubectl` are just typed REST clients. The kubeconfig supplies the server URL, the CA to trust, and the credential to present; in HCP that URL resolves to the Shared Ingress and terminates at the Guest API Server Pod.',
+            sections: [
+              { heading: 'At a glance', tags: ['HTTPS', 'TLS 1.3', 'HTTP/2', 'kubeconfig', 'REST + watch'] },
+              { heading: 'Explore', commands: [
+                '# The raw request oc makes for you\noc get deployment my-app -v=8',
+                '# Who does the kubeconfig say you are?\noc whoami',
+              ] },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'api-chain',
+      label: 'kube-apiserver · the handler chain',
+      colorVar: 'k-blue',
+      boxes: [
+        {
+          id: 'api-authn',
+          title: 'Authentication',
+          typePrefix: 'FILTER 1',
+          subtitle: 'who are you? — first authenticator to succeed wins',
+          badges: [{ label: '401 on failure', kind: 'stat' }],
+          detail: {
+            role: 'IDENTITY',
+            summary:
+              'The configured authenticators run in order and the first success attaches a user + groups to the request. X.509 client certificates encode the user in the CN and groups in O fields; ServiceAccount bearer tokens are verified as signed JWTs (the TokenReview API exposes the same check); OIDC tokens map claims to users. OpenShift adds its own path: the integrated OAuth server issues tokens that the oauth-apiserver validates. No authenticator succeeding = 401, and the request never goes further.',
+            sections: [
+              { heading: 'The authenticators', bullets: [
+                'X.509 client cert — CN = username, O = groups; how admins and kubelets authenticate.',
+                'ServiceAccount token — a signed JWT mounted into Pods; how in-cluster clients authenticate.',
+                'OIDC / OAuth token — how human users authenticate in OpenShift (oc login).',
+                'Anonymous — if everything fails and anonymous-auth is on, you are system:anonymous (and RBAC will almost certainly say 403).',
+              ] },
+              { heading: 'Explore', commands: [
+                '# The identity your current credential resolves to\noc whoami',
+                '# Decode a ServiceAccount JWT (header.payload.signature)\noc create token default | cut -d. -f2 | base64 -d | jq',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'api-authz',
+          title: 'Authorization · RBAC',
+          typePrefix: 'FILTER 2',
+          subtitle: 'may THIS user do THIS verb on THIS resource?',
+          detail: {
+            role: 'PERMISSION',
+            summary:
+              'Authorization is a pure function over the identity and the request attributes: verb, API group, resource, namespace, name. The RBAC authorizer walks RoleBindings (namespaced) and ClusterRoleBindings (cluster-wide) for the user and its groups, looking for a Role/ClusterRole rule that allows the tuple. RBAC is allow-only — there is no deny rule; anything not granted is forbidden. The same decision is queryable through the SubjectAccessReview API, which is what `oc auth can-i` calls.',
+            sections: [
+              { heading: 'Beyond RBAC', bullets: [
+                'Node authorizer — scopes each kubelet to exactly the objects of its own node (its credential is in system:nodes).',
+                'Webhook mode — delegate the decision to an external service.',
+                'Authorizers run as a chain too: the first one with a definitive allow/deny answer wins.',
+              ] },
+              { heading: 'Explore', commands: [
+                '# Ask the authorizer directly\noc auth can-i create deployments -n e-commerce-prod',
+                '# What grants someone a verb? (OpenShift helper)\noc adm policy who-can delete pods -n e-commerce-prod',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'api-admission-mutate',
+          title: 'Mutating admission',
+          typePrefix: 'FILTER 3',
+          subtitle: 'compiled-in plugins, then webhooks — each may patch',
+          detail: {
+            role: 'REWRITE',
+            summary:
+              'Admission is where the cluster gets to edit and police objects before they exist. Mutating admission runs first: compiled-in plugins (the ServiceAccount plugin injects the token volume into every Pod; DefaultStorageClass fills in an empty storageClassName — exactly what the storage trace relies on), then each matching MutatingWebhookConfiguration webhook in order. A webhook is just an HTTPS POST of an AdmissionReview to a Service — in HCP, to a Pod in the same namespace — whose response may carry a JSONPatch.',
+            sections: [
+              { heading: 'Note', bullets: [
+                'Order matters and webhooks can observe earlier patches — which is why validation runs only after ALL mutation is done.',
+                'sidecar injection (service meshes), default resource limits, and image-pull-secret injection all live here.',
+              ] },
+              { heading: 'Explore', commands: [
+                '# Which mutating webhooks does this cluster run?\noc get mutatingwebhookconfiguration',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'api-validate',
+          title: 'Validation',
+          typePrefix: 'FILTER 4',
+          subtitle: 'schema + CEL, then validating webhooks — any veto fails',
+          detail: {
+            role: 'VETO',
+            summary:
+              'The mutated object is checked against its OpenAPI schema and CEL validation rules, then every matching ValidatingWebhookConfiguration webhook is called — in parallel, since none may modify the object. A single veto fails the whole request with the webhook’s message. The Multus Admission Controller card on the Overview is one of these: it validates NetworkAttachmentDefinitions for the guest cluster right here in the Guest API Server’s chain.',
+            sections: [
+              { heading: 'Note', bullets: [
+                'ValidatingAdmissionPolicy (CEL, in-process) covers simple cases without the webhook round-trip.',
+                'A webhook with failurePolicy: Fail can block ALL matching writes if its Pod is down — a classic cluster outage.',
+              ] },
+              { heading: 'Explore', commands: [
+                '# Which validating webhooks does this cluster run?\noc get validatingwebhookconfiguration',
+              ] },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'api-store-zone',
+      label: 'Persistence · etcd',
+      colorVar: 'k-green',
+      boxes: [
+        {
+          id: 'api-etcd-commit',
+          title: 'etcd commit',
+          typePrefix: 'KV',
+          subtitle: 'protobuf write → Raft → resourceVersion',
+          detail: {
+            role: 'THE WRITE',
+            summary:
+              'The object is serialized to protobuf and written to etcd under /registry/<resource>/<namespace>/<name>, committed through Raft consensus across the etcd members. The resourceVersion every Kubernetes object carries is the etcd modification revision of that write — the cluster’s single logical clock. The “etcd — Raft, quorum” deep dive walks what commit means; in HCP this is the Guest Etcd StatefulSet in the management cluster, not the management masters’ static-pod etcd.',
+            sections: [
+              { heading: 'Explore', commands: [
+                '# The revision the object was last written at\noc get deployment my-app -o jsonpath=\'{.metadata.resourceVersion}\'',
+              ] },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'api-fanout',
+      label: 'Watch fan-out · what makes controllers tick',
+      colorVar: 'k-sky',
+      boxes: [
+        {
+          id: 'api-watch-cache',
+          title: 'Watch cache',
+          typePrefix: 'CACHE',
+          subtitle: 'one etcd watch in → thousands of client watches out',
+          detail: {
+            role: 'MULTIPLIER',
+            summary:
+              'The API server keeps a per-resource in-memory cache fed by its own etcd watch. Every committed revision lands here once and is replayed to every open client watch whose filter matches. This is why hundreds of controllers and kubelets watching Pods costs etcd a single watch — the API server, not etcd, does the fan-out.',
+            sections: [
+              { heading: 'Note', bullets: [
+                'A client resuming a watch from a too-old resourceVersion gets HTTP 410 Gone and must re-list — the cache ring is finite.',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'api-watchers',
+          title: 'The watchers',
+          typePrefix: 'LOOPS',
+          subtitle: 'informers · scheduler · every kubelet',
+          detail: {
+            role: 'THE AUDIENCE',
+            summary:
+              'Everything event-driven on the Overview hangs off this stream: controller informers (Deployment, ReplicaSet, the CSI external-provisioner from the storage trace), the scheduler watching for unbound Pods, and each kubelet watching for Pods bound to its node. Every connection is OUTBOUND into the API server — nothing is pushed to nodes, which is why pod-spawning needs no Konnectivity tunnel: the kubelet was already listening.',
+            sections: [
+              { heading: 'Explore', commands: [
+                '# Watch the stream yourself\noc get pods -w -n e-commerce-prod',
+              ] },
+            ],
+          },
+        },
+      ],
+    },
+  ],
+}
+
+export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, API_REQUEST_PATH, TMUX_SUDO, LINUX_FDS]
 
 export const findDeepDive = (topicId) =>
   DEEP_DIVES.find((t) => t.topicId === topicId) || null
