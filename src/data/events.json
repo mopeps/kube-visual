@@ -635,5 +635,72 @@
         "description": "CRI-O starts the container via runc; the application reads the updated ConfigMap at startup and goes Running with the new config live. Once it is Ready the old Pod is terminated and the rollout is complete."
       }
     ]
+  },
+  {
+    "eventId": "pvc-provision-mount",
+    "eventName": "Storage: PVC → Provisioned PV → Mounted in a Pod",
+    "description": "Tracing a guest PersistentVolumeClaim from 'oc apply' to a filesystem inside a Pod. The HCP-on-KubeVirt twist: the guest has no storage backend of its own — the KubeVirt CSI Controller provisions a backing PVC in the management cluster and hotplugs that volume into the worker VMI as a new disk, which the in-VM CSI Node Driver then formats and mounts. Day-0 setup happened earlier and stays out of the trace: the Storage Operator deployed the csi.kubevirt.io driver and its kubevirt-csi-infra-default StorageClass.",
+    "steps": [
+      {
+        "step": 1,
+        "sourceComponentId": "external-client",
+        "targetComponentId": "guest-api-server",
+        "description": "A developer declares a PersistentVolumeClaim with 'oc apply' — 10Gi, storageClassName kubevirt-csi-infra-default. The Guest API Server authenticates the request, runs admission, and accepts the claim."
+      },
+      {
+        "step": 2,
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "guest-etcd",
+        "description": "The Guest API Server persists the PersistentVolumeClaim in Guest Etcd. The claim sits at phase Pending — pure intent, no volume exists anywhere yet."
+      },
+      {
+        "step": 3,
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "kubevirt-csi-controller",
+        "description": "The KubeVirt CSI Controller's external-provisioner sidecar — running in the HCP namespace but watching the guest API — sees the Pending claim names its StorageClass and issues a CSI CreateVolume gRPC call to the csi.kubevirt.io driver."
+      },
+      {
+        "step": 4,
+        "sourceComponentId": "kubevirt-csi-controller",
+        "targetComponentId": "mgmt-kube-apiserver",
+        "description": "The driver creates a backing PersistentVolumeClaim in the management cluster's HCP namespace via the Management Kube API Server. The guest's 'cloud volume' is literally an infra PVC, bound by whatever StorageClass the management cluster runs on its bare metal."
+      },
+      {
+        "step": 5,
+        "sourceComponentId": "kubevirt-csi-controller",
+        "targetComponentId": "guest-api-server",
+        "description": "With the infra PVC bound, the external-provisioner creates the guest PersistentVolume: driver csi.kubevirt.io, volumeHandle pointing at the infra PVC's name. The guest now has a PV record describing storage that physically lives a cluster below it."
+      },
+      {
+        "step": 6,
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "guest-controller-manager",
+        "description": "The Guest Controller Manager's PersistentVolume controller loop binds claim to volume — it stamps each with a reference to the other and both flip to phase Bound. The claim is now usable; nothing is attached to any node yet."
+      },
+      {
+        "step": 7,
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "kubevirt-csi-controller",
+        "description": "A Pod consuming the claim gets scheduled onto the worker node, so a VolumeAttachment object appears. The controller's external-attacher sidecar sees it and calls ControllerPublishVolume: attach this volume to that node."
+      },
+      {
+        "step": 8,
+        "sourceComponentId": "kubevirt-csi-controller",
+        "targetComponentId": "kubevirt-launcher",
+        "description": "Attach means hotplug here: KubeVirt surfaces the bound infra PVC into the running VMI through the KubeVirt Launcher Pod (a transient hotplug attachment pod hands the volume to virt-launcher). Inside the VM the guest kernel discovers a brand-new SCSI disk."
+      },
+      {
+        "step": 9,
+        "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "csi-node-guest",
+        "description": "The in-VM Kubelet sees the attached volume and calls the CSI Node Driver over its node socket. NodeStageVolume finds the hotplugged disk by serial ID, formats it on first use, and mounts it at the staging path; NodePublishVolume then bind-mounts the staged filesystem into the Pod's volume directory under /var/lib/kubelet/pods/<uid>/volumes/."
+      },
+      {
+        "step": 10,
+        "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "frontend-application-pod",
+        "description": "Kubelet has CRI-O start the container with the volume bind-mounted into its mount namespace. The application writes to a plain directory — beneath it: a bind mount, an ext4 filesystem on a hotplugged virtio-scsi disk, a management-cluster PVC, and finally a real block device on bare metal."
+      }
+    ]
   }
 ]

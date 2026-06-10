@@ -605,6 +605,42 @@
     ]
   },
   {
+    "componentId": "kubevirt-csi-controller",
+    "displayName": "KubeVirt CSI Controller",
+    "typePrefix": "Pod",
+    "layer": "Guest Control Plane",
+    "role": "STORAGE PROVISIONER",
+    "runtimeForm": "Deployment · hcp-namespace",
+    "linuxPrimitive": "kubevirt-csi-driver binary + CSI gRPC sidecars (external-provisioner / external-attacher)",
+    "problemSolved": "Turns a guest PersistentVolumeClaim into real storage by provisioning a backing PVC in the management cluster and hot-plugging that volume into the worker VMI — the guest never needs a storage backend of its own.",
+    "interactions": [
+      "Watches the Guest API Server for PersistentVolumeClaims and VolumeAttachments via its external-provisioner and external-attacher sidecars.",
+      "Creates the backing infra PersistentVolumeClaim in the management cluster's HCP namespace through the Management Kube API Server, bound by a management-cluster StorageClass.",
+      "Asks KubeVirt to hotplug the bound infra volume into the running Guest Worker Node VM, where it appears as a new SCSI disk.",
+      "Pairs with the CSI Node Driver DaemonSet inside the guest VM, which stages, formats, and mounts the hotplugged disk for the consuming Pod.",
+      "Deployed in the HCP namespace by the Storage Operator; the driver name guest PVs reference is csi.kubevirt.io."
+    ],
+    "explorationCommands": [
+      "# Find the KubeVirt CSI controller in the HCP namespace\noc get pods -n <hcp-namespace> -l app=kubevirt-csi-driver",
+      "# The guest StorageClass that points at the driver\noc get sc kubevirt-csi-infra-default --kubeconfig <guest-kubeconfig>",
+      "# Watch attachments as Pods consume volumes\noc get volumeattachment --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "GitHub",
+        "url": "https://github.com/kubevirt/csi-driver"
+      },
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/hosted_control_planes/index"
+      },
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes-csi.github.io/docs/"
+      }
+    ]
+  },
+  {
     "componentId": "cluster-image-registry-operator",
     "displayName": "Image Registry Operator",
     "typePrefix": "Pod",

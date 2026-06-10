@@ -58,6 +58,7 @@ const ENTRIES = [
   { componentId: 'ovn-master-control', aliases: ['OVN-Kubernetes Master', 'OVN-K8s Master'] },
   { componentId: 'cloud-controller-manager', aliases: ['Cloud Controller Manager', 'CCM'] },
   { componentId: 'konnectivity-server', aliases: ['Konnectivity Server'] },
+  { componentId: 'kubevirt-csi-controller', aliases: ['KubeVirt CSI Controller', 'kubevirt-csi-driver'] },
   { componentId: 'ignition-server', aliases: ['Ignition Server'] },
   { componentId: 'cluster-monitoring', aliases: ['Cluster Monitoring'] },
   {

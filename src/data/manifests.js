@@ -181,6 +181,7 @@ export const MANIFESTS = {
   'cluster-authentication-operator': M(deployment('cluster-authentication-operator', HCPNS, 'cluster-authentication-operator:latest', 1)),
   'cluster-storage-operator': M(deployment('cluster-storage-operator', HCPNS, 'cluster-storage-operator:latest', 1)),
   'csi-snapshot-controller': M(deployment('csi-snapshot-controller', HCPNS)),
+  'kubevirt-csi-controller': M(deployment('kubevirt-csi-controller', HCPNS, 'kubevirt-csi-driver:latest', 1)),
   'cluster-image-registry-operator': M(deployment('cluster-image-registry-operator', HCPNS, 'cluster-image-registry-operator:latest', 1)),
   'cluster-node-tuning-operator': M(deployment('cluster-node-tuning-operator', HCPNS, 'cluster-node-tuning-operator:latest', 1)),
   'olm-operator': M(deployment('olm-operator', HCPNS, 'olm:latest', 1)),
