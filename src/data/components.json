@@ -1017,17 +1017,17 @@
     "layer": "Guest Control Plane",
     "role": "LOAD BALANCER",
     "runtimeForm": "Service (LoadBalancer) · hcp-namespace",
-    "linuxPrimitive": "MetalLB L2 VIP (ARP/NDP) → virt-launcher endpoints",
+    "linuxPrimitive": "MetalLB L2 VIP (ARP/NDP) → router NodePort on worker VMs",
     "problemSolved": "The bare-metal entry point that carries the guest's *.apps application traffic into the worker VMs.",
     "interactions": [
-      "Created and reconciled by the kubevirt cloud provider (Cloud Controller Manager) to mirror the guest cluster's router-default LoadBalancer Service.",
-      "Selects the virt-launcher Pods that host the guest worker VMIs and forwards to the NodePort where the in-VM OpenShift Ingress Router listens.",
-      "MetalLB (L2 mode) advertises its external VIP via ARP/NDP; the hosted cluster's *.apps wildcard DNS resolves here.",
+      "A LoadBalancer Service in the guest's HCP namespace on the management (bare metal) cluster — the bare-metal entry point for the guest's *.apps traffic. It is NOT a mirror of a guest LoadBalancer: the guest ingress is a NodePort, and there is no LoadBalancer (or MetalLB) inside the guest.",
+      "Selects the virt-launcher Pods that host the guest worker VMIs and forwards to the router-nodeport-default NodePort where the in-VM OpenShift Ingress Router listens.",
+      "Its external VIP is allocated by the MetalLB controller from an IPAddressPool and advertised in L2 mode (ARP/NDP) by a MetalLB speaker; the hosted cluster's *.apps wildcard DNS resolves here.",
       "Does NOT serve the guest API / OAuth / Konnectivity / Ignition endpoints — those ride the Shared Ingress Proxy."
     ],
     "explorationCommands": [
-      "# Find the infra LoadBalancer the kubevirt CCM created for the guest router\noc get svc -n <hcp-namespace> -l kubevirt.io/cluster-name -o wide",
-      "# Confirm the matching router-default LB inside the guest cluster\noc get svc router-default -n openshift-ingress -o wide --kubeconfig <guest-kubeconfig>",
+      "# List the LoadBalancer Services in the guest's HCP namespace (apps + control plane)\noc get svc -n <hcp-namespace> --field-selector spec.type=LoadBalancer -o wide",
+      "# Confirm the guest ingress is a NodePort — no LoadBalancer inside the guest\noc get svc -n openshift-ingress --kubeconfig <guest-kubeconfig>",
       "# See which node MetalLB advertises the VIP from\noc logs -n metallb-system -l component=speaker --tail=50 | grep announcing"
     ],
     "docLinks": [
@@ -1897,7 +1897,7 @@
     "problemSolved": "The guest cluster's own front door for application (*.apps) traffic — separate from the control-plane proxy.",
     "interactions": [
       "Watches Route objects in the guest cluster via the Guest API Server.",
-      "Receives *.apps application traffic via the guest's router-default LoadBalancer, after it enters the VM from the infra-side Apps Ingress LoadBalancer — NOT through the Shared Ingress Proxy, which fronts the control-plane API only.",
+      "Receives *.apps application traffic via the guest's router-nodeport-default NodePort, after it enters the VM from the infra-side Apps Ingress LoadBalancer on the management cluster — NOT through the Shared Ingress Proxy, which fronts the control-plane API only.",
       "Terminates TLS and forwards each request to the matching Service (e.g. the Front-End Service) inside the guest cluster."
     ],
     "explorationCommands": [
@@ -1917,32 +1917,56 @@
     ]
   },
   {
-    "componentId": "svc-ingress-lb-guest",
-    "displayName": "Ingress LoadBalancer",
+    "componentId": "svc-router-nodeport-default",
+    "displayName": "Router NodePort",
     "typePrefix": "Service",
     "layer": "Guest Application",
-    "role": "LOAD BALANCER",
-    "runtimeForm": "Service (LoadBalancer) · openshift-ingress (in VM)",
-    "linuxPrimitive": "router-default LB → kubevirt CCM mirror → OVN LB flows",
-    "problemSolved": "The guest-side LoadBalancer that fronts the in-VM ingress router for *.apps traffic.",
+    "role": "NODEPORT",
+    "runtimeForm": "Service (NodePort) · openshift-ingress (in VM)",
+    "linuxPrimitive": "NodePort → OVN LB flows → router Pod",
+    "problemSolved": "The guest's external ingress handle for *.apps traffic — a NodePort, NOT a LoadBalancer, because the guest has no cloud LB or MetalLB of its own.",
     "interactions": [
-      "Selects the guest Ingress Router Pods and exposes them behind the router-default external IP.",
-      "Its external IP is assigned and wired to the infra-side Apps Ingress LoadBalancer by the kubevirt cloud provider (CCM), not by a MetalLB speaker inside the guest.",
-      "Traffic to the VIP is DNATed by guest OVN load-balancer flows to a healthy router Pod endpoint."
+      "Selects the guest Ingress Router Pods and publishes them on a NodePort across the guest worker VMs.",
+      "The infra-side Apps Ingress LoadBalancer on the management cluster (where MetalLB owns the VIP) forwards inbound *.apps traffic to this NodePort — that LoadBalancer is the external front door, this NodePort is the in-guest target.",
+      "Traffic arriving at the NodePort is DNATed by guest OVN load-balancer flows to a healthy router Pod endpoint."
     ],
     "explorationCommands": [
-      "# View the router-default LoadBalancer service and its external IP\noc get svc router-default -n openshift-ingress -o wide --kubeconfig <guest-kubeconfig>",
-      "# Confirm MetalLB assigned the address from a pool\noc get ipaddresspool -n metallb-system --kubeconfig <guest-kubeconfig>",
-      "# See the speaker announcing the VIP\noc logs -n metallb-system -l component=speaker --tail=50 --kubeconfig <guest-kubeconfig> | grep announcing"
+      "# View the guest ingress Services — a NodePort + a ClusterIP, no LoadBalancer\noc get svc -n openshift-ingress --kubeconfig <guest-kubeconfig>",
+      "# Inspect the NodePort allocated for the router\noc get svc router-nodeport-default -n openshift-ingress -o wide --kubeconfig <guest-kubeconfig>",
+      "# Confirm the matching LoadBalancer lives on the MANAGEMENT cluster, not here\noc get svc -n <hcp-namespace> --field-selector spec.type=LoadBalancer -o wide"
     ],
     "docLinks": [
       {
         "label": "Kubernetes",
-        "url": "https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer"
+        "url": "https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport"
       },
       {
         "label": "OpenShift",
-        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ingress_and_load_balancing/load-balancing-with-metallb"
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ingress_and_load_balancing/configuring-ingress-cluster-traffic"
+      }
+    ]
+  },
+  {
+    "componentId": "svc-router-internal-default",
+    "displayName": "Router Internal Service",
+    "typePrefix": "Service",
+    "layer": "Guest Application",
+    "role": "CLUSTER IP",
+    "runtimeForm": "Service (ClusterIP) · openshift-ingress (in VM)",
+    "linuxPrimitive": "ClusterIP → OVN br-int load-balancer flow",
+    "problemSolved": "The router's in-cluster ClusterIP handle (router-internal-default) used by guest workloads and probes that reach the router from inside the cluster.",
+    "interactions": [
+      "Selects the guest Ingress Router Pods and exposes them on a stable cluster-internal virtual IP.",
+      "Has no external exposure and no datapath of its own — OVN-Kubernetes compiles it into a load-balancer flow on the in-VM Open vSwitch br-int bridge.",
+      "Distinct from the NodePort: this one is for in-guest traffic, the NodePort is the external ingress handle."
+    ],
+    "explorationCommands": [
+      "# View the router's internal ClusterIP Service\noc get svc router-internal-default -n openshift-ingress -o wide --kubeconfig <guest-kubeconfig>"
+    ],
+    "docLinks": [
+      {
+        "label": "Kubernetes",
+        "url": "https://kubernetes.io/docs/concepts/services-networking/service/#type-clusterip"
       }
     ]
   },
@@ -3328,6 +3352,135 @@
       {
         "label": "Kubernetes",
         "url": "https://kubernetes.io/docs/concepts/storage/persistent-volumes/"
+      }
+    ]
+  },
+  {
+    "componentId": "metallb-controller",
+    "displayName": "MetalLB Controller",
+    "typePrefix": "Pod",
+    "layer": "metallb-system",
+    "role": "LB CONTROLLER",
+    "runtimeForm": "Deployment · metallb-system",
+    "linuxPrimitive": "Go binary + controller-runtime",
+    "problemSolved": "Gives a bare-metal cluster the cloud-style LoadBalancer it otherwise lacks: it watches LoadBalancer Services and hands each one an external IP. The hosted cluster is a 'cloud-hosted' cluster whose cloud IS this management cluster, so its LoadBalancer Services are fulfilled here.",
+    "interactions": [
+      "Watches Services of type LoadBalancer across the management cluster (including the guest's apps + control-plane LB Services in each HCP namespace) and allocates each an address from an IPAddressPool, writing it to the Service's status.",
+      "A cluster-wide singleton Deployment — it does the IP allocation only; the per-node speakers do the actual L2 advertisement.",
+      "Runs in the management (bare metal) cluster, never inside a guest VM — there is no MetalLB inside the guest."
+    ],
+    "explorationCommands": [
+      "# The controller Deployment (one replica) in metallb-system\noc get deployment -n metallb-system controller",
+      "# Watch it allocate a VIP to a LoadBalancer Service\noc logs -n metallb-system deploy/controller --tail=50 | grep -i assigned",
+      "# Every LoadBalancer VIP it owns falls inside the configured pool\noc get ipaddresspool -n metallb-system -o yaml"
+    ],
+    "docLinks": [
+      {
+        "label": "MetalLB",
+        "url": "https://metallb.universe.tf/concepts/"
+      },
+      {
+        "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ingress_and_load_balancing/load-balancing-with-metallb"
+      }
+    ]
+  },
+  {
+    "componentId": "metallb-speaker-master",
+    "displayName": "MetalLB Speaker",
+    "typePrefix": "Pod",
+    "layer": "Bare Metal Master Node",
+    "role": "LB SPEAKER",
+    "runtimeForm": "DaemonSet · metallb-system",
+    "linuxPrimitive": "Go binary + raw ARP/NDP on host netdev",
+    "problemSolved": "Makes a LoadBalancer VIP reachable on a flat L2 network by answering ARP/NDP for it from a real node — the bare-metal substitute for a cloud load balancer announcing an address.",
+    "interactions": [
+      "Runs as a DaemonSet Pod on every bare metal node (this one on the master); in L2 mode the speakers elect a single owner per VIP, and that owner answers ARP (IPv4) / NDP (IPv6) so the VIP resolves to its node's MAC.",
+      "Advertises the VIPs the controller allocated — the guest's Apps Ingress LoadBalancer, the Shared Ingress LoadBalancer, and the rest of the control-plane LB row.",
+      "Which advertisements it makes is scoped by the L2Advertisement CR; it holds no IP-allocation logic of its own."
+    ],
+    "explorationCommands": [
+      "# The speaker DaemonSet — one Pod per bare metal node\noc get daemonset -n metallb-system speaker -o wide",
+      "# See which VIPs this node is currently announcing\noc logs -n metallb-system -l component=speaker --tail=80 | grep -i announcing"
+    ],
+    "docLinks": [
+      {
+        "label": "MetalLB",
+        "url": "https://metallb.universe.tf/concepts/layer2/"
+      }
+    ]
+  },
+  {
+    "componentId": "metallb-speaker-worker",
+    "displayName": "MetalLB Speaker",
+    "typePrefix": "Pod",
+    "layer": "Bare Metal Worker Node",
+    "role": "LB SPEAKER",
+    "runtimeForm": "DaemonSet · metallb-system",
+    "linuxPrimitive": "Go binary + raw ARP/NDP on host netdev",
+    "problemSolved": "The same speaker DaemonSet Pod on the worker node — any bare metal node can be elected to announce a given VIP.",
+    "interactions": [
+      "Identical to the master's speaker: a DaemonSet Pod that answers ARP/NDP for the LoadBalancer VIPs MetalLB owns, from whichever node currently owns each VIP.",
+      "If the announcing node fails, the surviving speakers re-elect a new owner and the VIP fails over to another node.",
+      "Advertises only — IP allocation is the controller's job."
+    ],
+    "explorationCommands": [
+      "# All speaker Pods and the nodes they run on\noc get pods -n metallb-system -l component=speaker -o wide",
+      "# Tail this node's announcements\noc logs -n metallb-system -l component=speaker --tail=80 | grep -i announcing"
+    ],
+    "docLinks": [
+      {
+        "label": "MetalLB",
+        "url": "https://metallb.universe.tf/concepts/layer2/"
+      }
+    ]
+  },
+  {
+    "componentId": "metallb-ipaddresspool",
+    "displayName": "IPAddressPool",
+    "typePrefix": "Custom Resource",
+    "layer": "metallb-system",
+    "role": "LB CONFIG",
+    "runtimeForm": "IPAddressPool · metallb.io/v1beta1 · metallb-system",
+    "linuxPrimitive": "config record (etcd) — no datapath",
+    "problemSolved": "Declares the range of external IPs MetalLB is allowed to hand out — the bare-metal equivalent of a cloud provider's pool of public addresses.",
+    "interactions": [
+      "Read by the MetalLB controller, which allocates addresses from this range to LoadBalancer Services.",
+      "Pure configuration with no datapath of its own; the VIPs you see on the guest's apps + control-plane LB Services all fall inside this pool.",
+      "Must be paired with an advertisement CR (here, an L2Advertisement) for the addresses to actually be announced."
+    ],
+    "explorationCommands": [
+      "# The address range MetalLB allocates from\noc get ipaddresspool -n metallb-system -o yaml",
+      "# Cross-check: a LoadBalancer Service's VIP should fall inside this range\noc get svc -A --field-selector spec.type=LoadBalancer -o wide"
+    ],
+    "docLinks": [
+      {
+        "label": "MetalLB",
+        "url": "https://metallb.universe.tf/configuration/#defining-the-ips-to-assign-to-the-load-balancer-services"
+      }
+    ]
+  },
+  {
+    "componentId": "metallb-l2advertisement",
+    "displayName": "L2Advertisement",
+    "typePrefix": "Custom Resource",
+    "layer": "metallb-system",
+    "role": "LB CONFIG",
+    "runtimeForm": "L2Advertisement · metallb.io/v1beta1 · metallb-system",
+    "linuxPrimitive": "config record (etcd) — no datapath",
+    "problemSolved": "Tells MetalLB to advertise its pool's addresses in Layer 2 (ARP/NDP) mode, rather than via BGP.",
+    "interactions": [
+      "Read by the speakers: it selects which IPAddressPools are advertised and, optionally, from which nodes/interfaces.",
+      "Its presence is what makes the speakers answer ARP/NDP for the pool's VIPs; without it the controller could allocate an IP that nothing announces.",
+      "Pure configuration with no datapath of its own."
+    ],
+    "explorationCommands": [
+      "# The L2 advertisement config\noc get l2advertisement -n metallb-system -o yaml"
+    ],
+    "docLinks": [
+      {
+        "label": "MetalLB",
+        "url": "https://metallb.universe.tf/configuration/#layer-2-configuration"
       }
     ]
   }

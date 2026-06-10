@@ -226,10 +226,60 @@ spec:
 
   // ── Services ────────────────────────────────────────────────────────────
   'svc-ingress-lb-shared': M(service('shared-ingress', 'hypershift-sharedingress', 'LoadBalancer', 443)),
-  'svc-apps-lb-infra': M(service('kube-apiserver', HCPNS, 'LoadBalancer', 6443)),
-  'svc-ingress-lb-guest': M(service('router-default', 'openshift-ingress', 'LoadBalancer', 443)),
+  // The infra-side apps LoadBalancer lives in the HCP namespace and forwards to
+  // the guest worker VMs on the router's NodePort — it does NOT mirror a guest
+  // LoadBalancer. Its external IP is allocated by MetalLB.
+  'svc-apps-lb-infra': M(`apiVersion: v1
+kind: Service
+metadata:
+  name: apps-ingress
+  namespace: ${HCPNS}
+spec:
+  type: LoadBalancer
+  selector:
+    kubevirt.io: virt-launcher
+  ports:
+    - name: https
+      port: 443
+      targetPort: 30443   # the guest router's NodePort on the worker VMs`),
+  'svc-router-nodeport-default': M(`apiVersion: v1
+kind: Service
+metadata:
+  name: router-nodeport-default
+  namespace: openshift-ingress
+spec:
+  type: NodePort
+  selector:
+    ingresscontroller.operator.openshift.io/deployment-ingresscontroller: default
+  ports:
+    - name: https
+      port: 443
+      targetPort: 443
+      nodePort: 30443`),
+  'svc-router-internal-default': M(service('router-internal-default', 'openshift-ingress', 'ClusterIP', 443)),
   'svc-frontend': M(service('frontend', 'e-commerce-prod', 'ClusterIP', 8080)),
   'svc-backend': M(service('backend', 'e-commerce-prod', 'ClusterIP', 8080)),
+
+  // ── MetalLB (management cluster — the guest's "cloud" LoadBalancer) ──────
+  'metallb-controller': M(deployment('controller', 'metallb-system', 'metallb/controller:latest', 1)),
+  'metallb-speaker-master': M(daemonset('speaker', 'metallb-system', 'metallb/speaker:latest')),
+  'metallb-speaker-worker': M(daemonset('speaker', 'metallb-system', 'metallb/speaker:latest')),
+  'metallb-ipaddresspool': M(`apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: bare-metal-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    - 192.168.1.240-192.168.1.250`),
+  'metallb-l2advertisement': M(`apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: l2-advert
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - bare-metal-pool`),
 
   // ── systemd units (host services on each node) ──────────────────────────
   'kubelet-master': M(KUBELET_UNIT, 'UNIT'),

@@ -70,6 +70,20 @@ export const ZONES = [
             programs: 'ovs-master',
             badges: [{ label: 'CNI', color: 'var(--k-blue)' }],
           },
+          // MetalLB speaker — a DaemonSet Pod on every bare metal node. This is
+          // the per-node L2 announcer: it answers ARP/NDP for the LoadBalancer
+          // VIPs assigned by the MetalLB controller, so external traffic for the
+          // guest's apps + control-plane LB Services lands on this cluster. It
+          // runs in the management (bare metal) cluster, never inside a guest VM.
+          {
+            id: 'metallb-speaker-master',
+            title: 'MetalLB Speaker',
+            typePrefix: 'Pod',
+            badges: [
+              { label: 'DaemonSet', color: 'var(--k-blue)' },
+              { label: 'ARP/NDP', color: 'var(--k-blue)' },
+            ],
+          },
           // The management (bare metal) cluster's OWN control plane, run by the
           // master kubelet from /etc/kubernetes/manifests — these sit directly
           // on the master node alongside its host agents.
@@ -698,6 +712,42 @@ export const ZONES = [
               },
             ],
           },
+          // metallb-system — a management-cluster namespace (NOT inside the
+          // guest). MetalLB is the bare-metal stand-in for a cloud LoadBalancer:
+          // the guest is a "cloud-hosted" cluster whose cloud IS this management
+          // cluster, so the guest's LoadBalancer Services are fulfilled here, not
+          // by a speaker inside the guest. The controller allocates VIPs from the
+          // IPAddressPool; the per-node speakers (on the node zones) advertise
+          // them via ARP/NDP in L2 mode.
+          {
+            id: 'metallb-system',
+            label: 'metallb-system Namespace',
+            color: 'var(--k-amber)',
+            colorVar: 'k-amber',
+            nodes: [
+              {
+                id: 'metallb-controller',
+                title: 'MetalLB Controller',
+                typePrefix: 'Pod',
+                badges: [
+                  { label: 'Deployment', color: 'var(--k-amber)' },
+                  { label: 'IP allocation', color: 'var(--k-amber)' },
+                ],
+              },
+              {
+                id: 'metallb-ipaddresspool',
+                title: 'IPAddressPool',
+                typePrefix: 'Custom Resource',
+                badges: [{ label: 'metallb.io', color: 'var(--k-amber)' }],
+              },
+              {
+                id: 'metallb-l2advertisement',
+                title: 'L2Advertisement',
+                typePrefix: 'Custom Resource',
+                badges: [{ label: 'metallb.io', color: 'var(--k-amber)' }],
+              },
+            ],
+          },
         ],
       },
       {
@@ -737,6 +787,18 @@ export const ZONES = [
             // Stacks above the Open vSwitch it programs (see ServicePair).
             programs: 'ovs-host',
             badges: [{ label: 'CNI', color: 'var(--k-blue-worker)' }],
+          },
+          // The same MetalLB speaker DaemonSet Pod, here on the worker node — it
+          // announces the LoadBalancer VIPs from whichever node currently owns
+          // them (L2 mode elects one announcer per VIP across all speakers).
+          {
+            id: 'metallb-speaker-worker',
+            title: 'MetalLB Speaker',
+            typePrefix: 'Pod',
+            badges: [
+              { label: 'DaemonSet', color: 'var(--k-blue-worker)' },
+              { label: 'ARP/NDP', color: 'var(--k-blue-worker)' },
+            ],
           },
           {
             id: 'virt-handler',
@@ -833,6 +895,18 @@ export const ZONES = [
                           { label: 'OVN ACL', color: 'var(--k-green)' },
                         ],
                       },
+                      // The router's in-cluster ClusterIP handle (router-internal
+                      // -default). Like the app ClusterIPs, it has no datapath of
+                      // its own — OVN compiles it into a br-int load-balancer flow.
+                      {
+                        id: 'svc-router-internal-default',
+                        title: 'Router Internal Service',
+                        typePrefix: 'Service',
+                        badges: [
+                          { label: 'ClusterIP', color: 'var(--k-green)' },
+                          { label: 'openshift-ingress', color: 'var(--k-green)' },
+                        ],
+                      },
                     ],
                   },
                   {
@@ -907,21 +981,22 @@ export const ZONES = [
                       { label: 'Route CR', color: 'var(--k-green)' },
                     ],
                   },
-                  // The guest cluster's own router-default LoadBalancer — the
-                  // guest-side half of the *.apps application ingress path. Its
-                  // external IP is realised by the kubevirt cloud provider (CCM),
-                  // which mirrors it to the infra-side Apps Ingress LoadBalancer
-                  // on the bare metal side (where MetalLB advertises the VIP).
+                  // The guest cluster's own external handle for the in-VM ingress
+                  // router. In HCP-on-KubeVirt the guest ingress is NOT a
+                  // LoadBalancer (there is no MetalLB or cloud LB inside the
+                  // guest) — it is a NodePort. The infra-side Apps Ingress
+                  // LoadBalancer on the bare metal cluster forwards to this
+                  // NodePort on the worker VMs; that infra Service is where the
+                  // MetalLB VIP actually lives.
                   {
-                    id: 'svc-ingress-lb-guest',
-                    title: 'Ingress LoadBalancer',
+                    id: 'svc-router-nodeport-default',
+                    title: 'Router NodePort',
                     typePrefix: 'Service',
                     // Stacks directly above the Pod it exposes (see ServicePair).
                     exposes: 'openshift-ingress-router-guest',
                     badges: [
-                      { label: 'LoadBalancer', color: 'var(--k-green)' },
-                      { label: 'router-default', color: 'var(--k-green)' },
-                      { label: 'kubevirt CCM', color: 'var(--k-green)' },
+                      { label: 'NodePort', color: 'var(--k-green)' },
+                      { label: 'router-nodeport-default', color: 'var(--k-green)' },
                     ],
                   },
                   // The e-commerce application Pods. Their ClusterIP Services and
