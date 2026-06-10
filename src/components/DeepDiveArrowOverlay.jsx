@@ -13,6 +13,9 @@ export default function DeepDiveArrowOverlay({ activeFlow, canvasRef, activeStep
         sourceId: `dd-${s.sourceBoxId}`,
         targetId: `dd-${s.targetBoxId}`,
         color: colorOf?.(s.targetBoxId) || 'var(--k-cyan)',
+        // A reply hop retracing an earlier hop's edge (an ack, a granted vote)
+        // can declare a bow so the two curves don't lie on top of each other.
+        bow: s.bow || 0,
       }))
       // "Road not taken" edges: a refused attempt drawn dashed-red, bowed clear of
       // the journey spine, ending in a ⊘ cap. It is not a numbered hop, so it gets
