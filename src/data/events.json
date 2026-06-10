@@ -27,13 +27,13 @@
   {
     "eventId": "app-ingress-traffic",
     "eventName": "Application Ingress (Wildcard Route)",
-    "description": "Tracing an inbound HTTPS request to a guest application on the *.apps wildcard domain. Unlike API traffic, this never touches the Shared Ingress Proxy: it enters through the Apps Ingress LoadBalancer (the infra-side Service the kubevirt cloud provider mirrors from the guest's router-default LB, advertised by MetalLB), crosses into the KubeVirt VM, and is handled by the guest cluster's own OpenShift Ingress Router before reaching the front-end ClusterIP Service and Pod.",
+    "description": "Tracing an inbound HTTPS request to a guest application on the *.apps wildcard domain. Unlike API traffic, this never touches the Shared Ingress Proxy: it enters through the Apps Ingress LoadBalancer (an infra-side LoadBalancer Service on the bare metal cluster whose VIP MetalLB advertises, which forwards to the guest router's NodePort), crosses into the KubeVirt VM, and is handled by the guest cluster's own OpenShift Ingress Router before reaching the front-end ClusterIP Service and Pod. There is no LoadBalancer inside the guest — its ingress is a NodePort fronted from the management cluster.",
     "steps": [
       {
         "step": 1,
         "sourceComponentId": "external-client",
         "targetComponentId": "svc-apps-lb-infra",
-        "description": "The client resolves an app hostname under *.apps.<guest-domain> to the Apps Ingress LoadBalancer VIP. This infra-side LoadBalancer — created by the kubevirt cloud provider to back the guest's router-default Service — is advertised by a MetalLB speaker, so the packet lands on the bare metal cluster. The control-plane Shared Ingress Proxy is not involved."
+        "description": "The client resolves an app hostname under *.apps.<guest-domain> to the Apps Ingress LoadBalancer VIP. This infra-side LoadBalancer lives in the guest's HCP namespace on the management cluster; a MetalLB speaker answers ARP for its VIP, so the packet lands on the bare metal cluster. The control-plane Shared Ingress Proxy is not involved."
       },
       {
         "step": 2,
@@ -62,14 +62,14 @@
       {
         "step": 6,
         "sourceComponentId": "ovs-guest",
-        "targetComponentId": "svc-ingress-lb-guest",
-        "description": "Guest OVS matches the router-default LoadBalancer (the guest-side half of this path, whose external IP the kubevirt CCM wired to the infra VIP) and applies its OVN load-balancer flow."
+        "targetComponentId": "svc-router-nodeport-default",
+        "description": "The packet arrives on the worker VM at the router's NodePort (router-nodeport-default) — the guest's external ingress handle. Guest OVS matches the NodePort Service and applies its OVN load-balancer flow. There is no guest LoadBalancer here; the LoadBalancer that fronted this NodePort lives back on the management cluster."
       },
       {
         "step": 7,
-        "sourceComponentId": "svc-ingress-lb-guest",
+        "sourceComponentId": "svc-router-nodeport-default",
         "targetComponentId": "openshift-ingress-router-guest",
-        "description": "The Service DNATs to an OpenShift Ingress Router Pod inside the VM, which terminates TLS and matches the request against its Route table for the *.apps hostname."
+        "description": "The NodePort Service DNATs to an OpenShift Ingress Router Pod inside the VM, which terminates TLS and matches the request against its Route table for the *.apps hostname."
       },
       {
         "step": 8,

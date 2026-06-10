@@ -87,7 +87,16 @@ const ENTRIES = [
     componentId: 'openshift-ingress-router-guest',
     aliases: ['Guest Ingress Router', 'Ingress Router (Guest)', 'OpenShift Ingress Router'],
   },
-  { componentId: 'svc-ingress-lb-guest', aliases: ['Ingress LoadBalancer'] },
+  { componentId: 'svc-router-nodeport-default', aliases: ['Router NodePort', 'router-nodeport-default'] },
+  { componentId: 'svc-router-internal-default', aliases: ['Router Internal Service', 'router-internal-default'] },
+  { componentId: 'svc-apps-lb-infra', aliases: ['Apps Ingress LoadBalancer'] },
+  // MetalLB (management cluster). Generic "MetalLB speaker" mentions resolve to
+  // the master node's speaker as the representative card (the worker speaker is
+  // the same DaemonSet Pod on the other node).
+  { componentId: 'metallb-controller', aliases: ['MetalLB Controller', 'MetalLB controller'] },
+  { componentId: 'metallb-speaker-master', aliases: ['MetalLB Speaker', 'MetalLB speaker'] },
+  { componentId: 'metallb-ipaddresspool', aliases: ['IPAddressPool'] },
+  { componentId: 'metallb-l2advertisement', aliases: ['L2Advertisement'] },
   {
     componentId: 'frontend-application-pod',
     aliases: ['Front-End Application Pod', 'Front-End Application Instance', 'Front-End Application', 'Front-End Pod', 'frontend Pod'],
