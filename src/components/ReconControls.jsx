@@ -82,6 +82,8 @@ export default function ReconControls({ loop }) {
         </div>
       </div>
 
+      {loop.lede && <p className="recon-nav-lede">{loop.lede}</p>}
+
       <p className="recon-nav-narration" aria-live="polite">{step.narration}</p>
 
       <ol className="recon-timeline">

@@ -1516,6 +1516,16 @@ body::after {
 }
 /* Narration takes the slack and scrolls when a step runs long; the timeline
    below stays pinned. */
+/* The scenario's one-line "why this teaches something" framing — persists above
+   the per-step narration while the walkthrough runs. */
+.recon-nav-lede {
+  margin: 0 0 6px;
+  font-size: 0.66rem;
+  line-height: 1.5;
+  color: var(--tx-muted);
+  border-left: 2px solid color-mix(in srgb, var(--k-amber) 55%, transparent);
+  padding-left: 10px;
+}
 .recon-nav-narration {
   margin: 0;
   flex: 1 1 auto;
@@ -1730,6 +1740,14 @@ body::after {
   padding: 16px 8px 8px;
   position: relative;
   background: rgba(0, 0, 0, 0.25);
+}
+/* Why the PIDs are clickable — pedagogy line under cgroup.procs, hidden once a
+   walkthrough is armed (the navigator's lede takes over). */
+.cgroup-hint {
+  margin: 8px 0 0;
+  font-size: 0.62rem;
+  line-height: 1.55;
+  color: var(--tx-muted);
 }
 .cgroup-frame-label {
   position: absolute;

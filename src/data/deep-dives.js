@@ -315,6 +315,9 @@ const SYSTEMD = {
   colorVar: 'k-amber',
   reconciliation: {
     unit: 'ovnkube-node.service',
+    // Why the cgroup box invites you to kill PIDs: shown under cgroup.procs
+    // while no walkthrough is armed, so the interaction explains itself.
+    hint: 'Click a PID to fire the loop for real — kill the main PID and systemd restarts the unit (watch cgroup.procs repopulate); kill a child and it is only reaped.',
     dagBoxId: 'sd-dag',
     engineBoxId: 'sd-engine',
     cgroupBoxId: 'sd-cgroup',
