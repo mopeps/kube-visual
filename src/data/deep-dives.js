@@ -3326,7 +3326,211 @@ const API_REQUEST_PATH = {
   ],
 }
 
-export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, API_REQUEST_PATH, TMUX_SUDO, LINUX_FDS]
+// ── etcd · Raft, quorum, and where HCP runs it ──────────────────────────────
+const ETCD_RAFT = {
+  topicId: 'etcd-raft',
+  title: 'etcd — Raft, quorum, and where HCP runs it',
+  tagline:
+    'Every resourceVersion in the cluster is an etcd revision, and every write the API server makes survives only because a quorum of etcd members agreed to it. This is how that agreement works — the replicated log, fsync before ack, the commit index, leader election — and the HCP twist: the guest cluster’s etcd is an ordinary StatefulSet in the management cluster, healed by the same machinery it serves elsewhere.',
+  colorVar: 'k-green',
+  flows: [
+    {
+      flowId: 'raft-write',
+      flowName: 'Write proposal → quorum commit',
+      description:
+        'One PUT from the API server, followed to durability. The leader serves all writes: it appends the entry to its own write-ahead log, replicates it to the followers, and only advances the commit index — and answers the client — once a quorum (2 of 3) has fsynced the entry. A committed write survives any single member dying, which is the entire point.',
+      steps: [
+        { step: 1, sourceBoxId: 'raft-leader', targetBoxId: 'raft-wal',
+          description: 'The leader appends the entry to its write-ahead log at the next (term, index) slot and fsyncs before doing anything else — an entry acknowledged but not on disk would break the protocol’s promises. This fsync-on-every-append is why etcd is so sensitive to disk latency.' },
+        { step: 2, sourceBoxId: 'raft-leader', targetBoxId: 'raft-follower-a', bow: 40,
+          description: 'The leader streams the entry to follower A in an AppendEntries message — the same message that doubles as the heartbeat. It carries the previous entry’s (term, index) so the follower can verify its log matches before accepting.' },
+        { step: 3, sourceBoxId: 'raft-leader', targetBoxId: 'raft-follower-b', bow: -64,
+          description: 'The identical AppendEntries goes to follower B in parallel. Followers never talk to each other — all replication fans out from the leader.' },
+        { step: 4, sourceBoxId: 'raft-follower-a', targetBoxId: 'raft-leader', bow: -48,
+          description: 'Follower A appends the entry to its own WAL, fsyncs, and acks the index back to the leader. (Follower B is doing the same; the leader needs only the FIRST ack to reach quorum.)' },
+        { step: 5, sourceBoxId: 'raft-leader', targetBoxId: 'raft-commit',
+          description: 'Leader + one follower = 2 of 3, a majority: the entry is committed. The leader advances the commit index past it — the line dividing “replicated enough to be permanent” from “still tentative”. Followers learn the new commit index on the next AppendEntries.' },
+        { step: 6, sourceBoxId: 'raft-commit', targetBoxId: 'raft-mvcc',
+          description: 'Each member applies committed entries, in order, to its MVCC keyspace in boltdb. The apply assigns the revision the API server hands back as the object’s resourceVersion — and only now does the client get its 200 OK.' },
+      ],
+    },
+    {
+      flowId: 'raft-election',
+      flowName: 'Leader dies → election',
+      description:
+        'Why a 3-member etcd shrugs off losing one member. Followers expect a heartbeat from the leader well inside their election timeout; when it stops, the first follower to time out stands as candidate and wins with a quorum of votes. The randomized timeout is the whole trick — it makes one follower move first instead of all of them splitting the vote forever.',
+      steps: [
+        { step: 1, sourceBoxId: 'raft-leader', targetBoxId: 'raft-follower-a',
+          description: 'The leader dies — its heartbeats (AppendEntries every 100ms, etcd’s default --heartbeat-interval) stop arriving. Each follower runs a RANDOMIZED election timeout (etcd default --election-timeout 1000ms); follower A’s happens to expire first.' },
+        { step: 2, sourceBoxId: 'raft-follower-a', targetBoxId: 'raft-follower-b',
+          description: 'Follower A becomes a candidate: it increments the term, votes for itself, and sends RequestVote to every other member, advertising the (term, index) of its last log entry.' },
+        { step: 3, sourceBoxId: 'raft-follower-b', targetBoxId: 'raft-follower-a', bow: 48,
+          description: 'Follower B grants its vote — but only because the candidate’s log is at least as up-to-date as its own. That rule is what makes a committed write unlosable: no member with a stale log can ever collect a majority.' },
+        { step: 4, sourceBoxId: 'raft-follower-a', targetBoxId: 'raft-leader', bow: -48,
+          description: 'Two votes of three is a quorum: follower A is the new leader for the new term and immediately heartbeats. If the old leader ever comes back, it sees the higher term in the first message and steps down to follower. Writes resume after roughly one election timeout — about a second.' },
+      ],
+    },
+  ],
+  zones: [
+    {
+      id: 'raft-members',
+      label: 'The etcd cluster · 3 members',
+      colorVar: 'k-green',
+      boxes: [
+        {
+          id: 'raft-leader',
+          title: 'Leader',
+          typePrefix: 'MEMBER',
+          subtitle: 'serves all writes · heartbeats every 100ms',
+          badges: [{ label: 'term 7', kind: 'stat' }],
+          detail: {
+            role: 'THE LEADER',
+            summary:
+              'At any moment exactly one member is leader for the current term — a monotonically increasing number that acts as Raft’s logical clock. The leader serves every write: it appends, replicates, and decides what is committed. Its AppendEntries messages double as heartbeats (every 100ms by default), constantly telling followers a leader is alive.',
+            sections: [
+              { heading: 'At a glance', tags: ['one per term', 'all writes', 'AppendEntries', 'heartbeat 100ms'] },
+              { heading: 'Explore', commands: [
+                '# Who is the leader right now?\netcdctl endpoint status --cluster -w table',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'raft-follower-a',
+          title: 'Follower A',
+          typePrefix: 'MEMBER',
+          subtitle: 'replicates the log · randomized election timeout',
+          detail: {
+            role: 'FOLLOWER',
+            summary:
+              'Followers append what the leader sends, fsync, and ack. They serve linearizable reads only via the leader (serializable reads can be local) and redirect any write to the leader. Each runs a randomized election timeout (default 1000ms) — if no heartbeat arrives within it, the follower assumes the leader is gone and stands for election.',
+            sections: [
+              { heading: 'Note', bullets: [
+                'The randomization is the split-vote fix: one member times out first and wins before the others even start.',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'raft-follower-b',
+          title: 'Follower B',
+          typePrefix: 'MEMBER',
+          subtitle: 'the quorum math: 3 members tolerate losing 1',
+          badges: [{ label: 'quorum ⌈(n+1)/2⌉', kind: 'stat' }],
+          detail: {
+            role: 'FOLLOWER · QUORUM',
+            summary:
+              'Quorum is a strict majority: 2 of 3, 3 of 5. Three members therefore tolerate one failure; five tolerate two. Even numbers add nothing (4 members still tolerate only 1 loss) — which is why etcd clusters are always odd. Lose quorum and etcd goes read-only: no writes, no leader elections, and above it the API server starts failing writes too.',
+            sections: [
+              { heading: 'The math', facts: [
+                { k: '3 members', v: 'quorum 2 — tolerates 1 down' },
+                { k: '5 members', v: 'quorum 3 — tolerates 2 down' },
+                { k: '4 members', v: 'quorum 3 — still only 1 down (never do this)' },
+              ] },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'raft-log',
+      label: 'One member’s disk · the replicated log',
+      colorVar: 'k-teal',
+      boxes: [
+        {
+          id: 'raft-wal',
+          title: 'Write-ahead log',
+          typePrefix: 'WAL',
+          subtitle: 'append + fsync BEFORE acking — ever',
+          detail: {
+            role: 'DURABILITY',
+            summary:
+              'Every entry hits the WAL and is fsynced before the member acknowledges anything. The log is the protocol’s source of truth — entries are identified by (term, index), and a member’s vote or ack is a promise backed by what its log durably contains. This is why etcd documentation is obsessed with disk latency: every write in the cluster waits for at least two fsyncs (leader + one follower).',
+            sections: [
+              { heading: 'Explore', commands: [
+                '# etcd’s own fsync latency histogram\ncurl -s localhost:2381/metrics | grep wal_fsync_duration',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'raft-commit',
+          title: 'Commit index',
+          typePrefix: 'INDEX',
+          subtitle: 'advances only at quorum — the permanence line',
+          detail: {
+            role: 'THE AGREEMENT',
+            summary:
+              'The commit index is the highest log position replicated to a majority. Everything at or below it is permanent — guaranteed to appear in every future leader’s log, because no candidate can win an election without a log at least that complete. Everything above it is tentative and may still be discarded if a leader change rewrites the tail.',
+            sections: [
+              { heading: 'Note', bullets: [
+                'This single integer is the whole consensus: “committed” simply means “at or below the commit index”.',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'raft-mvcc',
+          title: 'MVCC keyspace',
+          typePrefix: 'boltdb',
+          subtitle: 'applied entries → revisions → resourceVersion',
+          detail: {
+            role: 'THE DATABASE',
+            summary:
+              'Committed entries are applied, in log order, to a multi-version keyspace in boltdb: every apply creates a new revision rather than overwriting in place. That revision is exactly what the API server surfaces as resourceVersion, and it is what a Kubernetes watch resumes from — the watch fan-out in the API-server deep dive starts at this number.',
+            sections: [
+              { heading: 'Explore', commands: [
+                '# Read a key at the current revision\netcdctl get /registry/deployments/e-commerce-prod/my-app -w json | jq .header.revision',
+              ] },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'raft-hcp',
+      label: 'The HCP twist · where each etcd runs',
+      colorVar: 'k-sky',
+      boxes: [
+        {
+          id: 'raft-statefulset',
+          title: 'Guest etcd · StatefulSet',
+          typePrefix: 'StatefulSet',
+          subtitle: 'etcd-0/1/2 Pods in the HCP namespace',
+          badges: [{ label: 'PVC-backed', kind: 'stat' }],
+          detail: {
+            role: 'HOSTED',
+            summary:
+              'The hosted cluster’s etcd is the Guest Etcd card on the Overview: a 3-replica StatefulSet in the management cluster’s HCP namespace, each member with its own management-cluster PVC for the WAL and keyspace. The radical part is what that buys: a dead etcd member is healed by ordinary StatefulSet machinery — the management cluster reschedules the Pod and it rejoins the quorum from its PVC. Guest etcd is a workload, not infrastructure.',
+            sections: [
+              { heading: 'Explore', commands: [
+                '# The guest etcd members, as plain Pods\noc get pods -n <hcp-namespace> -l app=etcd',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'raft-staticpod',
+          title: 'Management etcd · Static Pod',
+          typePrefix: 'Static Pod',
+          subtitle: 'from /etc/kubernetes/manifests on each master',
+          detail: {
+            role: 'FOUNDATION',
+            summary:
+              'The management cluster’s own etcd (the Etcd intent store on the Overview) cannot be a workload — it must exist before any API server or scheduler does. So each master’s kubelet runs it as a Static Pod read straight from /etc/kubernetes/manifests on local disk, pinned to that node with no controller above it. Same Raft, same quorum — opposite end of the bootstrap problem.',
+            sections: [
+              { heading: 'Note', bullets: [
+                'One Raft protocol, two operational models: the guest rents reliability from the management cluster; the management cluster has to build it from disk up.',
+              ] },
+            ],
+          },
+        },
+      ],
+    },
+  ],
+}
+
+export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, API_REQUEST_PATH, ETCD_RAFT, TMUX_SUDO, LINUX_FDS]
 
 export const findDeepDive = (topicId) =>
   DEEP_DIVES.find((t) => t.topicId === topicId) || null
