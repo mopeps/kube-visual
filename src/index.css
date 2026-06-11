@@ -184,6 +184,29 @@ body::after {
   padding: 12px 14px;
 }
 
+/* ── Column zones ──────────────────────────────────────────────────────
+   A zone with layout:'columns' lays its child zones out side-by-side as
+   equal-width columns (two symmetric worker nodes in the OVN deep dive).
+   Stacks back to full-width rows on phones. */
+.zone--columns > .zone-content > .zone-content-inner > .zone {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .zone--columns > .zone-content > .zone-content-inner > .zone {
+    flex: 1 1 100%;
+  }
+}
+
+/* A layout:'stack' zone reads as a top-to-bottom chain: boxes stacked and
+   centred (the OVN columns' eth0 → br-int → … wiring). */
+.zone--stack > .zone-content > .zone-content-inner {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
 /* ── Node card ─────────────────────────────────────────────────────── */
 .node {
   border: 1px solid var(--node-accent, var(--border-w));
@@ -1605,6 +1628,22 @@ body::after {
   /* On phones the boxes already reflow 2-up; keep the intra gap small so that
      wrapping still works (the edge chips are a desktop-width affordance). */
   .recon-stack--edges .zone-content-inner { gap: 16px; }
+}
+
+/* Topology topics (topic.topology.edges): the static labeled wiring needs a
+   band between zones for its IP chips, but the links are short one-liners —
+   moderate gaps, not the systemd loop's 100px airfield. */
+.recon-stack--topology { gap: 56px; padding-top: 12px; padding-bottom: 12px; }
+/* Stacked chains (eth0 → br-int → …) carry an edge per gap, each parking its
+   chip in the row gap — open it up enough for one chip. */
+.recon-stack--topology .zone--stack > .zone-content > .zone-content-inner { gap: 44px; }
+@media (max-width: 640px) {
+  /* On phones the columns stack, so the static wiring would criss-cross the
+     whole canvas — hide it (the chips are a desktop-width affordance; flows
+     and box popups carry the story on mobile) and drop back to normal gaps. */
+  .recon-stack--topology > .recon-loop-svg { display: none; }
+  .recon-stack--topology { gap: 24px; }
+  .recon-stack--topology .zone--stack > .zone-content > .zone-content-inner { gap: 12px; }
 }
 
 /* The label chip — the "little box" anchored on each connector, carrying a

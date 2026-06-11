@@ -62,6 +62,25 @@ function PrimitiveInline({ primitive, color, onSelectComponent, selfId }) {
 // `suppressLegacyPrimitives` hides the PRIMITIVES_BY_TYPE section for components
 // whose kernel primitives are already shown in the modal's pipeline tree
 // (Layer 4), so the same information isn't presented twice.
+// Which deep dives a component cross-links to. Every systemd unit links to the
+// systemd explainer (by typePrefix); the SDN components additionally link to
+// the OVN logical-topology explainer (by componentId) — both layers of it: the
+// bare-metal management OVN and the guest cluster's own OVN inside the VMs.
+const OVN_LINKED_COMPONENTS = new Set([
+  'ovs-master', 'ovs-host', 'ovs-guest',
+  'ovn-node-master', 'ovn-node-host', 'ovn-node-guest',
+  'ovn-master-control',
+])
+
+function deepDiveLinks(component) {
+  const links = []
+  if (component.typePrefix === 'systemd') links.push({ topic: 'systemd', label: 'systemd' })
+  if (OVN_LINKED_COMPONENTS.has(component.componentId)) {
+    links.push({ topic: 'ovn-topology', label: 'OVN topology' })
+  }
+  return links
+}
+
 export default function DetailSections({ component, color, suppressLegacyPrimitives = false, onSelectComponent, pipelineSection = null, manifest = null, onOpenDeepDive = null }) {
   const [expandedPrimitive, setExpandedPrimitive] = useState(null)
   const [expandedBadge, setExpandedBadge] = useState(null)
@@ -170,14 +189,15 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
                 color={color}
               />
             )}
-            {/* For host services, a sibling chip beside [UNIT] that opens the
-                systemd deep dive — same chip family, so it reads as a peer of
+            {/* Deep-dive cross-links: sibling chips beside [UNIT] that open a
+                related deep dive — same chip family, so they read as peers of
                 the manifest tag. */}
-            {onOpenDeepDive && component.typePrefix === 'systemd' && (
+            {onOpenDeepDive && deepDiveLinks(component).map((link) => (
               <button
+                key={link.topic}
                 type="button"
                 className="node-badge node-badge--concept"
-                onClick={(e) => { e.stopPropagation(); onOpenDeepDive('systemd') }}
+                onClick={(e) => { e.stopPropagation(); onOpenDeepDive(link.topic) }}
                 style={{
                   color,
                   borderColor: `${color}66`,
@@ -190,11 +210,11 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = `${color}35` }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = `${color}1a` }}
-                title="Open the systemd deep dive"
+                title={`Open the ${link.label} deep dive`}
               >
-                systemd&nbsp;↗
+                {link.label}&nbsp;↗
               </button>
-            )}
+            ))}
           </div>
           {manifest && manifestOpen && (
             <ManifestBlock body={manifest.body} kind={manifest.kind} color={color} />

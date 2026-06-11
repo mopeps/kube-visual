@@ -3,6 +3,11 @@ export default function Zone({
   color,
   dashed = false,
   depth = 0,
+  // layout: 'columns' lays this zone's child zones out side-by-side (each an
+  // equal-width column), stacking back to full width under 640px. 'stack'
+  // stacks the zone's boxes vertically, centred — a chain read top-to-bottom.
+  // Used by deep-dive topics that mirror a symmetric diagram (the OVN topology).
+  layout,
   children,
   // When a zone doubles as a component (e.g. the VM), these wire its label up
   // as an arrow anchor (id), a click target, and a trace step badge.
@@ -24,7 +29,7 @@ export default function Zone({
 
   return (
     <div
-      className={`zone ${dashed ? 'zone--dashed' : ''} ${depth > 0 ? 'zone--nested' : ''}`}
+      className={`zone ${dashed ? 'zone--dashed' : ''} ${depth > 0 ? 'zone--nested' : ''} ${layout === 'columns' ? 'zone--columns' : ''} ${layout === 'stack' ? 'zone--stack' : ''}`}
       style={{
         background: fill,
         '--zone-depth': depth,

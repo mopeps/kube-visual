@@ -151,11 +151,13 @@ export default function DeepDiveTab({
   const boxIndex = useMemo(() => (topic ? indexTopicBoxes(topic) : {}), [topic])
   const colorOf = useCallback((boxId) => boxIndex[boxId]?.accent || 'var(--k-cyan)', [boxIndex])
 
-  // The reconciliation loop's connector edges carry their own clickable detail
-  // (systemd topic only) — index them so a clicked chip resolves to its popup.
+  // Connector edges carry their own clickable detail — the systemd loop's
+  // reconciliation edges and any topic's static topology edges (e.g. the OVN
+  // logical wiring) — index them so a clicked chip resolves to its popup.
   const edgeIndex = useMemo(() => {
     const out = {}
     for (const e of topic?.reconciliation?.edges || []) out[e.id] = e
+    for (const e of topic?.topology?.edges || []) out[e.id] = e
     return out
   }, [topic])
 
