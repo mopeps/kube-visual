@@ -3558,8 +3558,11 @@ export function indexTopicBoxes(topic) {
   }
   const walk = (zones) => {
     for (const zone of zones) {
-      const accent = `var(--${zone.colorVar || topic.colorVar || 'k-cyan'})`
-      zone.boxes?.forEach((box) => add(box, accent, zone))
+      const zoneAccent = zone.colorVar || topic.colorVar || 'k-cyan'
+      zone.boxes?.forEach((box) => {
+        if (box.spacer) return // layout-only pseudo-box, nothing to open
+        add(box, `var(--${box.colorVar || zoneAccent})`, zone)
+      })
       if (zone.zones) walk(zone.zones)
     }
   }

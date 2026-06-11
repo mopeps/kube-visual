@@ -155,7 +155,7 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
         // Transient edges (e.g. the cleanup sweep) are part of no steady-state
         // loop — draw them only while they are the active edge.
         if (p.transient && !live) return null
-        const lines = p.label.split('\n')
+        const lines = p.label ? p.label.split('\n') : []
         // Internal "memory" edges (an actor reading/writing its OWN data —
         // evaluate inside systemd, pin inside the kernel) are not real
         // communication, so they read as a faint dotted line. The syscall /
@@ -184,6 +184,9 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
                 generous canvas the flex wrapper centres the chip within.
                 The wrap re-enables pointer events (the SVG layer itself is
                 transparent) so the chip can be clicked to open its detail. */}
+            {/* An edge with nothing to say draws no chip at all — a plain line,
+                like the unlabeled links of a textbook diagram. */}
+            {(lines.length > 0 || p.kind || p.kindLabel || p.step !== '') && (
             <foreignObject
               x={p.labelX - CHIP_W / 2}
               y={p.labelY - CHIP_H / 2}
@@ -193,11 +196,11 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
             >
               <div className="recon-edge-chip-wrap" style={clickable ? { pointerEvents: 'auto' } : undefined}>
                 <span
-                  className={`recon-edge-chip ${live ? 'is-live' : ''} ${clickable ? 'is-clickable' : ''}`}
+                  className={`recon-edge-chip ${p.quiet ? 'recon-edge-chip--quiet' : ''} ${live ? 'is-live' : ''} ${clickable ? 'is-clickable' : ''}`}
                   style={{ '--edge-color': p.color }}
                   role={clickable ? 'button' : undefined}
                   tabIndex={clickable ? 0 : undefined}
-                  aria-label={clickable ? `${p.title || p.label.replace(/\n/g, ' ')} — open details` : undefined}
+                  aria-label={clickable ? `${p.title || (p.label || '').replace(/\n/g, ' ')} — open details` : undefined}
                   onClick={open}
                   onKeyDown={(e) => { if (clickable && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open() } }}
                 >
@@ -216,10 +219,11 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
                       <span key={i} className="recon-edge-chip-line">{ln}</span>
                     ))}
                   </span>
-                  {clickable && <span className="recon-edge-chip-go" aria-hidden>›</span>}
+                  {clickable && !p.quiet && <span className="recon-edge-chip-go" aria-hidden>›</span>}
                 </span>
               </div>
             </foreignObject>
+            )}
           </g>
         )
       })}

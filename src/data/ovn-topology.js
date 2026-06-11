@@ -219,41 +219,20 @@ export const podDetail = (name, ip, w) => ({
   ],
 })
 
-// ── Edge (link) details — the port pairs the IP chips open ──────────────────
+// ── Edge (link) details — the port pairs the labeled links open ─────────────
+// Only the links the classic diagram labels carry a clickable annotation (the
+// rtoj / rtos addresses); the unlabeled structural lines explain themselves
+// through the box popups on either end.
 
 const edgeDetail = (role, summary, commands) => ({
   role, summary,
   sections: commands?.length ? [{ heading: 'Explore', commands: [NBCTL_NOTE, ...commands] }] : [],
 })
 
-export const patchEdgeDetail = (w) => edgeDetail(
-  'OVS PATCH PORT',
-  `Not a cable — a patch port pair connecting the two OVS bridges on ${w.node}: br-ex (which owns eth0 and the node IP) and br-int (which owns the logical topology). Frames cross it in memory, no encapsulation.`,
-  ['ovs-vsctl list-ports br-ex; ovs-vsctl list-ports br-int'],
-)
-
-export const localnetEdgeDetail = (w) => edgeDetail(
-  'LOCALNET PORT',
-  `ext_${w.node}'s localnet port — the declaration that this logical switch is bridged to a real network. ovn-controller maps it to br-ex via the bridge-mappings OVS config, which is what lets gateway-router traffic reach the physical wire.`,
-  ['ovs-vsctl get Open_vSwitch . external_ids:ovn-bridge-mappings'],
-)
-
-export const etorEdgeDetail = (w) => edgeDetail(
-  'ROUTER ↔ SWITCH PORT PAIR',
-  `etor-GR_${w.node} (switch side) ↔ rtoe-GR_${w.node} (router side): the gateway router's external leg, carrying the node's own address ${w.hostIp}. Packets leaving here are already SNATed and look like host traffic.`,
-  [`ovn-nbctl lrp-list GR_${w.node}`],
-)
-
 export const rtojEdgeDetail = (w) => edgeDetail(
   'JOIN-SWITCH PORT',
-  `rtoj-GR_${w.node} · ${w.joinIp}/16 — the gateway router's leg on the "join" switch. The 100.64.0.0/16 addresses exist only so the routers can next-hop to each other; nothing else lives on this subnet.`,
+  `rtoj-GR_${w.node} · ${w.joinIp}/16 — the gateway router's leg on the "join" switch. The 100.64.0.0/16 addresses exist only so the routers can next-hop to each other; nothing else lives on this subnet (the cluster router holds 100.64.0.1).`,
   ['ovn-nbctl lsp-list join'],
-)
-
-export const JTOR_EDGE_DETAIL = edgeDetail(
-  'JOIN-SWITCH PORT',
-  'rtoj-ovn_cluster_router · 100.64.0.1/16 — the distributed router’s one leg on the join switch. Egress traffic next-hops from here to the local node’s gateway router; reply traffic comes back the same way.',
-  ['ovn-nbctl lr-route-list ovn_cluster_router'],
 )
 
 export const rtosEdgeDetail = (w) => edgeDetail(
@@ -262,58 +241,62 @@ export const rtosEdgeDetail = (w) => edgeDetail(
   [`ovn-nbctl lrp-list ovn_cluster_router`],
 )
 
-export const UNDERLAY_EDGE_DETAIL = (w) => edgeDetail(
-  'PHYSICAL ATTACHMENT',
-  `${w.node}'s eth0 on the underlay at ${w.hostIp}. Both overlay stories terminate here: Geneve tunnels run eth0-to-eth0, and SNATed egress leaves with this source address.`,
-  ['ip addr show br-ex', 'tcpdump -ni eth0 udp port 6081'],
-)
-
 // ── The deep-dive topic ──────────────────────────────────────────────────────
+// The canvas mirrors the classic diagram's geometry: two tall dashed node
+// columns (each the full chain — eth0 → br-int → ext switch → GR, then a gap,
+// then the node switch with its pods at the bottom), and the shared join
+// switch + cluster router floating between them at mid-height. Boxes are
+// colour-coded like the picture: switches sky, routers green, br-int and the
+// pods amber. Only the links the diagram labels carry text (quiet, plain).
 
-const nodeEdgeZone = (w) => ({
-  id: `ovn-${w.id}-edge`,
+// One node column: the full per-node chain inside one dashed boundary.
+const nodeZone = (w, pods) => ({
+  id: `ovn-${w.id}-node`,
   label: `${w.node} · ${w.hostIp}`,
   colorVar: 'k-teal',
+  dashed: true,
   layout: 'stack',
   boxes: [
-    { id: `${w.id}-eth0`, title: `eth0 · ${w.hostIp}`, typePrefix: 'netdev', detail: ethDetail(w) },
-    { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', detail: brIntDetail(w) },
-    { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'LogicalSwitch', detail: extSwitchDetail(w) },
-    { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'LogicalRouter', detail: gatewayRouterDetail(w) },
-  ],
-})
-
-const nodePodZone = (w, pods) => ({
-  id: `ovn-${w.id}-pods`,
-  label: `${w.node} pods · ${w.subnet}`,
-  colorVar: 'k-green',
-  layout: 'stack',
-  boxes: [
-    { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'LogicalSwitch', detail: nodeSwitchDetail(w) },
+    { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'netdev', detail: ethDetail(w) },
+    { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', detail: brIntDetail(w) },
+    { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'LogicalSwitch', colorVar: 'k-sky', detail: extSwitchDetail(w) },
+    { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'LogicalRouter', colorVar: 'k-green', detail: gatewayRouterDetail(w) },
+    // The diagram's empty mid-section: the shared core's links cross here.
+    { id: `${w.id}-gap`, spacer: true },
+    { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'LogicalSwitch', colorVar: 'k-sky', detail: nodeSwitchDetail(w) },
     ...pods.map((p) => ({
-      id: `${w.id}-${p.id}`, title: `${p.name} · ${p.ip}`, typePrefix: 'Pod', detail: podDetail(p.name, p.ip, w),
+      id: `${w.id}-${p.id}`, title: `${p.name} · ${p.ip}`, typePrefix: 'Pod',
+      colorVar: 'k-amber', inline: true, detail: podDetail(p.name, p.ip, w),
     })),
   ],
 })
 
-// Per-node wiring: eth0 → br-int → ext switch → GR, plus the GR's leg up to
-// the join switch. `side` biases the cross-zone curves apart.
-const nodeEdges = (w, side) => [
+// Per-node wiring. Only the GR→join link is labeled (its join-switch address),
+// matching the picture; the structural lines are quiet and bare.
+const nodeEdges = (w, pods) => [
   { id: `e-u-${w.id}`, from: 'ovn-underlay', to: `${w.id}-eth0`, step: '',
-    axis: 'vertical', label: w.hostIp, accent: 'k-blue',
-    title: `${w.node} on the underlay`, detail: UNDERLAY_EDGE_DETAIL(w) },
-  { id: `e-${w.id}-patch`, from: `${w.id}-eth0`, to: `${w.id}-brint`, step: '',
-    kindLabel: '⇄ patch', label: 'via br-ex', accent: 'k-teal',
-    title: `br-ex ↔ br-int patch (${w.node})`, detail: patchEdgeDetail(w) },
-  { id: `e-${w.id}-localnet`, from: `${w.id}-brint`, to: `${w.id}-ext`, step: '',
-    kindLabel: '⌁ localnet', label: 'bridge-mapping', accent: 'k-teal',
-    title: `localnet mapping (${w.node})`, detail: localnetEdgeDetail(w) },
-  { id: `e-${w.id}-etor`, from: `${w.id}-ext`, to: `${w.id}-gr`, step: '',
-    label: `rtoe · ${w.hostIp}`, accent: 'k-teal',
-    title: `etor ↔ rtoe (GR_${w.node})`, detail: etorEdgeDetail(w) },
+    axis: 'vertical', quiet: true, accent: 'k-blue' },
+  { id: `e-${w.id}-patch`, from: `${w.id}-eth0`, to: `${w.id}-brint`, step: '', quiet: true, accent: 'k-teal' },
+  { id: `e-${w.id}-localnet`, from: `${w.id}-brint`, to: `${w.id}-ext`, step: '', quiet: true, accent: 'k-teal' },
+  { id: `e-${w.id}-etor`, from: `${w.id}-ext`, to: `${w.id}-gr`, step: '', quiet: true, accent: 'k-teal' },
   { id: `e-${w.id}-rtoj`, from: `${w.id}-gr`, to: 'ovn-join', step: '',
-    axis: 'vertical', bias: side, label: `rtoj · ${w.joinIp}/16`, accent: 'k-purple',
+    quiet: true, label: `${w.joinIp}/16`, accent: 'k-sky',
     title: `GR_${w.node} on the join switch`, detail: rtojEdgeDetail(w) },
+  { id: `e-rtr-${w.id}ls`, from: 'ovn-cluster-router', to: `${w.id}-ls`, step: '',
+    axis: 'vertical', quiet: true, label: `${w.routerPort}/24`, accent: 'k-sky', labelT: 0.45,
+    title: `rtos-${w.node}`, detail: rtosEdgeDetail(w) },
+  ...pods.map((p) => ({
+    id: `e-${w.id}-ls-${p.id}`, from: `${w.id}-ls`, to: `${w.id}-${p.id}`, step: '',
+    quiet: true, accent: 'k-amber',
+  })),
+]
+
+const W1_PODS = [
+  { id: 'pod-a', name: 'pod-a', ip: '10.244.0.3' },
+  { id: 'pod-b', name: 'pod-b', ip: '10.244.0.5' },
+]
+const W2_PODS = [
+  { id: 'pod-a', name: 'pod-c', ip: '10.244.2.3' },
 ]
 
 export const OVN_TOPOLOGY = {
@@ -324,17 +307,10 @@ export const OVN_TOPOLOGY = {
   colorVar: 'k-teal',
   topology: {
     edges: [
-      ...nodeEdges(W1, 'left'),
-      ...nodeEdges(W2, 'right'),
+      ...nodeEdges(W1, W1_PODS),
+      ...nodeEdges(W2, W2_PODS),
       { id: 'e-join-rtr', from: 'ovn-join', to: 'ovn-cluster-router', step: '',
-        label: 'rtoj · 100.64.0.1/16', accent: 'k-purple',
-        title: 'ovn_cluster_router on the join switch', detail: JTOR_EDGE_DETAIL },
-      { id: 'e-rtr-w1ls', from: 'ovn-cluster-router', to: 'w1-ls', step: '',
-        axis: 'vertical', bias: 'left', labelT: 0.32, label: `rtos · ${W1.routerPort}/24`, accent: 'k-green',
-        title: `rtos-${W1.node}`, detail: rtosEdgeDetail(W1) },
-      { id: 'e-rtr-w2ls', from: 'ovn-cluster-router', to: 'w2-ls', step: '',
-        axis: 'vertical', bias: 'right', labelT: 0.32, label: `rtos · ${W2.routerPort}/24`, accent: 'k-green',
-        title: `rtos-${W2.node}`, detail: rtosEdgeDetail(W2) },
+        axis: 'vertical', quiet: true, accent: 'k-sky' },
     ],
   },
   flows: [
@@ -392,45 +368,35 @@ export const OVN_TOPOLOGY = {
     },
   ],
   zones: [
+    // The underlay floats at the top like the diagram's cloud — no zone box.
     {
       id: 'ovn-underlay-zone',
-      label: 'Underlay network · 172.18.0.0/24 — the only real wire',
+      bare: true,
+      layout: 'stack',
       colorVar: 'k-blue',
-      layout: 'stack',
       boxes: [
-        { id: 'ovn-underlay', title: 'Underlay 172.18.0.0/24', typePrefix: 'L2 segment', detail: UNDERLAY_DETAIL },
+        { id: 'ovn-underlay', title: 'Underlay · 172.18.0.0/24', typePrefix: 'L2 segment', colorVar: 'k-blue', detail: UNDERLAY_DETAIL },
       ],
     },
+    // Two node columns flanking the shared logical core, which floats between
+    // them at mid-height (a bare, vertically-centred column).
     {
-      id: 'ovn-edge-zone',
-      label: 'Node network edge — one stack per node',
-      colorVar: 'k-teal',
-      layout: 'columns',
-      zones: [nodeEdgeZone(W1), nodeEdgeZone(W2)],
-    },
-    {
-      id: 'ovn-core-zone',
-      label: 'OVN logical core — shared & distributed',
-      colorVar: 'k-purple',
-      layout: 'stack',
-      boxes: [
-        { id: 'ovn-join', title: 'LS "join" · 100.64.0.0/16', typePrefix: 'LogicalSwitch', detail: JOIN_SWITCH_DETAIL },
-        { id: 'ovn-cluster-router', title: 'ovn_cluster_router', typePrefix: 'LogicalRouter', detail: CLUSTER_ROUTER_DETAIL },
-      ],
-    },
-    {
-      id: 'ovn-pods-zone',
-      label: 'Pod networks · 10.244.0.0/16 — a switch per node',
-      colorVar: 'k-green',
+      id: 'ovn-nodes-zone',
+      bare: true,
       layout: 'columns',
       zones: [
-        nodePodZone(W1, [
-          { id: 'pod-a', name: 'pod-a', ip: '10.244.0.3' },
-          { id: 'pod-b', name: 'pod-b', ip: '10.244.0.5' },
-        ]),
-        nodePodZone(W2, [
-          { id: 'pod-a', name: 'pod-c', ip: '10.244.2.3' },
-        ]),
+        nodeZone(W1, W1_PODS),
+        {
+          id: 'ovn-core',
+          bare: true,
+          layout: 'stack',
+          colorVar: 'k-purple',
+          boxes: [
+            { id: 'ovn-join', title: 'LS "join" · 100.64.0.0/16', typePrefix: 'LogicalSwitch', colorVar: 'k-sky', detail: JOIN_SWITCH_DETAIL },
+            { id: 'ovn-cluster-router', title: 'ovn_cluster_router', typePrefix: 'LogicalRouter', colorVar: 'k-green', detail: CLUSTER_ROUTER_DETAIL },
+          ],
+        },
+        nodeZone(W2, W2_PODS),
       ],
     },
   ],

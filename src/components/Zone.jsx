@@ -8,6 +8,10 @@ export default function Zone({
   // stacks the zone's boxes vertically, centred — a chain read top-to-bottom.
   // Used by deep-dive topics that mirror a symmetric diagram (the OVN topology).
   layout,
+  // bare: no label bar, no border, no fill — an invisible layout container.
+  // Lets diagram-shaped topics float content (the OVN shared core between the
+  // two node columns) without drawing a box around it.
+  bare = false,
   children,
   // When a zone doubles as a component (e.g. the VM), these wire its label up
   // as an arrow anchor (id), a click target, and a trace step badge.
@@ -29,21 +33,21 @@ export default function Zone({
 
   return (
     <div
-      className={`zone ${dashed ? 'zone--dashed' : ''} ${depth > 0 ? 'zone--nested' : ''} ${layout === 'columns' ? 'zone--columns' : ''} ${layout === 'stack' ? 'zone--stack' : ''}`}
+      className={`zone ${dashed ? 'zone--dashed' : ''} ${depth > 0 && !bare ? 'zone--nested' : ''} ${layout === 'columns' ? 'zone--columns' : ''} ${layout === 'stack' ? 'zone--stack' : ''} ${bare ? 'zone--bare' : ''}`}
       style={{
-        background: fill,
+        ...(!bare && { background: fill }),
         '--zone-depth': depth,
         // nested zones pick this up via .zone--nested / .zone--dashed in index.css
         '--zone-border': line,
         // top-level zones get a clear border all around + a bolder left stripe
-        ...(isTop && {
+        ...(isTop && !bare && {
           border: `1px solid ${line}`,
           borderRadius: 12,
           borderLeft: `4px solid ${color}`,
         }),
       }}
     >
-      <div
+      {!bare && <div
         id={componentId}
         role={isComponent ? 'button' : undefined}
         tabIndex={isComponent ? 0 : undefined}
@@ -79,7 +83,7 @@ export default function Zone({
             {stepNum}
           </span>
         )}
-      </div>
+      </div>}
       <div className="zone-content">
         <div className="zone-content-inner">
           {children}
