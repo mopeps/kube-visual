@@ -12,6 +12,13 @@
 //     topicId, title, tagline, colorVar,
 //     reconciliation?,                 // systemd only — drives the animation +
 //                                      // the on-canvas loop edges (recon.edges)
+//     topology?: { edges: [edge] },    // always-on structural wiring drawn over
+//                                      // the canvas (same edge shape as
+//                                      // reconciliation.edges, plus axis? and
+//                                      // kindLabel?; use step:'' — they are
+//                                      // structural, not ordered). A topic sets
+//                                      // reconciliation OR topology, never both
+//                                      // (their canvas gap rules conflict).
 //     flows?: [ flow ],                // Overview-style trace flows: numbered
 //                                      // box→box hops drawn on the canvas with a
 //                                      // flow navigator + bottom hop inspector.
@@ -20,7 +27,9 @@
 //   }
 //   flow  = { flowId, flowName, description,
 //             steps: [{ step, sourceBoxId, targetBoxId, description }] }
-//   zone  = { id, label, colorVar, dashed?, boxes: [box], zones?: [zone] }
+//   zone  = { id, label, colorVar, dashed?, layout?, boxes: [box], zones?: [zone] }
+//     layout: 'columns' → child zones side-by-side as equal columns;
+//             'stack'   → boxes stacked vertically, centred (a chain).
 //   box   = {
 //     id, title, typePrefix?, subtitle?,
 //     badges?: [{ label, kind:'requires'|'after'|'stat' }],
@@ -42,6 +51,8 @@
 //                    manifest?:{kind,body}, ascii? }],
 //     },
 //   }
+
+import { OVN_TOPOLOGY } from './ovn-topology'
 
 // Example unit for the headline service (ovn-kubernetes node daemon). Mirrors
 // the real ordering: structural Requires= on Open vSwitch, chronological After=
@@ -3530,7 +3541,7 @@ const ETCD_RAFT = {
   ],
 }
 
-export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, API_REQUEST_PATH, ETCD_RAFT, TMUX_SUDO, LINUX_FDS]
+export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, OVN_TOPOLOGY, API_REQUEST_PATH, ETCD_RAFT, TMUX_SUDO, LINUX_FDS]
 
 export const findDeepDive = (topicId) =>
   DEEP_DIVES.find((t) => t.topicId === topicId) || null

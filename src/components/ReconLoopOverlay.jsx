@@ -28,7 +28,10 @@ function bezier(t, p0, p1, p2, p3) {
 // bows the curve sideways by `bias` so parallel vertical edges don't overlap.
 // `labelT` slides the label chip along the curve (0 = source … 1 = target) so two
 // edges sharing the same gap can park their chips at different points.
-function buildEdge(srcEl, tgtEl, canvasEl, bias, labelT = 0.5) {
+// `axis: 'vertical' | 'horizontal'` overrides the side heuristic — a wide box
+// fanning out to two columns (the OVN underlay) reads as vertical even when
+// the sideways distance beats the drop.
+function buildEdge(srcEl, tgtEl, canvasEl, bias, labelT = 0.5, axis) {
   const c = canvasEl.getBoundingClientRect()
   const s = srcEl.getBoundingClientRect()
   const t = tgtEl.getBoundingClientRect()
@@ -38,7 +41,9 @@ function buildEdge(srcEl, tgtEl, canvasEl, bias, labelT = 0.5) {
   const tCx = t.left + t.width / 2 - c.left
   const tCy = t.top + t.height / 2 - c.top
 
-  const vertical = Math.abs(tCy - sCy) >= Math.abs(tCx - sCx)
+  const vertical = axis
+    ? axis === 'vertical'
+    : Math.abs(tCy - sCy) >= Math.abs(tCx - sCx)
   const bow = bias === 'left' ? -64 : bias === 'right' ? 64 : 0
 
   let sx, sy, tx, ty
@@ -83,7 +88,7 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
       const srcEl = document.getElementById(`dd-${edge.from}`)
       const tgtEl = document.getElementById(`dd-${edge.to}`)
       if (!srcEl || !tgtEl) continue
-      const built = buildEdge(srcEl, tgtEl, canvas, edge.bias, edge.labelT)
+      const built = buildEdge(srcEl, tgtEl, canvas, edge.bias, edge.labelT, edge.axis)
       next.push({
         ...edge,
         color: `var(--${edge.accent || 'k-cyan'})`,
@@ -195,9 +200,13 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
                 >
                   {p.step !== '' && <span className="recon-edge-chip-num">{p.step}</span>}
                   <span className="recon-edge-chip-label">
-                    {p.kind && (
-                      <span className={`recon-edge-chip-kind recon-edge-chip-kind--${p.kind}`}>
-                        {p.kind === 'memory' ? '⌑ memory' : p.kind === 'signal' ? '⚡ signal' : '↳ syscall'}
+                    {(p.kind || p.kindLabel) && (
+                      <span className={`recon-edge-chip-kind ${p.kind ? `recon-edge-chip-kind--${p.kind}` : ''}`}>
+                        {/* kindLabel overrides the systemd vocabulary so topology
+                            edges can name their own link kind (patch, geneve…). */}
+                        {p.kindLabel
+                          ? p.kindLabel
+                          : p.kind === 'memory' ? '⌑ memory' : p.kind === 'signal' ? '⚡ signal' : '↳ syscall'}
                       </span>
                     )}
                     {lines.map((ln, i) => (

@@ -229,6 +229,7 @@ export default function DeepDiveCanvas({
       color={accentOf(zone, topic)}
       dashed={zone.dashed}
       depth={depth}
+      layout={zone.layout}
     >
       {zone.boxes?.map((box) => renderBox(box, zone))}
       {zone.zones?.map((child) => renderZone(child, depth + 1))}
@@ -237,13 +238,28 @@ export default function DeepDiveCanvas({
 
   return (
     <div className="deep-dive-canvas">
-      <div className={`overview-canvas recon-stack ${recon?.edges ? 'recon-stack--edges' : ''}`} ref={stackRef}>
+      <div
+        className={`overview-canvas recon-stack ${recon?.edges ? 'recon-stack--edges' : ''} ${topic.topology?.edges ? 'recon-stack--topology' : ''}`}
+        ref={stackRef}
+      >
         {recon?.edges && (
           <ReconLoopOverlay
             edges={recon.edges}
             canvasRef={stackRef}
             activeEdgeId={loop.activeEdgeId}
             signal={loop.signal}
+            onSelectEdge={onSelectEdge}
+          />
+        )}
+        {/* Static topology edges — the always-on structural links of a topic
+            (e.g. the OVN logical wiring), reusing the recon-loop edge renderer
+            with no live phase and no travelling signal. */}
+        {topic.topology?.edges && (
+          <ReconLoopOverlay
+            edges={topic.topology.edges}
+            canvasRef={stackRef}
+            activeEdgeId={null}
+            signal={null}
             onSelectEdge={onSelectEdge}
           />
         )}
