@@ -1692,9 +1692,10 @@ body::after {
    band between zones for its IP chips, but the links are short one-liners —
    moderate gaps, not the systemd loop's 100px airfield. */
 .recon-stack--topology { gap: 56px; padding-top: 12px; padding-bottom: 12px; }
-/* Stacked chains (eth0 → br-int → …) carry an edge per gap, each parking its
-   chip in the row gap — open it up enough for one chip. */
-.recon-stack--topology .zone--stack > .zone-content > .zone-content-inner { gap: 44px; }
+/* Stacked chains (eth0 → br-int → …) are joined by bare quiet lines — just
+   enough gap for a short connector, so the chain reads as one tight unit
+   like the source diagram (the old 44px was sized for pill chips). */
+.recon-stack--topology .zone--stack > .zone-content > .zone-content-inner { gap: 22px; }
 /* Inside the diagram's column row, every stack fills the column height so the
    side-by-side node chains stay equal and a spacer box can push each pod
    group to the bottom (the shared core centres in the same height). */
