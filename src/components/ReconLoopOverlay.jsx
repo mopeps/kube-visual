@@ -75,7 +75,10 @@ function buildEdge(srcEl, tgtEl, canvasEl, bias, labelT = 0.5, axis) {
   return { d: `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${tx} ${ty}`, labelX, labelY }
 }
 
-export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signal, onSelectEdge }) {
+// `idPrefix` namespaces the DOM lookups: the deep dives' boxes render as
+// dd-<boxId> (the default), while the Overview's network overlay passes '' to
+// connect raw ids — its own chips and real component cards alike.
+export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signal, onSelectEdge, idPrefix = 'dd' }) {
   const [paths, setPaths] = useState([])
   const rafRef = useRef(0)
 
@@ -85,8 +88,8 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
 
     const next = []
     for (const edge of edges) {
-      const srcEl = document.getElementById(`dd-${edge.from}`)
-      const tgtEl = document.getElementById(`dd-${edge.to}`)
+      const srcEl = document.getElementById(idPrefix ? `${idPrefix}-${edge.from}` : edge.from)
+      const tgtEl = document.getElementById(idPrefix ? `${idPrefix}-${edge.to}` : edge.to)
       if (!srcEl || !tgtEl) continue
       const built = buildEdge(srcEl, tgtEl, canvas, edge.bias, edge.labelT, edge.axis)
       next.push({
