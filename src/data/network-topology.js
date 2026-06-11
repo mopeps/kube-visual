@@ -35,20 +35,26 @@ export const NET_LAYERS = [
 
 // Real components that participate in the network story — they keep full
 // opacity while the overlay dims the rest of the canvas into background.
+// Includes the replica nodes' data-plane pairs (each anchors its own
+// gateway-router leg).
 export const NET_PARTICIPANTS = new Set([
   'ovs-master', 'ovn-node-master',
   'ovs-host', 'ovn-node-host',
+  'ovs-master-2', 'ovn-node-master-2',
+  'ovs-master-3', 'ovn-node-master-3',
+  'ovs-worker-2', 'ovn-node-worker-2',
+  'ovs-worker-3', 'ovn-node-worker-3',
   'ovs-guest', 'ovn-node-guest',
   'ovn-master-control',
   'frontend-application-pod', 'backend-application-pod',
 ])
 
 export const NET_CHIPS = [
-  // ── Management SDN: logical core parked in the empty band of the master
-  //    replica strip (between the two detailed node zones) ──
+  // ── Management SDN: logical core parked in the free right portions of the
+  //    master replica zones (the row between the two detailed node zones) ──
   {
     id: 'net-m-join', layer: 'mgmt', kind: 'switch', label: 'LS "join"',
-    anchor: { to: 'replica-master-3', at: 'right', dx: 200 },
+    anchor: { to: 'ovs-master-2', at: 'right', dx: 230 },
     detail: {
       role: 'LOGICAL SWITCH · MGMT SDN',
       summary:
@@ -65,7 +71,7 @@ export const NET_CHIPS = [
   },
   {
     id: 'net-m-router', layer: 'mgmt', kind: 'router', label: 'ovn_cluster_router',
-    anchor: { to: 'replica-master-3', at: 'right', dx: 470 },
+    anchor: { to: 'ovs-master-3', at: 'right', dx: 230 },
     detail: {
       role: 'DISTRIBUTED ROUTER · MGMT SDN',
       summary:
@@ -180,25 +186,25 @@ export const NET_EDGES = [
       summary: 'worker-1’s gateway router, realized in its Open vSwitch. North-south traffic from any pod on this node — the guest VM’s launcher pod included — is SNATed here to the node IP.',
     },
   }),
-  edge('ne-m-gr-m2', 'mgmt', 'replica-master-2', 'net-m-join', 'GR_master-2', {
+  edge('ne-m-gr-m2', 'mgmt', 'ovs-master-2', 'net-m-join', 'GR_master-2', {
     accent: 'k-orange', labelT: 0.45,
     title: 'GR_master-2 → join switch',
-    detail: { role: 'REPLICA NODE LEG', summary: 'Every node gets the same wiring: master-2 has its own gateway router, node switch and /23 pod subnet — drawn condensed here, identical to the detailed node’s.' },
+    detail: { role: 'REPLICA NODE LEG', summary: 'Every node gets the same wiring: master-2 has its own gateway router, node switch and /23 pod subnet, compiled into its own Open vSwitch — identical to the detailed node’s.' },
   }),
-  edge('ne-m-gr-m3', 'mgmt', 'replica-master-3', 'net-m-join', 'GR_master-3', {
-    accent: 'k-orange', labelT: 0.72,
+  edge('ne-m-gr-m3', 'mgmt', 'ovs-master-3', 'net-m-join', 'GR_master-3', {
+    accent: 'k-orange', labelT: 0.3, labelDY: -22,
     title: 'GR_master-3 → join switch',
-    detail: { role: 'REPLICA NODE LEG', summary: 'master-3’s gateway-router leg — same construct as every other node’s.' },
+    detail: { role: 'REPLICA NODE LEG', summary: 'master-3’s gateway-router leg — same construct as every other node’s, realized in its own br-int.' },
   }),
-  edge('ne-m-gr-w2', 'mgmt', 'replica-worker-2', 'net-m-join', 'GR_worker-2', {
-    axis: 'vertical', bias: 'right', accent: 'k-orange', labelT: 0.05, labelDY: -14,
+  edge('ne-m-gr-w2', 'mgmt', 'ovs-worker-2', 'net-m-join', 'GR_worker-2', {
+    axis: 'vertical', bias: 'right', accent: 'k-orange', labelT: 0.06, labelDY: -26,
     title: 'GR_worker-2 → join switch',
-    detail: { role: 'REPLICA NODE LEG', summary: 'worker-2’s gateway-router leg. The cross-layer packet trace ends on this node: the other guest VM lives here.' },
+    detail: { role: 'REPLICA NODE LEG', summary: 'worker-2’s gateway-router leg, realized in its own Open vSwitch. The cross-layer packet trace ends on this node: the other guest VM lives here.' },
   }),
-  edge('ne-m-gr-w3', 'mgmt', 'replica-worker-3', 'net-m-join', 'GR_worker-3', {
-    axis: 'vertical', bias: 'right', accent: 'k-orange', labelT: 0.05, labelDY: -42, labelDX: 60,
+  edge('ne-m-gr-w3', 'mgmt', 'ovs-worker-3', 'net-m-join', 'GR_worker-3', {
+    axis: 'vertical', bias: 'right', accent: 'k-orange', labelT: 0.06, labelDY: -26,
     title: 'GR_worker-3 → join switch',
-    detail: { role: 'REPLICA NODE LEG', summary: 'worker-3’s gateway-router leg — same construct as every other node’s.' },
+    detail: { role: 'REPLICA NODE LEG', summary: 'worker-3’s gateway-router leg — same construct as every other node’s, realized in its own br-int.' },
   }),
   edge('ne-m-join-rtr', 'mgmt', 'net-m-join', 'net-m-router', 'rtoj · 100.64.0.1', {
     accent: 'k-orange',
@@ -250,7 +256,7 @@ export const NET_EDGES = [
   }),
 
   // cross-layer: the one edge that says "most flows need both layers".
-  edge('ne-x-geneve', 'cross', 'net-g-ls', 'replica-worker-2', 'rides the mgmt pod net', {
+  edge('ne-x-geneve', 'cross', 'net-g-ls', 'ovs-worker-2', 'rides the mgmt pod net', {
     kindLabel: '⌁ geneve²', accent: 'k-amber', axis: 'vertical', bias: 'right', labelT: 0.5, labelDY: 10,
     title: 'Cross-node guest traffic: encapsulation squared',
     detail: {
@@ -306,7 +312,7 @@ export const NET_TRACE = {
       title: '6 · The management router — on worker-1',
       detail: { role: 'MGMT SDN', summary: 'The management cluster router (also distributed, also local to the source node) routes toward worker-2’s pod subnet and wraps the packet in the *management* Geneve — encapsulation number two.' },
     }),
-    edge('nt-7', 'trace', 'net-m-router', 'replica-worker-2', 'mgmt Geneve → worker-2 → VM → pod', {
+    edge('nt-7', 'trace', 'net-m-router', 'ovs-worker-2', 'mgmt Geneve → worker-2 → VM → pod', {
       step: 7, accent: 'k-amber', axis: 'vertical', bias: 'right', labelT: 0.5,
       title: '7 · Across the wire and back up the layers',
       detail: { role: 'ARRIVAL', summary: 'On the physical wire: node IP → node IP. worker-2’s br-int unwraps the mgmt Geneve and delivers to the launcher pod of the VM there; inside that VM, br-int unwraps the guest Geneve and delivers to the destination pod’s port. Down through two SDNs, up through both again.' },
