@@ -2,7 +2,6 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { ZONES, INTENT_OBJECT_STORE, CONTROLLER_PARENT, OPERATOR_PARENT, FLOW_PARENT } from '../data/zones'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
-import ReplicaNodeCard from './ReplicaNodeCard'
 import DeepDiveModal from './DeepDiveModal'
 import NetworkOverlay from './NetworkOverlay'
 import { NET_LAYERS, NET_PARTICIPANTS, NET_TRACE } from '../data/network-topology'
@@ -38,30 +37,32 @@ function collectZoneNodeIds(zone, ids = []) {
   return ids
 }
 
-// Popup content for a condensed replica node (a `zone.replicas` entry): the
-// cluster runs three of each bare-metal node, but only one is drawn in full —
-// this explains what the slim card stands for. Rendered via DeepDiveModal.
-function replicaDetail(title, zone) {
-  const isMaster = zone.id === 'master-node'
+// Popup content for a replica node zone's label (a `zone.replicaNodes` entry):
+// the cluster runs three of each bare-metal node, but only one is drawn in
+// full — the replicas carry just the inter-node network plane. Rendered via
+// DeepDiveModal.
+function replicaDetail(title, parentZone) {
+  const isMaster = parentZone.id === 'master-node'
   return {
     role: 'BARE METAL NODE · CONDENSED REPLICA',
     summary:
-      `${title} is identical to the detailed "${zone.label}" above — drawn condensed so the canvas stays readable. ` +
+      `${title} runs the identical stack to the detailed "${parentZone.label}" above. ` +
+      'It is drawn condensed — only the components that move traffic *between* nodes: the OVN-K8s Node agent programming this node\'s own Open vSwitch (br-int), and the MetalLB speaker. ' +
       (isMaster
         ? 'The cluster runs three masters: etcd needs an odd-sized quorum (three tolerates one node failure), and the management API servers sit behind one VIP across them.'
         : 'The cluster runs three workers: capacity and failure-domain spread for the KubeVirt VMs that make up the guest cluster’s nodes.'),
     sections: [
       {
-        heading: 'Runs the same host stack',
+        heading: 'Also runs (not drawn)',
         tags: isMaster
-          ? ['Kubelet', 'CRI-O', 'Open vSwitch', 'OVN-K8s Node', 'static control-plane Pods']
-          : ['Kubelet', 'CRI-O', 'Open vSwitch', 'OVN-K8s Node', 'MetalLB Speaker', 'virt-handler'],
+          ? ['Kubelet', 'CRI-O', 'static control-plane Pods']
+          : ['Kubelet', 'CRI-O', 'virt-handler', 'guest worker VMs'],
       },
       {
         heading: 'In OVN terms',
         bullets: [
-          `Every node — replicas included — gets its own gateway router (GR_${title}), node logical switch, and /24 pod subnet.`,
-          'Open the OVN topology deep dive (Deep Dive tab) to see that per-node wiring in full.',
+          `Every node — replicas included — gets its own gateway router (GR_${title}), node logical switch, and pod subnet, all compiled into its own br-int.`,
+          'Toggle the Network overlay (or open the OVN topology deep dive) to see that per-node wiring.',
         ],
       },
       {
@@ -275,7 +276,10 @@ export default function OverviewTab({
         isOnPath={isOnPath}
         isDimmed={isDimmed}
         isHighlighted={node.id === highlightId}
-        onClick={onSelectComponent}
+        // A replica-zone card mirrors a canonical component: it keeps its own
+        // DOM id (unique anchor for overlays/arrows) but opens the canonical
+        // component's detail modal — the software is identical.
+        onClick={node.mirror ? () => onSelectComponent(node.mirror) : onSelectComponent}
       />
     )
   }
@@ -317,7 +321,10 @@ export default function OverviewTab({
     return out
   }
 
-  function renderZone(zone, depth = 0) {
+  function renderZone(zone, depth = 0, parentZone = null) {
+    // A replica node zone's label opens the replica explainer popup instead of
+    // a component modal (the zone is a stand-in, not a registered component).
+    const isReplica = !!zone.replica
     const zoneEl = (
       <Zone
         key={zone.id}
@@ -326,13 +333,16 @@ export default function OverviewTab({
         dashed={zone.dashed}
         depth={depth}
         // A zone may double as a component (e.g. the VM); wire up its identity
-        // so it can anchor arrows, highlight, and open the detail panel.
-        componentId={zone.componentId}
+        // so it can anchor arrows, highlight, and open the detail panel. A
+        // replica zone borrows the same wiring for its explainer popup.
+        componentId={isReplica ? zone.id : zone.componentId}
         stepNum={zone.componentId ? stepNums.get(zone.componentId) : undefined}
         isActive={zone.componentId ? traceStates(zone.componentId).isActive : false}
         isOnPath={zone.componentId ? traceStates(zone.componentId).isOnPath : false}
         isHighlighted={zone.componentId ? zone.componentId === highlightId : false}
-        onClick={onSelectComponent}
+        onClick={isReplica
+          ? () => { setNetSheet(null); setReplica({ title: zone.label, zone: parentZone }) }
+          : onSelectComponent}
       >
         {/* Nodes in this zone (Service→target pairs stacked together) */}
         {renderZoneNodes(zone)}
@@ -340,26 +350,15 @@ export default function OverviewTab({
         {zone.zones?.map(child => renderZone(child, depth + 1))}
       </Zone>
     )
-    if (!zone.replicas?.length || !showReplicas) return zoneEl
-    // The zone's condensed sibling nodes (master-2/3, worker-2/3) trail it as a
-    // slim strip — real DOM anchors for overlays/flows without a full zone each.
+    if (!zone.replicaNodes?.length || !showReplicas) return zoneEl
+    // The zone's condensed siblings (master-2/3, worker-2/3) trail it as a row
+    // of real node zones — same border/label as the primary, but holding only
+    // the inter-node network plane (OVN-K8s Node → Open vSwitch, MetalLB).
     return (
       <Fragment key={zone.id}>
         {zoneEl}
-        <div className="replica-strip">
-          <span className="replica-strip-label" style={{ color: zone.color }}>
-            ×{zone.replicas.length + 1} in the cluster —
-          </span>
-          {zone.replicas.map((r) => (
-            <ReplicaNodeCard
-              key={r.id}
-              id={r.id}
-              title={r.title}
-              color={zone.color}
-              isDimmed={hasActive}
-              onClick={() => { setNetSheet(null); setReplica({ ...r, zone }) }}
-            />
-          ))}
+        <div className="replica-row">
+          {zone.replicaNodes.map((rz) => renderZone(rz, depth, zone))}
         </div>
       </Fragment>
     )
@@ -457,7 +456,7 @@ export default function OverviewTab({
           deep-dive sheet (one popup at a time). */}
       <DeepDiveModal
         content={replica ? {
-          id: replica.id,
+          id: `replica-${replica.title}`,
           title: `${replica.title} — identical replica`,
           typePrefix: 'BareMetal',
           accent: replica.zone.color,

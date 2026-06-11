@@ -178,10 +178,16 @@ store, or a trace-only zone).
 
 **Replica presentation:** the modeled cluster runs **three masters and three workers**,
 but only one of each renders as a full zone. The identical siblings render as condensed
-**replica cards** (`ReplicaNodeCard`, declared as `zone.replicas` in `zones.js`) in a
-slim strip trailing the detailed zone — own DOM ids (`replica-master-2`, …) so overlays
-and flows can anchor per node, with a popup explaining the HA story (etcd quorum /
-capacity spread) and that every node carries the same per-node OVN wiring.
+**replica node zones** (`zone.replicaNodes` in `zones.js`) — real bordered node zones,
+side by side in a row trailing the detailed zone, that carry *only* the components
+moving traffic between nodes: the `OVN-K8s Node → Open vSwitch` data-plane pair
+(`programs` br-int) and the MetalLB speaker. Each card keeps a replica-scoped DOM id
+(`ovs-worker-2`, …) so overlays/flows can anchor per node, but opens the **canonical**
+component's modal via its `mirror` field (the software is identical); the zone label
+opens a popup explaining the HA story (etcd quorum / capacity spread) and what is not
+drawn. Hidden by default for a clean main view — revealed by the wide-desktop
+**All nodes** toggle, and forced on by the network overlay (its per-node gateway-router
+chips anchor here).
 
 1. **The Context / Zone Boundaries** — the macro physical/virtual boundaries that frame
    everything else: `[Management Cluster]`, `[Management Master Node]`,

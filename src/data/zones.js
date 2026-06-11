@@ -1,6 +1,56 @@
 // Zone tree — top-to-bottom nested layout of the HCP cluster.
 // Each zone may have `nodes` (rendered as NodeCards) and/or `zones` (nested sub-zones).
 
+// A condensed replica of a bare-metal node, rendered as a real (bordered,
+// labelled) node zone like the primary — but carrying only the components that
+// move traffic *between* nodes: the OVN-K8s Node → Open vSwitch data-plane pair
+// (programs br-int) plus the MetalLB speaker. Their componentIds are
+// replica-scoped so each is unique in the DOM (the network overlay anchors a
+// per-node gateway-router chip to each node's Open vSwitch); `mirror` points the
+// detail popup at the canonical component's metadata, since the software is
+// identical to the primary node's. Shown only when "All nodes" is toggled on
+// (or the network overlay is active). See OverviewTab's renderZone.
+function replicaNode({ id, title, colorVar, kind }) {
+  const c = `var(--${colorVar})`
+  const canon = kind === 'master'
+    ? { ovs: 'ovs-master', ovn: 'ovn-node-master', mlb: 'metallb-speaker-master' }
+    : { ovs: 'ovs-host', ovn: 'ovn-node-host', mlb: 'metallb-speaker-worker' }
+  return {
+    id,
+    label: title,
+    color: c,
+    colorVar,
+    replica: true,
+    nodes: [
+      {
+        id: `ovn-node-${id}`,
+        title: 'OVN-K8s Node',
+        typePrefix: 'Pod',
+        programs: `ovs-${id}`,
+        mirror: canon.ovn,
+        badges: [{ label: 'CNI', color: c }],
+      },
+      {
+        id: `ovs-${id}`,
+        title: 'Open vSwitch',
+        typePrefix: 'systemd',
+        mirror: canon.ovs,
+        badges: [
+          { label: 'br-int', color: c },
+          { label: 'OpenFlow', color: c },
+        ],
+      },
+      {
+        id: `metallb-${id}`,
+        title: 'MetalLB Speaker',
+        typePrefix: 'Pod',
+        mirror: canon.mlb,
+        badges: [{ label: 'ARP/NDP', color: c }],
+      },
+    ],
+  }
+}
+
 export const ZONES = [
   {
     id: 'client',
@@ -35,11 +85,11 @@ export const ZONES = [
         color: 'var(--k-blue)',
         colorVar: 'k-blue',
         // The cluster runs three masters; one is drawn in full and these two
-        // render as condensed replica cards after the zone (ReplicaNodeCard) —
-        // same host stack, own ids so overlays/arrows can anchor per node.
-        replicas: [
-          { id: 'replica-master-2', title: 'master-2' },
-          { id: 'replica-master-3', title: 'master-3' },
+        // render as condensed-but-real node zones after this one (replicaNode),
+        // carrying just the inter-node network data plane.
+        replicaNodes: [
+          replicaNode({ id: 'master-2', title: 'master-2', colorVar: 'k-blue', kind: 'master' }),
+          replicaNode({ id: 'master-3', title: 'master-3', colorVar: 'k-blue', kind: 'master' }),
         ],
         // The master node's own host-level agents — the same node stack every
         // bare metal node runs (mirrors the worker node), distinct from the
@@ -779,10 +829,10 @@ export const ZONES = [
         label: 'Bare Metal Worker Node',
         color: 'var(--k-blue-worker)',
         colorVar: 'k-blue-worker',
-        // Three workers in the cluster; two condensed replicas (see master-node).
-        replicas: [
-          { id: 'replica-worker-2', title: 'worker-2' },
-          { id: 'replica-worker-3', title: 'worker-3' },
+        // Three workers in the cluster; two condensed replica nodes (see master-node).
+        replicaNodes: [
+          replicaNode({ id: 'worker-2', title: 'worker-2', colorVar: 'k-blue-worker', kind: 'worker' }),
+          replicaNode({ id: 'worker-3', title: 'worker-3', colorVar: 'k-blue-worker', kind: 'worker' }),
         ],
         nodes: [
           {

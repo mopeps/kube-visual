@@ -43,7 +43,7 @@ src/
     components.json          # one entry per componentId (incl. typePrefix, runtimeForm, linuxPrimitive, logicalContext)
     components-index.js      # O(1) componentId → entry Map (the shared findComponent lookup)
     events.json              # ordered step lists (source → target hops)
-    zones.js                 # recursive ZONES tree, COMPONENT_COLOR / _ZONE / _BADGES
+    zones.js                 # recursive ZONES tree (+ replicaNodes: condensed master-2/3, worker-2/3 network-plane zones), COMPONENT_COLOR / _ZONE / _BADGES
     primitives.js            # kernel/OS/virt primitives keyed by typePrefix
     manifests.js             # minimal example manifest (YAML) / systemd unit per componentId
     pipeline-layers.js       # Manifest → Kernel band definitions
@@ -68,7 +68,6 @@ src/
     SwipeViews.jsx           # compact-mode horizontal pager between tabs (finger-tracking, per-pane scroll)
     Zone.jsx                 # one labeled zone; renders nested child zones recursively (layout: 'columns' | 'stack' variants)
     NodeCard.jsx             # one box inside a zone (shows [typePrefix] label)
-    ReplicaNodeCard.jsx      # condensed bare-metal replica node (master-2/3, worker-2/3): slim dashed card with its own DOM id
     NetworkOverlay.jsx       # Overview overlay (wide desktop): OVN logical-topology chips + labeled edges over the real components, layer dimmer + packet trace
     TypeIcon.jsx             # glyph for a node's typePrefix ([Pod]/[systemd]/…)
     ServicePair.jsx          # stacks a Service over the in-zone target it `exposes`

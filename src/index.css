@@ -197,33 +197,25 @@ body::after {
   align-items: center;
 }
 
-/* ── Replica node strip ────────────────────────────────────────────────
+/* ── Replica node row ──────────────────────────────────────────────────
    The condensed siblings of a detailed bare-metal node zone (master-2/3,
-   worker-2/3): a slim dashed-card row trailing the zone it mirrors. */
-.replica-strip {
+   worker-2/3): real bordered node zones — same look as the primary — side
+   by side in one row, each holding just the inter-node network plane.
+   Stacks to full-width rows on phones. */
+.replica-row {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
+  align-items: stretch;
   gap: 8px;
-  padding: 0 10px 4px;
 }
-.replica-strip-label {
-  font-size: 0.58rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  font-weight: 600;
-  opacity: 0.75;
-  white-space: nowrap;
+.replica-row > .zone {
+  flex: 1 1 0;
+  min-width: 0;
 }
-.replica-node {
-  width: 150px;
-  border-style: dashed;
-  opacity: 0.9;
-}
-.replica-node .node-subtitle { font-size: 0.62rem; }
 @media (max-width: 640px) {
-  .replica-strip { padding: 0 6px 2px; }
-  .replica-node { width: auto; }
+  .replica-row {
+    flex-direction: column;
+    gap: 4px;
+  }
 }
 
 /* ── Node card ─────────────────────────────────────────────────────── */
