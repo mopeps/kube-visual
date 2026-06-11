@@ -207,6 +207,35 @@ body::after {
   align-items: center;
 }
 
+/* ── Replica node strip ────────────────────────────────────────────────
+   The condensed siblings of a detailed bare-metal node zone (master-2/3,
+   worker-2/3): a slim dashed-card row trailing the zone it mirrors. */
+.replica-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 10px 4px;
+}
+.replica-strip-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+.replica-node {
+  width: 150px;
+  border-style: dashed;
+  opacity: 0.9;
+}
+.replica-node .node-subtitle { font-size: 0.62rem; }
+@media (max-width: 640px) {
+  .replica-strip { padding: 0 6px 2px; }
+  .replica-node { width: auto; }
+}
+
 /* ── Node card ─────────────────────────────────────────────────────── */
 .node {
   border: 1px solid var(--node-accent, var(--border-w));
