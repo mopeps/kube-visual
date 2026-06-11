@@ -37,7 +37,7 @@ npm run preview   # serve dist locally
 
 ```
 src/
-  App.jsx                    # shell: header (H1) + tabs (+ wide-desktop dock toggle), tab panels, modal, hop inspector
+  App.jsx                    # shell: header (H1) + tabs (+ wide-desktop dock & network-overlay toggles), tab panels, modal, hop inspector
   index.css                  # design tokens, .zone, .node, .hop, .ancestry-modal, .pipeline-tree
   data/
     components.json          # one entry per componentId (incl. typePrefix, runtimeForm, linuxPrimitive, logicalContext)
@@ -48,7 +48,9 @@ src/
     manifests.js             # minimal example manifest (YAML) / systemd unit per componentId
     pipeline-layers.js       # Manifest → Kernel band definitions
     pipeline-kinds.js        # classifies pipeline-node actions into band-aware keyword chips
-    deep-dives.js            # Deep Dive tab topics (systemd loop, Linux boot, HCP node boot) as zone trees of clickable boxes (mirrors the ZONES shape)
+    deep-dives.js            # Deep Dive tab topics (systemd loop, Linux boot, HCP node boot, OVN topology…) as zone trees of clickable boxes (mirrors the ZONES shape)
+    ovn-topology.js          # the ovn-topology deep-dive topic + its OVN teaching content (box/edge details, flows)
+    network-topology.js      # Overview network-overlay model: SDN-layer chips + always-on labeled edges + the cross-layer packet trace
     pipeline-model.js        # builds a component's pipeline-tree band model
     interaction-kinds.js     # classifies interaction sentences (icon + accent)
     hop-kinds.js             # classifies a packet-flow step/sentence into an action keyword + glyph (Resolves/Routes/Terminates…); hopPoints() splits a step into per-sentence bullets
@@ -64,8 +66,10 @@ src/
   components/
     Tabs.jsx                 # tab nav
     SwipeViews.jsx           # compact-mode horizontal pager between tabs (finger-tracking, per-pane scroll)
-    Zone.jsx                 # one labeled zone; renders nested child zones recursively
+    Zone.jsx                 # one labeled zone; renders nested child zones recursively (layout: 'columns' | 'stack' variants)
     NodeCard.jsx             # one box inside a zone (shows [typePrefix] label)
+    ReplicaNodeCard.jsx      # condensed bare-metal replica node (master-2/3, worker-2/3): slim dashed card with its own DOM id
+    NetworkOverlay.jsx       # Overview overlay (wide desktop): OVN logical-topology chips + labeled edges over the real components, layer dimmer + packet trace
     TypeIcon.jsx             # glyph for a node's typePrefix ([Pod]/[systemd]/…)
     ServicePair.jsx          # stacks a Service over the in-zone target it `exposes`
     IntentStoreCard.jsx      # an etcd node that expands in place to show its records
@@ -80,7 +84,7 @@ src/
     DeepDiveTab.jsx          # Deep Dive tab: topic index + switcher → an Overview-style canvas; owns the box-popup selection
     DeepDiveCanvas.jsx       # renders a deep-dive topic's zone/box tree (reuses Zone/NodeCard) + the systemd reconciliation loop
     DeepDiveModal.jsx        # box detail popup — AncestryModal's gestures/CSS with generic content (prose, kv, commands, ASCII)
-    ReconLoopOverlay.jsx     # SVG overlay for the systemd reconciliation loop (edges + travelling signal token)
+    ReconLoopOverlay.jsx     # SVG overlay for persistent labeled edges: the systemd loop (+ travelling signal token), deep-dive topology.edges, and the network overlay's wiring (idPrefix='')
     ReconControls.jsx        # bottom-docked play/step/reset navigator for the reconciliation loop (mounts at App root like HopInspector; scenario armed via the Deep Dive "Scenario" dropdown)
     UnitGallery.jsx          # systemd unit-file gallery for the systemd deep-dive
     HopInspector.jsx         # bottom-docked single-hop reader (Overview tab)

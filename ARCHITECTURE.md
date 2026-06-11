@@ -176,6 +176,13 @@ fall into one of these three categories. Anything that is not one of these three
 off the main canvas (it surfaces elsewhere — e.g. in a detail modal, the etcd intent
 store, or a trace-only zone).
 
+**Replica presentation:** the modeled cluster runs **three masters and three workers**,
+but only one of each renders as a full zone. The identical siblings render as condensed
+**replica cards** (`ReplicaNodeCard`, declared as `zone.replicas` in `zones.js`) in a
+slim strip trailing the detailed zone — own DOM ids (`replica-master-2`, …) so overlays
+and flows can anchor per node, with a popup explaining the HA story (etcd quorum /
+capacity spread) and that every node carries the same per-node OVN wiring.
+
 1. **The Context / Zone Boundaries** — the macro physical/virtual boundaries that frame
    everything else: `[Management Cluster]`, `[Management Master Node]`,
    `[Dedicated Guest Control Plane Namespace]`, `[Management Worker Node]`,
@@ -325,8 +332,12 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    the *left* of Overview so the topology stays the first thing you see — holds
    ground-up explainers one level below the cluster: the **systemd state
    reconciliation loop** (followed through `ovnkube-node.service`), the standard
-   **Linux boot** sequence, and how an **OpenShift/HCP node boots** (NodePool →
-   MachineConfig → Ignition Server → VMI → kubelet joins). **It deliberately
+   **Linux boot** sequence, how an **OpenShift/HCP node boots** (NodePool →
+   MachineConfig → Ignition Server → VMI → kubelet joins), and the
+   **OVN-Kubernetes logical network topology** (the classic two-node diagram —
+   underlay → per-node `GR_<node>` gateway chains → `LS "join"` →
+   `ovn_cluster_router` → per-node pod switches — with three trace flows:
+   same-node, cross-node Geneve, SNAT egress). **It deliberately
    mirrors the Overview's interaction model rather than the packet flow:** a topic
    index + switcher opens a canvas of labelled **zones** holding **clickable
    boxes** (reusing `Zone.jsx`/`NodeCard.jsx`), and clicking a box opens a detail
@@ -341,8 +352,35 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    dependency dimensions — **Requires** (structural, solid badge) vs **After**
    (chronological, dashed badge) — drawn distinctly. It is also reachable via a
    `systemd ↗` chip beside the `[UNIT]` tag in any systemd-service detail modal,
-   which deep-links straight to the systemd page. Rendered by `DeepDiveTab.jsx` →
-   `DeepDiveCanvas.jsx`.
+   which deep-links straight to the systemd page (the OVN/OVS components carry the
+   same chip into the OVN topology page). Rendered by `DeepDiveTab.jsx` →
+   `DeepDiveCanvas.jsx`. Two generic layout/edge facilities exist for diagram-shaped
+   topics: a zone may declare `layout: 'columns'` (child zones side-by-side as equal
+   columns; stacks under 640px) or `layout: 'stack'` (boxes as a centred vertical
+   chain), and a topic may declare `topology.edges` — **always-on labeled wiring**
+   (same edge schema as `reconciliation.edges`, plus `axis`/`kindLabel`, `step: ''`)
+   drawn by `ReconLoopOverlay` with clickable IP/port chips. A topic sets
+   `reconciliation` *or* `topology`, never both (their canvas gap rules conflict);
+   the static wiring hides under 640px where the stacked columns would make it
+   criss-cross.
+ * **Network overlay (Overview, wide desktop ≥1280px):** the header's **Network**
+   toggle draws the OVN *logical* topology over the real canvas, so the link between
+   diagram objects and actual OpenShift components stays visible. Both HCP SDN
+   layers are modeled in `src/data/network-topology.js`: the **management** OVN
+   (orange — join switch + distributed `ovn_cluster_router` chips parked between the
+   node zones, gateway-router legs from every node's Open vSwitch and from each
+   replica card, `LS worker-1` anchored over the KubeVirt launcher whose pod port
+   *is* the guest VM's NIC) and the **guest** OVN (purple — its control plane
+   anchored at the HCP namespace's OVN-K8s Master where the NB DB rows live, its
+   node switch/gateway router beside the application pods inside the VM). Chips and
+   edge labels open detail popups (`DeepDiveModal`); non-participating cards dim. A
+   layer switch (Both / Management SDN / Guest SDN) **dims** the non-focused layer —
+   never unmounts it, because most packets traverse both — and a numbered
+   cross-layer **packet trace** (guest pod → guest pod on another node) walks the
+   double-Geneve story chip by chip. Rendered by `NetworkOverlay.jsx` (chips
+   measured against their anchor cards; edges via `ReconLoopOverlay` with
+   `idPrefix=''` so chips and real component ids connect alike). On phones the OVN
+   deep-dive topic carries the same story instead.
 ## 3. Reference Data Schemas
 ### Metadata Schema (components.json)
 ```json
