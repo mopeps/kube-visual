@@ -152,16 +152,6 @@ body::after {
     justify-content: center;
   }
 
-  /* Fluid 2-up grid: nodes share the row evenly instead of hugging the left
-     edge at a fixed 128px. 4px = half the 8px row gap. The max-width cap keeps
-     a lone last node at half width; justify-content centers it. */
-  .node {
-    flex: 1 1 calc(50% - 4px);
-    max-width: calc(50% - 4px);
-    width: auto;
-    padding: 8px 9px 7px;
-  }
-
   .node-title    { font-size: 0.92rem; }
   .node-subtitle { font-size: 0.7rem; }
   .zone-label    { font-size: 0.66rem; }
@@ -249,6 +239,21 @@ body::after {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .node:hover { transform: translateY(-2px); border-color: var(--tx-bright); }
+
+/* Fluid 2-up grid on phones: nodes share the row evenly instead of hugging
+   the left edge at a fixed 128px. 4px = half the 8px row gap; the max-width
+   cap keeps a lone last node at half width (justify-content centers it). This
+   must sit AFTER the base `.node` rule above so it actually wins — and it
+   matches `.service-pair`'s own mobile rule so a pair and a plain node end up
+   the same width side by side. */
+@media (max-width: 640px) {
+  .node {
+    flex: 1 1 calc(50% - 4px);
+    max-width: calc(50% - 4px);
+    width: auto;
+    padding: 8px 9px 7px;
+  }
+}
 
 /* ── Service → target pair ─────────────────────────────────────────────
    A Service stacked directly above the workload it exposes, occupying a

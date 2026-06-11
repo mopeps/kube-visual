@@ -24,6 +24,7 @@ const TABS = [
 
 const DOCK_KEY = 'kv-dock-open'
 const NET_KEY = 'kv-net-overlay'
+const REPLICAS_KEY = 'kv-replicas-open'
 
 function Header() {
   return (
@@ -97,6 +98,17 @@ export default function App() {
     try { localStorage.setItem(NET_KEY, netOpen ? '1' : '0') } catch { /* ignore */ }
   }, [netOpen])
   const netOverlay = isWide && netOpen
+
+  // Condensed replica nodes (master-2/3, worker-2/3) are off by default so the
+  // main overview stays clean; a wide-desktop toggle reveals them. The network
+  // overlay anchors its per-node chips to them, so it forces them on.
+  const [replicasOpen, setReplicasOpen] = useState(() => {
+    try { return localStorage.getItem(REPLICAS_KEY) === '1' } catch { return false }
+  })
+  useEffect(() => {
+    try { localStorage.setItem(REPLICAS_KEY, replicasOpen ? '1' : '0') } catch { /* ignore */ }
+  }, [replicasOpen])
+  const showReplicas = (isWide && replicasOpen) || netOverlay
 
   // When the packet flow is docked beside the overview it stops being a tab, so
   // it never lives in two places at once. Snap off it if it was active.
@@ -304,6 +316,7 @@ export default function App() {
       highlightId={highlightedId}
       onClearHighlight={clearHighlight}
       netOverlay={netOverlay}
+      showReplicas={showReplicas}
     />
   )
   const packetPanel = (
@@ -356,6 +369,23 @@ export default function App() {
           <span className="search-trigger-text">Search</span>
           <kbd className="search-trigger-kbd" aria-hidden>⌘K</kbd>
         </button>
+        {isWide && tab === 'overview' && (
+          <button
+            type="button"
+            className={`dock-toggle ${replicasOpen ? 'is-active' : ''}`}
+            onClick={() => setReplicasOpen(v => !v)}
+            aria-pressed={replicasOpen}
+            disabled={netOverlay}
+            title={netOverlay
+              ? 'The network overlay needs every node — replicas are shown while it is on'
+              : replicasOpen
+                ? 'Hide the additional master/worker nodes'
+                : 'Show all master/worker nodes (3 + 3)'}
+          >
+            <span aria-hidden>⧉</span>
+            {replicasOpen || netOverlay ? 'Hide replicas' : 'All nodes'}
+          </button>
+        )}
         {isWide && (
           <button
             type="button"

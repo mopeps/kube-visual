@@ -85,6 +85,9 @@ export default function OverviewTab({
   onClearHighlight,
   // Wide-desktop only: draw the OVN logical topology over the canvas.
   netOverlay = false,
+  // Whether the condensed replica nodes (master-2/3, worker-2/3) are shown —
+  // off by default so the main overview stays clean.
+  showReplicas = false,
 }) {
   const canvasRef = useRef(null)
   const [expandedStoreId, setExpandedStoreId] = useState(null)
@@ -337,7 +340,7 @@ export default function OverviewTab({
         {zone.zones?.map(child => renderZone(child, depth + 1))}
       </Zone>
     )
-    if (!zone.replicas?.length) return zoneEl
+    if (!zone.replicas?.length || !showReplicas) return zoneEl
     // The zone's condensed sibling nodes (master-2/3, worker-2/3) trail it as a
     // slim strip — real DOM anchors for overlays/flows without a full zone each.
     return (

@@ -46,7 +46,10 @@ export default function NodeCard({
       )}
       {typePrefix && typePrefix !== 'Pod' && (
         <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>
-          <TypeIcon typePrefix={typePrefix} className="type-icon" />
+          {/* Static Pods drop the glyph so every [STATIC POD] card reads the
+              same — the expand-in-place cards (etcd, controller-manager) never
+              had one, and the thumbtack was the only thing making them differ. */}
+          {typePrefix !== 'Static Pod' && <TypeIcon typePrefix={typePrefix} className="type-icon" />}
           [{typePrefix}]
         </span>
       )}
