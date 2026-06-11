@@ -4,6 +4,8 @@ import Zone from './Zone'
 import NodeCard from './NodeCard'
 import ReplicaNodeCard from './ReplicaNodeCard'
 import DeepDiveModal from './DeepDiveModal'
+import NetworkOverlay from './NetworkOverlay'
+import { NET_LAYERS, NET_PARTICIPANTS, NET_TRACE } from '../data/network-topology'
 import IntentStoreCard from './IntentStoreCard'
 import ControllerManagerCard from './ControllerManagerCard'
 import OperatorSetCard from './OperatorSetCard'
@@ -81,12 +83,20 @@ export default function OverviewTab({
   onSelectStep,
   highlightId,
   onClearHighlight,
+  // Wide-desktop only: draw the OVN logical topology over the canvas.
+  netOverlay = false,
 }) {
   const canvasRef = useRef(null)
   const [expandedStoreId, setExpandedStoreId] = useState(null)
   // A clicked condensed replica node ({ id, title, zone }) — opens a small
   // explainer popup, separate from the componentId-keyed AncestryModal flow.
   const [replica, setReplica] = useState(null)
+  // Network-overlay state: which SDN layer is in focus (the other one dims,
+  // never unmounts), whether the cross-layer packet trace is showing, and the
+  // popup content of a clicked chip / edge label.
+  const [netLayer, setNetLayer] = useState('both')
+  const [netTrace, setNetTrace] = useState(false)
+  const [netSheet, setNetSheet] = useState(null)
   const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
 
@@ -104,7 +114,12 @@ export default function OverviewTab({
     return {
       isActive: hopIds ? hopIds.has(id) : onPath,
       isOnPath: hopIds != null && onPath && !hopIds.has(id),
-      isDimmed: hasActive && !onPath,
+      // With the network overlay on (and no trace running), the components
+      // that realize the SDN keep full opacity and the rest recede, so the
+      // logical wiring reads as figure. An active trace flow wins.
+      isDimmed: hasActive
+        ? !onPath
+        : netOverlay && !NET_PARTICIPANTS.has(id),
     }
   }
 
@@ -339,7 +354,7 @@ export default function OverviewTab({
               title={r.title}
               color={zone.color}
               isDimmed={hasActive}
-              onClick={() => setReplica({ ...r, zone })}
+              onClick={() => { setNetSheet(null); setReplica({ ...r, zone }) }}
             />
           ))}
         </div>
@@ -347,9 +362,56 @@ export default function OverviewTab({
     )
   }
 
+  // Chip / edge-label clicks on the network overlay open the shared sheet
+  // (displacing an open replica popup, and vice versa).
+  const selectNetChip = (chip) => {
+    setReplica(null)
+    setNetSheet({
+      id: chip.id,
+      title: chip.label,
+      typePrefix: chip.kind === 'router' ? 'LogicalRouter' : 'LogicalSwitch',
+      accent: `var(--${NET_LAYERS.find(l => l.id === chip.layer)?.accentVar || 'k-amber'})`,
+      detail: chip.detail,
+    })
+  }
+  const selectNetEdge = (edge) => {
+    setReplica(null)
+    setNetSheet({
+      id: edge.id,
+      title: edge.title || edge.label?.replace(/\n/g, ' '),
+      accent: `var(--${edge.accent || 'k-orange'})`,
+      detail: edge.detail,
+      peekDefault: 0.34,
+    })
+  }
+
   return (
     <>
       <Legend />
+      {netOverlay && (
+        <div className="net-bar">
+          <span className="net-bar-label">SDN layers</span>
+          {['both', ...NET_LAYERS.map(l => l.id)].map((id) => (
+            <button
+              key={id}
+              type="button"
+              className={`net-bar-btn ${netLayer === id ? 'is-active' : ''}`}
+              onClick={() => setNetLayer(id)}
+            >
+              {id === 'both' ? 'Both' : NET_LAYERS.find(l => l.id === id).label}
+            </button>
+          ))}
+          <span className="net-bar-sep" aria-hidden>·</span>
+          <button
+            type="button"
+            className={`net-bar-btn net-bar-btn--trace ${netTrace ? 'is-active' : ''}`}
+            onClick={() => setNetTrace(v => !v)}
+            title={NET_TRACE.description}
+          >
+            {netTrace ? '✕ ' : '▸ '}{NET_TRACE.name}
+          </button>
+        </div>
+      )}
       <div
         ref={canvasRef}
         className="border border-border-w rounded-lg overflow-visible overview-canvas"
@@ -371,6 +433,15 @@ export default function OverviewTab({
           activeStep={activeStep}
           onSelectStep={onSelectStep}
         />
+        {netOverlay && (
+          <NetworkOverlay
+            canvasRef={canvasRef}
+            layerFocus={netLayer}
+            traceOn={netTrace}
+            onSelectChip={selectNetChip}
+            onSelectEdge={selectNetEdge}
+          />
+        )}
       </div>
       {/* Tail spacer: a little room to scroll past the last object, growing by
           the height of whichever bottom panel is open — the hop inspector
@@ -379,7 +450,8 @@ export default function OverviewTab({
           Extends whichever scroller owns the overview — the window on desktop,
           the pane in the compact swipe pager. */}
       <div aria-hidden style={{ height: 'calc(2rem + var(--hop-inset, 0px) + var(--peek-inset, 0px))' }} />
-      {/* The replica explainer popup (reuses the deep-dive sheet). */}
+      {/* The replica explainer and network-overlay chip/edge popups share the
+          deep-dive sheet (one popup at a time). */}
       <DeepDiveModal
         content={replica ? {
           id: replica.id,
@@ -387,8 +459,8 @@ export default function OverviewTab({
           typePrefix: 'BareMetal',
           accent: replica.zone.color,
           detail: replicaDetail(replica.title, replica.zone),
-        } : null}
-        onClose={() => setReplica(null)}
+        } : netSheet}
+        onClose={() => { setReplica(null); setNetSheet(null) }}
       />
     </>
   )

@@ -1675,6 +1675,96 @@ body::after {
   .recon-stack--topology .zone--stack > .zone-content > .zone-content-inner { gap: 12px; }
 }
 
+/* ── Network overlay (Overview, wide desktop) ──────────────────────────
+   The OVN logical topology drawn over the real canvas: synthetic chips for
+   the logical objects + always-on labeled edges. The layer switch dims the
+   non-focused SDN (opacity, never unmount — most packets traverse both). */
+.net-edge-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 22;
+  transition: opacity 0.25s ease;
+}
+.net-edge-layer.is-dim { opacity: 0.16; }
+.net-edge-layer.is-dim .recon-edge-chip-wrap { pointer-events: none !important; }
+.net-edge-layer--trace { z-index: 23; }
+
+.net-chip-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 24;
+}
+.net-chip {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--net-accent);
+  color: var(--net-accent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--net-accent) 16%, transparent), transparent),
+    var(--bg-2);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.55), 0 0 10px color-mix(in srgb, var(--net-accent) 22%, transparent);
+  transition: opacity 0.25s ease, box-shadow 0.15s ease;
+}
+.net-chip:hover { box-shadow: 0 2px 14px rgba(0, 0, 0, 0.55), 0 0 16px color-mix(in srgb, var(--net-accent) 45%, transparent); }
+.net-chip--mgmt { --net-accent: var(--k-orange); }
+.net-chip--guest { --net-accent: var(--k-purple); }
+.net-chip.is-dim { opacity: 0.18; pointer-events: none; }
+.net-chip-glyph { font-size: 0.72rem; opacity: 0.85; }
+
+/* The overlay's control bar above the canvas: layer focus + packet trace. */
+.net-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 0.64rem;
+}
+.net-bar-label {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--tx-muted);
+  margin-right: 2px;
+}
+.net-bar-sep { color: var(--tx-muted); }
+.net-bar-btn {
+  font-family: inherit;
+  font-size: 0.64rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-w);
+  color: var(--tx-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.net-bar-btn:hover { color: var(--tx); }
+.net-bar-btn.is-active {
+  color: var(--k-orange);
+  border-color: color-mix(in srgb, var(--k-orange) 60%, transparent);
+  background: color-mix(in srgb, var(--k-orange) 12%, transparent);
+}
+.net-bar-btn--trace.is-active {
+  color: var(--k-amber);
+  border-color: color-mix(in srgb, var(--k-amber) 60%, transparent);
+  background: color-mix(in srgb, var(--k-amber) 12%, transparent);
+}
+
 /* The label chip — the "little box" anchored on each connector, carrying a
    step-number badge + the edge's caption. A solid background keeps it readable
    wherever it lands; the live edge's chip lifts to its full accent. */

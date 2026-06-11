@@ -23,6 +23,7 @@ const TABS = [
 ]
 
 const DOCK_KEY = 'kv-dock-open'
+const NET_KEY = 'kv-net-overlay'
 
 function Header() {
   return (
@@ -86,6 +87,16 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem(DOCK_KEY, dockOpen ? '1' : '0') } catch { /* ignore */ }
   }, [dockOpen])
+
+  // The OVN network overlay on the Overview — a wide-desktop affordance like
+  // the dock (on phones the OVN deep dive carries the same story instead).
+  const [netOpen, setNetOpen] = useState(() => {
+    try { return localStorage.getItem(NET_KEY) === '1' } catch { return false }
+  })
+  useEffect(() => {
+    try { localStorage.setItem(NET_KEY, netOpen ? '1' : '0') } catch { /* ignore */ }
+  }, [netOpen])
+  const netOverlay = isWide && netOpen
 
   // When the packet flow is docked beside the overview it stops being a tab, so
   // it never lives in two places at once. Snap off it if it was active.
@@ -292,6 +303,7 @@ export default function App() {
       onSelectStep={selectStep}
       highlightId={highlightedId}
       onClearHighlight={clearHighlight}
+      netOverlay={netOverlay}
     />
   )
   const packetPanel = (
@@ -344,6 +356,20 @@ export default function App() {
           <span className="search-trigger-text">Search</span>
           <kbd className="search-trigger-kbd" aria-hidden>⌘K</kbd>
         </button>
+        {isWide && (
+          <button
+            type="button"
+            className={`dock-toggle ${netOpen ? 'is-active' : ''}`}
+            onClick={() => setNetOpen(v => !v)}
+            aria-pressed={netOpen}
+            title={netOpen
+              ? 'Hide the OVN logical network overlay'
+              : 'Overlay the OVN logical network topology on the overview'}
+          >
+            <span aria-hidden>⌗</span>
+            {netOpen ? 'Hide network' : 'Network'}
+          </button>
+        )}
         {isWide && (
           <button
             type="button"
