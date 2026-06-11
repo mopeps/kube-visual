@@ -169,10 +169,12 @@ export default function DeepDiveCanvas({
     const isDimmed = focusedIds ? !isActive && !isOnPath : false
 
     // Static subtitles are hidden on the resting canvas for every topic; on the
-    // systemd topic the overlay's live status line returns while armed.
+    // systemd topic the overlay's live status line returns while armed. A box
+    // may opt back in with `caption` — a one-line scope note the diagram needs
+    // on the canvas itself (the OVN core's "spans every node").
     const subtitle = recon
       ? (loop.armed ? ov?.subtitle : undefined)
-      : undefined
+      : box.caption
 
     if (recon && box.id === recon.cgroupBoxId) {
       return (
@@ -218,6 +220,7 @@ export default function DeepDiveCanvas({
         id={`dd-${box.id}`}
         title={box.title}
         typePrefix={box.typePrefix}
+        variant={box.variant}
         color={accent}
         subtitle={subtitle}
         badges={box.badges}

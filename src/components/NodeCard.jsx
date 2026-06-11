@@ -13,9 +13,12 @@ export default function NodeCard({
   onClick,
   // Optional, used by the Deep Dive canvas only — Overview never passes these,
   // so its cards are unchanged. `subtitle` is a status line; `badges` carry
-  // relationship chips ({ label, kind: 'requires' | 'after' | 'stat' }).
+  // relationship chips ({ label, kind: 'requires' | 'after' | 'stat' });
+  // `variant` picks a diagram shape ('ellipse' for routers, 'bus' for the
+  // full-width underlay) via a node--<variant> class.
   subtitle,
   badges,
+  variant,
 }) {
   return (
     <div
@@ -31,7 +34,7 @@ export default function NodeCard({
           onClick?.(id)
         }
       }}
-      className={`node ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''}`}
+      className={`node ${variant ? `node--${variant}` : ''} ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''}`}
       style={{
         '--node-accent': color,
         background: isActive

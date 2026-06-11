@@ -14,8 +14,11 @@
 //                                      // the on-canvas loop edges (recon.edges)
 //     topology?: { edges: [edge] },    // always-on structural wiring drawn over
 //                                      // the canvas (same edge shape as
-//                                      // reconciliation.edges, plus axis? and
-//                                      // kindLabel?; use step:'' — they are
+//                                      // reconciliation.edges, plus axis?,
+//                                      // kindLabel?, solid? — a plain continuous
+//                                      // line, no arrowhead — and spread? — leave
+//                                      // a wide source box at the target's x;
+//                                      // use step:'' — they are
 //                                      // structural, not ordered). A topic sets
 //                                      // reconciliation OR topology, never both
 //                                      // (their canvas gap rules conflict).
@@ -32,6 +35,10 @@
 //             'stack'   → boxes stacked vertically, centred (a chain).
 //   box   = {
 //     id, title, typePrefix?, subtitle?,
+//     variant?,    // diagram shape: 'ellipse' (routers) | 'bus' (the full-width
+//                  // underlay bar) — rendered as a node--<variant> class
+//     caption?,    // one-line scope note shown on the canvas itself (topology
+//                  // topics only — e.g. the OVN core's "runs on every node")
 //     badges?: [{ label, kind:'requires'|'after'|'stat' }],
 //     // Reveal-in-place: a box can hold an ordered sequence of sub-step boxes
 //     // that expand *inside* it on the canvas (like the etcd intent store),
