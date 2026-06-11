@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { ZONES, INTENT_OBJECT_STORE, CONTROLLER_PARENT, OPERATOR_PARENT, FLOW_PARENT } from '../data/zones'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
+import ReplicaNodeCard from './ReplicaNodeCard'
+import DeepDiveModal from './DeepDiveModal'
 import IntentStoreCard from './IntentStoreCard'
 import ControllerManagerCard from './ControllerManagerCard'
 import OperatorSetCard from './OperatorSetCard'
@@ -34,6 +36,43 @@ function collectZoneNodeIds(zone, ids = []) {
   return ids
 }
 
+// Popup content for a condensed replica node (a `zone.replicas` entry): the
+// cluster runs three of each bare-metal node, but only one is drawn in full —
+// this explains what the slim card stands for. Rendered via DeepDiveModal.
+function replicaDetail(title, zone) {
+  const isMaster = zone.id === 'master-node'
+  return {
+    role: 'BARE METAL NODE · CONDENSED REPLICA',
+    summary:
+      `${title} is identical to the detailed "${zone.label}" above — drawn condensed so the canvas stays readable. ` +
+      (isMaster
+        ? 'The cluster runs three masters: etcd needs an odd-sized quorum (three tolerates one node failure), and the management API servers sit behind one VIP across them.'
+        : 'The cluster runs three workers: capacity and failure-domain spread for the KubeVirt VMs that make up the guest cluster’s nodes.'),
+    sections: [
+      {
+        heading: 'Runs the same host stack',
+        tags: isMaster
+          ? ['Kubelet', 'CRI-O', 'Open vSwitch', 'OVN-K8s Node', 'static control-plane Pods']
+          : ['Kubelet', 'CRI-O', 'Open vSwitch', 'OVN-K8s Node', 'MetalLB Speaker', 'virt-handler'],
+      },
+      {
+        heading: 'In OVN terms',
+        bullets: [
+          `Every node — replicas included — gets its own gateway router (GR_${title}), node logical switch, and /24 pod subnet.`,
+          'Open the OVN topology deep dive (Deep Dive tab) to see that per-node wiring in full.',
+        ],
+      },
+      {
+        heading: 'Explore',
+        commands: [
+          'oc get nodes -o wide',
+          `oc get node ${title} -o jsonpath='{.metadata.annotations.k8s\\.ovn\\.org/node-subnets}'`,
+        ],
+      },
+    ],
+  }
+}
+
 export default function OverviewTab({
   activeEvent,
   activeComponentIds,
@@ -45,6 +84,9 @@ export default function OverviewTab({
 }) {
   const canvasRef = useRef(null)
   const [expandedStoreId, setExpandedStoreId] = useState(null)
+  // A clicked condensed replica node ({ id, title, zone }) — opens a small
+  // explainer popup, separate from the componentId-keyed AncestryModal flow.
+  const [replica, setReplica] = useState(null)
   const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
 
@@ -258,7 +300,7 @@ export default function OverviewTab({
   }
 
   function renderZone(zone, depth = 0) {
-    return (
+    const zoneEl = (
       <Zone
         key={zone.id}
         label={zone.label}
@@ -279,6 +321,29 @@ export default function OverviewTab({
         {/* Child zones */}
         {zone.zones?.map(child => renderZone(child, depth + 1))}
       </Zone>
+    )
+    if (!zone.replicas?.length) return zoneEl
+    // The zone's condensed sibling nodes (master-2/3, worker-2/3) trail it as a
+    // slim strip — real DOM anchors for overlays/flows without a full zone each.
+    return (
+      <Fragment key={zone.id}>
+        {zoneEl}
+        <div className="replica-strip">
+          <span className="replica-strip-label" style={{ color: zone.color }}>
+            ×{zone.replicas.length + 1} in the cluster —
+          </span>
+          {zone.replicas.map((r) => (
+            <ReplicaNodeCard
+              key={r.id}
+              id={r.id}
+              title={r.title}
+              color={zone.color}
+              isDimmed={hasActive}
+              onClick={() => setReplica({ ...r, zone })}
+            />
+          ))}
+        </div>
+      </Fragment>
     )
   }
 
@@ -314,6 +379,17 @@ export default function OverviewTab({
           Extends whichever scroller owns the overview — the window on desktop,
           the pane in the compact swipe pager. */}
       <div aria-hidden style={{ height: 'calc(2rem + var(--hop-inset, 0px) + var(--peek-inset, 0px))' }} />
+      {/* The replica explainer popup (reuses the deep-dive sheet). */}
+      <DeepDiveModal
+        content={replica ? {
+          id: replica.id,
+          title: `${replica.title} — identical replica`,
+          typePrefix: 'BareMetal',
+          accent: replica.zone.color,
+          detail: replicaDetail(replica.title, replica.zone),
+        } : null}
+        onClose={() => setReplica(null)}
+      />
     </>
   )
 }

@@ -34,6 +34,13 @@ export const ZONES = [
         label: 'Bare Metal Master Node',
         color: 'var(--k-blue)',
         colorVar: 'k-blue',
+        // The cluster runs three masters; one is drawn in full and these two
+        // render as condensed replica cards after the zone (ReplicaNodeCard) —
+        // same host stack, own ids so overlays/arrows can anchor per node.
+        replicas: [
+          { id: 'replica-master-2', title: 'master-2' },
+          { id: 'replica-master-3', title: 'master-3' },
+        ],
         // The master node's own host-level agents — the same node stack every
         // bare metal node runs (mirrors the worker node), distinct from the
         // guest control-plane Pods it also hosts.
@@ -772,6 +779,11 @@ export const ZONES = [
         label: 'Bare Metal Worker Node',
         color: 'var(--k-blue-worker)',
         colorVar: 'k-blue-worker',
+        // Three workers in the cluster; two condensed replicas (see master-node).
+        replicas: [
+          { id: 'replica-worker-2', title: 'worker-2' },
+          { id: 'replica-worker-3', title: 'worker-3' },
+        ],
         nodes: [
           {
             id: 'kubelet-host',
