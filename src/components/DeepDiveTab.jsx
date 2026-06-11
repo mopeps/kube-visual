@@ -268,7 +268,7 @@ function countBoxes(topic) {
   let n = 0
   const walk = (zones) => {
     for (const z of zones) {
-      n += z.boxes?.length || 0
+      n += z.boxes?.filter((b) => !b.spacer).length || 0
       if (z.zones) walk(z.zones)
     }
   }

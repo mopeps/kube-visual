@@ -360,15 +360,22 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    `systemd ↗` chip beside the `[UNIT]` tag in any systemd-service detail modal,
    which deep-links straight to the systemd page (the OVN/OVS components carry the
    same chip into the OVN topology page). Rendered by `DeepDiveTab.jsx` →
-   `DeepDiveCanvas.jsx`. Two generic layout/edge facilities exist for diagram-shaped
+   `DeepDiveCanvas.jsx`. Generic layout/edge facilities exist for diagram-shaped
    topics: a zone may declare `layout: 'columns'` (child zones side-by-side as equal
-   columns; stacks under 640px) or `layout: 'stack'` (boxes as a centred vertical
-   chain), and a topic may declare `topology.edges` — **always-on labeled wiring**
-   (same edge schema as `reconciliation.edges`, plus `axis`/`kindLabel`, `step: ''`)
-   drawn by `ReconLoopOverlay` with clickable IP/port chips. A topic sets
-   `reconciliation` *or* `topology`, never both (their canvas gap rules conflict);
-   the static wiring hides under 640px where the stacked columns would make it
-   criss-cross.
+   columns; stacks under 640px), `layout: 'stack'` (boxes as a centred vertical
+   chain), or `bare: true` (no label/border/fill — an invisible layout container; a
+   bare stack centres its content vertically, which is how the OVN shared core
+   floats between the two node columns). Boxes may carry their own `colorVar`
+   (colour-coding switches/routers/pods like the source diagram), `inline: true`
+   (consecutive inline boxes share one row — pods two-up under their switch), or
+   `spacer: true` (an empty flex-grow gap inside a stretch-aligned column). A topic
+   may declare `topology.edges` — **always-on labeled wiring** (same edge schema as
+   `reconciliation.edges`, plus `axis`/`kindLabel`/`quiet`, `step: ''`) drawn by
+   `ReconLoopOverlay` with clickable IP/port labels; `quiet: true` renders a plain
+   text annotation instead of the pill chip, and a label-less edge draws as a bare
+   line. A topic sets `reconciliation` *or* `topology`, never both (their canvas gap
+   rules conflict); the static wiring hides under 640px where the stacked columns
+   would make it criss-cross.
  * **Network overlay (Overview, wide desktop ≥1280px):** the header's **Network**
    toggle draws the OVN *logical* topology over the real canvas, so the link between
    diagram objects and actual OpenShift components stays visible. Both HCP SDN

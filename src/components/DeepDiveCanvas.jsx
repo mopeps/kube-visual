@@ -14,7 +14,10 @@ import DeepDiveArrowOverlay from './DeepDiveArrowOverlay'
 // The `loop` state (and its bottom-docked navigator) is owned by App and passed
 // in, so the navigator can dock to the viewport like the hop inspectors.
 
-const accentOf = (zone, topic) => `var(--${zone.colorVar || topic.colorVar || 'k-cyan'})`
+// A box may carry its own colorVar (the OVN topology colour-codes switches /
+// routers / pods like the classic diagram); otherwise it wears its zone's.
+const accentOf = (zone, topic, box) =>
+  `var(--${box?.colorVar || zone.colorVar || topic.colorVar || 'k-cyan'})`
 
 // The cgroup box: a NodeCard-styled container that shows the processes the
 // kernel pins inside the unit's cgroup. Clicking a PID kills it; clicking the
@@ -154,8 +157,13 @@ export default function DeepDiveCanvas({
   // shown only while the systemd walkthrough is armed: dynamic feedback, not a
   // description.
   const renderBox = (box, zone) => {
+    // A spacer pseudo-box: an empty flex-grow gap inside a stretch-aligned
+    // stack column (the OVN node columns push their pod group to the bottom
+    // with one, mirroring the diagram's empty mid-section).
+    if (box.spacer) return <div key={box.id} className="dd-spacer" aria-hidden />
+
     const ov = overlays[box.id]
-    const accent = ov?.accent || accentOf(zone, topic)
+    const accent = ov?.accent || accentOf(zone, topic, box)
     const isActive = focusedIds?.has(box.id) || false
     const isOnPath = focusedIds != null && !isActive && (flowIds?.has(box.id) || false)
     const isDimmed = focusedIds ? !isActive && !isOnPath : false
@@ -222,6 +230,32 @@ export default function DeepDiveCanvas({
     )
   }
 
+  // Consecutive boxes flagged `inline` render side by side in one row (the OVN
+  // pods sitting two-up under their logical switch); everything else stacks
+  // per the zone layout as before.
+  const renderZoneBoxes = (zone) => {
+    const out = []
+    let row = null
+    for (const box of zone.boxes ?? []) {
+      if (box.inline) {
+        if (!row) { row = []; out.push(row) }
+        row.push(box)
+      } else {
+        row = null
+        out.push(box)
+      }
+    }
+    return out.map((entry) =>
+      Array.isArray(entry) ? (
+        <div key={`row-${entry[0].id}`} className="dd-box-row">
+          {entry.map((box) => renderBox(box, zone))}
+        </div>
+      ) : (
+        renderBox(entry, zone)
+      )
+    )
+  }
+
   const renderZone = (zone, depth = 0) => (
     <Zone
       key={zone.id}
@@ -230,8 +264,9 @@ export default function DeepDiveCanvas({
       dashed={zone.dashed}
       depth={depth}
       layout={zone.layout}
+      bare={zone.bare}
     >
-      {zone.boxes?.map((box) => renderBox(box, zone))}
+      {renderZoneBoxes(zone)}
       {zone.zones?.map((child) => renderZone(child, depth + 1))}
     </Zone>
   )

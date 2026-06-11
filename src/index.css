@@ -197,6 +197,38 @@ body::after {
   align-items: center;
 }
 
+/* A bare zone is an invisible layout container (no label, border or fill).
+   Its content stretches the full height so a stack inside can centre
+   vertically — the OVN shared core floating mid-height between the two node
+   columns, exactly like the diagram. */
+.zone--bare > .zone-content {
+  flex: 1 1 auto;
+  display: flex;
+  padding: 0;
+}
+.zone--bare > .zone-content > .zone-content-inner {
+  flex: 1 1 auto;
+}
+.zone--bare.zone--stack > .zone-content > .zone-content-inner {
+  justify-content: center;
+}
+
+/* A spacer pseudo-box: eats the free height of a stretch-aligned stack column,
+   pushing what follows to the bottom (the OVN node columns' pod group). */
+.dd-spacer { flex: 1 1 56px; align-self: stretch; }
+
+/* Consecutive `inline` boxes share one row (pods two-up under their switch). */
+.dd-box-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: stretch;
+}
+.deep-dive-canvas .dd-box-row .node {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
 /* ── Replica node row ──────────────────────────────────────────────────
    The condensed siblings of a detailed bare-metal node zone (master-2/3,
    worker-2/3): real bordered node zones — same look as the primary — side
@@ -1663,13 +1695,26 @@ body::after {
 /* Stacked chains (eth0 → br-int → …) carry an edge per gap, each parking its
    chip in the row gap — open it up enough for one chip. */
 .recon-stack--topology .zone--stack > .zone-content > .zone-content-inner { gap: 44px; }
+/* Inside the diagram's column row, every stack fills the column height so the
+   side-by-side node chains stay equal and a spacer box can push each pod
+   group to the bottom (the shared core centres in the same height). */
+.recon-stack--topology .zone--columns .zone--stack > .zone-content {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.recon-stack--topology .zone--columns .zone--stack > .zone-content > .zone-content-inner {
+  flex: 1 1 auto;
+}
 @media (max-width: 640px) {
   /* On phones the columns stack, so the static wiring would criss-cross the
      whole canvas — hide it (the chips are a desktop-width affordance; flows
-     and box popups carry the story on mobile) and drop back to normal gaps. */
+     and box popups carry the story on mobile) and drop back to normal gaps.
+     The diagram's mid-column spacer collapses with it. */
   .recon-stack--topology > .recon-loop-svg { display: none; }
   .recon-stack--topology { gap: 24px; }
   .recon-stack--topology .zone--stack > .zone-content > .zone-content-inner { gap: 12px; }
+  .recon-stack--topology .dd-spacer { flex: 0 0 0; }
 }
 
 /* ── Network overlay (Overview, wide desktop) ──────────────────────────
@@ -1760,6 +1805,28 @@ body::after {
   color: var(--k-amber);
   border-color: color-mix(in srgb, var(--k-amber) 60%, transparent);
   background: color-mix(in srgb, var(--k-amber) 12%, transparent);
+}
+
+/* Quiet edge labels — plain coloured text riding the line (a halo of page
+   background keeps it readable), like the bare "100.64.0.1/16" annotations of
+   a textbook diagram, instead of the full pill chip. (Doubled class beats the
+   base .recon-edge-chip rule that appears later in this file.) */
+.recon-edge-chip.recon-edge-chip--quiet {
+  border: none;
+  background: var(--bg);
+  box-shadow: 0 0 0 3px var(--bg);
+  border-radius: 4px;
+  padding: 1px 4px;
+  gap: 4px;
+}
+.recon-edge-chip.recon-edge-chip--quiet .recon-edge-chip-line {
+  font-size: 0.62rem;
+  letter-spacing: 0.02em;
+  color: var(--edge-color);
+}
+.recon-edge-chip.recon-edge-chip--quiet.is-clickable:hover .recon-edge-chip-line {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 /* The label chip — the "little box" anchored on each connector, carrying a
