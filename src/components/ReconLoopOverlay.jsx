@@ -31,7 +31,11 @@ function bezier(t, p0, p1, p2, p3) {
 // `axis: 'vertical' | 'horizontal'` overrides the side heuristic — a wide box
 // fanning out to two columns (the OVN underlay) reads as vertical even when
 // the sideways distance beats the drop.
-function buildEdge(srcEl, tgtEl, canvasEl, bias, labelT = 0.5, axis) {
+// `spread` fans a vertical edge out of a wide source like a bus bar: the line
+// leaves the source at the *target's* x (clamped inside the source box), so a
+// full-width underlay drops a near-vertical line onto each node instead of
+// diagonals that cross the zone labels.
+function buildEdge(srcEl, tgtEl, canvasEl, bias, labelT = 0.5, axis, spread) {
   const c = canvasEl.getBoundingClientRect()
   const s = srcEl.getBoundingClientRect()
   const t = tgtEl.getBoundingClientRect()
@@ -46,10 +50,14 @@ function buildEdge(srcEl, tgtEl, canvasEl, bias, labelT = 0.5, axis) {
     : Math.abs(tCy - sCy) >= Math.abs(tCx - sCx)
   const bow = bias === 'left' ? -64 : bias === 'right' ? 64 : 0
 
+  const spreadX = spread
+    ? Math.min(Math.max(tCx, s.left - c.left + 18), s.right - c.left - 18)
+    : sCx
+
   let sx, sy, tx, ty
   if (vertical) {
-    if (tCy >= sCy) { sx = sCx; sy = s.bottom - c.top; tx = tCx; ty = t.top - c.top }
-    else            { sx = sCx; sy = s.top - c.top;    tx = tCx; ty = t.bottom - c.top }
+    if (tCy >= sCy) { sx = spreadX; sy = s.bottom - c.top; tx = tCx; ty = t.top - c.top }
+    else            { sx = spreadX; sy = s.top - c.top;    tx = tCx; ty = t.bottom - c.top }
   } else {
     if (tCx >= sCx) { sx = s.right - c.left; sy = sCy; tx = t.left - c.left;  ty = tCy }
     else            { sx = s.left - c.left;  sy = sCy; tx = t.right - c.left; ty = tCy }
@@ -91,7 +99,7 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
       const srcEl = document.getElementById(idPrefix ? `${idPrefix}-${edge.from}` : edge.from)
       const tgtEl = document.getElementById(idPrefix ? `${idPrefix}-${edge.to}` : edge.to)
       if (!srcEl || !tgtEl) continue
-      const built = buildEdge(srcEl, tgtEl, canvas, edge.bias, edge.labelT, edge.axis)
+      const built = buildEdge(srcEl, tgtEl, canvas, edge.bias, edge.labelT, edge.axis, edge.spread)
       next.push({
         ...edge,
         color: `var(--${edge.accent || 'k-cyan'})`,
@@ -161,6 +169,10 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
         // communication, so they read as a faint dotted line. The syscall /
         // signal crossings stay a bolder dash. The kind tag on the chip names it.
         const internal = p.kind === 'memory'
+        // Solid edges are structural wiring (the OVN topology's links): plain
+        // continuous lines with no arrowhead, like a textbook diagram — the
+        // relationship is bidirectional, direction comes from the trace flows.
+        const solid = p.solid && !live
         // A chip is clickable when its edge carries detail and a handler exists —
         // then it opens the edge's popup (same affordance as clicking a box).
         const clickable = !!(p.detail && onSelectEdge)
@@ -172,10 +184,10 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
               d={p.d}
               fill="none"
               stroke={p.color}
-              strokeWidth={live ? 2.4 : internal ? 1.2 : 1.5}
-              strokeOpacity={live ? 1 : internal ? 0.42 : 0.7}
-              strokeDasharray={internal ? '1.5 5' : '6 4'}
-              markerEnd={`url(#recon-arrow-${p.id})`}
+              strokeWidth={live ? 2.4 : solid ? 1.8 : internal ? 1.2 : 1.5}
+              strokeOpacity={live ? 1 : solid ? 0.8 : internal ? 0.42 : 0.7}
+              strokeDasharray={solid ? undefined : internal ? '1.5 5' : '6 4'}
+              markerEnd={solid ? undefined : `url(#recon-arrow-${p.id})`}
             />
             {/* The "little box" the user asked for: a solid step-numbered chip
                 that sits on the curve (in the gap), so the label never blends

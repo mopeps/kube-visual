@@ -1706,6 +1706,33 @@ body::after {
 .recon-stack--topology .zone--columns .zone--stack > .zone-content > .zone-content-inner {
   flex: 1 1 auto;
 }
+/* Topology boxes read like the textbook diagram: centred labels and a soft
+   accent fill (switches sky, routers green, br-int/pods amber), so the
+   colour-coding carries at a glance instead of living only in the border. */
+.recon-stack--topology .node {
+  text-align: center;
+  background: color-mix(in srgb, var(--node-accent) 10%, rgba(0, 0, 0, 0.35));
+}
+/* Routers are ellipses in the classic OVN picture — the shape alone says
+   "router" before you read the label. */
+.deep-dive-canvas .node--ellipse {
+  border-radius: 999px;
+  padding: 12px 26px 11px;
+}
+/* The underlay is the diagram's cloud: one wide bar spanning the canvas that
+   both nodes' eth0 lines drop out of (paired with the edges' `spread`). */
+.deep-dive-canvas .node--bus {
+  width: min(720px, 92%);
+  max-width: none;
+  border-radius: 999px;
+}
+/* Zone labels float above the wiring SVG (z-index 4) on an opaque fill, so a
+   line passing the zone's top edge tucks behind the chip instead of striking
+   through its text (!important beats the chip's inline translucent bg). */
+.recon-stack--topology .zone-label {
+  z-index: 5;
+  background: color-mix(in srgb, currentColor 10%, #0a0f1e) !important;
+}
 @media (max-width: 640px) {
   /* On phones the columns stack, so the static wiring would criss-cross the
      whole canvas — hide it (the chips are a desktop-width affordance; flows
