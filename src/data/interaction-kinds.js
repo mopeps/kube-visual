@@ -143,6 +143,21 @@ const VERB_KIND = {
   enters: 'outbound', enter: 'outbound', entered: 'outbound',
   attached: 'manage', attaches: 'manage', attach: 'manage',
   captures: 'observe', capture: 'observe', captured: 'observe',
+
+  // network data-plane verbs — the OVN deep-dive popup bullets lead with these
+  // (see ovn-topology.js). Carrying / routing / SNATing push traffic onward
+  // (outbound); DNAT / decapsulation act on traffic arriving here (inbound);
+  // compiling flows brings the realized pipeline into existence (create).
+  carries: 'outbound', carry: 'outbound',
+  routes: 'outbound', route: 'outbound',
+  delivers: 'outbound', deliver: 'outbound',
+  answers: 'outbound', answer: 'outbound',
+  encapsulates: 'outbound', encapsulate: 'outbound',
+  snats: 'outbound',
+  dnats: 'inbound',
+  decapsulates: 'inbound',
+  enslaves: 'manage', enslave: 'manage',
+  compiles: 'create', compile: 'create', compiled: 'create',
 }
 
 // Pull the leading verb token off a sentence: first run of letters/hyphens.

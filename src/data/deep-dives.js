@@ -63,7 +63,7 @@
 //     },
 //   }
 
-import { OVN_TOPOLOGY, OVN_TOPOLOGY_BIG } from './ovn-topology'
+import { OVN_TOPOLOGY, OVN_TOPOLOGY_BIG, OVN_TOPOLOGY_GUEST } from './ovn-topology'
 
 // Example unit for the headline service (ovn-kubernetes node daemon). Mirrors
 // the real ordering: structural Requires= on Open vSwitch, chronological After=
@@ -3552,7 +3552,7 @@ const ETCD_RAFT = {
   ],
 }
 
-export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, OVN_TOPOLOGY, OVN_TOPOLOGY_BIG, API_REQUEST_PATH, ETCD_RAFT, TMUX_SUDO, LINUX_FDS]
+export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, OVN_TOPOLOGY, OVN_TOPOLOGY_BIG, OVN_TOPOLOGY_GUEST, API_REQUEST_PATH, ETCD_RAFT, TMUX_SUDO, LINUX_FDS]
 
 export const findDeepDive = (topicId) =>
   DEEP_DIVES.find((t) => t.topicId === topicId) || null

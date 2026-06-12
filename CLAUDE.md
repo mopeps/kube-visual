@@ -49,7 +49,7 @@ src/
     pipeline-layers.js       # Manifest → Kernel band definitions
     pipeline-kinds.js        # classifies pipeline-node actions into band-aware keyword chips
     deep-dives.js            # Deep Dive tab topics (systemd loop, Linux boot, HCP node boot, OVN topology…) as zone trees of clickable boxes (mirrors the ZONES shape)
-    ovn-topology.js          # the ovn-topology deep-dive topic + its OVN teaching content (box/edge details, flows) + the "big view" twin topic (same boxes inside greyed OpenShift component containers)
+    ovn-topology.js          # the ovn-topology deep-dive topic + its OVN teaching content (box/edge details, flows) + two twin topics: the "big view" (same boxes inside greyed OpenShift component containers) and the guest-cluster view (the same wiring run by the hosted cluster — VMI nodes riding the mgmt pod network)
     network-topology.js      # Overview network-overlay model: SDN-layer chips + always-on labeled edges + the cross-layer packet trace
     pipeline-model.js        # builds a component's pipeline-tree band model
     interaction-kinds.js     # classifies interaction sentences (icon + accent)
