@@ -5,6 +5,7 @@ import NodeCard from './NodeCard'
 import DeepDiveModal from './DeepDiveModal'
 import NetworkOverlay from './NetworkOverlay'
 import { NET_LAYERS, NET_PARTICIPANTS, NET_TRACE } from '../data/network-topology'
+import { serviceAlias } from '../data/service-alias'
 import IntentStoreCard from './IntentStoreCard'
 import ControllerManagerCard from './ControllerManagerCard'
 import OperatorSetCard from './OperatorSetCard'
@@ -270,6 +271,7 @@ export default function OverviewTab({
         id={node.id}
         title={node.title}
         typePrefix={node.typePrefix}
+        typeAlias={serviceAlias(node)}
         color={zone.color}
         stepNum={stepNums.get(node.id)}
         isActive={isActive}

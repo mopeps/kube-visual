@@ -443,6 +443,23 @@ body::after {
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* A Service card's type alias — a tiny tag after the [Service] prefix naming
+   the exposure model (svc_lb / svc_cip / svc_np). Lowercase on purpose: it
+   reads as the object's shorthand, not another shouting label. */
+.node-type-alias {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border: 1px solid color-mix(in srgb, var(--node-accent, currentColor) 55%, transparent);
+  border-radius: 4px;
+  font-size: 0.56rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--node-accent, currentColor);
+  background: color-mix(in srgb, var(--node-accent, currentColor) 10%, transparent);
+  vertical-align: 1px;
+}
+
 /* Detail-modal badge variants. Concept badges (a glossary definition opens on
    click) keep the filled, bordered, hoverable chip look. Stat badges have no
    definition, so they read as a flat label — no border, no background, no

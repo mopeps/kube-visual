@@ -11,6 +11,9 @@ export default function NodeCard({
   isDimmed,
   isHighlighted,
   onClick,
+  // A Service card's type alias (svc_lb / svc_cip / svc_np) — a small tag
+  // beside the [Service] prefix declaring the exposure model at a glance.
+  typeAlias,
   // Optional, used by the Deep Dive canvas only — Overview never passes these,
   // so its cards are unchanged. `subtitle` is a status line; `badges` carry
   // relationship chips ({ label, kind: 'requires' | 'after' | 'stat' });
@@ -54,6 +57,7 @@ export default function NodeCard({
               had one, and the thumbtack was the only thing making them differ. */}
           {typePrefix !== 'Static Pod' && <TypeIcon typePrefix={typePrefix} className="type-icon" />}
           [{typePrefix}]
+          {typeAlias && <span className="node-type-alias">{typeAlias}</span>}
         </span>
       )}
       <div className="node-title" style={{ color }}>{title}</div>

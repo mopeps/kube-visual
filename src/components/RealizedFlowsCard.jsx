@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { serviceAlias } from '../data/service-alias'
 
 // An Open vSwitch node that doubles as a "realized-flows" store. Collapsed, it
 // looks like a regular node card with an expand affordance. Expanded, it
@@ -147,6 +148,7 @@ export default function RealizedFlowsCard({
             >
               <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>
                 [{obj.typePrefix}]
+                {serviceAlias(obj) && <span className="node-type-alias">{serviceAlias(obj)}</span>}
               </span>
               <span className="node-title" style={{ color }}>{obj.title}</span>
             </button>
