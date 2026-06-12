@@ -11,8 +11,8 @@ export default function NodeCard({
   isDimmed,
   isHighlighted,
   onClick,
-  // A Service card's type alias (svc_lb / svc_cip / svc_np) — a small tag
-  // beside the [Service] prefix declaring the exposure model at a glance.
+  // A Service card's type alias (svc_lb / svc_cip / svc_np) — replaces the
+  // generic [Service] prefix so the card names its exposure model directly.
   typeAlias,
   // Optional, used by the Deep Dive canvas only — Overview never passes these,
   // so its cards are unchanged. `subtitle` is a status line; `badges` carry
@@ -56,8 +56,7 @@ export default function NodeCard({
               same — the expand-in-place cards (etcd, controller-manager) never
               had one, and the thumbtack was the only thing making them differ. */}
           {typePrefix !== 'Static Pod' && <TypeIcon typePrefix={typePrefix} className="type-icon" />}
-          [{typePrefix}]
-          {typeAlias && <span className="node-type-alias">{typeAlias}</span>}
+          [{typeAlias || typePrefix}]
         </span>
       )}
       <div className="node-title" style={{ color }}>{title}</div>
