@@ -147,8 +147,7 @@ export default function RealizedFlowsCard({
               title={`Open ${obj.title} details`}
             >
               <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>
-                [{obj.typePrefix}]
-                {serviceAlias(obj) && <span className="node-type-alias">{serviceAlias(obj)}</span>}
+                [{serviceAlias(obj) || obj.typePrefix}]
               </span>
               <span className="node-title" style={{ color }}>{obj.title}</span>
             </button>
