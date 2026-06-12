@@ -54,6 +54,7 @@ src/
     pipeline-model.js        # builds a component's pipeline-tree band model
     interaction-kinds.js     # classifies interaction sentences (icon + accent)
     hop-kinds.js             # classifies a packet-flow step/sentence into an action keyword + glyph (Resolves/Routes/Terminates…); hopPoints() splits a step into per-sentence bullets
+    service-alias.js         # Service-type alias tags (svc_lb / svc_cip / svc_np) shown beside the [Service] prefix
     object-tags.js           # turns object names in prose into clickable chips
     badge-glossary.js        # explanations shown when a badge chip is clicked
   hooks/

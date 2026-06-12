@@ -738,6 +738,7 @@ export const ZONES = [
                 id: 'svc-ingress-lb-shared',
                 title: 'Shared Ingress LoadBalancer',
                 typePrefix: 'Service',
+                serviceType: 'LoadBalancer',
                 badges: [
                   { label: 'LoadBalancer', color: 'var(--k-sky)' },
                   { label: 'MetalLB L2', color: 'var(--k-sky)' },
@@ -753,6 +754,7 @@ export const ZONES = [
                 id: 'svc-apps-lb-infra',
                 title: 'Apps Ingress LoadBalancer',
                 typePrefix: 'Service',
+                serviceType: 'LoadBalancer',
                 badges: [
                   { label: 'LoadBalancer', color: 'var(--k-sky)' },
                   { label: 'MetalLB L2', color: 'var(--k-sky)' },
@@ -951,6 +953,7 @@ export const ZONES = [
                         id: 'svc-frontend',
                         title: 'Front-End Service',
                         typePrefix: 'Service',
+                        serviceType: 'ClusterIP',
                         badges: [
                           { label: 'ClusterIP', color: 'var(--k-green)' },
                           { label: 'e-commerce-prod', color: 'var(--k-green)' },
@@ -960,6 +963,7 @@ export const ZONES = [
                         id: 'svc-backend',
                         title: 'Back-End Service',
                         typePrefix: 'Service',
+                        serviceType: 'ClusterIP',
                         badges: [
                           { label: 'ClusterIP', color: 'var(--k-green)' },
                           { label: 'e-commerce-prod', color: 'var(--k-green)' },
@@ -981,6 +985,7 @@ export const ZONES = [
                         id: 'svc-router-internal-default',
                         title: 'Router Internal Service',
                         typePrefix: 'Service',
+                        serviceType: 'ClusterIP',
                         badges: [
                           { label: 'ClusterIP', color: 'var(--k-green)' },
                           { label: 'openshift-ingress', color: 'var(--k-green)' },
@@ -1071,6 +1076,7 @@ export const ZONES = [
                     id: 'svc-router-nodeport-default',
                     title: 'Router NodePort',
                     typePrefix: 'Service',
+                    serviceType: 'NodePort',
                     // Stacks directly above the Pod it exposes (see ServicePair).
                     exposes: 'openshift-ingress-router-guest',
                     badges: [
