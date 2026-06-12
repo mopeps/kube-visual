@@ -35,11 +35,12 @@ const TYPE_GLYPHS = {
       <circle cx="12" cy="3.6" r="1.3" />
     </>
   ),
-  // systemd — an OS-level daemon / init unit: a power symbol (running service).
+  // systemd — an OS-level daemon / service unit: a gear (background machinery),
+  // drawn as a hub with radial teeth so it stays crisp at 1em.
   systemd: (
     <>
-      <path d="M12 3v6.5" />
-      <path d="M7.4 6.4a7 7 0 1 0 9.2 0" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </>
   ),
   // Service — a virtual front-end fanning traffic to endpoints: a hub + spokes.
@@ -82,7 +83,7 @@ const TYPE_GLYPHS = {
 }
 
 // The glyph drawn next to a node's bracketed [typePrefix] label. Each runtime
-// form gets a distinct mark (Pod hexagon, systemd power symbol, VMI monitor…)
+// form gets a distinct mark (Pod hexagon, systemd gear, VMI monitor…)
 // so the form is recognisable at a glance; the Overview legend explains the
 // vocabulary. Renders nothing for a prefix with no glyph (graceful no-op).
 export default function TypeIcon({ typePrefix, className }) {
