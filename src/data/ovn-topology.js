@@ -261,17 +261,17 @@ const nodeZone = (w, pods) => ({
   dashed: true,
   layout: 'stack',
   boxes: [
-    { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'netdev', detail: ethDetail(w) },
-    { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', detail: brIntDetail(w) },
-    { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'LogicalSwitch', colorVar: 'k-sky', detail: extSwitchDetail(w) },
-    { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'LogicalRouter', colorVar: 'k-green',
-      variant: 'ellipse', caption: 'pinned to this node', detail: gatewayRouterDetail(w) },
+    { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'netdev', variant: 'iface', detail: ethDetail(w) },
+    { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', detail: brIntDetail(w) },
+    { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', detail: extSwitchDetail(w) },
+    { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'Gateway Router', colorVar: 'k-green',
+      variant: 'ellipse', detail: gatewayRouterDetail(w) },
     // The diagram's empty mid-section: the shared core's links cross here.
     { id: `${w.id}-gap`, spacer: true },
-    { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'LogicalSwitch', colorVar: 'k-sky', detail: nodeSwitchDetail(w) },
+    { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', detail: nodeSwitchDetail(w) },
     ...pods.map((p) => ({
-      id: `${w.id}-${p.id}`, title: `${p.name} · ${p.ip}`, typePrefix: 'Pod',
-      colorVar: 'k-amber', inline: true, detail: podDetail(p.name, p.ip, w),
+      id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod',
+      colorVar: 'k-amber', variant: 'pod', inline: true, detail: podDetail(p.name, p.ip, w),
     })),
   ],
 })
@@ -287,8 +287,10 @@ const nodeEdges = (w, pods) => [
   { id: `e-${w.id}-patch`, from: `${w.id}-eth0`, to: `${w.id}-brint`, step: '', solid: true, quiet: true, accent: 'k-teal' },
   { id: `e-${w.id}-localnet`, from: `${w.id}-brint`, to: `${w.id}-ext`, step: '', solid: true, quiet: true, accent: 'k-teal' },
   { id: `e-${w.id}-etor`, from: `${w.id}-ext`, to: `${w.id}-gr`, step: '', solid: true, quiet: true, accent: 'k-teal' },
+  // mobileHide: in the phone layout the GR↔join gap is a sliver, so these two
+  // chips would sit on the join switch's text — the lines stay, the labels go.
   { id: `e-${w.id}-rtoj`, from: `${w.id}-gr`, to: 'ovn-join', step: '',
-    solid: true, quiet: true, label: `${w.joinIp}/16`, accent: 'k-sky',
+    solid: true, quiet: true, mobileHide: true, label: `${w.joinIp}/16`, accent: 'k-sky',
     title: `GR_${w.node} on the join switch`, detail: rtojEdgeDetail(w) },
   { id: `e-rtr-${w.id}ls`, from: 'ovn-cluster-router', to: `${w.id}-ls`, step: '',
     axis: 'vertical', solid: true, quiet: true, label: `${w.routerPort}/24`, accent: 'k-sky', labelT: 0.45,
@@ -401,9 +403,9 @@ export const OVN_TOPOLOGY = {
           layout: 'stack',
           colorVar: 'k-purple',
           boxes: [
-            { id: 'ovn-join', title: 'LS "join" · 100.64.0.0/16', typePrefix: 'LogicalSwitch', colorVar: 'k-sky',
-              caption: 'one per cluster · joins every router', detail: JOIN_SWITCH_DETAIL },
-            { id: 'ovn-cluster-router', title: 'ovn_cluster_router', typePrefix: 'LogicalRouter', colorVar: 'k-green',
+            { id: 'ovn-join', title: 'join · 100.64.0.0/16', typePrefix: 'Logical Switch', colorVar: 'k-sky',
+              variant: 'switch', caption: 'one per cluster · joins every router', detail: JOIN_SWITCH_DETAIL },
+            { id: 'ovn-cluster-router', title: 'ovn_cluster_router', typePrefix: 'OVN Cluster Router', colorVar: 'k-green',
               variant: 'ellipse', caption: 'distributed · runs on every node', detail: CLUSTER_ROUTER_DETAIL },
           ],
         },
