@@ -812,6 +812,9 @@ export const ZONES = [
             label: 'metallb-system Namespace',
             color: 'var(--k-amber)',
             colorVar: 'k-amber',
+            // Namespace zones draw dashed (a logical grouping, not a machine
+            // boundary) — same treatment as the Guest Control Plane Namespace.
+            dashed: true,
             nodes: [
               {
                 id: 'metallb-controller',
