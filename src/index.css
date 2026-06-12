@@ -1803,15 +1803,29 @@ body::after {
      screen each. */
   .recon-stack--topology { gap: 34px; }
   .recon-stack--topology .zone--stack > .zone-content > .zone-content-inner { gap: 26px; }
-  .recon-stack--topology .zone--columns > .zone-content > .zone-content-inner { gap: 6px; }
+  .recon-stack--topology .zone--columns > .zone-content > .zone-content-inner { gap: 0; }
   .recon-stack--topology .zone--columns > .zone-content > .zone-content-inner > .zone {
     flex: 1 1 0;
     min-width: 0;
   }
-  /* The shared core (the bare middle column) carries the widest labels —
-     give it a little more of the row than the two worker columns. */
+  /* The shared core (the bare middle column) gets its own BAND between the
+     workers' upper chains and their LS rows, never sitting beside another
+     object: its padding pushes its boxes below the tallest upper chain
+     (eth0→GR, ~350px with the label) and holds them above the LS+pods block
+     (~240px) — and because the three columns stretch to equal height, the
+     worker spacers grow to open exactly that band. Negative margins then let
+     its wide boxes spill over the now-empty zone area on either side, above
+     the wiring SVG (z 4). */
   .recon-stack--topology .zone--columns > .zone-content > .zone-content-inner > .zone--bare {
-    flex: 1.3 1 0;
+    flex: 1.35 1 0;
+    position: relative;
+    z-index: 6;
+    margin: 0 -54px;
+  }
+  .recon-stack--topology .zone--columns > .zone-content > .zone-content-inner > .zone--bare > .zone-content > .zone-content-inner {
+    justify-content: flex-start;
+    padding-top: 350px;
+    padding-bottom: 240px;
   }
   .recon-stack--topology .zone--nested > .zone-content { padding: 10px 5px; }
   .recon-stack--topology .node {
@@ -1819,20 +1833,23 @@ body::after {
     min-width: 0;
     max-width: 100%;
   }
-  .recon-stack--topology .node--switch { min-width: 0; padding: 8px 8px 7px; }
-  .recon-stack--topology .node--ellipse { padding: 12px 16px 10px; }
-  .recon-stack--topology .node-title { font-size: 0.62rem; overflow-wrap: anywhere; }
-  .recon-stack--topology .node-type-prefix { font-size: 0.45rem; letter-spacing: 0.05em; }
-  .recon-stack--topology .node-subtitle { font-size: 0.5rem; }
+  .recon-stack--topology .node--switch { min-width: 0; padding: 9px 10px 8px; }
+  .recon-stack--topology .node--ellipse { padding: 13px 12px 11px; }
+  .recon-stack--topology .node-title { font-size: 0.74rem; overflow-wrap: anywhere; }
+  .recon-stack--topology .node-type-prefix { font-size: 0.52rem; letter-spacing: 0.05em; }
+  .recon-stack--topology .node-subtitle { font-size: 0.58rem; }
   .recon-stack--topology .node--iface .node-title,
-  .recon-stack--topology .node--bridge .node-title { font-size: 0.62rem; }
-  .recon-stack--topology .dd-box-row { gap: 4px; flex-wrap: wrap; }
+  .recon-stack--topology .node--bridge .node-title { font-size: 0.7rem; }
+  .recon-stack--topology .node--pod .node-title { font-size: 0.7rem; }
+  .recon-stack--topology .node--pod .node-subtitle { font-size: 0.58rem; }
+  /* Wrapped pod rows need row room for the eth0 stub riding each roofline. */
+  .recon-stack--topology .dd-box-row { gap: 16px 4px; flex-wrap: wrap; }
   .recon-stack--topology .zone-label {
-    font-size: 0.5rem;
+    font-size: 0.56rem;
     letter-spacing: 0.04em;
     white-space: normal;
   }
-  .recon-stack--topology .recon-edge-chip.recon-edge-chip--quiet .recon-edge-chip-line { font-size: 0.5rem; }
+  .recon-stack--topology .recon-edge-chip.recon-edge-chip--quiet .recon-edge-chip-line { font-size: 0.56rem; }
   /* Edges flagged mobileHide drop their label chip here (the gap they ride is
      a sliver on phones); the line itself stays. */
   .recon-edge-chip.recon-edge-chip--mhide { display: none; }
