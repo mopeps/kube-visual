@@ -12,6 +12,10 @@ export default function Zone({
   // Lets diagram-shaped topics float content (the OVN shared core between the
   // two node columns) without drawing a box around it.
   bare = false,
+  // ghost: a greyed background container (the OVN big view's OpenShift
+  // components) — keeps label/border/fill but wears the muted treatment so the
+  // coloured topology boxes inside read as the figure, the zone as ground.
+  ghost = false,
   children,
   // When a zone doubles as a component (e.g. the VM), these wire its label up
   // as an arrow anchor (id), a click target, and a trace step badge.
@@ -33,7 +37,7 @@ export default function Zone({
 
   return (
     <div
-      className={`zone ${dashed ? 'zone--dashed' : ''} ${depth > 0 && !bare ? 'zone--nested' : ''} ${layout === 'columns' ? 'zone--columns' : ''} ${layout === 'stack' ? 'zone--stack' : ''} ${bare ? 'zone--bare' : ''}`}
+      className={`zone ${dashed ? 'zone--dashed' : ''} ${depth > 0 && !bare ? 'zone--nested' : ''} ${layout === 'columns' ? 'zone--columns' : ''} ${layout === 'stack' ? 'zone--stack' : ''} ${bare ? 'zone--bare' : ''} ${ghost ? 'zone--ghost' : ''}`}
       style={{
         ...(!bare && { background: fill }),
         '--zone-depth': depth,

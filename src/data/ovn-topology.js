@@ -253,28 +253,53 @@ export const rtosEdgeDetail = (w) => edgeDetail(
 // "runs on every node"). All structural links are solid plain lines; only the
 // ones the diagram labels carry text (the rtoj/rtos addresses, quiet style).
 
-// One node column: the full per-node chain inside one dashed boundary.
-const nodeZone = (w, pods) => ({
-  id: `ovn-${w.id}-node`,
-  label: `${w.node} · ${w.hostIp}`,
-  colorVar: 'k-teal',
-  dashed: true,
-  layout: 'stack',
-  boxes: [
-    { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'netdev', variant: 'iface', detail: ethDetail(w) },
-    { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', detail: brIntDetail(w) },
-    { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', detail: extSwitchDetail(w) },
-    { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'Gateway Router', colorVar: 'k-green',
-      variant: 'ellipse', detail: gatewayRouterDetail(w) },
-    // The diagram's empty mid-section: the shared core's links cross here.
-    { id: `${w.id}-gap`, spacer: true },
-    { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', detail: nodeSwitchDetail(w) },
-    ...pods.map((p) => ({
-      id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod',
-      colorVar: 'k-amber', variant: 'pod', inline: true, detail: podDetail(p.name, p.ip, w),
-    })),
-  ],
+// Shared box definitions — the topology boxes exist once (same ids, details,
+// colours and shapes) and two topics arrange them: the classic diagram, and
+// the "big view" that re-parents the very same boxes into the greyed
+// OpenShift components that contain them.
+const nodeBoxes = (w) => ({
+  eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'netdev', variant: 'iface', detail: ethDetail(w) },
+  brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', detail: brIntDetail(w) },
+  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', detail: extSwitchDetail(w) },
+  gr: { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'Gateway Router', colorVar: 'k-green',
+    variant: 'ellipse', detail: gatewayRouterDetail(w) },
+  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', detail: nodeSwitchDetail(w) },
 })
+const podBox = (w, p) => ({
+  id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod',
+  colorVar: 'k-amber', variant: 'pod', inline: true, detail: podDetail(p.name, p.ip, w),
+})
+const UNDERLAY_BOX = {
+  id: 'ovn-underlay', title: 'Underlay · 172.18.0.0/24', typePrefix: 'L2 segment', colorVar: 'k-blue',
+  variant: 'bus', caption: 'the only network that physically exists', detail: UNDERLAY_DETAIL,
+}
+const JOIN_BOX = {
+  id: 'ovn-join', title: 'join · 100.64.0.0/16', typePrefix: 'Logical Switch', colorVar: 'k-sky',
+  variant: 'switch', caption: 'one per cluster · joins every router', detail: JOIN_SWITCH_DETAIL,
+}
+const ROUTER_BOX = {
+  id: 'ovn-cluster-router', title: 'ovn_cluster_router', typePrefix: 'OVN Cluster Router', colorVar: 'k-green',
+  variant: 'ellipse', caption: 'distributed · runs on every node', detail: CLUSTER_ROUTER_DETAIL,
+}
+
+// One node column: the full per-node chain inside one dashed boundary.
+const nodeZone = (w, pods) => {
+  const b = nodeBoxes(w)
+  return {
+    id: `ovn-${w.id}-node`,
+    label: `${w.node} · ${w.hostIp}`,
+    colorVar: 'k-teal',
+    dashed: true,
+    layout: 'stack',
+    boxes: [
+      b.eth0, b.brint, b.ext, b.gr,
+      // The diagram's empty mid-section: the shared core's links cross here.
+      { id: `${w.id}-gap`, spacer: true },
+      b.ls,
+      ...pods.map((p) => podBox(w, p)),
+    ],
+  }
+}
 
 // Per-node wiring — solid plain lines, like the picture's. Only the links the
 // diagram labels carry text (the rtoj / rtos addresses); the rest are bare.
@@ -309,21 +334,16 @@ const W2_PODS = [
   { id: 'pod-a', name: 'pod-c', ip: '10.244.2.3' },
 ]
 
-export const OVN_TOPOLOGY = {
-  topicId: 'ovn-topology',
-  title: 'OVN-Kubernetes — the logical network topology',
-  tagline:
-    'How OVN-Kubernetes wires a cluster: per-node gateway routers behind localnet switches, one "join" switch gluing them to a distributed cluster router, and a logical switch per node carrying the pods. Everything here is a row in OVN’s northbound DB that you can list with ovn-nbctl — except br-int, the OVS bridge each node compiles all of it into. The same wiring runs twice in this app’s HCP topology: once on the bare-metal management cluster, once inside the guest VMs.',
-  colorVar: 'k-teal',
-  topology: {
-    edges: [
-      ...nodeEdges(W1, W1_PODS),
-      ...nodeEdges(W2, W2_PODS),
-      { id: 'e-join-rtr', from: 'ovn-join', to: 'ovn-cluster-router', step: '',
-        axis: 'vertical', solid: true, quiet: true, label: '100.64.0.1/16', labelT: 0.5, accent: 'k-sky' },
-    ],
-  },
-  flows: [
+// The wiring and the trace flows are shared verbatim by both topics — the box
+// ids they reference are identical in either arrangement.
+const EDGES = [
+  ...nodeEdges(W1, W1_PODS),
+  ...nodeEdges(W2, W2_PODS),
+  { id: 'e-join-rtr', from: 'ovn-join', to: 'ovn-cluster-router', step: '',
+    axis: 'vertical', solid: true, quiet: true, label: '100.64.0.1/16', labelT: 0.5, accent: 'k-sky' },
+]
+
+const FLOWS = [
     {
       flowId: 'ovn-pp-same',
       flowName: 'Pod → Pod, same node',
@@ -376,19 +396,27 @@ export const OVN_TOPOLOGY = {
           description: 'Onto the wire toward the default gateway. The reply hits 172.18.0.2, conntrack un-NATs it at GR_ovn-worker, and the path runs in reverse.' },
       ],
     },
-  ],
+]
+
+// The underlay floats at the top like the diagram's cloud — no zone box.
+const underlayZone = (boxes = [UNDERLAY_BOX]) => ({
+  id: 'ovn-underlay-zone',
+  bare: true,
+  layout: 'stack',
+  colorVar: 'k-blue',
+  boxes,
+})
+
+export const OVN_TOPOLOGY = {
+  topicId: 'ovn-topology',
+  title: 'OVN-Kubernetes — the logical network topology',
+  tagline:
+    'How OVN-Kubernetes wires a cluster: per-node gateway routers behind localnet switches, one "join" switch gluing them to a distributed cluster router, and a logical switch per node carrying the pods. Everything here is a row in OVN’s northbound DB that you can list with ovn-nbctl — except br-int, the OVS bridge each node compiles all of it into. The same wiring runs twice in this app’s HCP topology: once on the bare-metal management cluster, once inside the guest VMs.',
+  colorVar: 'k-teal',
+  topology: { edges: EDGES },
+  flows: FLOWS,
   zones: [
-    // The underlay floats at the top like the diagram's cloud — no zone box.
-    {
-      id: 'ovn-underlay-zone',
-      bare: true,
-      layout: 'stack',
-      colorVar: 'k-blue',
-      boxes: [
-        { id: 'ovn-underlay', title: 'Underlay · 172.18.0.0/24', typePrefix: 'L2 segment', colorVar: 'k-blue',
-          variant: 'bus', caption: 'the only network that physically exists', detail: UNDERLAY_DETAIL },
-      ],
-    },
+    underlayZone(),
     // Two node columns flanking the shared logical core, which floats between
     // them at mid-height (a bare, vertically-centred column).
     {
@@ -402,14 +430,151 @@ export const OVN_TOPOLOGY = {
           bare: true,
           layout: 'stack',
           colorVar: 'k-purple',
-          boxes: [
-            { id: 'ovn-join', title: 'join · 100.64.0.0/16', typePrefix: 'Logical Switch', colorVar: 'k-sky',
-              variant: 'switch', caption: 'one per cluster · joins every router', detail: JOIN_SWITCH_DETAIL },
-            { id: 'ovn-cluster-router', title: 'ovn_cluster_router', typePrefix: 'OVN Cluster Router', colorVar: 'k-green',
-              variant: 'ellipse', caption: 'distributed · runs on every node', detail: CLUSTER_ROUTER_DETAIL },
-          ],
+          boxes: [JOIN_BOX, ROUTER_BOX],
         },
         nodeZone(W2, W2_PODS),
+      ],
+    },
+  ],
+}
+
+// ── The "big view" — the same topology inside its OpenShift containers ──────
+// A 1:1 copy of the diagram above (same boxes, same wiring, same flows), with
+// one level zoomed out: every group of topology abstractions is drawn inside
+// the greyed OpenShift (network) component that holds it. Grey = machinery;
+// colour = the topology it carries. Each grey container also holds a small
+// ghost chip naming the component, clickable like any box.
+
+const ovsGhostDetail = (w) => ({
+  role: 'OPENSHIFT · HOST DATA PLANE',
+  summary:
+    `Open vSwitch — the layer that is actually real on ${w.node}. Two systemd units on the RHCOS host (ovs-vswitchd.service + ovsdb-server.service) own every bridge and port: they enslave eth0 to br-ex, run br-int, and forward every packet through the kernel datapath. Everything logical in this diagram ends up as OpenFlow rules inside this process — which is why it runs on the host, not as a pod: the network must come up before, and outlive, the pods.`,
+  sections: [
+    { heading: 'Facts', facts: [
+      { k: 'runs as', v: 'systemd units on the host — not pods' },
+      { k: 'owns', v: 'br-int · br-ex · the Geneve tunnel port · every pod veth' },
+    ] },
+    { heading: 'Explore', commands: [
+      '# On the node (oc debug node/<node> → chroot /host)\nsystemctl status ovs-vswitchd ovsdb-server',
+      'ovs-vsctl show',
+    ] },
+  ],
+})
+
+const ovnkubeGhostDetail = (w) => ({
+  role: 'OPENSHIFT · NODE AGENT POD',
+  summary:
+    `ovnkube-node — the DaemonSet pod (namespace openshift-ovn-kubernetes) through which every logical object on ${w.node} becomes real. Its ovn-controller container watches the OVN database and compiles the rows — ext_${w.node}, GR_${w.node}, LS ${w.node} — into OpenFlow rules in br-int. Since OpenShift moved to OVN's interconnect mode, the pod also runs the node's own nbdb, sbdb and northd, so the node's slice of the logical space lives entirely on the node.`,
+  sections: [
+    { heading: 'Containers', facts: [
+      { k: 'ovn-controller', v: 'SB DB rows → OpenFlow in br-int' },
+      { k: 'ovnkube-controller', v: 'watches Pods/Services/NetworkPolicies → writes NB DB rows' },
+      { k: 'nbdb · sbdb · northd', v: 'the node-local OVN databases (interconnect mode)' },
+    ] },
+    { heading: 'Explore', commands: [
+      `oc get pods -n openshift-ovn-kubernetes -o wide --field-selector spec.nodeName=${w.node}`,
+      '# The logical rows this pod realizes\noc rsh -n openshift-ovn-kubernetes -c nbdb <ovnkube-node-pod> ovn-nbctl show',
+    ] },
+  ],
+})
+
+const cniGhostDetail = (w) => ({
+  role: 'OPENSHIFT · POD WIRING',
+  summary:
+    `The CNI half of OVN-Kubernetes. When the kubelet (via CRI-O) creates a pod on ${w.node}, the ovn-k8s-cni-overlay plugin makes the veth pair, moves one end into the pod's netns as eth0, plugs the other into br-int, and binds it to the pod's logical switch port on LS ${w.node} — the moment a pod becomes a row in this diagram.`,
+  sections: [
+    { heading: 'Explore', commands: [
+      '# What the CNI recorded for a pod\nkubectl get pod <pod> -o jsonpath=\'{.metadata.annotations.k8s\\.ovn\\.org/pod-networks}\'',
+    ] },
+  ],
+})
+
+const CTLPLANE_GHOST_DETAIL = {
+  role: 'OPENSHIFT · CONTROL PLANE',
+  summary:
+    'The machinery that owns the logical space itself. Every switch and router in this diagram is a row in the OVN Northbound database — written by ovnkube, translated by northd, consumed by every node\'s ovn-controller. ovnkube-control-plane (a Deployment in openshift-ovn-kubernetes) does the cluster-scoped part — allocating each node its pod subnet — and the Cluster Network Operator deploys the whole stack from the Network.operator config.',
+  sections: [
+    { heading: 'Facts', facts: [
+      { k: 'NB DB', v: 'the desired logical network — what ovn-nbctl lists' },
+      { k: 'ovnkube-control-plane', v: 'allocates node subnets (10.244.0.0/24 → ovn-worker …)' },
+      { k: 'CNO', v: 'rolls the stack out from Network.operator "cluster"' },
+    ] },
+    { heading: 'Explore', commands: [
+      'oc get pods -n openshift-ovn-kubernetes | grep control-plane',
+      'oc get network.operator cluster -o yaml | head -20',
+    ] },
+  ],
+}
+
+// A grey container: a dashed slate zone holding topology boxes + a ghost chip
+// naming the OpenShift component (last, like a signature).
+const ghostZone = (id, label, boxes) => ({
+  id, label, ghost: true, dashed: true, layout: 'stack', colorVar: 'k-ghost', boxes,
+})
+const ghostChip = (id, title, typePrefix, caption, detail) => ({
+  id, title, typePrefix, caption, variant: 'ghost', colorVar: 'k-ghost', detail,
+})
+
+// The same node column, with its boxes re-parented into the three grey
+// containers: OVS on the metal, the logical objects realized by ovn-controller,
+// and the pod wiring done by the CNI.
+const nodeZoneBig = (w, pods) => {
+  const b = nodeBoxes(w)
+  return {
+    id: `ovnb-${w.id}-node`,
+    label: `${w.node} · ${w.hostIp}`,
+    colorVar: 'k-teal',
+    dashed: true,
+    layout: 'stack',
+    zones: [
+      ghostZone(`ovnb-${w.id}-ovs`, 'Open vSwitch · on the metal', [
+        b.eth0, b.brint,
+        ghostChip(`${w.id}-ovs`, 'ovs-vswitchd.service', 'systemd', 'forwards every packet', ovsGhostDetail(w)),
+      ]),
+      ghostZone(`ovnb-${w.id}-ovnkube`, 'realized by ovn-controller', [
+        b.ext, b.gr,
+        ghostChip(`${w.id}-ovnkube`, 'ovnkube-node', 'Pod', 'DB rows → OpenFlow', ovnkubeGhostDetail(w)),
+      ]),
+      { id: `ovnb-${w.id}-gap`, spacer: true },
+      ghostZone(`ovnb-${w.id}-cni`, 'pod wiring · CNI', [
+        b.ls,
+        ...pods.map((p) => podBox(w, p)),
+        ghostChip(`${w.id}-cni`, 'ovn-k8s-cni-overlay', 'CNI', 'plugs veths into br-int', cniGhostDetail(w)),
+      ]),
+    ],
+  }
+}
+
+export const OVN_TOPOLOGY_BIG = {
+  topicId: 'ovn-topology-big',
+  title: 'OVN-Kubernetes in OpenShift — where the topology lives',
+  tagline:
+    'The exact same diagram, zoomed out one level: every box of the OVN topology, unchanged, now drawn inside the greyed OpenShift component that contains it — Open vSwitch on the metal, the ovnkube-node pod whose ovn-controller realizes the logical objects, the CNI that wires the pods, and the Northbound database the whole logical space is rows in. Grey is machinery; colour is the topology it carries. The trace flows are the same three packets as the plain view.',
+  colorVar: 'k-teal',
+  canvasClass: 'recon-stack--ovnbig',
+  topology: { edges: EDGES },
+  flows: FLOWS,
+  zones: [
+    underlayZone(),
+    {
+      id: 'ovnb-nodes-zone',
+      bare: true,
+      layout: 'columns',
+      zones: [
+        nodeZoneBig(W1, W1_PODS),
+        {
+          id: 'ovnb-core',
+          bare: true,
+          layout: 'stack',
+          colorVar: 'k-purple',
+          zones: [
+            ghostZone('ovnb-core-db', 'OVN Northbound DB · rows, not devices', [
+              JOIN_BOX, ROUTER_BOX,
+              ghostChip('ovn-ctlplane', 'ovnkube-control-plane', 'Deployment', 'allocates the node subnets', CTLPLANE_GHOST_DETAIL),
+            ]),
+          ],
+        },
+        nodeZoneBig(W2, W2_PODS),
       ],
     },
   ],

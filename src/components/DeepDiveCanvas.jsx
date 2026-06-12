@@ -268,16 +268,24 @@ export default function DeepDiveCanvas({
       depth={depth}
       layout={zone.layout}
       bare={zone.bare}
+      ghost={zone.ghost}
     >
       {renderZoneBoxes(zone)}
-      {zone.zones?.map((child) => renderZone(child, depth + 1))}
+      {/* A child entry may be a spacer pseudo-zone — the flex-grow gap between
+          sibling zones (the OVN big view's mid-column gap, where the node
+          column holds zones, not boxes). */}
+      {zone.zones?.map((child) =>
+        child.spacer
+          ? <div key={child.id} className="dd-spacer" aria-hidden />
+          : renderZone(child, depth + 1)
+      )}
     </Zone>
   )
 
   return (
     <div className="deep-dive-canvas">
       <div
-        className={`overview-canvas recon-stack ${recon?.edges ? 'recon-stack--edges' : ''} ${topic.topology?.edges ? 'recon-stack--topology' : ''}`}
+        className={`overview-canvas recon-stack ${recon?.edges ? 'recon-stack--edges' : ''} ${topic.topology?.edges ? 'recon-stack--topology' : ''} ${topic.canvasClass || ''}`}
         ref={stackRef}
       >
         {recon?.edges && (

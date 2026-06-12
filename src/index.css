@@ -36,6 +36,7 @@
   --k-purple: #8b5cf6;   /* Brightened to violet-500, matching the 500-level accents */
   --k-amber:  #f59e0b;
   --k-orange: #f97316;
+  --k-ghost:  #8b97ab;   /* Greyed machinery (the OVN big view's containers) */
   --packet:   #ff4d6d;
 }
 
@@ -1781,6 +1782,29 @@ body::after {
   border-radius: 3px;
   background: #0a0f1e;
 }
+/* Ghost containers (the big view): greyed OpenShift machinery drawn AROUND
+   the topology. The zone keeps its dashed slate frame but stays quiet — the
+   coloured boxes inside are the figure. Tight inner gaps: a container, not a
+   diagram band. */
+.recon-stack--topology .zone--ghost > .zone-content { padding: 10px 12px 9px; }
+.recon-stack--topology .zone--ghost.zone--stack > .zone-content > .zone-content-inner { gap: 18px; }
+.recon-stack--topology .zone--ghost > .zone-label {
+  font-size: 0.52rem;
+  opacity: 0.85;
+}
+/* The ghost chip naming the component — small, dashed, grey, deliberately the
+   least vivid thing on the canvas (but still clickable for its popup). */
+.recon-stack--topology .node--ghost {
+  width: auto;
+  min-width: 0;
+  padding: 4px 11px 3px;
+  border-style: dashed;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--node-accent) 7%, transparent);
+}
+.recon-stack--topology .node--ghost .node-type-prefix { font-size: 0.45rem; margin-bottom: 1px; }
+.recon-stack--topology .node--ghost .node-title { font-size: 0.62rem; margin-bottom: 0; }
+.recon-stack--topology .node--ghost .node-subtitle { font-size: 0.5rem; }
 /* The underlay is the diagram's cloud: one wide bar spanning the canvas that
    both nodes' eth0 lines drop out of (paired with the edges' `spread`). */
 .deep-dive-canvas .node--bus {
@@ -1826,6 +1850,12 @@ body::after {
     justify-content: flex-start;
     padding-top: 350px;
     padding-bottom: 240px;
+  }
+  /* The big view's chains are taller (each group wears a ghost container), so
+     its core band starts lower and reserves more room below. */
+  .recon-stack--ovnbig .zone--columns > .zone-content > .zone-content-inner > .zone--bare > .zone-content > .zone-content-inner {
+    padding-top: 585px;
+    padding-bottom: 430px;
   }
   .recon-stack--topology .zone--nested > .zone-content { padding: 10px 5px; }
   .recon-stack--topology .node {
