@@ -29,10 +29,12 @@
 const W1 = {
   id: 'w1', node: 'ovn-worker', hostIp: '172.18.0.2',
   joinIp: '100.64.0.2', subnet: '10.244.0.0/24', routerPort: '10.244.0.1', mask: 24,
+  cidr: '10.244.0.0/16',
 }
 const W2 = {
   id: 'w2', node: 'ovn-worker2', hostIp: '172.18.0.4',
   joinIp: '100.64.0.3', subnet: '10.244.2.0/24', routerPort: '10.244.2.1', mask: 24,
+  cidr: '10.244.0.0/16',
 }
 
 const NBCTL_NOTE =
@@ -86,7 +88,7 @@ export const ethDetail = (w) => ({
   ],
 })
 
-export const brIntDetail = (w) => ({
+export const brIntDetail = (w, note = NBCTL_NOTE) => ({
   role: 'OVS BRIDGE · THE DATA PLANE',
   summary:
     `The integration bridge on ${w.node} — and the punchline of this whole diagram: every switch and router above is *logical*, rows in OVN's northbound database. br-int is the only thing that actually exists on the node. ovn-controller compiles the entire logical topology into OpenFlow rules here, and one rule lookup does what the diagram draws as a multi-hop journey.`,
@@ -98,7 +100,7 @@ export const brIntDetail = (w) => ({
       'Receives its flows from ovn-controller, which watches the southbound DB and recompiles them on every change.',
     ] },
     { heading: 'Explore', commands: [
-      NBCTL_NOTE,
+      note,
       '# The real topology: br-int and its ports\novs-vsctl show',
       '# The compiled logical pipeline (thousands of rules)\novs-ofctl dump-flows br-int | head -40',
       '# Trace one imaginary packet through the rules\novs-appctl ofproto/trace br-int in_port=<port>,ip,nw_src=10.244.0.3,nw_dst=10.244.2.3',
@@ -106,7 +108,7 @@ export const brIntDetail = (w) => ({
   ],
 })
 
-export const extSwitchDetail = (w) => ({
+export const extSwitchDetail = (w, note = NBCTL_NOTE) => ({
   role: 'LOGICAL SWITCH · LOCALNET',
   summary:
     `ext_${w.node} — a tiny logical switch whose job is to splice the gateway router onto the physical network. Its localnet port maps to the provider bridge (br-ex), so frames leaving GR_${w.node} hit the real wire with the node's own MAC and IP.`,
@@ -121,14 +123,14 @@ export const extSwitchDetail = (w) => ({
       { k: 'network', v: 'the underlay, untagged' },
     ] },
     { heading: 'Explore', commands: [
-      NBCTL_NOTE,
+      note,
       `ovn-nbctl ls-list | grep ext_`,
       `ovn-nbctl lsp-list ext_${w.node}`,
     ] },
   ],
 })
 
-export const gatewayRouterDetail = (w) => ({
+export const gatewayRouterDetail = (w, note = NBCTL_NOTE) => ({
   role: 'GATEWAY ROUTER · ONE PER NODE',
   summary:
     `GR_${w.node} — the node's door to the outside. Unlike the distributed cluster router it is pinned to ${w.node}, because it owns real state: a NAT table and conntrack entries that must live in exactly one place.`,
@@ -141,10 +143,10 @@ export const gatewayRouterDetail = (w) => ({
     { heading: 'Facts', facts: [
       { k: 'join port', v: `rtoj-GR_${w.node} · ${w.joinIp}/16` },
       { k: 'external port', v: `rtoe-GR_${w.node} · ${w.hostIp}/24` },
-      { k: 'SNAT', v: `10.244.0.0/16 → ${w.hostIp}` },
+      { k: 'SNAT', v: `${w.cidr} → ${w.hostIp}` },
     ] },
     { heading: 'Explore', commands: [
-      NBCTL_NOTE,
+      note,
       'ovn-nbctl lr-list',
       `# The NAT rules that rewrite pod sources to the node IP\novn-nbctl lr-nat-list GR_${w.node}`,
       `ovn-nbctl lrp-list GR_${w.node}`,
@@ -222,7 +224,7 @@ export const CLUSTER_ROUTER_DETAIL = {
   ],
 }
 
-export const nodeSwitchDetail = (w) => ({
+export const nodeSwitchDetail = (w, note = NBCTL_NOTE) => ({
   role: 'LOGICAL SWITCH · ONE PER NODE',
   summary:
     `The logical switch named after ${w.node}, owning the node's pod subnet ${w.subnet}. Every pod scheduled here gets a port on it (its veth, by another name) and uses the cluster router's rtos port ${w.routerPort} as default gateway.`,
@@ -238,7 +240,7 @@ export const nodeSwitchDetail = (w) => ({
       { k: 'ports', v: 'one per pod + stor (to the router) + a mgmt port' },
     ] },
     { heading: 'Explore', commands: [
-      NBCTL_NOTE,
+      note,
       `# Every pod on ${w.node} is a port here\novn-nbctl lsp-list ${w.node}`,
       `# The subnet annotation the node carries\nkubectl get node ${w.node} -o jsonpath='{.metadata.annotations.k8s\\.ovn\\.org/node-subnets}'`,
     ] },
@@ -313,13 +315,13 @@ export const rtosEdgeDetail = (w, note) => edgeDetail(
 // the "big view" that re-parents the very same boxes into the greyed
 // OpenShift components that contain them. (The guest-cluster twin further
 // down builds its own boxes — same shapes, different ids and content.)
-const nodeBoxes = (w) => ({
+const nodeBoxes = (w, note = NBCTL_NOTE) => ({
   eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'netdev', variant: 'iface', detail: ethDetail(w) },
-  brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', detail: brIntDetail(w) },
-  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', detail: extSwitchDetail(w) },
+  brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', detail: brIntDetail(w, note) },
+  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', detail: extSwitchDetail(w, note) },
   gr: { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'Gateway Router', colorVar: 'k-green',
-    variant: 'ellipse', detail: gatewayRouterDetail(w) },
-  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', detail: nodeSwitchDetail(w) },
+    variant: 'ellipse', detail: gatewayRouterDetail(w, note) },
+  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', detail: nodeSwitchDetail(w, note) },
 })
 const podBox = (w, p) => ({
   id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod',
@@ -363,27 +365,39 @@ const MGMT_CORE = { underlay: 'ovn-underlay', join: 'ovn-join', router: 'ovn-clu
 
 // Per-node wiring — solid plain lines, like the picture's. Only the links the
 // diagram labels carry text (the rtoj / rtos addresses); the rest are bare.
+// Split into pieces so the full-picture topic can rewire a guest column off a
+// launcher pod instead of an underlay bus.
+const chainEdges = (w) => [
+  { id: `e-${w.id}-patch`, from: `${w.id}-eth0`, to: `${w.id}-brint`, step: '', solid: true, quiet: true, accent: 'k-teal' },
+  { id: `e-${w.id}-localnet`, from: `${w.id}-brint`, to: `${w.id}-ext`, step: '', solid: true, quiet: true, accent: 'k-teal' },
+  { id: `e-${w.id}-etor`, from: `${w.id}-ext`, to: `${w.id}-gr`, step: '', solid: true, quiet: true, accent: 'k-teal' },
+]
+// mobileHide: in the phone layout the GR↔join gap is a sliver, so these two
+// chips would sit on the join switch's text — the lines stay, the labels go.
+const rtojEdge = (w, core) => ({
+  id: `e-${w.id}-rtoj`, from: `${w.id}-gr`, to: core.join, step: '',
+  solid: true, quiet: true, mobileHide: true, label: `${w.joinIp}/16`, accent: 'k-sky',
+  title: `GR_${w.node} on the join switch`, detail: rtojEdgeDetail(w, core.note),
+})
+const rtosEdge = (w, core) => ({
+  id: `e-rtr-${w.id}ls`, from: core.router, to: `${w.id}-ls`, step: '',
+  axis: 'vertical', solid: true, quiet: true, label: `${w.routerPort}/${w.mask}`, accent: 'k-sky', labelT: 0.45,
+  title: `rtos-${w.node}`, detail: rtosEdgeDetail(w, core.note),
+})
+const podEdges = (w, pods) => pods.map((p) => ({
+  id: `e-${w.id}-ls-${p.id}`, from: `${w.id}-ls`, to: `${w.id}-${p.id}`, step: '',
+  solid: true, quiet: true, accent: 'k-amber',
+}))
 const nodeEdges = (w, pods, core = MGMT_CORE) => [
   // The underlay box is a full-width bus; `spread` drops each node's line out
   // of it at the node's own x, so the two drops read as the diagram's two
   // separate lines off the cloud instead of diagonals crossing the labels.
   { id: `e-u-${w.id}`, from: core.underlay, to: `${w.id}-eth0`, step: '',
     axis: 'vertical', spread: true, solid: true, quiet: true, accent: 'k-blue' },
-  { id: `e-${w.id}-patch`, from: `${w.id}-eth0`, to: `${w.id}-brint`, step: '', solid: true, quiet: true, accent: 'k-teal' },
-  { id: `e-${w.id}-localnet`, from: `${w.id}-brint`, to: `${w.id}-ext`, step: '', solid: true, quiet: true, accent: 'k-teal' },
-  { id: `e-${w.id}-etor`, from: `${w.id}-ext`, to: `${w.id}-gr`, step: '', solid: true, quiet: true, accent: 'k-teal' },
-  // mobileHide: in the phone layout the GR↔join gap is a sliver, so these two
-  // chips would sit on the join switch's text — the lines stay, the labels go.
-  { id: `e-${w.id}-rtoj`, from: `${w.id}-gr`, to: core.join, step: '',
-    solid: true, quiet: true, mobileHide: true, label: `${w.joinIp}/16`, accent: 'k-sky',
-    title: `GR_${w.node} on the join switch`, detail: rtojEdgeDetail(w, core.note) },
-  { id: `e-rtr-${w.id}ls`, from: core.router, to: `${w.id}-ls`, step: '',
-    axis: 'vertical', solid: true, quiet: true, label: `${w.routerPort}/${w.mask}`, accent: 'k-sky', labelT: 0.45,
-    title: `rtos-${w.node}`, detail: rtosEdgeDetail(w, core.note) },
-  ...pods.map((p) => ({
-    id: `e-${w.id}-ls-${p.id}`, from: `${w.id}-ls`, to: `${w.id}-${p.id}`, step: '',
-    solid: true, quiet: true, accent: 'k-amber',
-  })),
+  ...chainEdges(w),
+  rtojEdge(w, core),
+  rtosEdge(w, core),
+  ...podEdges(w, pods),
 ]
 
 const W1_PODS = [
@@ -1043,6 +1057,468 @@ export const OVN_TOPOLOGY_GUEST = {
           boxes: [GUEST_JOIN_BOX, GUEST_ROUTER_BOX],
         },
         guestNodeZone(G2, G2_PODS),
+      ],
+    },
+  ],
+}
+
+// ── The full HCP picture — both SDNs, inside their OpenShift objects ────────
+// Everything at once: the management cluster's OVN topology on the two
+// bare-metal workers that host the guest VMs, the guest cluster's identical
+// topology nested inside each worker's VMI, and the big view's grey-container
+// treatment applied to BOTH layers — every group of boxes drawn inside the
+// OpenShift component that owns it, with the virt-launcher pod as the seam
+// where the layers meet (its tap device and the VM's eth0 are one NIC).
+
+// The two bare-metal workers (machine network 192.168.1.0/24 — the MetalLB
+// pool in manifests.js lives at the top of it). Their /23 pod subnets come
+// from the mgmt cluster's 10.128.0.0/14, matching network-topology.js.
+const FM1 = {
+  id: 'fm1', node: 'worker-1', hostIp: '192.168.1.11',
+  joinIp: '100.64.0.2', subnet: '10.128.2.0/23', routerPort: '10.128.2.1', mask: 23,
+  cidr: '10.128.0.0/14',
+}
+const FM2 = {
+  id: 'fm2', node: 'worker-2', hostIp: '192.168.1.12',
+  joinIp: '100.64.0.3', subnet: '10.128.4.0/23', routerPort: '10.128.4.1', mask: 23,
+  cidr: '10.128.0.0/14',
+}
+// The same guest VMIs as the guest twin, under full-picture ids so both
+// topics' box ids stay distinct in the search index.
+const FG1 = { ...G1, id: 'fg1' }
+const FG2 = { ...G2, id: 'fg2' }
+
+const MGMT_NB_NOTE =
+  '# The mgmt SDN’s NB DB lives in the ovnkube pods on each bare-metal node:\n' +
+  '#   oc -n openshift-ovn-kubernetes exec <ovnkube-node-…> -c nbdb -- ovn-nbctl …'
+
+const FULL_M_CORE = { underlay: 'ovnf-underlay', join: 'ovnf-mjoin', router: 'ovnf-mrouter', note: MGMT_NB_NOTE }
+const FULL_G_CORE = { join: 'ovnf-gjoin', router: 'ovnf-grouter', note: GUEST_NB_NOTE }
+
+// ── Full-picture details (the boxes the shared factories don't cover) ───────
+
+const MACHINE_UNDERLAY_DETAIL = {
+  role: 'PHYSICAL L2 SEGMENT · BARE METAL',
+  summary:
+    'The machine network between the bare-metal nodes — the only network in this entire picture that physically exists. Both SDNs above it are rows in databases; every byte either of them moves eventually crosses this wire as a plain Ethernet frame from one node IP to another.',
+  sections: [
+    { heading: 'At a glance', tags: ['the only real wire', 'two SDNs ride it', 'mgmt Geneve UDP :6081'] },
+    { heading: 'What rides it', bullets: [
+      'Carries the mgmt SDN’s Geneve tunnels between the node IPs — guest Geneve frames riding inside them included.',
+      'Carries egress already SNATed (twice, if it started in a guest pod) to a node IP.',
+      'Carries everything the hosts themselves do: API calls, image pulls, etcd peering, the MetalLB VIPs.',
+    ] },
+    { heading: 'Facts', facts: [
+      { k: 'subnet', v: '192.168.1.0/24 (the machine network)' },
+      { k: `${FM1.node}`, v: FM1.hostIp },
+      { k: `${FM2.node}`, v: FM2.hostIp },
+    ] },
+    { heading: 'Explore', commands: [
+      '# The node addresses on the machine network\noc get nodes -o wide',
+      '# mgmt Geneve between the nodes (oc debug node/<node> → chroot /host)\ntcpdump -ni br-ex udp port 6081',
+    ] },
+  ],
+}
+
+// The mgmt node switch — nodeSwitchDetail plus the seam: the launcher pod
+// port that IS the guest VM's NIC.
+const mLsDetail = (w, g) => ({
+  role: 'LOGICAL SWITCH · ONE PER BARE-METAL NODE',
+  summary:
+    `The mgmt node switch for ${w.node}, owning its pod subnet ${w.subnet}. Every management pod on this node is a port here — including the virt-launcher pod below, which means the guest VM's entire "machine network" is, physically, one port on this switch. That port is the seam the two SDN layers meet at.`,
+  sections: [
+    { heading: 'At a glance', tags: ['one per node', 'owns the pod subnet', 'notable port: the VM’s NIC'] },
+    { heading: 'What it does', bullets: [
+      `Owns ${w.node}’s pod subnet ${w.subnet} — every mgmt pod here gets a port on it.`,
+      `Carries the guest node ${g.node} as the launcher pod’s port (${g.hostIp}) — the guest’s whole underlay, one row in this switch.`,
+    ] },
+    { heading: 'Facts', facts: [
+      { k: 'subnet', v: w.subnet },
+      { k: 'gateway', v: `${w.routerPort} — rtos-${w.node} on the mgmt ovn_cluster_router` },
+      { k: 'notable port', v: `the virt-launcher pod = ${g.node}'s NIC` },
+    ] },
+    { heading: 'Explore', commands: [
+      MGMT_NB_NOTE,
+      `ovn-nbctl lsp-list ${w.node}`,
+    ] },
+  ],
+})
+
+const launcherPodDetail = (w, g) => ({
+  role: 'POD · THE SEAM BETWEEN THE LAYERS',
+  summary:
+    `The virt-launcher pod on ${w.node} — to the mgmt SDN an ordinary port on LS ${w.node}, to the guest cluster its entire physical world. Inside it qemu-kvm runs the ${g.node} VM and bridges the VM's virtio-net eth0 to a tap device in the pod's netns: one NIC, two SDNs.`,
+  sections: [
+    { heading: 'At a glance', tags: ['one pod = one VM', 'pod IP = VM address', 'tap ↔ virtio'] },
+    { heading: 'What it does', bullets: [
+      `Carries everything ${g.node} sends or receives — the guest cluster’s whole "machine network" is this one switch port.`,
+      'Runs the qemu-kvm process whose virtio-net frontend is the VM’s eth0; the backend is a tap device in this pod’s netns.',
+    ] },
+    { heading: 'Facts', facts: [
+      { k: 'pod IP', v: `${g.hostIp} — exactly the address ${g.node} sees on its eth0` },
+      { k: 'namespace', v: 'clusters-<guest> (the HCP namespace)' },
+    ] },
+    { heading: 'Explore', commands: [
+      '# The launcher pods — their IPs are the guest "machine network"\noc get pods -n clusters-<guest> -l kubevirt.io=virt-launcher -o wide',
+      '# The tap device backing the VM NIC\noc exec -n clusters-<guest> <launcher-pod> -- ip link show',
+    ] },
+  ],
+})
+
+const FULL_MJOIN_DETAIL = {
+  role: 'LOGICAL SWITCH · ROUTER INTERCONNECT (MGMT)',
+  summary:
+    'The management cluster’s join switch — the same construct as every other view of this diagram, in the mgmt NB DB. Every bare-metal node’s gateway router (six in this cluster; the two drawn here) peers with the mgmt distributed router across it.',
+  sections: [
+    { heading: 'At a glance', tags: ['router interconnect', '100.64.0.0/16', 'one per cluster — six legs'] },
+    { heading: 'Job', bullets: [
+      'Connects the mgmt ovn_cluster_router to every bare-metal node’s gateway router.',
+    ] },
+    { heading: 'Facts', facts: [
+      { k: 'subnet', v: '100.64.0.0/16 — the guest core below holds the same range, in its own universe' },
+      { k: 'ovn_cluster_router', v: '100.64.0.1' },
+      { k: `GR_${FM1.node}`, v: FM1.joinIp },
+      { k: `GR_${FM2.node}`, v: FM2.joinIp },
+    ] },
+    { heading: 'Explore', commands: [MGMT_NB_NOTE, 'ovn-nbctl lsp-list join'] },
+  ],
+}
+
+const FULL_MROUTER_DETAIL = {
+  role: 'DISTRIBUTED LOGICAL ROUTER (MGMT)',
+  summary:
+    'The management cluster’s pod-subnet router. It runs nowhere: every bare-metal node’s ovn-controller compiles it into that node’s br-int, so mgmt routing — launcher-pod-to-launcher-pod traffic included — happens on the source node and crosses the machine network as Geneve frames.',
+  sections: [
+    { heading: 'At a glance', tags: ['distributed', 'runs nowhere', 'routed at the source node'] },
+    { heading: 'What it does', bullets: [
+      'Routes between the bare-metal nodes’ /23 pod subnets — one rtos port per node switch.',
+      'Compiled into every node’s br-int by ovn-controller.',
+      'Routes the guest VMs’ tunnel traffic without knowing it: to this router a guest Geneve frame is just pod-to-pod UDP.',
+    ] },
+    { heading: 'Facts', facts: [
+      { k: `rtos-${FM1.node}`, v: `${FM1.routerPort}/23 (the ${FM1.subnet} default gw)` },
+      { k: `rtos-${FM2.node}`, v: `${FM2.routerPort}/23 (the ${FM2.subnet} default gw)` },
+    ] },
+    { heading: 'Explore', commands: [MGMT_NB_NOTE, 'ovn-nbctl lr-route-list ovn_cluster_router'] },
+  ],
+}
+
+const FULL_MNB_GHOST_DETAIL = {
+  role: 'OPENSHIFT · MGMT NETWORK CONTROL PLANE',
+  summary:
+    'The mgmt SDN’s logical space: rows in the OVN Northbound database, owned by the openshift-ovn-kubernetes namespace on the management cluster. ovnkube-control-plane allocates each bare-metal node its /23; every node’s ovn-controller realizes its slice.',
+  sections: [
+    { heading: 'At a glance', tags: ['mgmt NB DB', 'openshift-ovn-kubernetes', 'CNO-deployed'] },
+    { heading: 'Facts', facts: [
+      { k: 'ovnkube-control-plane', v: 'allocates node subnets (10.128.2.0/23 → worker-1 …)' },
+      { k: 'scope', v: 'the bare-metal cluster only — it knows nothing of the guest SDN' },
+    ] },
+    { heading: 'Explore', commands: [
+      'oc get pods -n openshift-ovn-kubernetes | grep control-plane',
+    ] },
+  ],
+}
+
+const FULL_GNB_GHOST_DETAIL = {
+  role: 'OPENSHIFT · GUEST NETWORK CONTROL PLANE',
+  summary:
+    'The guest SDN’s logical space lives nowhere near the guest nodes: its switches and routers are rows in a northbound database served by the OVN-K8s Master pod in the HCP namespace — on the management cluster. The guest network’s control plane never touches a guest VM; only the rows travel down, realized by each VM’s ovn-controller.',
+  sections: [
+    { heading: 'At a glance', tags: ['guest NB DB', 'runs in the HCP namespace', 'control plane off-node'] },
+    { heading: 'What it does', bullets: [
+      'Watches the Guest API Server for Pod, Service and NetworkPolicy events.',
+      'Writes the guest’s logical topology — these join/router rows included — into the guest NB DB.',
+    ] },
+    { heading: 'Explore', commands: [
+      'oc get pods -n clusters-<guest> | grep ovnkube',
+      GUEST_NB_NOTE,
+    ] },
+  ],
+}
+
+const gOvsGhostDetail = (g) => ({
+  role: 'OPENSHIFT · IN-VM DATA PLANE',
+  summary:
+    `Open vSwitch inside the ${g.node} VM — a systemd unit on the guest's RHCOS, exactly as its twin runs on the bare metal below. It is the only real thing on the guest node: the in-VM ovn-controller compiles the guest's whole logical topology into this br-int.`,
+  sections: [
+    { heading: 'At a glance', tags: ['systemd unit in the VM', 'up before the guest kubelet', 'the guest’s only real object'] },
+    { heading: 'What it does', bullets: [
+      'Owns the in-VM br-int and br-ex, every guest pod veth, and the guest Geneve tunnel port.',
+      'Forwards every guest packet according to the OpenFlow rules the in-VM ovn-controller programs.',
+    ] },
+    { heading: 'Explore', commands: [
+      GUEST_VM_NOTE,
+      'systemctl status ovs-vswitchd ovsdb-server',
+      'ovs-vsctl show',
+    ] },
+  ],
+})
+
+const gOvnkubeGhostDetail = (g) => ({
+  role: 'OPENSHIFT · GUEST NODE AGENT POD',
+  summary:
+    `The guest cluster's own ovnkube-node DaemonSet pod, running inside the ${g.node} VM. It realizes the guest's logical objects — ext_${g.node}, GR_${g.node}, LS ${g.node} — exactly as its mgmt twin does one layer down, from rows served out of the HCP namespace.`,
+  sections: [
+    { heading: 'At a glance', tags: ['DaemonSet in the VM', 'guest DB rows → OpenFlow'] },
+    { heading: 'What it does', bullets: [
+      'Compiles the guest NB/SB rows into OpenFlow in the in-VM br-int.',
+      'Maintains the guest Geneve tunnels between the VM addresses.',
+    ] },
+    { heading: 'Explore', commands: [
+      `oc --kubeconfig <guest-kubeconfig> get pods -n openshift-ovn-kubernetes -o wide --field-selector spec.nodeName=${g.node}`,
+    ] },
+  ],
+})
+
+const gCniGhostDetail = (g) => ({
+  role: 'OPENSHIFT · IN-VM POD WIRING',
+  summary:
+    `The CNI half of the guest's OVN-Kubernetes. When the guest kubelet (via the in-VM CRI-O) creates an application pod on ${g.node}, the plugin wires it into the guest's logical network — the same three moves as on bare metal, one turtle up.`,
+  sections: [
+    { heading: 'At a glance', tags: ['CNI plugin in the VM', 'invoked per guest pod'] },
+    { heading: 'What it does', bullets: [
+      'Creates the veth pair when the guest kubelet sets up the pod sandbox.',
+      'Wires one end into the pod’s netns as eth0 and plugs the other into the in-VM br-int.',
+      `Registers the br-int end as the pod’s logical switch port on LS ${g.node}.`,
+    ] },
+    { heading: 'Explore', commands: [
+      '# What the guest CNI recorded for a pod\noc --kubeconfig <guest-kubeconfig> get pod <pod> -n e-commerce-prod -o jsonpath=\'{.metadata.annotations.k8s\\.ovn\\.org/pod-networks}\'',
+    ] },
+  ],
+})
+
+const seamEdgeDetail = (g) => ({
+  role: 'TAP ↔ VIRTIO · ONE NIC, TWO SDNS',
+  summary:
+    `${g.node}'s eth0 and the launcher pod's tap device are two halves of one NIC: qemu bridges the virtio frontend inside the VM to the tap in the pod's netns. Every frame the guest cluster sends crosses this line — and becomes, with no translation and no NAT, management pod traffic from ${g.hostIp}.`,
+  sections: [
+    { tags: ['one NIC', 'no translation, no NAT', 'where the layers meet'] },
+    { heading: 'Explore', commands: [
+      '# The tap side, from the mgmt cluster\noc exec -n clusters-<guest> <launcher-pod> -- ip link show',
+      '# The virtio side, from inside the VM\nvirtctl ssh core@<guest-node> -n clusters-<guest> -- ip addr show eth0',
+    ] },
+  ],
+})
+
+// ── Full-picture boxes & zones ───────────────────────────────────────────────
+
+const MACHINE_UNDERLAY_BOX = {
+  id: 'ovnf-underlay', title: 'Machine network · 192.168.1.0/24', typePrefix: 'L2 segment', colorVar: 'k-blue',
+  variant: 'bus', caption: 'bare metal — the only network that physically exists', detail: MACHINE_UNDERLAY_DETAIL,
+}
+const FULL_MJOIN_BOX = {
+  id: 'ovnf-mjoin', title: 'join · 100.64.0.0/16', typePrefix: 'Logical Switch', colorVar: 'k-sky',
+  variant: 'switch', caption: 'mgmt — one leg per bare-metal node', detail: FULL_MJOIN_DETAIL,
+}
+const FULL_MROUTER_BOX = {
+  id: 'ovnf-mrouter', title: 'ovn_cluster_router', typePrefix: 'OVN Cluster Router', colorVar: 'k-green',
+  variant: 'ellipse', caption: 'mgmt · runs on every bare-metal node', detail: FULL_MROUTER_DETAIL,
+}
+const FULL_GJOIN_BOX = {
+  id: 'ovnf-gjoin', title: 'join · 100.64.0.0/16', typePrefix: 'Logical Switch', colorVar: 'k-sky',
+  variant: 'switch', caption: 'guest — same subnet, its own universe', detail: GUEST_JOIN_DETAIL,
+}
+const FULL_GROUTER_BOX = {
+  id: 'ovnf-grouter', title: 'ovn_cluster_router', typePrefix: 'OVN Cluster Router', colorVar: 'k-green',
+  variant: 'ellipse', caption: 'guest · runs in every VM', detail: GUEST_ROUTER_DETAIL,
+}
+
+const launcherBox = (m, g) => ({
+  id: `${m.id}-launcher`, title: 'virt-launcher', caption: `${g.hostIp} · the VM’s NIC`, typePrefix: 'Pod',
+  colorVar: 'k-amber', variant: 'pod', inline: true, detail: launcherPodDetail(m, g),
+})
+
+// The guest VMI nested inside its bare-metal host's column, wearing the same
+// grey containers as the metal: in-VM OVS, the guest ovnkube-node, in-VM CNI.
+const fullVmZone = (g, pods) => {
+  const b = guestNodeBoxes(g)
+  return {
+    id: `ovnf-${g.id}-vm`,
+    label: `${g.node} · VirtualMachineInstance`,
+    colorVar: 'k-green',
+    dashed: true,
+    layout: 'stack',
+    zones: [
+      ghostZone(`ovnf-${g.id}-ovs`, 'Open vSwitch · systemd in the VM', [
+        b.eth0, b.brint,
+        ghostChip(`${g.id}-ovs`, 'ovs-vswitchd.service', 'systemd', 'the in-VM data plane', gOvsGhostDetail(g)),
+      ]),
+      ghostZone(`ovnf-${g.id}-ovnkube`, 'realized by the guest ovn-controller', [
+        b.ext, b.gr,
+        ghostChip(`${g.id}-ovnkube`, 'ovnkube-node (guest)', 'Pod', 'guest DB rows → OpenFlow', gOvnkubeGhostDetail(g)),
+      ]),
+      { id: `ovnf-${g.id}-gap`, spacer: true },
+      ghostZone(`ovnf-${g.id}-cni`, 'pod wiring · in-VM CNI', [
+        b.ls,
+        ...pods.map((p) => guestPodBox(g, p)),
+        ghostChip(`${g.id}-cni`, 'ovn-k8s-cni-overlay', 'CNI', 'plugs veths into the in-VM br-int', gCniGhostDetail(g)),
+      ]),
+    ],
+  }
+}
+
+// One bare-metal column: the mgmt chain in its grey containers, then the
+// nested VMI carrying the guest chain in its own.
+const fullMetalZone = (m, g, gPods) => {
+  const b = nodeBoxes(m, MGMT_NB_NOTE)
+  b.ls = { ...b.ls, detail: mLsDetail(m, g) }
+  return {
+    id: `ovnf-${m.id}-node`,
+    label: `${m.node} · bare metal · ${m.hostIp}`,
+    colorVar: 'k-blue',
+    dashed: true,
+    layout: 'stack',
+    zones: [
+      ghostZone(`ovnf-${m.id}-ovs`, 'Open vSwitch · systemd on RHCOS', [
+        b.eth0, b.brint,
+        ghostChip(`${m.id}-ovs`, 'ovs-vswitchd.service', 'systemd', 'forwards every packet', ovsGhostDetail(m)),
+      ]),
+      ghostZone(`ovnf-${m.id}-ovnkube`, 'realized by ovn-controller', [
+        b.ext, b.gr,
+        ghostChip(`${m.id}-ovnkube`, 'ovnkube-node', 'Pod', 'DB rows → OpenFlow', ovnkubeGhostDetail(m)),
+      ]),
+      { id: `ovnf-${m.id}-gap`, spacer: true },
+      ghostZone(`ovnf-${m.id}-cni`, 'pod wiring · CNI', [
+        b.ls, launcherBox(m, g),
+        ghostChip(`${m.id}-cni`, 'ovn-k8s-cni-overlay', 'CNI', 'plugs veths into br-int', cniGhostDetail(m)),
+      ]),
+      fullVmZone(g, gPods),
+    ],
+  }
+}
+
+// Guest wiring hangs off the launcher pod instead of an underlay bus — the
+// seam edge replaces the bus drop, everything else is the standard per-node
+// wiring against the guest core.
+const fullGuestEdges = (g, pods, launcherId) => [
+  { id: `e-seam-${g.id}`, from: launcherId, to: `${g.id}-eth0`, step: '',
+    axis: 'vertical', solid: true, quiet: true, label: 'tap ↔ virtio', accent: 'k-amber', labelT: 0.5,
+    title: 'One NIC, two SDNs', detail: seamEdgeDetail(g) },
+  ...chainEdges(g),
+  rtojEdge(g, FULL_G_CORE),
+  rtosEdge(g, FULL_G_CORE),
+  ...podEdges(g, pods),
+]
+
+const LAUNCHER_POD = [{ id: 'launcher' }]
+const FULL_EDGES = [
+  ...nodeEdges(FM1, LAUNCHER_POD, FULL_M_CORE),
+  ...nodeEdges(FM2, LAUNCHER_POD, FULL_M_CORE),
+  { id: 'e-fmjoin-rtr', from: 'ovnf-mjoin', to: 'ovnf-mrouter', step: '',
+    axis: 'vertical', solid: true, quiet: true, label: '100.64.0.1/16', labelT: 0.5, accent: 'k-sky' },
+  ...fullGuestEdges(FG1, G1_PODS, 'fm1-launcher'),
+  ...fullGuestEdges(FG2, G2_PODS, 'fm2-launcher'),
+  { id: 'e-fgjoin-rtr', from: 'ovnf-gjoin', to: 'ovnf-grouter', step: '',
+    axis: 'vertical', solid: true, quiet: true, label: '100.64.0.1/16', labelT: 0.5, accent: 'k-sky' },
+]
+
+const FULL_FLOWS = [
+  {
+    flowId: 'ovnf-pp-cross',
+    flowName: 'Guest pod → guest pod — down through both SDNs and back up',
+    description:
+      'The whole point of this view in one packet: frontend (guest-worker-1) calls backend (guest-worker-2). The guest SDN routes and tunnels it between VM addresses; those are mgmt pod IPs on different metal, so the mgmt SDN routes and tunnels it again between node IPs. Down through two SDNs, across the one real wire, up through both again.',
+    steps: [
+      { step: 1, sourceBoxId: 'fg1-pod-fe', targetBoxId: 'fg1-ls',
+        description: 'frontend sends to 10.128.2.9 — another guest subnet, so it targets its gateway 10.128.0.1, the guest cluster router’s rtos port.' },
+      { step: 2, sourceBoxId: 'fg1-ls', targetBoxId: 'ovnf-grouter',
+        description: 'Routed by the guest’s distributed router *on the source VM* — its table is compiled into the in-VM br-int, from rows in the HCP namespace’s NB DB.' },
+      { step: 3, sourceBoxId: 'ovnf-grouter', targetBoxId: 'fg1-eth0',
+        description: 'The route says 10.128.2.0/23 lives on guest-worker-2, so the VM encapsulates in guest Geneve between VM addresses (10.128.2.15 → 10.128.4.21) and the frame leaves the virtio NIC.' },
+      { step: 4, sourceBoxId: 'fg1-eth0', targetBoxId: 'fm1-launcher',
+        description: 'Out of the VM without leaving the machine: eth0’s other half is the tap device in the virt-launcher pod. The packet is now ordinary mgmt pod traffic from 10.128.2.15.' },
+      { step: 5, sourceBoxId: 'fm1-launcher', targetBoxId: 'fm1-ls',
+        description: 'Enters the launcher pod’s port on LS worker-1 — the guest’s whole "machine network" is this switch, one layer down.' },
+      { step: 6, sourceBoxId: 'fm1-ls', targetBoxId: 'ovnf-mrouter',
+        description: 'The mgmt SDN runs the same play: destination 10.128.4.21 is on worker-2’s pod subnet, so the mgmt distributed router routes it — on worker-1, in the bare-metal br-int.' },
+      { step: 7, sourceBoxId: 'ovnf-mrouter', targetBoxId: 'fm2-ls',
+        description: 'Second encapsulation: mgmt Geneve between machine addresses (192.168.1.11 → 192.168.1.12) crosses the only real wire in the picture. worker-2’s br-int decapsulates into LS worker-2.' },
+      { step: 8, sourceBoxId: 'fm2-ls', targetBoxId: 'fm2-launcher',
+        description: 'Delivered to the other launcher pod’s port — still carrying the intact guest Geneve frame inside.' },
+      { step: 9, sourceBoxId: 'fm2-launcher', targetBoxId: 'fg2-eth0',
+        description: 'Through the tap ↔ virtio pair into guest-worker-2 — the packet climbs back up a layer.' },
+      { step: 10, sourceBoxId: 'fg2-eth0', targetBoxId: 'fg2-ls',
+        description: 'The in-VM br-int decapsulates the guest Geneve straight into LS guest-worker-2.' },
+      { step: 11, sourceBoxId: 'fg2-ls', targetBoxId: 'fg2-pod-be',
+        description: 'Normal L2 delivery to backend’s port. On the wire this was: machine IP → machine IP, carrying mgmt Geneve, carrying guest Geneve, carrying pod IP → pod IP.' },
+    ],
+  },
+  {
+    flowId: 'ovnf-egress',
+    flowName: 'Guest pod → internet — SNAT at each layer',
+    description:
+      'The egress story told twice, once per SDN: the guest’s gateway router SNATs the pod address to the VM address; the mgmt cluster’s gateway router SNATs that to the bare-metal node IP. Each layer’s GR holds its own conntrack table, and the reply un-NATs through both in reverse.',
+    steps: [
+      { step: 1, sourceBoxId: 'fg1-pod-fe', targetBoxId: 'fg1-ls',
+        description: 'frontend sends to 1.1.1.1 — off-cluster, via its gateway 10.128.0.1.' },
+      { step: 2, sourceBoxId: 'fg1-ls', targetBoxId: 'ovnf-grouter',
+        description: 'No guest pod subnet matches. Policy routes steer the packet toward the *local* VM’s gateway router.' },
+      { step: 3, sourceBoxId: 'ovnf-grouter', targetBoxId: 'ovnf-gjoin',
+        description: 'Out the guest rtoj port (100.64.0.1) onto the guest’s join switch.' },
+      { step: 4, sourceBoxId: 'ovnf-gjoin', targetBoxId: 'fg1-gr',
+        description: 'Next hop 100.64.0.2: GR_guest-worker-1, pinned to this VM — the first conntrack table this packet meets.' },
+      { step: 5, sourceBoxId: 'fg1-gr', targetBoxId: 'fg1-eth0',
+        description: 'SNAT № 1: 10.128.0.7 becomes 10.128.2.15 — the VM address, a mgmt pod IP. Out via ext_guest-worker-1 and the in-VM br-ex; in br-int all of it was rule lookups.' },
+      { step: 6, sourceBoxId: 'fg1-eth0', targetBoxId: 'fm1-launcher',
+        description: 'Out the virtio NIC into the launcher pod: from here on the packet is plain mgmt pod egress.' },
+      { step: 7, sourceBoxId: 'fm1-launcher', targetBoxId: 'fm1-ls',
+        description: 'Enters the launcher’s port on LS worker-1.' },
+      { step: 8, sourceBoxId: 'fm1-ls', targetBoxId: 'ovnf-mrouter',
+        description: 'The mgmt cluster router matches no mgmt pod subnet — policy routes steer toward worker-1’s own gateway router. Egress still never crosses to another node first.' },
+      { step: 9, sourceBoxId: 'ovnf-mrouter', targetBoxId: 'ovnf-mjoin',
+        description: 'Out the mgmt rtoj port — 100.64.0.1 again, but the *other* 100.64.0.1: same range, different universe, never in the same packet header.' },
+      { step: 10, sourceBoxId: 'ovnf-mjoin', targetBoxId: 'fm1-gr',
+        description: 'Next hop 100.64.0.2: GR_worker-1, pinned to the metal — the second conntrack table.' },
+      { step: 11, sourceBoxId: 'fm1-gr', targetBoxId: 'fm1-eth0',
+        description: 'SNAT № 2: 10.128.2.15 becomes 192.168.1.11. Out via ext_worker-1 and br-ex onto the uplink.' },
+      { step: 12, sourceBoxId: 'fm1-eth0', targetBoxId: 'ovnf-underlay',
+        description: 'Onto the machine network toward the default gateway — a plain frame from the node IP. The reply un-NATs at GR_worker-1, rides back into the VM, and un-NATs again at GR_guest-worker-1.' },
+    ],
+  },
+]
+
+export const OVN_TOPOLOGY_FULL = {
+  topicId: 'ovn-topology-full',
+  title: 'OVN-Kubernetes — the full HCP picture: both SDNs in their OpenShift objects',
+  tagline:
+    'Everything at once: the management cluster’s OVN topology on the bare-metal workers, the guest cluster’s identical topology nested inside each worker’s VMI, and the grey OpenShift container around every group of boxes — Open vSwitch units on the metal and in each VM, the ovnkube-node pods that realize each layer, the CNIs that wire the pods, the two northbound databases (one in openshift-ovn-kubernetes, one in the HCP namespace), and the virt-launcher pod where the layers meet: its tap device and the VM’s eth0 are one NIC. Grey is machinery; colour is topology. The two trace flows walk a packet down through both SDNs and back up.',
+  colorVar: 'k-orange',
+  canvasClass: 'recon-stack--ovnfull',
+  topology: { edges: FULL_EDGES },
+  flows: FULL_FLOWS,
+  zones: [
+    underlayZone([MACHINE_UNDERLAY_BOX], 'ovnf-underlay-zone'),
+    {
+      id: 'ovnf-nodes-zone',
+      bare: true,
+      layout: 'columns',
+      zones: [
+        fullMetalZone(FM1, FG1, G1_PODS),
+        // The middle column stacks the two logical cores: the mgmt core up at
+        // gateway-router height, the guest core down at the VMIs' height, with
+        // a growing gap between — each inside the grey container naming the
+        // database its rows live in.
+        {
+          id: 'ovnf-core',
+          bare: true,
+          layout: 'stack',
+          colorVar: 'k-purple',
+          zones: [
+            // Top spacer drops the mgmt core toward the metal GRs' height; the
+            // mid spacer holds the guest core down at the nested VMIs' band.
+            { id: 'ovnf-core-top', spacer: true },
+            ghostZone('ovnf-core-m', 'mgmt NB DB · openshift-ovn-kubernetes', [
+              FULL_MJOIN_BOX, FULL_MROUTER_BOX,
+              ghostChip('ovnf-mnb', 'ovnkube-control-plane', 'Deployment', 'the mgmt SDN’s rows', FULL_MNB_GHOST_DETAIL),
+            ]),
+            { id: 'ovnf-core-gap', spacer: true },
+            ghostZone('ovnf-core-g', 'guest NB DB · HCP namespace', [
+              FULL_GJOIN_BOX, FULL_GROUTER_BOX,
+              ghostChip('ovnf-gnb', 'OVN-K8s Master', 'Pod', 'the guest SDN’s rows — on the mgmt cluster', FULL_GNB_GHOST_DETAIL),
+            ]),
+          ],
+        },
+        fullMetalZone(FM2, FG2, G2_PODS),
       ],
     },
   ],
