@@ -344,6 +344,7 @@ export default function App() {
       loop={reconLoop}
       targetBoxId={deepTarget}
       onConsumeTarget={() => setDeepTarget(null)}
+      onSelectComponent={selectComponent}
     />
   )
   const panelFor = (id) => {

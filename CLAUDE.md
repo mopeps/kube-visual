@@ -81,9 +81,9 @@ src/
     OverviewTab.jsx          # recursively renders ZONES tree + ArrowOverlay
     PacketFlowTab.jsx        # expandable hop cards for active event (number + route header, per-sentence glyph+keyword bullets, object chips)
     HopIcon.jsx              # monochrome line glyphs for the hop keywords (hop-kinds.js)
-    DeepDiveTab.jsx          # Deep Dive tab: topic index + switcher → an Overview-style canvas; owns the box-popup selection
+    DeepDiveTab.jsx          # Deep Dive tab: topic index + switcher → an Overview-style canvas; owns the box-popup selection (a box with componentId and no detail opens the component's real AncestryModal instead)
     DeepDiveCanvas.jsx       # renders a deep-dive topic's zone/box tree (reuses Zone/NodeCard) + the systemd reconciliation loop
-    DeepDiveModal.jsx        # box detail popup — AncestryModal's gestures/CSS with generic content (prose, kv, commands, ASCII)
+    DeepDiveModal.jsx        # box detail popup — AncestryModal's gestures/CSS with generic content (prose, kv, commands, ASCII; + an "object card ↗" chip when the box maps to a registered component)
     ReconLoopOverlay.jsx     # SVG overlay for persistent labeled edges: the systemd loop (+ travelling signal token), deep-dive topology.edges, and the network overlay's wiring (idPrefix='')
     ReconControls.jsx        # bottom-docked play/step/reset navigator for the reconciliation loop (mounts at App root like HopInspector; scenario armed via the Deep Dive "Scenario" dropdown)
     UnitGallery.jsx          # systemd unit-file gallery for the systemd deep-dive

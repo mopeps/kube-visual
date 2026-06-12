@@ -39,6 +39,11 @@
 //     between sibling zones (mirrors the box-level spacer).
 //   box   = {
 //     id, title, typePrefix?, subtitle?,
+//     componentId?, // this box IS a registered overview object. With no
+//                   // `detail` of its own, clicking opens the component's real
+//                   // sheet (AncestryModal); with a `detail`, the deep-dive
+//                   // popup keeps its teaching and adds an "object card ↗"
+//                   // chip to the same sheet — one object, never two copies.
 //     variant?,    // diagram shape: 'ellipse' (routers) | 'bus' (the full-width
 //                  // underlay bar) — rendered as a node--<variant> class
 //     caption?,    // one-line scope note shown on the canvas itself (topology

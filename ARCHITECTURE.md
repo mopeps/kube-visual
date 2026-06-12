@@ -363,7 +363,14 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    index + switcher opens a canvas of labelled **zones** holding **clickable
    boxes** (reusing `Zone.jsx`/`NodeCard.jsx`), and clicking a box opens a detail
    **popup** (`DeepDiveModal`, reusing `AncestryModal`'s gestures/CSS) with prose,
-   key/value rows, copyable commands, an example unit, or an ASCII blueprint. Each
+   key/value rows, copyable commands, an example unit, or an ASCII blueprint.
+   A box may carry `componentId` naming the registered overview object it *is*
+   (the OVN views' OpenShift-machinery chips, the launcher pod, the guest app
+   pods): with no `detail` of its own the click opens the component's real
+   `AncestryModal` — the same sheet as the Overview, never a copy — and with a
+   `detail` the popup keeps its view-specific teaching and adds an
+   "object card ↗" chip through to that sheet (chip titles/[typePrefix] come
+   from `components.json` via `components-index`, so the views cannot drift). Each
    topic is pure data in `src/data/deep-dives.js` — a zone tree (`zones → boxes`),
    not registered in `zones.js`/`components.json` — so a new explainer is just
    another entry. The systemd topic additionally declares a `reconciliation`

@@ -22,6 +22,14 @@
 // accent-chip facts, and phrases bullets to LEAD WITH A VERB that
 // interaction-kinds.js classifies — so each line renders as a glyph + keyword
 // row (Carries / Receives / Routes / SNATs …), not a wall of prose.
+//
+// Reuse over copies: a box may carry `componentId` naming the registered
+// overview object it IS. With no `detail` of its own (the OpenShift-machinery
+// ghost chips) clicking it opens the component's real sheet (AncestryModal);
+// with a `detail` (the pods, the launcher) the popup keeps its OVN teaching
+// and adds an "object card ↗" chip to the same sheet — one object everywhere.
+
+import { findComponent } from './components-index'
 
 // The two worker nodes of the reference topology. (ovn-kubernetes numbers the
 // join-switch ports rtoj-: the distributed router takes 100.64.0.1, the
@@ -598,6 +606,18 @@ const ghostZone = (id, label, boxes) => ({
 const ghostChip = (id, title, typePrefix, caption, detail) => ({
   id, title, typePrefix, caption, variant: 'ghost', colorVar: 'k-ghost', detail,
 })
+// A ghost chip that IS a registered overview object: title and [typePrefix]
+// come straight from components.json (so the two views can never drift), and
+// clicking it opens the component's real detail sheet — interactions, the
+// Manifest → Kernel pipeline, primitives, commands — instead of a duplicate
+// deep-dive popup.
+const ghostChipFor = (id, componentId, caption) => {
+  const c = findComponent(componentId)
+  return {
+    id, componentId, title: c.displayName, typePrefix: c.typePrefix,
+    caption, variant: 'ghost', colorVar: 'k-ghost',
+  }
+}
 
 // The same node column, with its boxes re-parented into the three grey
 // containers: OVS on the metal, the logical objects realized by ovn-controller,
@@ -926,7 +946,8 @@ const guestNodeBoxes = (w) => ({
 })
 const guestPodBox = (w, p) => ({
   id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod',
-  colorVar: 'k-amber', variant: 'pod', inline: true, detail: gPodDetail(p.name, p.ip, w),
+  colorVar: 'k-amber', variant: 'pod', inline: true, componentId: p.componentId,
+  detail: gPodDetail(p.name, p.ip, w),
 })
 const GUEST_UNDERLAY_BOX = {
   id: 'ovng-underlay', title: 'Mgmt pod network · 10.128.0.0/14', typePrefix: 'pod SDN', colorVar: 'k-blue',
@@ -964,11 +985,11 @@ const guestNodeZone = (w, pods) => {
 // front end; the back end lives on the other VM so the cross-node flow is the
 // app's real east-west call.
 const G1_PODS = [
-  { id: 'pod-rtr', name: 'router-default', ip: '10.128.0.4' },
-  { id: 'pod-fe', name: 'frontend', ip: '10.128.0.7' },
+  { id: 'pod-rtr', name: 'router-default', ip: '10.128.0.4', componentId: 'openshift-ingress-router-guest' },
+  { id: 'pod-fe', name: 'frontend', ip: '10.128.0.7', componentId: 'frontend-application-pod' },
 ]
 const G2_PODS = [
-  { id: 'pod-be', name: 'backend', ip: '10.128.2.9' },
+  { id: 'pod-be', name: 'backend', ip: '10.128.2.9', componentId: 'backend-application-pod' },
 ]
 
 const GUEST_EDGES = [
@@ -1219,57 +1240,6 @@ const FULL_MNB_GHOST_DETAIL = {
   ],
 }
 
-const FULL_GNB_GHOST_DETAIL = {
-  role: 'OPENSHIFT · GUEST NETWORK CONTROL PLANE',
-  summary:
-    'The guest SDN’s logical space lives nowhere near the guest nodes: its switches and routers are rows in a northbound database served by the OVN-K8s Master pod in the HCP namespace — on the management cluster. The guest network’s control plane never touches a guest VM; only the rows travel down, realized by each VM’s ovn-controller.',
-  sections: [
-    { heading: 'At a glance', tags: ['guest NB DB', 'runs in the HCP namespace', 'control plane off-node'] },
-    { heading: 'What it does', bullets: [
-      'Watches the Guest API Server for Pod, Service and NetworkPolicy events.',
-      'Writes the guest’s logical topology — these join/router rows included — into the guest NB DB.',
-    ] },
-    { heading: 'Explore', commands: [
-      'oc get pods -n clusters-<guest> | grep ovnkube',
-      GUEST_NB_NOTE,
-    ] },
-  ],
-}
-
-const gOvsGhostDetail = (g) => ({
-  role: 'OPENSHIFT · IN-VM DATA PLANE',
-  summary:
-    `Open vSwitch inside the ${g.node} VM — a systemd unit on the guest's RHCOS, exactly as its twin runs on the bare metal below. It is the only real thing on the guest node: the in-VM ovn-controller compiles the guest's whole logical topology into this br-int.`,
-  sections: [
-    { heading: 'At a glance', tags: ['systemd unit in the VM', 'up before the guest kubelet', 'the guest’s only real object'] },
-    { heading: 'What it does', bullets: [
-      'Owns the in-VM br-int and br-ex, every guest pod veth, and the guest Geneve tunnel port.',
-      'Forwards every guest packet according to the OpenFlow rules the in-VM ovn-controller programs.',
-    ] },
-    { heading: 'Explore', commands: [
-      GUEST_VM_NOTE,
-      'systemctl status ovs-vswitchd ovsdb-server',
-      'ovs-vsctl show',
-    ] },
-  ],
-})
-
-const gOvnkubeGhostDetail = (g) => ({
-  role: 'OPENSHIFT · GUEST NODE AGENT POD',
-  summary:
-    `The guest cluster's own ovnkube-node DaemonSet pod, running inside the ${g.node} VM. It realizes the guest's logical objects — ext_${g.node}, GR_${g.node}, LS ${g.node} — exactly as its mgmt twin does one layer down, from rows served out of the HCP namespace.`,
-  sections: [
-    { heading: 'At a glance', tags: ['DaemonSet in the VM', 'guest DB rows → OpenFlow'] },
-    { heading: 'What it does', bullets: [
-      'Compiles the guest NB/SB rows into OpenFlow in the in-VM br-int.',
-      'Maintains the guest Geneve tunnels between the VM addresses.',
-    ] },
-    { heading: 'Explore', commands: [
-      `oc --kubeconfig <guest-kubeconfig> get pods -n openshift-ovn-kubernetes -o wide --field-selector spec.nodeName=${g.node}`,
-    ] },
-  ],
-})
-
 const gCniGhostDetail = (g) => ({
   role: 'OPENSHIFT · IN-VM POD WIRING',
   summary:
@@ -1325,7 +1295,8 @@ const FULL_GROUTER_BOX = {
 
 const launcherBox = (m, g) => ({
   id: `${m.id}-launcher`, title: 'virt-launcher', caption: `${g.hostIp} · the VM’s NIC`, typePrefix: 'Pod',
-  colorVar: 'k-amber', variant: 'pod', inline: true, detail: launcherPodDetail(m, g),
+  colorVar: 'k-amber', variant: 'pod', inline: true, componentId: 'kubevirt-launcher',
+  detail: launcherPodDetail(m, g),
 })
 
 // The guest VMI nested inside its bare-metal host's column, wearing the same
@@ -1338,14 +1309,17 @@ const fullVmZone = (g, pods) => {
     colorVar: 'k-green',
     dashed: true,
     layout: 'stack',
+    // The zone's own identity chip: the VMI is itself a registered overview
+    // object — clicking opens its real sheet.
+    boxes: [ghostChipFor(`${g.id}-vmi`, 'guest-worker-node-vm', 'the node, as the mgmt cluster sees it')],
     zones: [
       ghostZone(`ovnf-${g.id}-ovs`, 'Open vSwitch · systemd in the VM', [
         b.eth0, b.brint,
-        ghostChip(`${g.id}-ovs`, 'ovs-vswitchd.service', 'systemd', 'the in-VM data plane', gOvsGhostDetail(g)),
+        ghostChipFor(`${g.id}-ovs`, 'ovs-guest', 'the in-VM data plane'),
       ]),
       ghostZone(`ovnf-${g.id}-ovnkube`, 'realized by the guest ovn-controller', [
         b.ext, b.gr,
-        ghostChip(`${g.id}-ovnkube`, 'ovnkube-node (guest)', 'Pod', 'guest DB rows → OpenFlow', gOvnkubeGhostDetail(g)),
+        ghostChipFor(`${g.id}-ovnkube`, 'ovn-node-guest', 'guest DB rows → OpenFlow'),
       ]),
       { id: `ovnf-${g.id}-gap`, spacer: true },
       ghostZone(`ovnf-${g.id}-cni`, 'pod wiring · in-VM CNI', [
@@ -1371,11 +1345,11 @@ const fullMetalZone = (m, g, gPods) => {
     zones: [
       ghostZone(`ovnf-${m.id}-ovs`, 'Open vSwitch · systemd on RHCOS', [
         b.eth0, b.brint,
-        ghostChip(`${m.id}-ovs`, 'ovs-vswitchd.service', 'systemd', 'forwards every packet', ovsGhostDetail(m)),
+        ghostChipFor(`${m.id}-ovs`, 'ovs-host', 'forwards every packet'),
       ]),
       ghostZone(`ovnf-${m.id}-ovnkube`, 'realized by ovn-controller', [
         b.ext, b.gr,
-        ghostChip(`${m.id}-ovnkube`, 'ovnkube-node', 'Pod', 'DB rows → OpenFlow', ovnkubeGhostDetail(m)),
+        ghostChipFor(`${m.id}-ovnkube`, 'ovn-node-host', 'DB rows → OpenFlow'),
       ]),
       { id: `ovnf-${m.id}-gap`, spacer: true },
       ghostZone(`ovnf-${m.id}-cni`, 'pod wiring · CNI', [
@@ -1514,7 +1488,7 @@ export const OVN_TOPOLOGY_FULL = {
             { id: 'ovnf-core-gap', spacer: true },
             ghostZone('ovnf-core-g', 'guest NB DB · HCP namespace', [
               FULL_GJOIN_BOX, FULL_GROUTER_BOX,
-              ghostChip('ovnf-gnb', 'OVN-K8s Master', 'Pod', 'the guest SDN’s rows — on the mgmt cluster', FULL_GNB_GHOST_DETAIL),
+              ghostChipFor('ovnf-gnb', 'ovn-master-control', 'the guest SDN’s rows — on the mgmt cluster'),
             ]),
           ],
         },
