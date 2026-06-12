@@ -1845,6 +1845,13 @@ body::after {
   max-width: none;
   border-radius: 999px;
 }
+/* Boxes paint above the structural wiring (SVG z 4), so a long connector
+   passes BEHIND a box instead of striking through its text. The numbered
+   trace arrows (z 10) deliberately stay on top of everything. */
+.recon-stack--topology .node {
+  position: relative;
+  z-index: 5;
+}
 /* Zone labels float above the wiring SVG (z-index 4) on an opaque fill, so a
    line passing the zone's top edge tucks behind the chip instead of striking
    through its text (!important beats the chip's inline translucent bg). */
@@ -1918,6 +1925,13 @@ body::after {
      for the core group that parks beside them. */
   .recon-stack--ovnfull .zone--columns > .zone-content > .zone-content-inner > .zone:not(.zone--bare) .dd-spacer {
     min-height: 374px;
+  }
+  /* Counterpart rows at the same height: the left VM's two pods wrap to a
+     second line under ~478px while the right VM has one pod, which would sink
+     everything below LS worker-2 by a row. Pin the in-VM pod rows (the only
+     wrap-variable block) to the wrapped height on both sides. */
+  .recon-stack--ovnfull .zone--columns > .zone-content > .zone-content-inner > .zone:not(.zone--bare) > .zone-content > .zone-content-inner > .zone > .zone-content > .zone-content-inner > .zone--ghost .dd-box-row {
+    min-height: 120px;
   }
   .recon-stack--topology .zone--nested > .zone-content { padding: 10px 5px; }
   .recon-stack--topology .node {
