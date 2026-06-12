@@ -293,6 +293,11 @@ export default function OverviewTab({
   //   • `programs` — an OVN-K8s Node configures the Open vSwitch data plane
   // The target only gets absorbed when its carrier lives in the same zone; an
   // orphaned reference (cross-zone target) falls through to normal rendering.
+  //
+  // The cards come back wrapped in a .zone-nodes container: display:contents on
+  // desktop (the flex-wrap layout is untouched), a two-column masonry on phones
+  // so cards pack upward instead of leaving holes beside taller neighbours
+  // (the stacked OVN-K8s→OVS pair, an expanded store).
   function renderZoneNodes(zone) {
     const nodes = zone.nodes ?? []
     const byId = new Map(nodes.map(n => [n.id, n]))
@@ -320,7 +325,8 @@ export default function OverviewTab({
       }
       out.push(renderNode(node, zone))
     }
-    return out
+    if (out.length === 0) return null
+    return <div className="zone-nodes" key={`${zone.id}-nodes`}>{out}</div>
   }
 
   function renderZone(zone, depth = 0, parentZone = null) {
@@ -426,7 +432,7 @@ export default function OverviewTab({
             ? [
                 // Wrapper hidden: surface its own nodes and child zones directly
                 // so neither is silently dropped.
-                ...renderZoneNodes(zone),
+                renderZoneNodes(zone),
                 ...(zone.zones ?? []).map(child => renderZone(child)),
               ]
             : [renderZone(zone)]
