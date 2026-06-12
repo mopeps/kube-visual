@@ -138,6 +138,33 @@ body::after {
   align-items: flex-start;
 }
 
+/* A zone's node cards live in a .zone-nodes wrapper (OverviewTab only). On
+   desktop it is layout-invisible — the flex-wrap rows behave exactly as if
+   the cards were direct children. */
+.zone-nodes { display: contents; }
+
+@media (max-width: 640px) {
+  /* On phones the wrapper becomes a two-column masonry (CSS multicol): cards
+     pack each column top-down, so a tall neighbour — the stacked
+     OVN-K8s→OVS pair, an expanded etcd store, a card with extra chips —
+     never strands a hole beside or below a shorter one. The flex-wrap two-up
+     sizing (flex-basis 50%) is replaced by the column width. */
+  .zone-nodes {
+    display: block;
+    flex: 1 1 100%;
+    columns: 2;
+    column-gap: 8px;
+  }
+  /* .overview-canvas scope outranks the cards' own 50%-width mobile rules
+     (.node / .service-pair), which still apply outside the wrapper. */
+  .overview-canvas .zone-nodes > * {
+    width: 100%;
+    max-width: 100%;
+    break-inside: avoid;
+    margin-bottom: 8px;
+  }
+}
+
 /* ── Overview canvas ───────────────────────────────────────────────── */
 .overview-canvas {
   display: flex;
