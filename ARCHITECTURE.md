@@ -347,7 +347,12 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    **OVN-Kubernetes logical network topology** (the classic two-node diagram —
    underlay → per-node `GR_<node>` gateway chains → `LS "join"` →
    `ovn_cluster_router` → per-node pod switches — with three trace flows:
-   same-node, cross-node Geneve, SNAT egress). **It deliberately
+   same-node, cross-node Geneve, SNAT egress), plus two twin views of it: the
+   "big view" (the same boxes drawn inside the greyed OpenShift components that
+   contain them) and the **guest-cluster topology** (the identical wiring as run
+   by the hosted cluster, one turtle down — every "node" a KubeVirt VMI, the
+   underlay the management cluster's pod network, the NB DB rows in the HCP
+   namespace, with Geneve-in-Geneve and double-SNAT trace flows). **It deliberately
    mirrors the Overview's interaction model rather than the packet flow:** a topic
    index + switcher opens a canvas of labelled **zones** holding **clickable
    boxes** (reusing `Zone.jsx`/`NodeCard.jsx`), and clicking a box opens a detail
