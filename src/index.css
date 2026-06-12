@@ -444,8 +444,7 @@ body::after {
 }
 
 /* A Service card's type alias — a tiny tag after the [Service] prefix naming
-   the exposure model (svc_lb / svc_cip / svc_np). Lowercase on purpose: it
-   reads as the object's shorthand, not another shouting label. */
+   the exposure model (SVC_LB / SVC_CIP / SVC_NP). */
 .node-type-alias {
   display: inline-block;
   margin-left: 6px;
@@ -453,8 +452,8 @@ body::after {
   border: 1px solid color-mix(in srgb, var(--node-accent, currentColor) 55%, transparent);
   border-radius: 4px;
   font-size: 0.56rem;
-  letter-spacing: 0.04em;
-  text-transform: none;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--node-accent, currentColor);
   background: color-mix(in srgb, var(--node-accent, currentColor) 10%, transparent);
   vertical-align: 1px;
