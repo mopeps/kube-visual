@@ -30,9 +30,13 @@
 //   }
 //   flow  = { flowId, flowName, description,
 //             steps: [{ step, sourceBoxId, targetBoxId, description }] }
-//   zone  = { id, label, colorVar, dashed?, layout?, boxes: [box], zones?: [zone] }
+//   zone  = { id, label, colorVar, dashed?, ghost?, layout?, boxes: [box], zones?: [zone] }
 //     layout: 'columns' → child zones side-by-side as equal columns;
 //             'stack'   → boxes stacked vertically, centred (a chain).
+//     ghost: greyed background container (the OVN big view's OpenShift
+//            machinery) — muted frame, the coloured boxes inside stay vivid.
+//     A zones[] entry may also be { id, spacer: true } — a flex-grow gap
+//     between sibling zones (mirrors the box-level spacer).
 //   box   = {
 //     id, title, typePrefix?, subtitle?,
 //     variant?,    // diagram shape: 'ellipse' (routers) | 'bus' (the full-width
@@ -59,7 +63,7 @@
 //     },
 //   }
 
-import { OVN_TOPOLOGY } from './ovn-topology'
+import { OVN_TOPOLOGY, OVN_TOPOLOGY_BIG } from './ovn-topology'
 
 // Example unit for the headline service (ovn-kubernetes node daemon). Mirrors
 // the real ordering: structural Requires= on Open vSwitch, chronological After=
@@ -3548,7 +3552,7 @@ const ETCD_RAFT = {
   ],
 }
 
-export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, OVN_TOPOLOGY, API_REQUEST_PATH, ETCD_RAFT, TMUX_SUDO, LINUX_FDS]
+export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, OVN_TOPOLOGY, OVN_TOPOLOGY_BIG, API_REQUEST_PATH, ETCD_RAFT, TMUX_SUDO, LINUX_FDS]
 
 export const findDeepDive = (topicId) =>
   DEEP_DIVES.find((t) => t.topicId === topicId) || null
