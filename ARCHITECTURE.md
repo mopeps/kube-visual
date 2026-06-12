@@ -192,7 +192,11 @@ chips anchor here).
 1. **The Context / Zone Boundaries** — the macro physical/virtual boundaries that frame
    everything else: `[Management Cluster]`, `[Management Master Node]`,
    `[Dedicated Guest Control Plane Namespace]`, `[Management Worker Node]`,
-   `[Guest Worker Node VM]`.
+   `[Guest Worker Node VM]`. Border style is a rule, not a per-zone choice:
+   **physical/virtual machine boundaries draw solid; Kubernetes Namespace zones draw
+   dashed** (`dashed: true` in `zones.js`) — a namespace is a logical grouping, not a
+   wall, and every namespace zone (the Guest Control Plane Namespace, `metallb-system`,
+   …) must wear the same dashed treatment.
 2. **The Active Enforcers (`systemd` Services)** — binary systems executing
    continuous loop cycles directly on a host OS or guest OS instance: `Kubelet`, `CRI-O`,
    `Open vSwitch`, `virt-handler`. `Open vSwitch` is the host's data-plane switch
