@@ -6,6 +6,7 @@ import UnitGallery from './UnitGallery'
 import DeepTree from './DeepTree'
 import { KindIcon } from './InteractionRow'
 import { classifyInteraction } from '../data/interaction-kinds'
+import { findComponent } from '../data/components-index'
 
 // A detail popup for a deep-dive box. Shares AncestryModal's look, gestures and
 // CSS classes (.ancestry-overlay / .ancestry-modal / grip-resize / swipe-dismiss
@@ -21,7 +22,7 @@ const MIN_SHEET_PX = 220
 const DISMISS_SHEET_PX = 120
 let lastSheetHeight = null
 
-export default function DeepDiveModal({ content, onClose }) {
+export default function DeepDiveModal({ content, onClose, onSelectComponent }) {
   const [offset, setOffset] = useState(0)
   const [snapping, setSnapping] = useState(false)
   const [sheetHeight, setSheetHeight] = useState(lastSheetHeight)
@@ -157,6 +158,7 @@ export default function DeepDiveModal({ content, onClose }) {
   if (!content) return null
 
   const { title, typePrefix, subtitle, accent = 'var(--k-cyan)', detail } = content
+  const linked = content.componentId ? findComponent(content.componentId) : null
   const transition = resizing
     ? 'none'
     : snapping
@@ -208,6 +210,33 @@ export default function DeepDiveModal({ content, onClose }) {
           </div>
 
           {subtitle && <div className="deep-detail-subtitle">{subtitle}</div>}
+
+          {/* This box is also a registered overview object — link to its real
+              detail sheet instead of duplicating its content here. Same chip
+              family as the systemd↗ cross-links in the component modal. */}
+          {linked && onSelectComponent && (
+            <button
+              type="button"
+              className="node-badge node-badge--concept"
+              onClick={() => onSelectComponent(content.componentId)}
+              style={{
+                color: accent,
+                borderColor: `${accent}66`,
+                background: `${accent}1a`,
+                fontSize: '0.66rem',
+                padding: '4px 10px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                marginBottom: 12,
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = `${accent}35` }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = `${accent}1a` }}
+              title="Open the full object card — the same sheet as on the Overview"
+            >
+              [{linked.typePrefix}] {linked.displayName} · object card ↗
+            </button>
+          )}
 
           {(detail?.role || detail?.summary) && (
             <div className="detail-section dd-lead">

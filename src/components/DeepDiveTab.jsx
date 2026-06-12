@@ -143,6 +143,7 @@ export default function DeepDiveTab({
   loop,
   targetBoxId,        // a box id to auto-open (a search result landed here)
   onConsumeTarget,    // clear that request once honored
+  onSelectComponent,  // open a registered component's detail sheet (AncestryModal)
 }) {
   const [selectedBoxId, setSelectedBoxId] = useState(null)
   const [selectedEdgeId, setSelectedEdgeId] = useState(null)
@@ -171,13 +172,17 @@ export default function DeepDiveTab({
   useEffect(() => {
     if (!targetBoxId || !boxIndex[targetBoxId]) return
     setSelectedEdgeId(null)
-    setSelectedBoxId(targetBoxId)
+    // Boxes that ARE a registered component (componentId, no own detail) open
+    // the real component sheet instead of a deep-dive popup.
+    const target = boxIndex[targetBoxId].box
+    if (target.componentId && !target.detail) onSelectComponent?.(target.componentId)
+    else setSelectedBoxId(targetBoxId)
     const raf = requestAnimationFrame(() => {
       scrollIntoUpperThird(document.getElementById(`dd-${targetBoxId}`))
     })
     onConsumeTarget?.()
     return () => cancelAnimationFrame(raf)
-  }, [targetBoxId, boxIndex, onConsumeTarget])
+  }, [targetBoxId, boxIndex, onConsumeTarget, onSelectComponent])
 
   // Follow the trace: when a hop is focused, bring its target box into the upper
   // third of whatever scrolls the canvas (mirrors the Overview's trace-follow).
@@ -192,7 +197,20 @@ export default function DeepDiveTab({
   }, [activeFlowStep, activeFlow])
 
   // Only one popup at a time — opening a box closes any open edge and vice versa.
-  const selectBox = useCallback((id) => { setSelectedEdgeId(null); setSelectedBoxId(id) }, [])
+  // A box that IS a registered overview object (componentId, no own detail) —
+  // the OpenShift-machinery chips in the OVN views — opens the component's real
+  // detail sheet (AncestryModal) instead of a deep-dive popup, so the same
+  // object is one object everywhere.
+  const selectBox = useCallback((id) => {
+    setSelectedEdgeId(null)
+    const box = boxIndex[id]?.box
+    if (box?.componentId && !box.detail) {
+      setSelectedBoxId(null)
+      onSelectComponent?.(box.componentId)
+      return
+    }
+    setSelectedBoxId(id)
+  }, [boxIndex, onSelectComponent])
   const selectEdge = useCallback((edge) => { setSelectedBoxId(null); setSelectedEdgeId(edge.id) }, [])
   const closeBox = useCallback(() => { setSelectedBoxId(null); setSelectedEdgeId(null) }, [])
 
@@ -210,6 +228,7 @@ export default function DeepDiveTab({
         subtitle: selected.box.subtitle,
         accent: selected.accent,
         detail: selected.box.detail,
+        componentId: selected.box.componentId,
       }
     : selectedEdge
       ? {
@@ -259,7 +278,11 @@ export default function DeepDiveTab({
           inspector when a flow hop is being inspected (--hop-inset). */}
       <div aria-hidden style={{ height: 'calc(1rem + var(--hop-inset, 0px))' }} />
 
-      <DeepDiveModal content={content} onClose={closeBox} />
+      <DeepDiveModal
+        content={content}
+        onClose={closeBox}
+        onSelectComponent={onSelectComponent ? (id) => { closeBox(); onSelectComponent(id) } : null}
+      />
     </div>
   )
 }
