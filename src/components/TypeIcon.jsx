@@ -3,16 +3,17 @@
 // single-stroke SVG drawn with `currentColor` so it inherits whatever colour the
 // surrounding label uses, and sized at 1em so it tracks the adjacent text.
 //
-// This is the *backbone* glyph map: the same nine shapes encode the same nine
-// kinds everywhere, so the type vocabulary stays consistent no matter which view
+// This is the *backbone* glyph map: the same shapes encode the same kinds
+// everywhere, so the type vocabulary stays consistent no matter which view
 // you're reading. Keyed by the raw `typePrefix` string from components.json /
 // zones.js (see TYPE_GLYPH_KEY for the prefix → glyph-id mapping).
 
 // typePrefix → glyph id. An unknown prefix renders nothing (graceful no-op).
+// (systemd deliberately has NO glyph: the bracketed [systemd] text stands
+// alone — the gear/power symbols it wore earlier are retired.)
 const TYPE_GLYPH_KEY = {
   'Pod': 'pod',
   'Static Pod': 'static-pod',
-  'systemd': 'systemd',
   'Service': 'service',
   'API Object': 'api-object',
   'Custom Resource': 'custom-resource',
@@ -33,14 +34,6 @@ const TYPE_GLYPHS = {
       <rect x="4.5" y="8" width="15" height="11" rx="1.5" />
       <path d="M12 8V4.5" />
       <circle cx="12" cy="3.6" r="1.3" />
-    </>
-  ),
-  // systemd — an OS-level daemon / service unit: a gear (background machinery),
-  // drawn as a hub with radial teeth so it stays crisp at 1em.
-  systemd: (
-    <>
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </>
   ),
   // Service — a virtual front-end fanning traffic to endpoints: a hub + spokes.
@@ -83,9 +76,10 @@ const TYPE_GLYPHS = {
 }
 
 // The glyph drawn next to a node's bracketed [typePrefix] label. Each runtime
-// form gets a distinct mark (Pod hexagon, systemd gear, VMI monitor…)
-// so the form is recognisable at a glance; the Overview legend explains the
-// vocabulary. Renders nothing for a prefix with no glyph (graceful no-op).
+// form gets a distinct mark (Pod hexagon, VMI monitor…) so the form is
+// recognisable at a glance; the Overview legend explains the vocabulary.
+// Renders nothing for a prefix with no glyph (graceful no-op — systemd among
+// them, by design).
 export default function TypeIcon({ typePrefix, className }) {
   const glyph = TYPE_GLYPHS[TYPE_GLYPH_KEY[typePrefix]]
   if (!glyph) return null
