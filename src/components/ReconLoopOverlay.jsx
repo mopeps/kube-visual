@@ -208,7 +208,7 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
             >
               <div className="recon-edge-chip-wrap" style={clickable ? { pointerEvents: 'auto' } : undefined}>
                 <span
-                  className={`recon-edge-chip ${p.quiet ? 'recon-edge-chip--quiet' : ''} ${live ? 'is-live' : ''} ${clickable ? 'is-clickable' : ''}`}
+                  className={`recon-edge-chip ${p.quiet ? 'recon-edge-chip--quiet' : ''} ${p.mobileHide ? 'recon-edge-chip--mhide' : ''} ${live ? 'is-live' : ''} ${clickable ? 'is-clickable' : ''}`}
                   style={{ '--edge-color': p.color }}
                   role={clickable ? 'button' : undefined}
                   tabIndex={clickable ? 0 : undefined}
