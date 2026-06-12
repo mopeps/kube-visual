@@ -1884,6 +1884,13 @@ body::after {
     padding-top: 585px;
     padding-bottom: 430px;
   }
+  /* The full HCP picture stacks TWO cores in the middle column (mgmt up at the
+     metal GRs, guest down at the nested VMIs), so the band opens like the big
+     view's and the growing gap between the cores does the rest. */
+  .recon-stack--ovnfull .zone--columns > .zone-content > .zone-content-inner > .zone--bare > .zone-content > .zone-content-inner {
+    padding-top: 585px;
+    padding-bottom: 560px;
+  }
   .recon-stack--topology .zone--nested > .zone-content { padding: 10px 5px; }
   .recon-stack--topology .node {
     flex: 0 1 auto;

@@ -352,7 +352,13 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    contain them) and the **guest-cluster topology** (the identical wiring as run
    by the hosted cluster, one turtle down — every "node" a KubeVirt VMI, the
    underlay the management cluster's pod network, the NB DB rows in the HCP
-   namespace, with Geneve-in-Geneve and double-SNAT trace flows). **It deliberately
+   namespace, with Geneve-in-Geneve and double-SNAT trace flows), and the
+   **full HCP picture** combining the two: both SDNs on one canvas — the
+   management topology on the bare-metal workers, the guest topology nested
+   inside each worker's VMI zone, two stacked logical cores (mgmt NB DB /
+   guest NB DB in the HCP namespace), every group of boxes inside its greyed
+   OpenShift component, and the virt-launcher pod drawn as the seam where the
+   layers meet (`tap ↔ virtio` — one NIC, two SDNs). **It deliberately
    mirrors the Overview's interaction model rather than the packet flow:** a topic
    index + switcher opens a canvas of labelled **zones** holding **clickable
    boxes** (reusing `Zone.jsx`/`NodeCard.jsx`), and clicking a box opens a detail
