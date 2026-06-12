@@ -129,6 +129,14 @@ body::after {
   align-items: stretch;
 }
 
+/* On the Overview (not the deep-dive canvases, which carry .recon-stack and
+   rely on stretch for equal columns), cards size to their own content: a
+   MetalLB Speaker next to the stacked OVN-K8s-Node→OVS pair stays one card
+   tall instead of stretching into a mostly-empty double-height box. */
+.overview-canvas:not(.recon-stack) .zone-content-inner {
+  align-items: flex-start;
+}
+
 /* ── Overview canvas ───────────────────────────────────────────────── */
 .overview-canvas {
   display: flex;
