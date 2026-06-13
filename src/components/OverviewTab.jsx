@@ -3,8 +3,8 @@ import { ZONES, INTENT_OBJECT_STORE, CONTROLLER_PARENT, OPERATOR_PARENT, FLOW_PA
 import Zone from './Zone'
 import NodeCard from './NodeCard'
 import DeepDiveModal from './DeepDiveModal'
-import NetworkOverlay from './NetworkOverlay'
-import { NET_LAYERS, NET_PARTICIPANTS, NET_TRACE } from '../data/network-topology'
+import NetworkCanvas from './NetworkCanvas'
+import { NET_LAYERS } from '../data/network-zones'
 import { serviceAlias } from '../data/service-alias'
 import IntentStoreCard from './IntentStoreCard'
 import ControllerManagerCard from './ControllerManagerCard'
@@ -101,7 +101,6 @@ export default function OverviewTab({
   // never unmounts), whether the cross-layer packet trace is showing, and the
   // popup content of a clicked chip / edge label.
   const [netLayer, setNetLayer] = useState('both')
-  const [netTrace, setNetTrace] = useState(false)
   const [netSheet, setNetSheet] = useState(null)
   const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
@@ -135,12 +134,7 @@ export default function OverviewTab({
     return {
       isActive: hopIds ? hopIds.has(id) : onPath,
       isOnPath: hopIds != null && onPath && !hopIds.has(id),
-      // With the network overlay on (and no trace running), the components
-      // that realize the SDN keep full opacity and the rest recede, so the
-      // logical wiring reads as figure. An active trace flow wins.
-      isDimmed: hasActive
-        ? !onPath
-        : netOverlay && !NET_PARTICIPANTS.has(id),
+      isDimmed: hasActive ? !onPath : false,
     }
   }
 
@@ -394,9 +388,9 @@ export default function OverviewTab({
     setReplica(null)
     setNetSheet({
       id: chip.id,
-      title: chip.label,
-      typePrefix: chip.kind === 'router' ? 'LogicalRouter' : 'LogicalSwitch',
-      accent: `var(--${NET_LAYERS.find(l => l.id === chip.layer)?.accentVar || 'k-amber'})`,
+      title: chip.title,
+      typePrefix: chip.typePrefix,
+      accent: `var(--${chip.colorVar || 'k-amber'})`,
       detail: chip.detail,
     })
   }
@@ -428,47 +422,46 @@ export default function OverviewTab({
             </button>
           ))}
           <span className="net-bar-sep" aria-hidden>·</span>
-          <button
-            type="button"
-            className={`net-bar-btn net-bar-btn--trace ${netTrace ? 'is-active' : ''}`}
-            onClick={() => setNetTrace(v => !v)}
-            title={NET_TRACE.description}
-          >
-            {netTrace ? '✕ ' : '▸ '}{NET_TRACE.name}
-          </button>
+          <span className="net-bar-hint">
+            The OVN logical topology over the real components. Click any switch,
+            router or node card for details.
+          </span>
         </div>
       )}
-      <div
-        ref={canvasRef}
-        className="border border-border-w rounded-lg overflow-visible overview-canvas"
-        style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
-      >
-        {visibleZones.flatMap(zone =>
-          zone.hideWrapper
-            ? [
-                // Wrapper hidden: surface its own nodes and child zones directly
-                // so neither is silently dropped.
-                renderZoneNodes(zone),
-                ...(zone.zones ?? []).map(child => renderZone(child)),
-              ]
-            : [renderZone(zone)]
-        )}
-        <ArrowOverlay
-          activeEvent={activeEvent}
-          canvasRef={canvasRef}
-          activeStep={activeStep}
-          onSelectStep={onSelectStep}
+      {netOverlay ? (
+        // Network mode: the full component stack gives way to a focused OVN
+        // logical topology — parallel node columns under an overarching shared
+        // core (see NetworkCanvas / network-zones.js).
+        <NetworkCanvas
+          layerFocus={netLayer}
+          onSelectComponent={onSelectComponent}
+          onSelectChip={selectNetChip}
+          onSelectEdge={selectNetEdge}
         />
-        {netOverlay && (
-          <NetworkOverlay
+      ) : (
+        <div
+          ref={canvasRef}
+          className="border border-border-w rounded-lg overflow-visible overview-canvas"
+          style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
+        >
+          {visibleZones.flatMap(zone =>
+            zone.hideWrapper
+              ? [
+                  // Wrapper hidden: surface its own nodes and child zones directly
+                  // so neither is silently dropped.
+                  renderZoneNodes(zone),
+                  ...(zone.zones ?? []).map(child => renderZone(child)),
+                ]
+              : [renderZone(zone)]
+          )}
+          <ArrowOverlay
+            activeEvent={activeEvent}
             canvasRef={canvasRef}
-            layerFocus={netLayer}
-            traceOn={netTrace}
-            onSelectChip={selectNetChip}
-            onSelectEdge={selectNetEdge}
+            activeStep={activeStep}
+            onSelectStep={onSelectStep}
           />
-        )}
-      </div>
+        </div>
+      )}
       {/* Tail spacer: a little room to scroll past the last object, growing by
           the height of whichever bottom panel is open — the hop inspector
           (--hop-inset) or a resized detail sheet in peek mode (--peek-inset) —
