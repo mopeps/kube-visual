@@ -165,9 +165,22 @@ body::after {
    row (the desktop namespaces / launcher pod). The overview stacks its nested
    zones full-width anyway (no side-by-side columns here — that's deep-dive
    only), so force them to a full row, giving their masonry the real width to
-   pack into. Depth-0 replica zones keep their own side-by-side flex sizing. */
-.overview-canvas .zone--nested {
+   pack into. Depth-0 replica zones keep their own side-by-side flex sizing.
+   Scoped OFF the recon-stack: its deep-dive columns stack nested zones in a
+   flex column where `flex-basis: 100%` would make every nested zone claim the
+   whole column height and they'd all shrink to an equal split — crushing a
+   tall nested zone (the OVN full view's VMI, which carries its own chain of
+   grey containers) and spilling its pods off the bottom of the canvas. */
+.overview-canvas:not(.recon-stack) .zone--nested {
   flex: 1 1 100%;
+  width: 100%;
+}
+/* Deep-dive nested zones (the OVN big/full views' grey OpenShift containers):
+   full column width, but each sized to its OWN content height — never an
+   equal-height split. The stack's flex-grow spacer still pushes the trailing
+   zone to the column's bottom. */
+.recon-stack .zone--nested {
+  flex: 0 0 auto;
   width: 100%;
 }
 
@@ -1786,11 +1799,45 @@ body::after {
 .recon-stack--topology .node--ghost .node-type-prefix { font-size: 0.52rem; margin-bottom: 1px; }
 .recon-stack--topology .node--ghost .node-title { font-size: 0.72rem; margin-bottom: 0; }
 .recon-stack--topology .node--ghost .node-subtitle { font-size: 0.58rem; }
-/* The full picture's middle band only holds the two stacked core groups —
-   keep it lean so the bare-metal columns (each nesting a whole VMI) get the
-   width. Phones override this with their own band rules below. */
+/* The full picture's middle band carries only the two NB-DB core groups. By
+   default (the 640–880px band) it stays a lean reserved column beside the
+   bare-metal ones — narrow enough to give the columns the width, wide enough
+   that the cores never reach a box. Wide screens upgrade this to the overlap
+   below. Phones override it again further down. */
 .recon-stack--ovnfull .zone--columns > .zone-content > .zone-content-inner > .zone--bare {
   flex: 0.55 1 0;
+}
+
+/* Wide screens: the cores stop claiming a column of their own. The bare middle
+   collapses to a zero-width seam between the two bare-metal columns (which then
+   split the full width), and each core group floats CENTRED on that seam —
+   overflowing equally into both columns' inner margins, which are always empty
+   because every box in a topology column is centre-aligned. A lifted z-index
+   paints them over the column fills, so they overlap the bare-metal zones
+   without ever covering a box or OpenShift object. The column's own vertical
+   spacers still park the mgmt core at the metal gateway band and the guest core
+   down at the nested VMI band. 880px is the floor at which the seam-centred
+   core still clears the boxes on both sides (incl. the wider guest pod row). */
+@media (min-width: 880px) {
+  .recon-stack--ovnfull .zone--columns > .zone-content > .zone-content-inner > .zone--bare {
+    flex: 0 0 0;
+    position: relative;
+    z-index: 6;
+  }
+  .recon-stack--ovnfull .zone--columns > .zone-content > .zone-content-inner > .zone--bare > .zone-content {
+    overflow: visible;
+  }
+  .recon-stack--ovnfull .zone--columns > .zone-content > .zone-content-inner > .zone--bare > .zone-content > .zone-content-inner {
+    align-items: center;
+  }
+  /* The core groups: a seam-centred width that overflows the zero-width column
+     symmetrically into both empty inner margins. It scales with the viewport
+     so it never reaches the centre-aligned boxes as the columns narrow. */
+  .recon-stack--ovnfull .zone--columns > .zone-content > .zone-content-inner > .zone--bare .zone--ghost {
+    flex: 0 0 auto;
+    width: clamp(190px, 21vw, 290px);
+    max-width: none;
+  }
 }
 /* The underlay is the diagram's cloud: one wide bar spanning the canvas that
    both nodes' eth0 lines drop out of (paired with the edges' `spread`). */
