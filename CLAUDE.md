@@ -50,7 +50,7 @@ src/
     pipeline-kinds.js        # classifies pipeline-node actions into band-aware keyword chips
     deep-dives.js            # Deep Dive tab topics (systemd loop, Linux boot, HCP node boot, OVN topology…) as zone trees of clickable boxes (mirrors the ZONES shape)
     ovn-topology.js          # the ovn-topology deep-dive topic + its OVN teaching content (box/edge details, flows) + three twin topics: the "big view" (same boxes inside greyed OpenShift component containers), the guest-cluster view (the same wiring run by the hosted cluster — VMI nodes riding the mgmt pod network), and the full HCP picture (both SDNs at once, the guest chain nested inside each bare-metal column, every group in its OpenShift container)
-    network-zones.js         # Overview network-MODE model: buildNetworkView() regroups the REAL zones.js components into a network-first map (lifted mgmt namespaces, three master+worker pair columns as two rows, the guest VM) + the floating OVN logical objects (NET_LOGICAL) and their connectors (NET_CONNECTORS)
+    network-zones.js         # Overview network-MODE model: the floating OVN logical objects (NET_LOGICAL mgmt/guest) + connectors (NET_CONNECTORS) for the parallel view, where OverviewTab renders the normal canvas 3x in #net-col-N columns (one per node pair) with the shared SDN core floating above/below
     pipeline-model.js        # builds a component's pipeline-tree band model
     interaction-kinds.js     # classifies interaction sentences (icon + accent)
     hop-kinds.js             # classifies a packet-flow step/sentence into an action keyword + glyph (Resolves/Routes/Terminates…); hopPoints() splits a step into per-sentence bullets

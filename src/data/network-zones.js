@@ -1,29 +1,23 @@
 // ── The Overview's network-mode "bigger picture" ────────────────────────────
-// When the "Network" toggle is on (wide desktop), the Overview rearranges its
-// REAL components into a network-first map and floats the OVN logical objects
-// over the top of it. Nothing here redefines a component — it pulls the actual
-// zone/node objects out of zones.js and regroups them, so every card still
-// opens its true AncestryModal and every special card (etcd intent store,
-// controller/operator sets, realized Service/NetworkPolicy flows, MetalLB)
-// renders exactly as on the normal canvas.
+// When the "Network" toggle is on (wide desktop), the Overview renders the SAME
+// normal canvas THREE times in parallel columns — one per node pair — and floats
+// the OVN logical objects over the top. The columns are built by OverviewTab from
+// the real zone tree (so every card still opens its true AncestryModal and every
+// special card renders unchanged); this file supplies only the floating logical
+// objects and the connectors that tie the three columns to them.
 //
-// Layout (buildNetworkView):
-//   • the cluster-scoped singletons that aren't per-node — the guest control
-//     plane namespace and metallb-system — sit as full-width zones up top.
-//   • the bare-metal nodes are paired into THREE parallel columns: a master row
-//     (master-1/2/3) above a worker row (worker-1/2/3). Column N reads as one
-//     "pair": master-N over worker-N.
-//   • the KubeVirt launcher / guest VM (with its app pods, Services and the
-//     NetworkPolicy) is a full-width zone at the bottom — that is where the
-//     guest SDN physically lives.
+// Layout:
+//   • three identical full-overview columns side by side (#net-col-0/1/2), each
+//     the whole management context — control-plane static pods, the guest control
+//     plane & metallb namespaces, and the guest VM.
+//   • the management SDN core (NET_LOGICAL.mgmt: join switch + cluster router)
+//     floats in a reserved strip ABOVE the columns; the guest SDN core
+//     (NET_LOGICAL.guest) floats in a reserved strip BELOW them.
 //
-// The logical objects (NET_LOGICAL) are NOT zones. They render as free-floating
-// objects in the gap between the master row and the worker row, spanning all
-// three pairs — so it reads that one join switch / one cluster router is shared
-// by every node — while sitting in the empty band so they never cover a card.
-// NET_CONNECTORS wire each node's Open vSwitch (br-int) up to them.
-
-import { ZONES } from './zones'
+// The logical objects are NOT zones — they're free-floating objects in the empty
+// strips, spanning all three columns, so it reads that one join switch / one
+// cluster router is shared by every pair. NET_CONNECTORS leg each column up to
+// the mgmt core (net-col-top-N) and down to the guest core (net-col-bot-N).
 
 // ── Synthetic logical-object details (DeepDiveModal shape) ──────────────────
 
@@ -105,16 +99,29 @@ export const NET_LOGICAL = {
   ],
 }
 
-// Always-on connectors (ReconLoopOverlay, idPrefix ''). Each bare-metal node's
-// Open vSwitch (br-int) legs its gateway router up to the shared join switch;
-// the cluster router peers across it. The guest core wires to the in-VM switch.
-const grLeg = (n, ovsId) => ({
-  id: `net-gr-${n}`, from: ovsId, to: 'net-mjoin', step: '',
+// Always-on connectors (ReconLoopOverlay, idPrefix ''). The three parallel node
+// pairs each leg up to the one shared SDN core that floats above them; the join
+// switch and cluster router peer across the stub subnet. The guest SDN core
+// floats below and wires to each pair likewise.
+export const NET_PAIRS = [0, 1, 2]
+
+const mgmtLeg = (i) => ({
+  id: `net-mleg-${i}`, from: `net-col-top-${i}`, to: 'net-mjoin', step: '',
   axis: 'vertical', solid: true, quiet: true, accent: 'k-orange',
-  title: `GR_${n} on the join switch`,
+  title: `node pair ${i + 1} → shared join switch`,
   detail: {
     role: 'GATEWAY ROUTER LEG',
-    summary: `${n}’s gateway router — compiled into this node’s Open vSwitch (br-int) — peers with the distributed cluster router across the join switch. It is pinned to the node because it holds NAT/conntrack state.`,
+    summary: `Node pair ${i + 1}'s gateway router — compiled into its Open vSwitch (br-int) — peers with the distributed cluster router across the shared join switch. Every pair holds its own leg; the switch itself is one logical object for the whole cluster.`,
+  },
+})
+
+const guestLeg = (i) => ({
+  id: `net-gleg-${i}`, from: `net-col-bot-${i}`, to: 'net-gjoin', step: '',
+  axis: 'vertical', solid: true, quiet: true, accent: 'k-purple',
+  title: `node pair ${i + 1} → guest join switch`,
+  detail: {
+    role: 'GATEWAY ROUTER LEG (GUEST)',
+    summary: `The guest node's gateway router, compiled into the in-VM br-int on pair ${i + 1}. Guest egress is SNATed here to the VM's address — which is itself a management pod IP.`,
   },
 })
 
@@ -128,13 +135,7 @@ export const NET_CONNECTORS = [
       summary: 'The distributed router’s single leg on the join switch (100.64.0.1). OVN routers can’t peer directly; this stub subnet exists purely so they can next-hop to each other.',
     },
   },
-  grLeg('master-1', 'ovs-master'),
-  grLeg('master-2', 'ovs-master-2'),
-  grLeg('master-3', 'ovs-master-3'),
-  grLeg('worker-1', 'ovs-host'),
-  grLeg('worker-2', 'ovs-worker-2'),
-  grLeg('worker-3', 'ovs-worker-3'),
-  // Guest SDN — over the VM zone.
+  ...NET_PAIRS.map(mgmtLeg),
   {
     id: 'net-gjoin-rtr', from: 'net-grouter', to: 'net-gjoin', step: '',
     solid: true, quiet: true, accent: 'k-purple', label: 'rtoj · 100.64.0.1',
@@ -144,65 +145,10 @@ export const NET_CONNECTORS = [
       summary: 'Same construct as the management layer’s, even the same default subnet — a row in the guest’s own northbound database. The two SDNs never collide: each is its own address universe, meeting only through encapsulation.',
     },
   },
-  {
-    id: 'net-gjoin-ovs', from: 'ovs-guest', to: 'net-gjoin', step: '',
-    axis: 'vertical', solid: true, quiet: true, accent: 'k-purple',
-    title: 'GR_guest-worker on the guest join switch',
-    detail: {
-      role: 'GATEWAY ROUTER LEG (GUEST)',
-      summary: 'The guest node’s gateway router, compiled into the in-VM br-int. Guest egress is SNATed here to the VM’s address — which is itself a management pod IP.',
-    },
-  },
+  ...NET_PAIRS.map(guestLeg),
 ]
-
-// Which connector ids belong to the guest layer (the rest are mgmt) — used by
-// the SDN-layer focus dimmer.
-export const NET_GUEST_EDGE_IDS = new Set(['net-gjoin-rtr', 'net-gjoin-ovs'])
 
 export const NET_LAYERS = [
   { id: 'mgmt', label: 'Management SDN', accentVar: 'k-orange' },
   { id: 'guest', label: 'Guest SDN', accentVar: 'k-purple' },
 ]
-
-// ── Build the rearranged view from the real zone tree ───────────────────────
-
-const findZone = (zones, id) => {
-  for (const z of zones || []) {
-    if (z.id === id) return z
-    const hit = findZone(z.zones, id)
-    if (hit) return hit
-  }
-  return null
-}
-
-// A node-level copy of a bare-metal node zone: keep its own nodes (the host
-// agents + network plane + any static pods), drop the child namespaces and the
-// replica-row machinery — those are placed elsewhere in this view.
-const nodeOnly = (zone, label) => ({
-  ...zone, label: label || zone.label, zones: undefined, replicaNodes: undefined,
-})
-
-// Builds the network-mode layout once (the zone tree is static). Returns the
-// pieces OverviewTab assembles: the full-width singleton zones, the two rows of
-// three node columns, and the guest VM zone.
-export function buildNetworkView() {
-  const mgmtCtx = findZone(ZONES, 'management-context')
-  const masterNode = findZone(ZONES, 'master-node')
-  const workerNode = findZone(ZONES, 'worker-node')
-  const [m2, m3] = masterNode.replicaNodes
-  const [w2, w3] = workerNode.replicaNodes
-
-  return {
-    // Cluster-scoped management namespaces, lifted to the top.
-    topZones: [
-      findZone(ZONES, 'guest-cp-namespace'),
-      findZone(ZONES, 'metallb-system'),
-    ].filter(Boolean),
-    // The three master+worker pairs, as aligned rows of columns.
-    masters: [nodeOnly(masterNode, 'master-1 · bare metal'), m2, m3],
-    workers: [nodeOnly(workerNode, 'worker-1 · bare metal'), w2, w3],
-    // The guest VM (launcher → VMI with the app pods, Services, NetworkPolicy).
-    bottomZones: [findZone(ZONES, 'kubevirt-launcher-zone')].filter(Boolean),
-    ctxColor: mgmtCtx?.color || 'var(--k-blue)',
-  }
-}
