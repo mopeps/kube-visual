@@ -399,26 +399,27 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    rules conflict); the static wiring hides under 640px where the stacked columns
    would make it criss-cross.
  * **Network mode (Overview, wide desktop ≥1280px):** the header's **Network**
-   toggle *replaces* the full component stack with a focused OVN logical topology —
-   so the network story reads on its own, free of the control-plane Pods, etcd,
-   operators and MetalLB that have nothing to do with it. Its shape follows the
-   `ovn-topology-full` deep dive: the bare-metal nodes are laid out as **parallel
-   columns** (master-1/2/3, worker-1/2/3), each a tidy node zone showing only its
-   network plane (Open vSwitch / br-int at the top, the OVN-K8s Node agent below),
-   and the management SDN's **shared logical core** (join switch + distributed
-   `ovn_cluster_router`) sits in an *overarching* bordered band that spans the full
-   width above every column. Each node's gateway-router leg rises from its br-int
-   straight up to the join switch through the empty gap — the core overlaps *over*
-   the nodes without ever drawing on the cards inside them. The worker that hosts
-   the guest VMs nests the **guest** SDN's own little topology inside its column
-   (its own purple join/router core, the in-VM Open vSwitch, the application pods).
-   The view is built from the REAL components (`src/data/network-zones.js`), so a
-   node card opens its true `AncestryModal`; the synthetic switch/router chips and
-   the edge labels open OVN teaching popups (`DeepDiveModal`). A layer switch (Both
-   / Management SDN / Guest SDN) **dims** the non-focused layer. Rendered by
-   `NetworkCanvas.jsx` (Zone / NodeCard for the boxes; edges via `ReconLoopOverlay`
-   with `idPrefix=''` so synthetic chips and real component ids connect alike). On
-   phones the OVN deep-dive topic carries the same story instead.
+   toggle *regroups* the whole Overview around the network — the same real
+   components, rearranged into a network-first map, with the OVN logical objects
+   floating over the top of it. `buildNetworkView()` in `src/data/network-zones.js`
+   pulls the actual zone/node objects out of `zones.js` (so every card still opens
+   its true `AncestryModal`, and every special card — etcd intent store,
+   controller/operator sets, realized Service/NetworkPolicy flows, MetalLB —
+   renders unchanged) and lays them out as: the cluster-scoped management
+   namespaces (guest control plane, metallb-system) as full-width zones up top;
+   the bare-metal nodes paired into **three parallel columns** — a master row
+   (master-1/2/3) above a worker row (worker-1/2/3), so column *N* reads as one
+   master-N/worker-N pair; and the KubeVirt launcher / guest VM (app pods,
+   Services, the NetworkPolicy) as a full-width zone at the bottom. The **logical
+   objects are not zones**: the management join switch + `ovn_cluster_router`
+   render as free, dashed, floating objects in the gap *between* the two node rows
+   — spanning all three pairs so it reads that one switch / one router is shared by
+   every node, parked in the empty band so they never cover a card — and the guest
+   join/router float likewise over the VM zone. `NET_CONNECTORS` wire each node's
+   Open vSwitch (br-int) up to them via `ReconLoopOverlay` (`idPrefix=''`).
+   Rendered inline in `OverviewTab.jsx` (it reuses the Overview's own `renderZone`,
+   extended to honour a zone's `layout`/`bare`/`className`, plus a `renderLogicalBand`
+   helper). On phones the OVN deep-dive topic carries the same story instead.
 ## 3. Reference Data Schemas
 ### Metadata Schema (components.json)
 ```json

@@ -2011,45 +2011,66 @@ body::after {
   min-width: 180px;
 }
 
-/* ── Network-mode canvas ────────────────────────────────────────────────
-   The focused OVN logical topology that REPLACES the component stack while
-   the Network toggle is on: an overarching shared-core band above a row of
-   parallel node columns (network-zones.js). Reuses the deep-dive topology
-   look (.recon-stack--topology), tuned a little tighter so six bare-metal
-   columns fit a wide desktop and the core band reads as one wide thing. */
-.recon-stack--netmode { gap: 44px; padding: 18px 16px 22px; }
+/* ── Network-mode "bigger picture" ──────────────────────────────────────
+   The real components regrouped around the network: lifted management
+   namespaces up top, three master+worker pairs as two aligned rows of node
+   columns, the guest VM below — with the OVN logical objects floating in the
+   gaps (see network-zones.js / renderLogicalBand in OverviewTab). */
+.net-bigpicture { gap: 14px; }
 
-/* The overarching core bands — full-width bordered zones; each tier's join
-   switch + cluster router sit side by side, centred over the columns below. */
-.recon-stack--netmode > .zone:not(.zone--bare) { align-self: stretch; }
-.recon-stack--netmode > .zone:not(.zone--bare) .dd-box-row { gap: clamp(24px, 8vw, 90px); }
-
-/* Both tiers' columns: even spacing, top-aligned. */
-.recon-stack--netmode .zone--columns > .zone-content > .zone-content-inner {
+/* The two node rows are bare layout:'columns' containers — three equal-width
+   columns each (a master-N over a worker-N "pair"). The base overview rule
+   forces nested zones to full width; override it so the columns sit side by
+   side. Top-aligned so a short replica column doesn't stretch to match the
+   detailed node. */
+.net-bigpicture .net-node-row > .zone-content { padding: 0; }
+.net-bigpicture .net-node-row > .zone-content > .zone-content-inner {
   gap: 12px;
   align-items: flex-start;
+  flex-wrap: nowrap;
 }
-/* Management tier — the six bare-metal nodes fill the width as equal columns. */
-.recon-stack--netmode .nz-mgmt-row > .zone-content > .zone-content-inner > .zone {
+.net-bigpicture .net-node-row > .zone-content > .zone-content-inner > .zone {
   flex: 1 1 0;
-  min-width: 132px;
+  width: auto;
+  min-width: 0;
 }
-/* Guest tier — its worker column(s) are capped and centred under the wide core
-   band rather than stretched edge to edge. */
-.recon-stack--netmode .nz-guest-row > .zone-content > .zone-content-inner {
+
+/* The floating logical band: join switch + cluster router as free objects, not
+   a zone. It straddles the gap between the rows (mgmt) or sits over the VM
+   (guest), spanning all three pairs and centred. A small negative margin lets
+   the objects overlap the zone borders above/below — the cards are inset, so
+   they're never covered. z-index lifts the objects over the connector lines. */
+.net-logical-band {
+  position: relative;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
+  align-items: center;
+  gap: clamp(28px, 10vw, 120px);
+  margin: -10px 0;
+  pointer-events: none;
 }
-.recon-stack--netmode .nz-guest-row > .zone-content > .zone-content-inner > .zone {
-  flex: 0 1 300px;
-  min-width: 200px;
-  max-width: 340px;
+.net-logical-band > .node { pointer-events: auto; }
+/* Floating objects read as "logical, not real": a dashed glow ring + a faint
+   lift off the canvas, distinct from the solid component cards. */
+.net-logical-band > .node {
+  border-style: dashed;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.55), 0 0 0 4px var(--bg);
+  backdrop-filter: blur(2px);
 }
-.recon-stack--netmode .zone--stack > .zone-content > .zone-content-inner { gap: 26px; }
+.net-logical-band--guest { margin-top: -22px; }
+
+/* The guest VM and its floating guest-SDN band share a positioning context. */
+.net-guest-wrap { position: relative; }
 
 @media (max-width: 1023px) {
-  /* Network mode is a wide-desktop affordance; if it is ever shown narrow,
-     let the management columns wrap instead of crushing. */
-  .recon-stack--netmode .nz-mgmt-row > .zone-content > .zone-content-inner > .zone {
+  /* Network mode is a wide-desktop affordance; if shown narrow, let the node
+     columns wrap rather than crush. */
+  .net-bigpicture .net-node-row > .zone-content > .zone-content-inner {
+    flex-wrap: wrap;
+  }
+  .net-bigpicture .net-node-row > .zone-content > .zone-content-inner > .zone {
     flex: 1 1 46%;
   }
 }

@@ -3,8 +3,8 @@ import { ZONES, INTENT_OBJECT_STORE, CONTROLLER_PARENT, OPERATOR_PARENT, FLOW_PA
 import Zone from './Zone'
 import NodeCard from './NodeCard'
 import DeepDiveModal from './DeepDiveModal'
-import NetworkCanvas from './NetworkCanvas'
-import { NET_LAYERS } from '../data/network-zones'
+import ReconLoopOverlay from './ReconLoopOverlay'
+import { buildNetworkView, NET_LOGICAL, NET_CONNECTORS } from '../data/network-zones'
 import { serviceAlias } from '../data/service-alias'
 import IntentStoreCard from './IntentStoreCard'
 import ControllerManagerCard from './ControllerManagerCard'
@@ -14,6 +14,13 @@ import ServicePair from './ServicePair'
 import Masonry from './Masonry'
 import ArrowOverlay from './ArrowOverlay'
 import { scrollIntoUpperThird } from '../lib/scroll'
+
+// The network-mode layout is static (built once from the zone tree): the three
+// master+worker pairs as two aligned rows of node columns, plus the lifted
+// singleton zones. The logical objects float between/over them (see below).
+const NET_VIEW = buildNetworkView()
+const NET_MASTERS_ROW = { id: 'net-masters', bare: true, layout: 'columns', color: NET_VIEW.ctxColor, className: 'net-node-row', zones: NET_VIEW.masters }
+const NET_WORKERS_ROW = { id: 'net-workers', bare: true, layout: 'columns', color: NET_VIEW.ctxColor, className: 'net-node-row', zones: NET_VIEW.workers }
 
 // How long the reveal spotlight stays lit before it auto-clears. Kept in sync
 // with the `.is-highlighted` pulse in index.css (reveal-pulse-* runs 1.3s × 2),
@@ -96,10 +103,8 @@ export default function OverviewTab({
   // A clicked condensed replica node ({ id, title, zone }) — opens a small
   // explainer popup, separate from the componentId-keyed AncestryModal flow.
   const [replica, setReplica] = useState(null)
-  // Network-overlay state: which SDN layer is in focus (the other one dims,
-  // never unmounts), whether the cross-layer packet trace is showing, and the
-  // popup content of a clicked chip / edge label.
-  const [netLayer, setNetLayer] = useState('both')
+  // Network-mode state: the popup content of a clicked logical switch / router
+  // or connector label (shares the deep-dive sheet with the replica popup).
   const [netSheet, setNetSheet] = useState(null)
   const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
@@ -349,6 +354,9 @@ export default function OverviewTab({
         color={zone.color}
         dashed={zone.dashed}
         depth={depth}
+        layout={zone.layout}
+        bare={zone.bare}
+        className={zone.className}
         // A zone may double as a component (e.g. the VM); wire up its identity
         // so it can anchor arrows, highlight, and open the detail panel. A
         // replica zone borrows the same wiring for its explainer popup.
@@ -404,38 +412,68 @@ export default function OverviewTab({
     })
   }
 
+  // The floating logical objects (join switch / cluster router) — rendered as a
+  // free band, NOT a zone: it straddles the gap between the node rows (mgmt) or
+  // sits over the guest VM (guest), spanning every pair, but lands in empty
+  // space so it never covers a card. Clicking one opens its teaching popup.
+  const renderLogicalBand = (objects, extraClass) => (
+    <div className={`net-logical-band ${extraClass}`} aria-label="OVN logical objects (shared by every node)">
+      {objects.map((o) => (
+        <NodeCard
+          key={o.id}
+          id={o.id}
+          title={o.title}
+          typePrefix={o.typePrefix}
+          variant={o.variant}
+          color={`var(--${o.colorVar})`}
+          subtitle={o.caption}
+          onClick={() => selectNetChip(o)}
+        />
+      ))}
+    </div>
+  )
+
   return (
     <>
       {netOverlay && (
         <div className="net-bar">
-          <span className="net-bar-label">SDN layers</span>
-          {['both', ...NET_LAYERS.map(l => l.id)].map((id) => (
-            <button
-              key={id}
-              type="button"
-              className={`net-bar-btn ${netLayer === id ? 'is-active' : ''}`}
-              onClick={() => setNetLayer(id)}
-            >
-              {id === 'both' ? 'Both' : NET_LAYERS.find(l => l.id === id).label}
-            </button>
-          ))}
-          <span className="net-bar-sep" aria-hidden>·</span>
+          <span className="net-bar-label">Network map</span>
           <span className="net-bar-hint">
-            The OVN logical topology over the real components. Click any switch,
-            router or node card for details.
+            The whole cluster regrouped around the network — three master+worker
+            pairs, with the OVN join switch &amp; cluster router shared across every
+            node and the guest SDN over the VM. Click any card, switch or router.
           </span>
         </div>
       )}
       {netOverlay ? (
-        // Network mode: the full component stack gives way to a focused OVN
-        // logical topology — parallel node columns under an overarching shared
-        // core (see NetworkCanvas / network-zones.js).
-        <NetworkCanvas
-          layerFocus={netLayer}
-          onSelectComponent={onSelectComponent}
-          onSelectChip={selectNetChip}
-          onSelectEdge={selectNetEdge}
-        />
+        // Network mode: the real components, regrouped into a network-first map —
+        // lifted management namespaces up top, three master+worker pairs as two
+        // aligned rows, the guest VM below — with the OVN logical objects floating
+        // over the gaps (see network-zones.js / LogicalBand above).
+        <div
+          ref={canvasRef}
+          className="border border-border-w rounded-lg overflow-visible overview-canvas net-bigpicture"
+          style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
+        >
+          {NET_VIEW.topZones.map((z) => renderZone(z))}
+          {renderZone(NET_MASTERS_ROW)}
+          {renderLogicalBand(NET_LOGICAL.mgmt, 'net-logical-band--mgmt')}
+          {renderZone(NET_WORKERS_ROW)}
+          {NET_VIEW.bottomZones.map((z) => (
+            <div className="net-guest-wrap" key={z.id}>
+              {renderLogicalBand(NET_LOGICAL.guest, 'net-logical-band--guest')}
+              {renderZone(z)}
+            </div>
+          ))}
+          <ReconLoopOverlay
+            edges={NET_CONNECTORS}
+            canvasRef={canvasRef}
+            activeEdgeId={null}
+            signal={null}
+            onSelectEdge={selectNetEdge}
+            idPrefix=""
+          />
+        </div>
       ) : (
         <div
           ref={canvasRef}
