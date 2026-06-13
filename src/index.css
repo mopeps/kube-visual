@@ -2058,21 +2058,19 @@ body::after {
   min-width: 180px;
 }
 
-/* ── Network-mode "bigger picture" ──────────────────────────────────────
-   The normal Overview rendered THREE times in parallel columns — one per node
-   pair — with the shared OVN logical core floating in reserved strips above
-   (mgmt) and below (guest) the columns (see network-zones.js / OverviewTab). */
+/* ── Network-mode topology ──────────────────────────────────────────────
+   The network-filtered Overview rendered THREE times in parallel columns — one
+   per node pair — where each drillable component box opens to show its internal
+   Linux primitives + integrations (see network-internals.js / PrimitiveBoxCard). */
 .net-bigpicture { position: relative; }
 
-/* The three parallel pair-columns. Each column is a full normal-overview stack. */
+/* The three parallel pair-columns. */
 .net-cols {
   display: flex;
   align-items: flex-start;
   gap: 18px;
   margin: 12px 0;
 }
-/* With the OVN overlay on, reserve the strips above/below for the floating cores. */
-.net-bigpicture--net .net-cols { margin: 104px 0; }
 .net-col {
   flex: 1 1 0;
   min-width: 0;
@@ -2081,45 +2079,57 @@ body::after {
   gap: 8px;
   position: relative;
 }
-/* A column header that doubles as the anchor each pair's gateway-router leg
-   rises from, up to the shared join switch. */
 .net-col-cap {
   align-self: center;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.66rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--tx-muted);
   padding: 3px 12px;
   border: 1px solid var(--border-w);
   border-radius: 999px;
   background: var(--bg-2);
 }
-/* The bottom anchor for the guest-SDN leg — a hairline, just a connector hook. */
-.net-col-foot { height: 1px; align-self: center; width: 40%; }
 
-/* The shared OVN core — join switch + cluster router as free objects (not a
-   zone), centred in the reserved strip, spanning all three columns. */
-.net-core {
-  position: absolute;
-  left: 0;
-  right: 0;
-  z-index: 6;
+/* ── A component box opened to show its internals (PrimitiveBoxCard) ──────
+   Reuses .intent-store-expanded for the full-width opened card; .primitive-band
+   partitions the interior by placement (user space vs kernel datapath, etc.). */
+.primitive-box .primitive-band { margin-top: 8px; }
+/* The "kernel boundary" rule between user-space daemons and the datapath. */
+.primitive-boundary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 2px 6px;
+  color: var(--tx-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.primitive-boundary::before,
+.primitive-boundary::after {
+  content: '';
+  flex: 1;
+  border-top: 1px dashed var(--border-w);
+}
+.primitive-band-label {
+  color: var(--tx-muted);
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  margin: 0 2px 5px;
+}
+.primitive-band-boxes {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: clamp(28px, 9vw, 110px);
-  pointer-events: none;
+  gap: 8px;
 }
-.net-core--mgmt { top: 14px; }
-.net-core--guest { bottom: 14px; }
-.net-core > .node { pointer-events: auto; }
-/* Logical, not real: a dashed ring + a lift off the canvas, distinct from the
-   solid component cards below. */
-.net-core > .node {
-  border-style: dashed;
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.55), 0 0 0 4px var(--bg);
+/* The sub-boxes size to content (a row of primitives), not the fixed node width. */
+.primitive-band-boxes > .node {
+  width: auto;
+  min-width: 116px;
+  flex: 0 1 auto;
 }
 
 @media (max-width: 1100px) {

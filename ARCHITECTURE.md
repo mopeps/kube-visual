@@ -402,29 +402,35 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    would make it criss-cross.
  * **Big view & Network mode (Overview, wide desktop ≥1280px):** two header
    toggles. **Big view** renders the **whole normal Overview three times in
-   parallel columns** — one per node pair. **Network** (enabled only once Big view
-   is on, since the OVN core spans all three columns) floats the shared OVN logical
-   objects over the top.
-   `OverviewTab.jsx` reuses its own `renderOverviewStack()` (the exact normal-canvas
-   content) inside three `#net-col-N` columns, so every card still opens its true
-   `AncestryModal` and every special card (etcd intent store, controller/operator
-   sets, realized Service/NetworkPolicy flows, MetalLB) renders unchanged. The
-   **logical objects are not zones**: the management join switch + `ovn_cluster_router`
-   (`NET_LOGICAL.mgmt` in `src/data/network-zones.js`) float, dashed, in a reserved
-   strip **above** the columns; the guest join/router (`NET_LOGICAL.guest`) float in
-   a reserved strip **below** — each spanning all three columns so it reads that one
-   switch / one router is shared by every pair, parked in empty space so they never
-   cover a card. `NET_CONNECTORS` leg each column up to the mgmt core
-   (`net-col-top-N`) and down to the guest core (`net-col-bot-N`) via
-   `ReconLoopOverlay` (`idPrefix=''`). The trailing replica rows are suppressed in
-   this mode (the three columns are the three pairs). **With Network on, the columns
-   are also pruned to network-only**: `filterNetworkZone()` keeps just the components
-   whose `role` (components.json) is a network role — plus the network control-plane
-   operators (Cluster Network / Multus / Ingress / DNS), surfaced out of the CPO/CVO
-   operator-set cards as standalone cards — and drops everything else (control-plane
-   pods, etcd, storage, monitoring, app workloads) and any now-empty zone. The
-   classifier is `isNetworkComponent` in `src/data/network-components.js`. On phones the OVN deep-dive
-   topic carries the same story instead.
+   parallel columns** — one per node pair (`#net-col-N`), reusing
+   `renderOverviewStack()` so every card still opens its true `AncestryModal`. The
+   trailing replica rows are suppressed (the three columns are the three pairs).
+   **Network** (enabled only once Big view is on) turns those columns into a
+   **detailed networking topology**:
+   - The columns are pruned to network-only by `filterNetworkZone()` —
+     `isNetworkComponent` (`src/data/network-components.js`) keeps components whose
+     `role` (components.json) is a network role, plus the network control-plane
+     operators (Cluster Network / Multus / Ingress / DNS) lifted out of the CPO/CVO
+     operator-set cards; everything else and any now-empty zone is dropped.
+   - **Each drillable component box opens *in place* to show its own internals** —
+     never a zone. `PrimitiveBoxCard.jsx` (the generalised expand-in-place card)
+     partitions the component's own card body into placement bands (e.g. user space
+     vs a `── kernel boundary ──` vs the `openvswitch.ko` datapath) holding the
+     primitive sub-boxes. **Default expanded**; a `▴` control collapses any one
+     independently (`netCollapsedIds` Set). The five integrations live in
+     `src/data/network-internals.js` (`INTERNAL_TOPOLOGY`): Open vSwitch →
+     ovsdb-server/ovs-vswitchd/br-int/br-ex; OVN-K8s Master → NB-DB rows
+     `ovn_cluster_router (100.64.0.1)` + `LS "join"` + SB DB (so the logical objects
+     live inside the real pod, not floating); MetalLB Speaker → AF_PACKET GARP;
+     Multus → the VM's `tap0`; Konnectivity Server → its tunnel endpoint.
+   - **Integration edges** (`buildNetworkEdges` → one `ReconLoopOverlay`, `idPrefix=''`)
+     wire the boxes with their mechanism labels — `db.sock` (OVN-K8s Node → ovs-vswitchd),
+     `GARP` (MetalLB Speaker → br-ex), `tap0 → br-int` (Multus → br-int), the
+     Konnectivity tunnel, `NB→SB→node`. Sub-box and card DOM ids are namespaced per
+     column (`nt-c{N}-…`) so the three columns never collide. Sub-box clicks open a
+     `DeepDiveModal`.
+
+   On phones the OVN deep-dive topic carries the same story instead.
 ## 3. Reference Data Schemas
 ### Metadata Schema (components.json)
 ```json
