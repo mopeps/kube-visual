@@ -146,9 +146,9 @@ body::after {
 @media (max-width: 640px) {
   /* On phones the wrapper becomes a two-column masonry (CSS multicol): cards
      pack each column top-down, so a tall neighbour — the stacked
-     OVN-K8s→OVS pair, an expanded etcd store, a card with extra chips —
-     never strands a hole beside or below a shorter one. The flex-wrap two-up
-     sizing (flex-basis 50%) is replaced by the column width. */
+     OVN-K8s→OVS pair, a card with extra chips — never strands a hole beside or
+     below a shorter one. The flex-wrap two-up sizing (flex-basis 50%) is
+     replaced by the column width. */
   .zone-nodes {
     display: block;
     flex: 1 1 100%;
@@ -164,14 +164,26 @@ body::after {
     margin-bottom: 8px;
   }
   /* An expand-in-place store (etcd intent store, controller set, operator set,
-     realized flows) is full-width by design, but inside the two-column masonry
-     it would otherwise be confined to a single column — clipping its objects to
-     half the row. Make it span every column so it reveals at full width. The
-     realized-flows store opens inside a .service-pair, so match either the store
-     itself or a direct child wrapping one. */
-  .overview-canvas .zone-nodes > .intent-store-expanded,
-  .overview-canvas .zone-nodes > *:has(.intent-store-expanded) {
-    column-span: all;
+     realized flows) is full-width by design. A CSS multicol can't give a single
+     item the full row without `column-span: all`, and engines size a spanning
+     child inconsistently — it can blow the whole zone out far wider than the
+     screen. So the moment a zone holds an expanded store, that wrapper leaves
+     masonry for plain flex-wrap: the store (flex 1 1 100%) takes the full row
+     and the remaining cards fall back to their own two-up sizing. The masonry
+     only matters in the collapsed steady state anyway. */
+  .zone-nodes:has(.intent-store-expanded) {
+    columns: auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  /* Undo the multicol child overrides so the cards' own flex sizing wins:
+     two-up for normal cards, full-row for the expanded store/pair. */
+  .overview-canvas .zone-nodes:has(.intent-store-expanded) > * {
+    width: auto;
+    max-width: none;
+    margin-bottom: 0;
   }
 }
 
