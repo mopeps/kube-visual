@@ -2049,6 +2049,49 @@ body::after {
   border-color: color-mix(in srgb, var(--k-amber) 60%, transparent);
   background: color-mix(in srgb, var(--k-amber) 12%, transparent);
 }
+.net-bar-hint {
+  color: var(--tx-muted);
+  font-size: 0.62rem;
+  flex: 1 1 240px;
+  min-width: 180px;
+}
+
+/* ── Network-mode canvas ────────────────────────────────────────────────
+   The focused OVN logical topology that REPLACES the component stack while
+   the Network toggle is on: an overarching shared-core band above a row of
+   parallel node columns (network-zones.js). Reuses the deep-dive topology
+   look (.recon-stack--topology), tuned a little tighter so six bare-metal
+   columns fit a wide desktop and the core band reads as one wide thing. */
+.recon-stack--netmode { gap: 44px; padding: 18px 16px 22px; }
+
+/* The overarching core band — a full-width bordered zone; its join switch and
+   cluster router sit side by side, centred over the columns below. */
+.recon-stack--netmode > .zone:first-child { align-self: stretch; }
+.recon-stack--netmode > .zone:first-child .dd-box-row { gap: clamp(24px, 8vw, 90px); }
+
+/* The six node columns: even spacing, top-aligned so a short column (just an
+   agent + switch) doesn't stretch to match the tall worker that nests the
+   guest VM. */
+.recon-stack--netmode .zone--columns > .zone-content > .zone-content-inner {
+  gap: 12px;
+  align-items: flex-start;
+}
+/* Keep each node column compact and self-contained. */
+.recon-stack--netmode .zone--columns > .zone-content > .zone-content-inner > .zone {
+  flex: 1 1 0;
+  min-width: 132px;
+}
+.recon-stack--netmode .zone--stack > .zone-content > .zone-content-inner { gap: 26px; }
+/* The nested guest-VM zone inside the worker column keeps its own dashed box. */
+.recon-stack--netmode .zone--nested { width: 100%; flex: 1 1 100%; }
+
+@media (max-width: 1023px) {
+  /* Network mode is a wide-desktop affordance; if it is ever shown narrow,
+     let the columns wrap instead of crushing. */
+  .recon-stack--netmode .zone--columns > .zone-content > .zone-content-inner > .zone {
+    flex: 1 1 46%;
+  }
+}
 
 /* Quiet edge labels — plain coloured text riding the line (a halo of page
    background keeps it readable), like the bare "100.64.0.1/16" annotations of

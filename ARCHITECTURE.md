@@ -398,24 +398,27 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    line. A topic sets `reconciliation` *or* `topology`, never both (their canvas gap
    rules conflict); the static wiring hides under 640px where the stacked columns
    would make it criss-cross.
- * **Network overlay (Overview, wide desktop ≥1280px):** the header's **Network**
-   toggle draws the OVN *logical* topology over the real canvas, so the link between
-   diagram objects and actual OpenShift components stays visible. Both HCP SDN
-   layers are modeled in `src/data/network-topology.js`: the **management** OVN
-   (orange — join switch + distributed `ovn_cluster_router` chips parked between the
-   node zones, gateway-router legs from every node's Open vSwitch and from each
-   replica card, `LS worker-1` anchored over the KubeVirt launcher whose pod port
-   *is* the guest VM's NIC) and the **guest** OVN (purple — its control plane
-   anchored at the HCP namespace's OVN-K8s Master where the NB DB rows live, its
-   node switch/gateway router beside the application pods inside the VM). Chips and
-   edge labels open detail popups (`DeepDiveModal`); non-participating cards dim. A
-   layer switch (Both / Management SDN / Guest SDN) **dims** the non-focused layer —
-   never unmounts it, because most packets traverse both — and a numbered
-   cross-layer **packet trace** (guest pod → guest pod on another node) walks the
-   double-Geneve story chip by chip. Rendered by `NetworkOverlay.jsx` (chips
-   measured against their anchor cards; edges via `ReconLoopOverlay` with
-   `idPrefix=''` so chips and real component ids connect alike). On phones the OVN
-   deep-dive topic carries the same story instead.
+ * **Network mode (Overview, wide desktop ≥1280px):** the header's **Network**
+   toggle *replaces* the full component stack with a focused OVN logical topology —
+   so the network story reads on its own, free of the control-plane Pods, etcd,
+   operators and MetalLB that have nothing to do with it. Its shape follows the
+   `ovn-topology-full` deep dive: the bare-metal nodes are laid out as **parallel
+   columns** (master-1/2/3, worker-1/2/3), each a tidy node zone showing only its
+   network plane (Open vSwitch / br-int at the top, the OVN-K8s Node agent below),
+   and the management SDN's **shared logical core** (join switch + distributed
+   `ovn_cluster_router`) sits in an *overarching* bordered band that spans the full
+   width above every column. Each node's gateway-router leg rises from its br-int
+   straight up to the join switch through the empty gap — the core overlaps *over*
+   the nodes without ever drawing on the cards inside them. The worker that hosts
+   the guest VMs nests the **guest** SDN's own little topology inside its column
+   (its own purple join/router core, the in-VM Open vSwitch, the application pods).
+   The view is built from the REAL components (`src/data/network-zones.js`), so a
+   node card opens its true `AncestryModal`; the synthetic switch/router chips and
+   the edge labels open OVN teaching popups (`DeepDiveModal`). A layer switch (Both
+   / Management SDN / Guest SDN) **dims** the non-focused layer. Rendered by
+   `NetworkCanvas.jsx` (Zone / NodeCard for the boxes; edges via `ReconLoopOverlay`
+   with `idPrefix=''` so synthetic chips and real component ids connect alike). On
+   phones the OVN deep-dive topic carries the same story instead.
 ## 3. Reference Data Schemas
 ### Metadata Schema (components.json)
 ```json

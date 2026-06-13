@@ -50,7 +50,7 @@ src/
     pipeline-kinds.js        # classifies pipeline-node actions into band-aware keyword chips
     deep-dives.js            # Deep Dive tab topics (systemd loop, Linux boot, HCP node boot, OVN topology…) as zone trees of clickable boxes (mirrors the ZONES shape)
     ovn-topology.js          # the ovn-topology deep-dive topic + its OVN teaching content (box/edge details, flows) + three twin topics: the "big view" (same boxes inside greyed OpenShift component containers), the guest-cluster view (the same wiring run by the hosted cluster — VMI nodes riding the mgmt pod network), and the full HCP picture (both SDNs at once, the guest chain nested inside each bare-metal column, every group in its OpenShift container)
-    network-topology.js      # Overview network-overlay model: SDN-layer chips + always-on labeled edges + the cross-layer packet trace
+    network-zones.js         # Overview network-MODE model: the OVN logical topology as parallel bare-metal node columns (real components) under an overarching shared-core band + always-on labeled edges (replaced the old network-topology.js overlay)
     pipeline-model.js        # builds a component's pipeline-tree band model
     interaction-kinds.js     # classifies interaction sentences (icon + accent)
     hop-kinds.js             # classifies a packet-flow step/sentence into an action keyword + glyph (Resolves/Routes/Terminates…); hopPoints() splits a step into per-sentence bullets
@@ -69,7 +69,7 @@ src/
     SwipeViews.jsx           # compact-mode horizontal pager between tabs (finger-tracking, per-pane scroll)
     Zone.jsx                 # one labeled zone; renders nested child zones recursively (layout: 'columns' | 'stack' variants)
     NodeCard.jsx             # one box inside a zone (shows [typePrefix] label)
-    NetworkOverlay.jsx       # Overview overlay (wide desktop): OVN logical-topology chips + labeled edges over the real components, layer dimmer + packet trace
+    NetworkCanvas.jsx        # Overview network-MODE canvas (wide desktop): replaces the component stack with the parallel-column OVN topology from network-zones.js (Zone/NodeCard boxes + ReconLoopOverlay edges, idPrefix=''); node cards open real AncestryModals, synthetic switch/router chips open DeepDiveModal, layer dimmer
     TypeIcon.jsx             # glyph for a node's typePrefix ([Pod]/[systemd]/…)
     ServicePair.jsx          # stacks a Service over the in-zone target it `exposes`
     Masonry.jsx              # hand-rolled shortest-column packing for a zone's node cards (fills the gaps a flex grid leaves; an expanded store spans the full width in place)
