@@ -5,6 +5,7 @@ import NodeCard from './NodeCard'
 import DeepDiveModal from './DeepDiveModal'
 import ReconLoopOverlay from './ReconLoopOverlay'
 import { NET_LOGICAL, NET_CONNECTORS, NET_PAIRS } from '../data/network-zones'
+import { isNetworkComponent } from '../data/network-components'
 import { serviceAlias } from '../data/service-alias'
 import IntentStoreCard from './IntentStoreCard'
 import ControllerManagerCard from './ControllerManagerCard'
@@ -75,6 +76,28 @@ function replicaDetail(title, parentZone) {
       },
     ],
   }
+}
+
+// Network mode (Big view): prune a zone to its network components. Keeps network
+// nodes; surfaces the network control-plane operators out of the CPO/CVO
+// operator-set cards as standalone nodes; drops everything else and any zone
+// that ends up empty (no labelled empty boxes). Preserves zone metadata
+// (hideWrapper / componentId / replicaNodes / …) via spread.
+function filterNetworkZone(zone) {
+  const nodes = []
+  for (const node of zone.nodes ?? []) {
+    if (isNetworkComponent(node)) {
+      nodes.push(node)
+    } else if (node.operators) {
+      // A non-network operator set (CPO/CVO): lift out its network operators.
+      for (const op of node.operators) {
+        if (isNetworkComponent(op)) nodes.push(op)
+      }
+    }
+  }
+  const zones = (zone.zones ?? []).map(filterNetworkZone).filter(Boolean)
+  if (!nodes.length && !zones.length) return null
+  return { ...zone, nodes, zones }
 }
 
 export default function OverviewTab({
@@ -411,17 +434,21 @@ export default function OverviewTab({
   // The normal Overview canvas content — the management context surfaced as its
   // master-node / worker-node stack. Shared by the normal canvas and rendered
   // once per parallel column in network mode.
-  const renderOverviewStack = () =>
-    visibleZones.flatMap(zone =>
-      zone.hideWrapper
-        ? [
-            // Wrapper hidden: surface its own nodes and child zones directly
-            // so neither is silently dropped.
-            renderZoneNodes(zone),
-            ...(zone.zones ?? []).map(child => renderZone(child)),
-          ]
-        : [renderZone(zone)]
-    )
+  // `networkOnly` (Network mode) prunes the tree to network components first —
+  // see filterNetworkZone. The normal/big-view paths pass nothing and render the
+  // full stack.
+  const renderOverviewStack = (networkOnly = false) =>
+    (networkOnly ? visibleZones.map(filterNetworkZone).filter(Boolean) : visibleZones)
+      .flatMap(zone =>
+        zone.hideWrapper
+          ? [
+              // Wrapper hidden: surface its own nodes and child zones directly
+              // so neither is silently dropped.
+              renderZoneNodes(zone),
+              ...(zone.zones ?? []).map(child => renderZone(child)),
+            ]
+          : [renderZone(zone)]
+      )
 
   // The shared OVN logical core (join switch + cluster router) — floats in a
   // reserved strip above (mgmt) or below (guest) the three columns, NOT a zone,
@@ -471,7 +498,7 @@ export default function OverviewTab({
                 <div className="net-col-cap" id={`net-col-top-${i}`}>
                   Node pair {i + 1}
                 </div>
-                {renderOverviewStack()}
+                {renderOverviewStack(netOverlay)}
                 <div className="net-col-foot" id={`net-col-bot-${i}`} aria-hidden />
               </div>
             ))}
