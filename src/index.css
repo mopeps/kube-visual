@@ -163,6 +163,16 @@ body::after {
     break-inside: avoid;
     margin-bottom: 8px;
   }
+  /* An expand-in-place store (etcd intent store, controller set, operator set,
+     realized flows) is full-width by design, but inside the two-column masonry
+     it would otherwise be confined to a single column — clipping its objects to
+     half the row. Make it span every column so it reveals at full width. The
+     realized-flows store opens inside a .service-pair, so match either the store
+     itself or a direct child wrapping one. */
+  .overview-canvas .zone-nodes > .intent-store-expanded,
+  .overview-canvas .zone-nodes > *:has(.intent-store-expanded) {
+    column-span: all;
+  }
 }
 
 /* ── Overview canvas ───────────────────────────────────────────────── */
