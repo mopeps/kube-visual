@@ -4,7 +4,7 @@ import Zone from './Zone'
 import NodeCard from './NodeCard'
 import DeepDiveModal from './DeepDiveModal'
 import ReconLoopOverlay from './ReconLoopOverlay'
-import { buildNetworkView, NET_LOGICAL, NET_CONNECTORS } from '../data/network-zones'
+import { NET_LOGICAL, NET_CONNECTORS, NET_PAIRS } from '../data/network-zones'
 import { serviceAlias } from '../data/service-alias'
 import IntentStoreCard from './IntentStoreCard'
 import ControllerManagerCard from './ControllerManagerCard'
@@ -14,13 +14,6 @@ import ServicePair from './ServicePair'
 import Masonry from './Masonry'
 import ArrowOverlay from './ArrowOverlay'
 import { scrollIntoUpperThird } from '../lib/scroll'
-
-// The network-mode layout is static (built once from the zone tree): the three
-// master+worker pairs as two aligned rows of node columns, plus the lifted
-// singleton zones. The logical objects float between/over them (see below).
-const NET_VIEW = buildNetworkView()
-const NET_MASTERS_ROW = { id: 'net-masters', bare: true, layout: 'columns', color: NET_VIEW.ctxColor, className: 'net-node-row', zones: NET_VIEW.masters }
-const NET_WORKERS_ROW = { id: 'net-workers', bare: true, layout: 'columns', color: NET_VIEW.ctxColor, className: 'net-node-row', zones: NET_VIEW.workers }
 
 // How long the reveal spotlight stays lit before it auto-clears. Kept in sync
 // with the `.is-highlighted` pulse in index.css (reveal-pulse-* runs 1.3s × 2),
@@ -412,12 +405,26 @@ export default function OverviewTab({
     })
   }
 
-  // The floating logical objects (join switch / cluster router) — rendered as a
-  // free band, NOT a zone: it straddles the gap between the node rows (mgmt) or
-  // sits over the guest VM (guest), spanning every pair, but lands in empty
-  // space so it never covers a card. Clicking one opens its teaching popup.
-  const renderLogicalBand = (objects, extraClass) => (
-    <div className={`net-logical-band ${extraClass}`} aria-label="OVN logical objects (shared by every node)">
+  // The normal Overview canvas content — the management context surfaced as its
+  // master-node / worker-node stack. Shared by the normal canvas and rendered
+  // once per parallel column in network mode.
+  const renderOverviewStack = () =>
+    visibleZones.flatMap(zone =>
+      zone.hideWrapper
+        ? [
+            // Wrapper hidden: surface its own nodes and child zones directly
+            // so neither is silently dropped.
+            renderZoneNodes(zone),
+            ...(zone.zones ?? []).map(child => renderZone(child)),
+          ]
+        : [renderZone(zone)]
+    )
+
+  // The shared OVN logical core (join switch + cluster router) — floats in a
+  // reserved strip above (mgmt) or below (guest) the three columns, NOT a zone,
+  // spanning all three pairs. Clicking one opens its teaching popup.
+  const renderCore = (objects, extraClass) => (
+    <div className={`net-core ${extraClass}`} aria-label="Shared OVN logical objects">
       {objects.map((o) => (
         <NodeCard
           key={o.id}
@@ -439,32 +446,34 @@ export default function OverviewTab({
         <div className="net-bar">
           <span className="net-bar-label">Network map</span>
           <span className="net-bar-hint">
-            The whole cluster regrouped around the network — three master+worker
-            pairs, with the OVN join switch &amp; cluster router shared across every
-            node and the guest SDN over the VM. Click any card, switch or router.
+            The whole Overview, three node pairs in parallel — with the one OVN
+            join switch &amp; cluster router they all share floating above, and the
+            guest SDN core below. Click any card, switch or router for details.
           </span>
         </div>
       )}
       {netOverlay ? (
-        // Network mode: the real components, regrouped into a network-first map —
-        // lifted management namespaces up top, three master+worker pairs as two
-        // aligned rows, the guest VM below — with the OVN logical objects floating
-        // over the gaps (see network-zones.js / LogicalBand above).
+        // Network mode: the normal canvas rendered three times in parallel
+        // columns (one per node pair), with the shared OVN core floating in the
+        // reserved strips above and below (see network-zones.js).
         <div
           ref={canvasRef}
           className="border border-border-w rounded-lg overflow-visible overview-canvas net-bigpicture"
           style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
         >
-          {NET_VIEW.topZones.map((z) => renderZone(z))}
-          {renderZone(NET_MASTERS_ROW)}
-          {renderLogicalBand(NET_LOGICAL.mgmt, 'net-logical-band--mgmt')}
-          {renderZone(NET_WORKERS_ROW)}
-          {NET_VIEW.bottomZones.map((z) => (
-            <div className="net-guest-wrap" key={z.id}>
-              {renderLogicalBand(NET_LOGICAL.guest, 'net-logical-band--guest')}
-              {renderZone(z)}
-            </div>
-          ))}
+          {renderCore(NET_LOGICAL.mgmt, 'net-core--mgmt')}
+          <div className="net-cols">
+            {NET_PAIRS.map((i) => (
+              <div className="net-col" id={`net-col-${i}`} key={i}>
+                <div className="net-col-cap" id={`net-col-top-${i}`}>
+                  Node pair {i + 1}
+                </div>
+                {renderOverviewStack()}
+                <div className="net-col-foot" id={`net-col-bot-${i}`} aria-hidden />
+              </div>
+            ))}
+          </div>
+          {renderCore(NET_LOGICAL.guest, 'net-core--guest')}
           <ReconLoopOverlay
             edges={NET_CONNECTORS}
             canvasRef={canvasRef}
@@ -480,16 +489,7 @@ export default function OverviewTab({
           className="border border-border-w rounded-lg overflow-visible overview-canvas"
           style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
         >
-          {visibleZones.flatMap(zone =>
-            zone.hideWrapper
-              ? [
-                  // Wrapper hidden: surface its own nodes and child zones directly
-                  // so neither is silently dropped.
-                  renderZoneNodes(zone),
-                  ...(zone.zones ?? []).map(child => renderZone(child)),
-                ]
-              : [renderZone(zone)]
-          )}
+          {renderOverviewStack()}
           <ArrowOverlay
             activeEvent={activeEvent}
             canvasRef={canvasRef}

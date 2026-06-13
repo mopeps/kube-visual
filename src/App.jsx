@@ -108,7 +108,9 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem(REPLICAS_KEY, replicasOpen ? '1' : '0') } catch { /* ignore */ }
   }, [replicasOpen])
-  const showReplicas = (isWide && replicasOpen) || netOverlay
+  // Network mode lays out its own three parallel node columns, so the normal
+  // canvas's trailing replica rows are suppressed there.
+  const showReplicas = isWide && replicasOpen && !netOverlay
 
   // When the packet flow is docked beside the overview it stops being a tab, so
   // it never lives in two places at once. Snap off it if it was active.
@@ -378,13 +380,13 @@ export default function App() {
             aria-pressed={replicasOpen}
             disabled={netOverlay}
             title={netOverlay
-              ? 'The network overlay needs every node — replicas are shown while it is on'
+              ? 'Network mode already shows all three node pairs in parallel'
               : replicasOpen
                 ? 'Hide the additional master/worker nodes'
                 : 'Show all master/worker nodes (3 + 3)'}
           >
             <span aria-hidden>⧉</span>
-            {replicasOpen || netOverlay ? 'Hide replicas' : 'All nodes'}
+            {replicasOpen && !netOverlay ? 'Hide replicas' : 'All nodes'}
           </button>
         )}
         {isWide && (

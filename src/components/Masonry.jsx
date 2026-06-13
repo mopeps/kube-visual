@@ -31,8 +31,8 @@ export default function Masonry({ minColWidth = 120, gap = 8, className = '', ch
     if (!el) return
 
     // A zone with NO sibling child zones is a leaf: it can shrink-wrap to the
-    // columns it actually fills, so a one-card namespace (metallb-system) draws
-    // a small box instead of stretching across the row. A zone that also holds
+    // columns it actually fills, so a sparse leaf zone draws a small box instead
+    // of stretching across the row. A zone that also holds
     // child zones (master/worker nodes) must stay full-width — its children
     // need the room — so the .zone--nested CSS rule keeps it filled and we leave
     // its width alone. Reset any prior shrink so we measure the full available

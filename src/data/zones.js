@@ -141,6 +141,20 @@ export const ZONES = [
               { label: 'ARP/NDP', color: 'var(--k-blue)' },
             ],
           },
+          // MetalLB controller — the Deployment that watches LoadBalancer
+          // Services and allocates VIPs from the pools, which the per-node
+          // speakers then advertise. It lives in the metallb-system namespace,
+          // but MetalLB is a node-level networking concern, so it sits here on
+          // the node beside its speaker rather than in a separate namespace zone.
+          {
+            id: 'metallb-controller',
+            title: 'MetalLB Controller',
+            typePrefix: 'Pod',
+            badges: [
+              { label: 'Deployment', color: 'var(--k-amber)' },
+              { label: 'IP allocation', color: 'var(--k-amber)' },
+            ],
+          },
           // The management (bare metal) cluster's OWN control plane, run by the
           // master kubelet from /etc/kubernetes/manifests — these sit directly
           // on the master node alongside its host agents.
@@ -795,35 +809,6 @@ export const ZONES = [
                 title: 'Ignition Server',
                 typePrefix: 'Pod',
                 badges: [{ label: 'Bootstrap', color: 'var(--k-sky)' }],
-              },
-            ],
-          },
-          // metallb-system — a management-cluster namespace (NOT inside the
-          // guest). MetalLB is the bare-metal stand-in for a cloud LoadBalancer:
-          // the guest is a "cloud-hosted" cluster whose cloud IS this management
-          // cluster, so the guest's LoadBalancer Services are fulfilled here, not
-          // by a speaker inside the guest. The controller allocates VIPs and the
-          // per-node speakers (on the node zones) advertise them via ARP/NDP in
-          // L2 mode. Its config CRs (IPAddressPool / L2Advertisement) are pure
-          // desired state, so they live in the Management Etcd intent store above,
-          // not as standalone cards here.
-          {
-            id: 'metallb-system',
-            label: 'metallb-system Namespace',
-            color: 'var(--k-amber)',
-            colorVar: 'k-amber',
-            // Namespace zones draw dashed (a logical grouping, not a machine
-            // boundary) — same treatment as the Guest Control Plane Namespace.
-            dashed: true,
-            nodes: [
-              {
-                id: 'metallb-controller',
-                title: 'MetalLB Controller',
-                typePrefix: 'Pod',
-                badges: [
-                  { label: 'Deployment', color: 'var(--k-amber)' },
-                  { label: 'IP allocation', color: 'var(--k-amber)' },
-                ],
               },
             ],
           },
