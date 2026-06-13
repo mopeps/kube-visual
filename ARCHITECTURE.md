@@ -417,7 +417,13 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    cover a card. `NET_CONNECTORS` leg each column up to the mgmt core
    (`net-col-top-N`) and down to the guest core (`net-col-bot-N`) via
    `ReconLoopOverlay` (`idPrefix=''`). The trailing replica rows are suppressed in
-   this mode (the three columns are the three pairs). On phones the OVN deep-dive
+   this mode (the three columns are the three pairs). **With Network on, the columns
+   are also pruned to network-only**: `filterNetworkZone()` keeps just the components
+   whose `role` (components.json) is a network role — plus the network control-plane
+   operators (Cluster Network / Multus / Ingress / DNS), surfaced out of the CPO/CVO
+   operator-set cards as standalone cards — and drops everything else (control-plane
+   pods, etcd, storage, monitoring, app workloads) and any now-empty zone. The
+   classifier is `isNetworkComponent` in `src/data/network-components.js`. On phones the OVN deep-dive
    topic carries the same story instead.
 ## 3. Reference Data Schemas
 ### Metadata Schema (components.json)
