@@ -132,41 +132,8 @@ const MGMT_CORE = {
   ],
 }
 
-// The guest cluster's little OVN topology, nested inside the worker that hosts
-// the VM (worker-1 in this app's model). Its own core + in-VM data plane + the
-// application pods — the whole guest SDN, one turtle down.
-// Box order mirrors the metal columns: the shared core at the top (router then
-// join switch, so the switch sits adjacent to the br-int it legs into), then
-// the in-VM Open vSwitch, then the pods, then the agents at the bottom. Every
-// edge connects adjacent boxes, so none crosses a card.
-const GUEST_VM_ZONE = {
-  id: 'nz-guest-vm', label: 'guest-worker · VirtualMachineInstance', colorVar: 'k-green',
-  dashed: true, layout: 'stack',
-  boxes: [
-    chip('nz-grouter', 'ovn_cluster_router', 'OVN Cluster Router', 'ellipse', 'k-purple',
-      'distributed · runs in the VM', GUEST_ROUTER_DETAIL),
-    chip('nz-gjoin', 'LS "join" (guest)', 'Logical Switch', 'switch', 'k-purple',
-      'guest NB DB · same subnet, own universe', GUEST_JOIN_DETAIL),
-    real('ovs-guest', 'Open vSwitch', 'systemd', 'k-amber', { variant: 'bridge', caption: 'in-VM br-int · GR_guest-worker' }),
-    { ...real('frontend-application-pod', 'Front-End', 'Pod', 'k-green'), inline: true },
-    { ...real('backend-application-pod', 'Back-End', 'Pod', 'k-green'), inline: true },
-    real('openshift-ingress-router-guest', 'Ingress Router', 'Pod', 'k-green'),
-    real('ovn-node-guest', 'OVN-K8s Node', 'Pod', 'k-green'),
-  ],
-}
-
-const WORKER_1_COLUMN = {
-  id: 'nz-col-worker-1', label: 'worker-1 · bare metal', colorVar: 'k-blue-worker',
-  dashed: true, layout: 'stack',
-  boxes: [
-    real('ovs-host', 'Open vSwitch', 'systemd', 'k-amber', { variant: 'bridge', caption: 'br-int · GR_worker-1' }),
-    real('ovn-node-host', 'OVN-K8s Node', 'Pod', 'k-blue-worker'),
-  ],
-  zones: [GUEST_VM_ZONE],
-}
-
 const NODE_COLUMNS = {
-  id: 'nz-mgmt-nodes', bare: true, layout: 'columns',
+  id: 'nz-mgmt-nodes', bare: true, layout: 'columns', className: 'nz-mgmt-row',
   zones: [
     metalColumn({ id: 'nz-col-master-1', label: 'master-1 · bare metal', colorVar: 'k-blue',
       ovnId: 'ovn-node-master', ovsId: 'ovs-master', gr: 'br-int · GR_master-1' }),
@@ -176,7 +143,8 @@ const NODE_COLUMNS = {
     metalColumn({ id: 'nz-col-master-3', label: 'master-3 · bare metal', colorVar: 'k-blue',
       ovnId: 'ovn-node-master-3', ovnMirror: 'ovn-node-master',
       ovsId: 'ovs-master-3', ovsMirror: 'ovs-master', gr: 'br-int · GR_master-3' }),
-    WORKER_1_COLUMN,
+    metalColumn({ id: 'nz-col-worker-1', label: 'worker-1 · bare metal', colorVar: 'k-blue-worker',
+      ovnId: 'ovn-node-host', ovsId: 'ovs-host', gr: 'br-int · GR_worker-1' }),
     metalColumn({ id: 'nz-col-worker-2', label: 'worker-2 · bare metal', colorVar: 'k-blue-worker',
       ovnId: 'ovn-node-worker-2', ovnMirror: 'ovn-node-host',
       ovsId: 'ovs-worker-2', ovsMirror: 'ovs-host', gr: 'br-int · GR_worker-2' }),
@@ -186,9 +154,55 @@ const NODE_COLUMNS = {
   ],
 }
 
-// The whole network-mode canvas: the overarching core band on top, the row of
-// parallel node columns below (the OVN full-picture topic's geometry).
-export const NET_ZONES = [MGMT_CORE, NODE_COLUMNS]
+// ── The guest SDN, as its OWN parallel-columns tier ─────────────────────────
+// Same shape as the management tier — an overarching shared core above a row of
+// guest-worker columns — one turtle down. The hosted cluster's "nodes" are
+// KubeVirt VMs that ride the bare-metal worker nodes above (the virt-launcher
+// pod IS the VM's NIC), which the tier label notes.
+
+// The guest cluster's shared logical core (its own NB DB rows).
+const GUEST_CORE = {
+  id: 'nz-guest-core', label: 'Guest SDN · shared logical core (rides the worker nodes)',
+  colorVar: 'k-purple', layout: 'stack',
+  boxes: [
+    { ...chip('nz-gjoin', 'LS "join" (guest)', 'Logical Switch', 'switch', 'k-purple',
+      'guest NB DB · same subnet, own universe', GUEST_JOIN_DETAIL), inline: true },
+    { ...chip('nz-grouter', 'ovn_cluster_router', 'OVN Cluster Router', 'ellipse', 'k-purple',
+      'distributed · runs in every VM', GUEST_ROUTER_DETAIL), inline: true },
+  ],
+}
+
+// One guest-worker column: the in-VM Open vSwitch at the top (it legs up to the
+// guest join switch), then the application pods it carries, then the agents.
+const guestColumn = ({ id, label, ovsId, ovsMirror, ovnId, pods, extras = [] }) => ({
+  id, label, colorVar: 'k-green', dashed: true, layout: 'stack',
+  boxes: [
+    real(ovsId, 'Open vSwitch', 'systemd', 'k-amber', { mirror: ovsMirror, variant: 'bridge', caption: 'in-VM br-int · GR' }),
+    ...pods,
+    ...extras,
+    real(ovnId, 'OVN-K8s Node', 'Pod', 'k-green', { mirror: 'ovn-node-guest' }),
+  ],
+})
+
+const GUEST_NODES = {
+  id: 'nz-guest-nodes', bare: true, layout: 'columns', className: 'nz-guest-row',
+  zones: [
+    guestColumn({
+      id: 'nz-gcol-1', label: 'guest-worker · VirtualMachineInstance',
+      ovsId: 'ovs-guest', ovnId: 'ovn-node-guest',
+      pods: [
+        { ...real('frontend-application-pod', 'Front-End', 'Pod', 'k-green'), inline: true },
+        { ...real('backend-application-pod', 'Back-End', 'Pod', 'k-green'), inline: true },
+      ],
+      extras: [real('openshift-ingress-router-guest', 'Ingress Router', 'Pod', 'k-green')],
+    }),
+  ],
+}
+
+// The whole network-mode canvas: two tiers, each an overarching shared-core
+// band above a row of parallel node columns (the OVN full-picture geometry) —
+// the management SDN on the bare-metal nodes, then the guest SDN on the VMs.
+export const NET_ZONES = [MGMT_CORE, NODE_COLUMNS, GUEST_CORE, GUEST_NODES]
 
 // ── Always-on structural wiring ──────────────────────────────────────────────
 // Plain solid lines (a textbook diagram's geometry); only a couple carry a
@@ -235,7 +249,7 @@ export const NET_EDGES = [
     },
   },
   {
-    id: 'nz-gjoin-ovs', from: 'nz-gjoin', to: 'ovs-guest', step: '',
+    id: 'nz-gjoin-ovs', from: 'ovs-guest', to: 'nz-gjoin', step: '',
     axis: 'vertical', solid: true, quiet: true, accent: 'k-purple',
     title: 'GR_guest-worker on the guest join switch',
     detail: {

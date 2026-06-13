@@ -1456,51 +1456,6 @@ body::after {
   padding-left: 12px;
 }
 
-/* Overview legend — same disclosure chrome as .dd-about, with swatch / glyph
-   chips for the zone colours and runtime forms. */
-.legend { margin-bottom: 12px; }
-.legend-body {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border-left: 2px solid color-mix(in srgb, var(--k-cyan) 50%, transparent);
-  padding-left: 12px;
-}
-.legend-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 14px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.66rem;
-  color: var(--tx-muted);
-}
-.legend-key {
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  font-size: 0.58rem;
-  color: var(--tx-dim);
-  min-width: 42px;
-}
-.legend-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-.legend-swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  flex: none;
-}
-.legend-glyph {
-  display: inline-flex;
-  font-size: 1.05em;
-  color: var(--tx-dim);
-}
-.legend-note { color: var(--tx-dim); }
 
 .deep-dive .flow-switcher .event-pill.is-active {
   color: var(--bg);
@@ -2064,31 +2019,37 @@ body::after {
    columns fit a wide desktop and the core band reads as one wide thing. */
 .recon-stack--netmode { gap: 44px; padding: 18px 16px 22px; }
 
-/* The overarching core band — a full-width bordered zone; its join switch and
-   cluster router sit side by side, centred over the columns below. */
-.recon-stack--netmode > .zone:first-child { align-self: stretch; }
-.recon-stack--netmode > .zone:first-child .dd-box-row { gap: clamp(24px, 8vw, 90px); }
+/* The overarching core bands — full-width bordered zones; each tier's join
+   switch + cluster router sit side by side, centred over the columns below. */
+.recon-stack--netmode > .zone:not(.zone--bare) { align-self: stretch; }
+.recon-stack--netmode > .zone:not(.zone--bare) .dd-box-row { gap: clamp(24px, 8vw, 90px); }
 
-/* The six node columns: even spacing, top-aligned so a short column (just an
-   agent + switch) doesn't stretch to match the tall worker that nests the
-   guest VM. */
+/* Both tiers' columns: even spacing, top-aligned. */
 .recon-stack--netmode .zone--columns > .zone-content > .zone-content-inner {
   gap: 12px;
   align-items: flex-start;
 }
-/* Keep each node column compact and self-contained. */
-.recon-stack--netmode .zone--columns > .zone-content > .zone-content-inner > .zone {
+/* Management tier — the six bare-metal nodes fill the width as equal columns. */
+.recon-stack--netmode .nz-mgmt-row > .zone-content > .zone-content-inner > .zone {
   flex: 1 1 0;
   min-width: 132px;
 }
+/* Guest tier — its worker column(s) are capped and centred under the wide core
+   band rather than stretched edge to edge. */
+.recon-stack--netmode .nz-guest-row > .zone-content > .zone-content-inner {
+  justify-content: center;
+}
+.recon-stack--netmode .nz-guest-row > .zone-content > .zone-content-inner > .zone {
+  flex: 0 1 300px;
+  min-width: 200px;
+  max-width: 340px;
+}
 .recon-stack--netmode .zone--stack > .zone-content > .zone-content-inner { gap: 26px; }
-/* The nested guest-VM zone inside the worker column keeps its own dashed box. */
-.recon-stack--netmode .zone--nested { width: 100%; flex: 1 1 100%; }
 
 @media (max-width: 1023px) {
   /* Network mode is a wide-desktop affordance; if it is ever shown narrow,
-     let the columns wrap instead of crushing. */
-  .recon-stack--netmode .zone--columns > .zone-content > .zone-content-inner > .zone {
+     let the management columns wrap instead of crushing. */
+  .recon-stack--netmode .nz-mgmt-row > .zone-content > .zone-content-inner > .zone {
     flex: 1 1 46%;
   }
 }
