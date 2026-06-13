@@ -11,6 +11,7 @@ import ControllerManagerCard from './ControllerManagerCard'
 import OperatorSetCard from './OperatorSetCard'
 import RealizedFlowsCard from './RealizedFlowsCard'
 import ServicePair from './ServicePair'
+import Masonry from './Masonry'
 import ArrowOverlay from './ArrowOverlay'
 import Legend from './Legend'
 import { scrollIntoUpperThird } from '../lib/scroll'
@@ -309,10 +310,10 @@ export default function OverviewTab({
   // The target only gets absorbed when its carrier lives in the same zone; an
   // orphaned reference (cross-zone target) falls through to normal rendering.
   //
-  // The cards come back wrapped in a .zone-nodes container: display:contents on
-  // desktop (the flex-wrap layout is untouched), and a source-order two-up
-  // flex-wrap on phones so an expanding store grows in place instead of
-  // teleporting (see the .zone-nodes mobile rule in index.css).
+  // The cards come back wrapped in a <Masonry>: a hand-rolled shortest-column
+  // packing (desktop and phone alike) so cards fill the gaps a flex grid would
+  // leave under shorter neighbours, while an expanded store still spans the full
+  // width in place (see Masonry.jsx).
   function renderZoneNodes(zone) {
     const nodes = zone.nodes ?? []
     const byId = new Map(nodes.map(n => [n.id, n]))
@@ -341,7 +342,7 @@ export default function OverviewTab({
       out.push(renderNode(node, zone))
     }
     if (out.length === 0) return null
-    return <div className="zone-nodes" key={`${zone.id}-nodes`}>{out}</div>
+    return <Masonry key={`${zone.id}-nodes`}>{out}</Masonry>
   }
 
   function renderZone(zone, depth = 0, parentZone = null) {
