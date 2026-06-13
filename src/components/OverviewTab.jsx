@@ -4,8 +4,10 @@ import Zone from './Zone'
 import NodeCard from './NodeCard'
 import DeepDiveModal from './DeepDiveModal'
 import ReconLoopOverlay from './ReconLoopOverlay'
-import { NET_LOGICAL, NET_CONNECTORS, NET_PAIRS } from '../data/network-zones'
+import { NET_PAIRS } from '../data/network-zones'
 import { isNetworkComponent } from '../data/network-components'
+import { INTERNAL_TOPOLOGY, buildNetworkEdges } from '../data/network-internals'
+import PrimitiveBoxCard from './PrimitiveBoxCard'
 import { serviceAlias } from '../data/service-alias'
 import IntentStoreCard from './IntentStoreCard'
 import ControllerManagerCard from './ControllerManagerCard'
@@ -20,6 +22,12 @@ import { scrollIntoUpperThird } from '../lib/scroll'
 // with the `.is-highlighted` pulse in index.css (reveal-pulse-* runs 1.3s × 2),
 // so the highlight clears exactly when the animation finishes.
 const SPOTLIGHT_MS = 1300 * 2
+
+// Network-mode integration edges (db.sock, GARP→br-ex, tap0→br-int, tunnel…),
+// pre-namespaced for the three columns. Drawn by one canvas-level overlay; each
+// edge only renders when both its boxes are present (the owning components shown
+// / expanded). Static — built once.
+const NETWORK_EDGES = buildNetworkEdges(NET_PAIRS)
 
 // Map componentId → step number it first appears in the active event.
 function buildStepNumMap(activeEvent) {
@@ -122,9 +130,17 @@ export default function OverviewTab({
   // A clicked condensed replica node ({ id, title, zone }) — opens a small
   // explainer popup, separate from the componentId-keyed AncestryModal flow.
   const [replica, setReplica] = useState(null)
-  // Network-mode state: the popup content of a clicked logical switch / router
-  // or connector label (shares the deep-dive sheet with the replica popup).
+  // Network-mode state: the popup content of a clicked sub-box / integration
+  // edge (shares the deep-dive sheet with the replica popup).
   const [netSheet, setNetSheet] = useState(null)
+  // Which drillable network components the user has collapsed. Default expanded:
+  // an id is in the set only once collapsed; each toggles independently.
+  const [netCollapsedIds, setNetCollapsedIds] = useState(() => new Set())
+  const toggleNetCollapse = (id) => setNetCollapsedIds((prev) => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
   const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
 
@@ -215,8 +231,26 @@ export default function OverviewTab({
     collectZoneNodeIds(zone).some(id => activeComponentIds?.has?.(id))
   )
 
-  function renderNode(node, zone) {
+  function renderNode(node, zone, colIndex = 0) {
     const { isActive, isOnPath, isDimmed } = traceStates(node.id)
+    // Network mode: a drillable component opens in place to show its own internal
+    // primitives + integrations inside its own box (never a zone). Takes
+    // precedence over the other expand cards (e.g. ovs-guest's realized flows).
+    if (netOverlay && INTERNAL_TOPOLOGY[node.id]) {
+      return (
+        <PrimitiveBoxCard
+          key={node.id}
+          node={node}
+          internal={INTERNAL_TOPOLOGY[node.id]}
+          colIndex={colIndex}
+          color={zone.color}
+          isOpen={!netCollapsedIds.has(node.id)}
+          onToggle={() => toggleNetCollapse(node.id)}
+          onSelectComponent={onSelectComponent}
+          onSelectBox={selectNetBox}
+        />
+      )
+    }
     // Nodes carrying intent objects (the etcd "intent store") render as an
     // expandable card instead of a plain box.
     if (node.intentObjects) {
@@ -301,7 +335,10 @@ export default function OverviewTab({
     return (
       <NodeCard
         key={node.id}
-        id={node.id}
+        // Network mode renders the same tree in three columns, so card ids are
+        // namespaced per column to stay unique (integration edges anchor to them);
+        // the normal canvas keeps the raw componentId.
+        id={netOverlay ? `nt-c${colIndex}-${node.id}` : node.id}
         title={node.title}
         typePrefix={node.typePrefix}
         typeAlias={serviceAlias(node)}
@@ -311,10 +348,9 @@ export default function OverviewTab({
         isOnPath={isOnPath}
         isDimmed={isDimmed}
         isHighlighted={node.id === highlightId}
-        // A replica-zone card mirrors a canonical component: it keeps its own
-        // DOM id (unique anchor for overlays/arrows) but opens the canonical
-        // component's detail modal — the software is identical.
-        onClick={node.mirror ? () => onSelectComponent(node.mirror) : onSelectComponent}
+        // Open the canonical component's modal regardless of the (possibly
+        // namespaced) DOM id — a replica mirrors its canonical component.
+        onClick={() => onSelectComponent(node.mirror || node.id)}
       />
     )
   }
@@ -331,13 +367,14 @@ export default function OverviewTab({
   // packing (desktop and phone alike) so cards fill the gaps a flex grid would
   // leave under shorter neighbours, while an expanded store still spans the full
   // width in place (see Masonry.jsx).
-  function renderZoneNodes(zone) {
+  function renderZoneNodes(zone, colIndex = 0) {
     const nodes = zone.nodes ?? []
     const byId = new Map(nodes.map(n => [n.id, n]))
     // Either relation references its target by id; the target renders inside the
-    // pair, not standalone.
+    // pair, not standalone. Network mode skips pairing — an opened Open vSwitch
+    // is full-width, and its OVN-K8s Node link reads as a db.sock edge instead.
     const targetOf = (n) => n.exposes || n.programs
-    const pairedTargets = new Set(
+    const pairedTargets = netOverlay ? new Set() : new Set(
       nodes.filter(n => targetOf(n) && byId.has(targetOf(n))).map(n => targetOf(n))
     )
     const out = []
@@ -350,19 +387,19 @@ export default function OverviewTab({
             key={node.id}
             color={zone.color}
             relation={node.programs ? 'programs' : 'exposes'}
-            service={renderNode(node, zone)}
-            target={renderNode(byId.get(target), zone)}
+            service={renderNode(node, zone, colIndex)}
+            target={renderNode(byId.get(target), zone, colIndex)}
           />
         )
         continue
       }
-      out.push(renderNode(node, zone))
+      out.push(renderNode(node, zone, colIndex))
     }
     if (out.length === 0) return null
     return <Masonry key={`${zone.id}-nodes`}>{out}</Masonry>
   }
 
-  function renderZone(zone, depth = 0, parentZone = null) {
+  function renderZone(zone, depth = 0, parentZone = null, colIndex = 0) {
     // A replica node zone's label opens the replica explainer popup instead of
     // a component modal (the zone is a stand-in, not a registered component).
     const isReplica = !!zone.replica
@@ -389,9 +426,9 @@ export default function OverviewTab({
           : onSelectComponent}
       >
         {/* Nodes in this zone (Service→target pairs stacked together) */}
-        {renderZoneNodes(zone)}
+        {renderZoneNodes(zone, colIndex)}
         {/* Child zones */}
-        {zone.zones?.map(child => renderZone(child, depth + 1))}
+        {zone.zones?.map(child => renderZone(child, depth + 1, null, colIndex))}
       </Zone>
     )
     if (!zone.replicaNodes?.length || !showReplicas) return zoneEl
@@ -408,18 +445,8 @@ export default function OverviewTab({
     )
   }
 
-  // Chip / edge-label clicks on the network overlay open the shared sheet
-  // (displacing an open replica popup, and vice versa).
-  const selectNetChip = (chip) => {
-    setReplica(null)
-    setNetSheet({
-      id: chip.id,
-      title: chip.title,
-      typePrefix: chip.typePrefix,
-      accent: `var(--${chip.colorVar || 'k-amber'})`,
-      detail: chip.detail,
-    })
-  }
+  // Edge-label clicks on the network overlay open the shared sheet (displacing
+  // an open replica popup, and vice versa).
   const selectNetEdge = (edge) => {
     setReplica(null)
     setNetSheet({
@@ -430,6 +457,17 @@ export default function OverviewTab({
       peekDefault: 0.34,
     })
   }
+  // Click on a component's internal primitive sub-box → its teaching popup.
+  const selectNetBox = (box) => {
+    setReplica(null)
+    setNetSheet({
+      id: box.id,
+      title: box.title,
+      typePrefix: box.typePrefix,
+      accent: `var(--${box.colorVar || 'k-amber'})`,
+      detail: box.detail,
+    })
+  }
 
   // The normal Overview canvas content — the management context surfaced as its
   // master-node / worker-node stack. Shared by the normal canvas and rendered
@@ -437,38 +475,18 @@ export default function OverviewTab({
   // `networkOnly` (Network mode) prunes the tree to network components first —
   // see filterNetworkZone. The normal/big-view paths pass nothing and render the
   // full stack.
-  const renderOverviewStack = (networkOnly = false) =>
+  const renderOverviewStack = (networkOnly = false, colIndex = 0) =>
     (networkOnly ? visibleZones.map(filterNetworkZone).filter(Boolean) : visibleZones)
       .flatMap(zone =>
         zone.hideWrapper
           ? [
               // Wrapper hidden: surface its own nodes and child zones directly
               // so neither is silently dropped.
-              renderZoneNodes(zone),
-              ...(zone.zones ?? []).map(child => renderZone(child)),
+              renderZoneNodes(zone, colIndex),
+              ...(zone.zones ?? []).map(child => renderZone(child, 0, null, colIndex)),
             ]
-          : [renderZone(zone)]
+          : [renderZone(zone, 0, null, colIndex)]
       )
-
-  // The shared OVN logical core (join switch + cluster router) — floats in a
-  // reserved strip above (mgmt) or below (guest) the three columns, NOT a zone,
-  // spanning all three pairs. Clicking one opens its teaching popup.
-  const renderCore = (objects, extraClass) => (
-    <div className={`net-core ${extraClass}`} aria-label="Shared OVN logical objects">
-      {objects.map((o) => (
-        <NodeCard
-          key={o.id}
-          id={o.id}
-          title={o.title}
-          typePrefix={o.typePrefix}
-          variant={o.variant}
-          color={`var(--${o.colorVar})`}
-          subtitle={o.caption}
-          onClick={() => selectNetChip(o)}
-        />
-      ))}
-    </div>
-  )
 
   return (
     <>
@@ -477,36 +495,31 @@ export default function OverviewTab({
           <span className="net-bar-label">{netOverlay ? 'Network map' : 'Big view'}</span>
           <span className="net-bar-hint">
             {netOverlay
-              ? 'The whole Overview, three node pairs in parallel — with the one OVN join switch & cluster router they all share floating above, and the guest SDN core below. Click any card, switch or router for details.'
-              : 'The whole Overview, three node pairs in parallel. Turn on Network to float the shared OVN logical objects over the top.'}
+              ? 'Each network component box is opened to show where its abstractions live and how they’re implemented — collapse any box with its ▴ control. Click a sub-box or an edge for detail.'
+              : 'The whole Overview, three node pairs in parallel. Turn on Network to open each component and trace the real networking topology.'}
           </span>
         </div>
       )}
       {bigView ? (
         // Big view: the normal canvas rendered three times in parallel columns
-        // (one per node pair). Network mode adds the shared OVN core floating in
-        // the reserved strips above and below (see network-zones.js).
+        // (one per node pair). Network mode opens each drillable component box to
+        // show its internals, wired by the integration edges (network-internals.js).
         <div
           ref={canvasRef}
           className={`border border-border-w rounded-lg overflow-visible overview-canvas net-bigpicture ${netOverlay ? 'net-bigpicture--net' : ''}`}
           style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
         >
-          {netOverlay && renderCore(NET_LOGICAL.mgmt, 'net-core--mgmt')}
           <div className="net-cols">
             {NET_PAIRS.map((i) => (
               <div className="net-col" id={`net-col-${i}`} key={i}>
-                <div className="net-col-cap" id={`net-col-top-${i}`}>
-                  Node pair {i + 1}
-                </div>
-                {renderOverviewStack(netOverlay)}
-                <div className="net-col-foot" id={`net-col-bot-${i}`} aria-hidden />
+                <div className="net-col-cap">Node pair {i + 1}</div>
+                {renderOverviewStack(netOverlay, i)}
               </div>
             ))}
           </div>
-          {netOverlay && renderCore(NET_LOGICAL.guest, 'net-core--guest')}
           {netOverlay && (
             <ReconLoopOverlay
-              edges={NET_CONNECTORS}
+              edges={NETWORK_EDGES}
               canvasRef={canvasRef}
               activeEdgeId={null}
               signal={null}
