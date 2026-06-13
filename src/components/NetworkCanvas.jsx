@@ -76,6 +76,7 @@ export default function NetworkCanvas({ layerFocus = 'both', onSelectComponent, 
       depth={depth}
       layout={zone.layout}
       bare={zone.bare}
+      className={zone.className || ''}
     >
       {renderZoneBoxes(zone)}
       {zone.zones?.map((child) => renderZone(child, depth + 1))}

@@ -13,7 +13,6 @@ import RealizedFlowsCard from './RealizedFlowsCard'
 import ServicePair from './ServicePair'
 import Masonry from './Masonry'
 import ArrowOverlay from './ArrowOverlay'
-import Legend from './Legend'
 import { scrollIntoUpperThird } from '../lib/scroll'
 
 // How long the reveal spotlight stays lit before it auto-clears. Kept in sync
@@ -407,7 +406,6 @@ export default function OverviewTab({
 
   return (
     <>
-      <Legend />
       {netOverlay && (
         <div className="net-bar">
           <span className="net-bar-label">SDN layers</span>

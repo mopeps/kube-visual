@@ -16,6 +16,9 @@ export default function Zone({
   // components) — keeps label/border/fill but wears the muted treatment so the
   // coloured topology boxes inside read as the figure, the zone as ground.
   ghost = false,
+  // An extra class on the zone wrapper — lets a caller target a specific zone
+  // for layout tweaks (the network-mode guest column row centres its columns).
+  className = '',
   children,
   // When a zone doubles as a component (e.g. the VM), these wire its label up
   // as an arrow anchor (id), a click target, and a trace step badge.
@@ -37,7 +40,7 @@ export default function Zone({
 
   return (
     <div
-      className={`zone ${dashed ? 'zone--dashed' : ''} ${depth > 0 && !bare ? 'zone--nested' : ''} ${layout === 'columns' ? 'zone--columns' : ''} ${layout === 'stack' ? 'zone--stack' : ''} ${bare ? 'zone--bare' : ''} ${ghost ? 'zone--ghost' : ''}`}
+      className={`zone ${dashed ? 'zone--dashed' : ''} ${depth > 0 && !bare ? 'zone--nested' : ''} ${layout === 'columns' ? 'zone--columns' : ''} ${layout === 'stack' ? 'zone--stack' : ''} ${bare ? 'zone--bare' : ''} ${ghost ? 'zone--ghost' : ''} ${className}`}
       style={{
         ...(!bare && { background: fill }),
         '--zone-depth': depth,
