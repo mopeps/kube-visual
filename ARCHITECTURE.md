@@ -400,9 +400,11 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    line. A topic sets `reconciliation` *or* `topology`, never both (their canvas gap
    rules conflict); the static wiring hides under 640px where the stacked columns
    would make it criss-cross.
- * **Network mode (Overview, wide desktop ≥1280px):** the header's **Network**
-   toggle renders the **whole normal Overview three times in parallel columns** —
-   one per node pair — and floats the shared OVN logical objects over the top.
+ * **Big view & Network mode (Overview, wide desktop ≥1280px):** two header
+   toggles. **Big view** renders the **whole normal Overview three times in
+   parallel columns** — one per node pair. **Network** (enabled only once Big view
+   is on, since the OVN core spans all three columns) floats the shared OVN logical
+   objects over the top.
    `OverviewTab.jsx` reuses its own `renderOverviewStack()` (the exact normal-canvas
    content) inside three `#net-col-N` columns, so every card still opens its true
    `AncestryModal` and every special card (etcd intent store, controller/operator

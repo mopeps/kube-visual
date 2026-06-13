@@ -2017,14 +2017,15 @@ body::after {
    (mgmt) and below (guest) the columns (see network-zones.js / OverviewTab). */
 .net-bigpicture { position: relative; }
 
-/* The three parallel pair-columns. Each column is a full normal-overview stack;
-   the rows above/below are reserved (by margin) for the floating cores. */
+/* The three parallel pair-columns. Each column is a full normal-overview stack. */
 .net-cols {
   display: flex;
   align-items: flex-start;
   gap: 18px;
-  margin: 104px 0;
+  margin: 12px 0;
 }
+/* With the OVN overlay on, reserve the strips above/below for the floating cores. */
+.net-bigpicture--net .net-cols { margin: 104px 0; }
 .net-col {
   flex: 1 1 0;
   min-width: 0;
