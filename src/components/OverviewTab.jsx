@@ -85,7 +85,10 @@ export default function OverviewTab({
   onSelectStep,
   highlightId,
   onClearHighlight,
-  // Wide-desktop only: draw the OVN logical topology over the canvas.
+  // Wide-desktop only: "Big view" renders the whole overview three times in
+  // parallel columns (one per node pair).
+  bigView = false,
+  // On top of the big view, float the shared OVN logical core + connectors.
   netOverlay = false,
   // Whether the condensed replica nodes (master-2/3, worker-2/3) are shown —
   // off by default so the main overview stays clean.
@@ -442,26 +445,26 @@ export default function OverviewTab({
 
   return (
     <>
-      {netOverlay && (
+      {bigView && (
         <div className="net-bar">
-          <span className="net-bar-label">Network map</span>
+          <span className="net-bar-label">{netOverlay ? 'Network map' : 'Big view'}</span>
           <span className="net-bar-hint">
-            The whole Overview, three node pairs in parallel — with the one OVN
-            join switch &amp; cluster router they all share floating above, and the
-            guest SDN core below. Click any card, switch or router for details.
+            {netOverlay
+              ? 'The whole Overview, three node pairs in parallel — with the one OVN join switch & cluster router they all share floating above, and the guest SDN core below. Click any card, switch or router for details.'
+              : 'The whole Overview, three node pairs in parallel. Turn on Network to float the shared OVN logical objects over the top.'}
           </span>
         </div>
       )}
-      {netOverlay ? (
-        // Network mode: the normal canvas rendered three times in parallel
-        // columns (one per node pair), with the shared OVN core floating in the
-        // reserved strips above and below (see network-zones.js).
+      {bigView ? (
+        // Big view: the normal canvas rendered three times in parallel columns
+        // (one per node pair). Network mode adds the shared OVN core floating in
+        // the reserved strips above and below (see network-zones.js).
         <div
           ref={canvasRef}
-          className="border border-border-w rounded-lg overflow-visible overview-canvas net-bigpicture"
+          className={`border border-border-w rounded-lg overflow-visible overview-canvas net-bigpicture ${netOverlay ? 'net-bigpicture--net' : ''}`}
           style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
         >
-          {renderCore(NET_LOGICAL.mgmt, 'net-core--mgmt')}
+          {netOverlay && renderCore(NET_LOGICAL.mgmt, 'net-core--mgmt')}
           <div className="net-cols">
             {NET_PAIRS.map((i) => (
               <div className="net-col" id={`net-col-${i}`} key={i}>
@@ -473,15 +476,17 @@ export default function OverviewTab({
               </div>
             ))}
           </div>
-          {renderCore(NET_LOGICAL.guest, 'net-core--guest')}
-          <ReconLoopOverlay
-            edges={NET_CONNECTORS}
-            canvasRef={canvasRef}
-            activeEdgeId={null}
-            signal={null}
-            onSelectEdge={selectNetEdge}
-            idPrefix=""
-          />
+          {netOverlay && renderCore(NET_LOGICAL.guest, 'net-core--guest')}
+          {netOverlay && (
+            <ReconLoopOverlay
+              edges={NET_CONNECTORS}
+              canvasRef={canvasRef}
+              activeEdgeId={null}
+              signal={null}
+              onSelectEdge={selectNetEdge}
+              idPrefix=""
+            />
+          )}
         </div>
       ) : (
         <div

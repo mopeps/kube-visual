@@ -37,7 +37,7 @@ npm run preview   # serve dist locally
 
 ```
 src/
-  App.jsx                    # shell: header (H1) + tabs (+ wide-desktop dock & network-overlay toggles), tab panels, modal, hop inspector
+  App.jsx                    # shell: header (H1) + tabs (+ wide-desktop dock, big-view & network-overlay toggles), tab panels, modal, hop inspector
   index.css                  # design tokens, .zone, .node, .hop, .ancestry-modal, .pipeline-tree
   data/
     components.json          # one entry per componentId (incl. typePrefix, runtimeForm, linuxPrimitive, logicalContext)
