@@ -72,6 +72,7 @@ src/
     NetworkOverlay.jsx       # Overview overlay (wide desktop): OVN logical-topology chips + labeled edges over the real components, layer dimmer + packet trace
     TypeIcon.jsx             # glyph for a node's typePrefix ([Pod]/[systemd]/…)
     ServicePair.jsx          # stacks a Service over the in-zone target it `exposes`
+    Masonry.jsx              # hand-rolled shortest-column packing for a zone's node cards (fills the gaps a flex grid leaves; an expanded store spans the full width in place)
     IntentStoreCard.jsx      # an etcd node that expands in place to show its records
     ControllerManagerCard.jsx # a controller-manager node that expands to show its control loops
     OperatorSetCard.jsx      # a CPO/CVO node that expands to show the operator Pods it owns

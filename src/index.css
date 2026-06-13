@@ -138,35 +138,37 @@ body::after {
   align-items: flex-start;
 }
 
-/* A zone's node cards live in a .zone-nodes wrapper (OverviewTab only). On
-   desktop it is layout-invisible — the flex-wrap rows behave exactly as if
-   the cards were direct children. */
-.zone-nodes { display: contents; }
-
-@media (max-width: 640px) {
-  /* On phones the card wrapper is a plain two-up flex-wrap that keeps the cards
-     in source order. Tapping an expand-in-place store (etcd intent store,
-     controller set, operator set, realized flows) then grows THAT card in place
-     into a full row — its .intent-store-expanded is flex 1 1 100% — while its
-     neighbours barely move.
-
-     (An earlier CSS-multicol masonry packed the collapsed cards into balanced
-     columns to avoid holes; it read tighter, but a multicol can't give one item
-     the full row, so expanding had to reflow every card from column order into
-     row order — the card teleported, usually downward. Source-order flex-wrap
-     trades a few collapsed-state holes for an expansion that stays put.) */
-  .zone-nodes {
-    display: flex;
-    flex: 1 1 100%;
-    flex-wrap: wrap;
-    /* Stretch so the two cards on a row share one height: a store card carries
-       an extra "▸ N objects" hint line, and without this its plainer row-mate
-       would sit short and leave a gap below it. Equal heights keep the vertical
-       rhythm even. (Tall stacked pairs are pulled onto their own full-width row
-       below, so nothing balloons to double height.) */
-    align-items: stretch;
-    gap: 8px;
-  }
+/* A zone's node cards live in a <Masonry> wrapper (OverviewTab only): a
+   hand-rolled shortest-column packing that fills the holes a flex grid leaves
+   under shorter cards. It takes a full row of its parent zone so child zones
+   wrap below it; the cards inside are absolutely positioned by Masonry.jsx, so
+   the box needs an explicit (JS-set) height. */
+.zone-nodes-masonry {
+  position: relative;
+  flex: 1 1 100%;
+  width: 100%;
+}
+/* Each card is positioned by JS; it fills its column (width is set inline by
+   Masonry), overriding the card's own fixed/percent widths. */
+.zone-nodes-masonry > .masonry-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+}
+.zone-nodes-masonry > .masonry-item > * {
+  width: 100%;
+  max-width: none;
+}
+/* Absolutely-positioned masonry children carry no intrinsic width, so a nested
+   zone would otherwise collapse to its label width when it sits in a flex-wrap
+   row (the desktop namespaces / launcher pod). The overview stacks its nested
+   zones full-width anyway (no side-by-side columns here — that's deep-dive
+   only), so force them to a full row, giving their masonry the real width to
+   pack into. Depth-0 replica zones keep their own side-by-side flex sizing. */
+.overview-canvas .zone--nested {
+  flex: 1 1 100%;
+  width: 100%;
 }
 
 /* ── Overview canvas ───────────────────────────────────────────────── */
@@ -363,19 +365,6 @@ body::after {
   max-width: none;
 }
 
-@media (max-width: 640px) {
-  /* A stacked pair (Service→workload, or OVN-K8s Node→Open vSwitch) is ~twice
-     as tall as a plain card. Two-up it left a hole beside its lower half that
-     the next card couldn't fill, so give the pair its own full-width row — the
-     remaining single cards then pack two-up at a uniform height with no holes.
-     (This also matches the programs pair's expanded state, which is already
-     full-width, so its Open vSwitch grows in place.) */
-  .service-pair {
-    flex: 1 1 100%;
-    max-width: none;
-    width: 100%;
-  }
-}
 
 .node.is-active {
   border-color: var(--packet);
