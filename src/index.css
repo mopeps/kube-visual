@@ -159,7 +159,12 @@ body::after {
     display: flex;
     flex: 1 1 100%;
     flex-wrap: wrap;
-    align-items: flex-start;
+    /* Stretch so the two cards on a row share one height: a store card carries
+       an extra "▸ N objects" hint line, and without this its plainer row-mate
+       would sit short and leave a gap below it. Equal heights keep the vertical
+       rhythm even. (Tall stacked pairs are pulled onto their own full-width row
+       below, so nothing balloons to double height.) */
+    align-items: stretch;
     gap: 8px;
   }
 }
@@ -359,10 +364,16 @@ body::after {
 }
 
 @media (max-width: 640px) {
+  /* A stacked pair (Service→workload, or OVN-K8s Node→Open vSwitch) is ~twice
+     as tall as a plain card. Two-up it left a hole beside its lower half that
+     the next card couldn't fill, so give the pair its own full-width row — the
+     remaining single cards then pack two-up at a uniform height with no holes.
+     (This also matches the programs pair's expanded state, which is already
+     full-width, so its Open vSwitch grows in place.) */
   .service-pair {
-    flex: 1 1 calc(50% - 4px);
-    max-width: calc(50% - 4px);
-    width: auto;
+    flex: 1 1 100%;
+    max-width: none;
+    width: 100%;
   }
 }
 
