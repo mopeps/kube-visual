@@ -105,6 +105,21 @@ export default function OverviewTab({
   const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
 
+  // Toggle an expand-in-place store (etcd / controller set / operator set /
+  // realized flows). On expand, gently scroll the card into the upper third so
+  // its freshly revealed objects are in view — a store can be tall (etcd holds
+  // 11), and on a phone it may open below the fold. Collapse never scrolls.
+  function toggleStore(id) {
+    const willExpand = expandedStoreId !== id
+    setExpandedStoreId(willExpand ? id : null)
+    if (!willExpand) return
+    // Two frames so the scroll measures the post-expand height, not the
+    // collapsed card's.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      scrollIntoUpperThird(document.getElementById(id))
+    }))
+  }
+
   // Figure/ground for the trace: with a hop focused, the packet-red .is-active
   // glow narrows to that hop's two endpoints while the rest of the route keeps
   // an .is-on-path tint — distinct from unrelated .is-dimmed nodes. With no hop
@@ -199,7 +214,7 @@ export default function OverviewTab({
           isHighlighted={node.id === highlightId}
           highlightId={highlightId}
           isExpanded={expandedStoreId === node.id}
-          onToggle={() => setExpandedStoreId(prev => prev === node.id ? null : node.id)}
+          onToggle={() => toggleStore(node.id)}
           onSelectComponent={onSelectComponent}
         />
       )
@@ -219,7 +234,7 @@ export default function OverviewTab({
           isHighlighted={node.id === highlightId}
           highlightId={highlightId}
           isExpanded={expandedStoreId === node.id}
-          onToggle={() => setExpandedStoreId(prev => prev === node.id ? null : node.id)}
+          onToggle={() => toggleStore(node.id)}
           onSelectComponent={onSelectComponent}
         />
       )
@@ -240,7 +255,7 @@ export default function OverviewTab({
           isHighlighted={node.id === highlightId}
           highlightId={highlightId}
           isExpanded={expandedStoreId === node.id}
-          onToggle={() => setExpandedStoreId(prev => prev === node.id ? null : node.id)}
+          onToggle={() => toggleStore(node.id)}
           onSelectComponent={onSelectComponent}
         />
       )
@@ -260,7 +275,7 @@ export default function OverviewTab({
           isHighlighted={node.id === highlightId}
           highlightId={highlightId}
           isExpanded={expandedStoreId === node.id}
-          onToggle={() => setExpandedStoreId(prev => prev === node.id ? null : node.id)}
+          onToggle={() => toggleStore(node.id)}
           onSelectComponent={onSelectComponent}
         />
       )
@@ -295,9 +310,9 @@ export default function OverviewTab({
   // orphaned reference (cross-zone target) falls through to normal rendering.
   //
   // The cards come back wrapped in a .zone-nodes container: display:contents on
-  // desktop (the flex-wrap layout is untouched), a two-column masonry on phones
-  // so cards pack upward instead of leaving holes beside taller neighbours
-  // (the stacked OVN-K8s→OVS pair, an expanded store).
+  // desktop (the flex-wrap layout is untouched), and a source-order two-up
+  // flex-wrap on phones so an expanding store grows in place instead of
+  // teleporting (see the .zone-nodes mobile rule in index.css).
   function renderZoneNodes(zone) {
     const nodes = zone.nodes ?? []
     const byId = new Map(nodes.map(n => [n.id, n]))
