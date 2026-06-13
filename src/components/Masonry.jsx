@@ -29,6 +29,19 @@ export default function Masonry({ minColWidth = 120, gap = 8, className = '', ch
   const layout = useCallback(() => {
     const el = ref.current
     if (!el) return
+
+    // A zone with NO sibling child zones is a leaf: it can shrink-wrap to the
+    // columns it actually fills, so a one-card namespace (metallb-system) draws
+    // a small box instead of stretching across the row. A zone that also holds
+    // child zones (master/worker nodes) must stay full-width — its children
+    // need the room — so the .zone--nested CSS rule keeps it filled and we leave
+    // its width alone. Reset any prior shrink so we measure the full available
+    // width this pass before deciding again.
+    const zone = el.closest('.zone')
+    const isLeaf = zone && el.parentElement &&
+      !el.parentElement.querySelector(':scope > .zone')
+    if (isLeaf) { zone.style.flex = ''; zone.style.width = '' }
+
     const W = el.clientWidth
     if (!W) return // hidden / not laid out yet — skip, a later pass will run
 
@@ -62,6 +75,17 @@ export default function Masonry({ minColWidth = 120, gap = 8, className = '', ch
       }
     })
     el.style.height = `${Math.max(0, Math.max(...cols) - gap)}px`
+
+    // Shrink a leaf zone to the columns it actually used (contiguous from 0,
+    // since we fill shortest-first), so it no longer spans the whole row.
+    if (isLeaf) {
+      const usedCols = cols.filter((h) => h > 0).length || 1
+      const usedW = usedCols * colW + (usedCols - 1) * gap
+      if (usedW < W - 1) {
+        zone.style.flex = '0 0 auto'
+        zone.style.width = `${Math.ceil(usedW)}px`
+      }
+    }
   }, [gap, minColWidth])
 
   // Re-pack after every render (card heights change when a store expands, a step
