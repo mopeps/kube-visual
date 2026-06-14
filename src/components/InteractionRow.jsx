@@ -58,6 +58,15 @@ export function KindIcon({ name }) {
           <path d="M11.8 9.4v4M9.8 11.4h4" />
         </svg>
       )
+    case 'document':
+      // a manifest/spec page with a folded corner — declared desired state
+      return (
+        <svg {...common}>
+          <path d="M4 1.8h5L12.2 5v9.2H4z" />
+          <path d="M9 1.8V5h3.2" />
+          <path d="M5.8 8h4.4M5.8 10.4h4.4" />
+        </svg>
+      )
     case 'note':
     default:
       return (
