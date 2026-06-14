@@ -137,8 +137,10 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
       const colEl = colIdx != null ? document.getElementById(`net-col-${colIdx}`) : null
       let built
       if (colEl) {
-        const lane = (railLanes[colEl.id] = (railLanes[colEl.id] ?? -1) + 1)
-        built = buildRailEdge(srcEl, tgtEl, canvas, colEl, lane)
+        // Cycle through a fixed set of lanes so the rails always fit the gutter
+        // (rails in different vertical bands can safely share a lane).
+        const n = (railLanes[colEl.id] = (railLanes[colEl.id] ?? -1) + 1)
+        built = buildRailEdge(srcEl, tgtEl, canvas, colEl, n % 6)
       } else {
         built = buildEdge(srcEl, tgtEl, canvas, edge.bias, edge.labelT, edge.axis, edge.spread)
       }
@@ -219,15 +221,19 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
         // then it opens the edge's popup (same affordance as clicking a box).
         const clickable = !!(p.detail && onSelectEdge)
         const open = () => { if (clickable) onSelectEdge(p) }
+        // Network mode keeps every connector faint (`dim`) so the canvas reads
+        // calmly; only the connectors of the box you hover light up (`active`).
+        const netActive = p.active
+        const netDim = p.dim && !p.active
         return (
-          <g key={p.id} className={`recon-edge ${live ? 'is-live' : ''}`}>
+          <g key={p.id} className={`recon-edge ${live ? 'is-live' : ''} ${netActive ? 'is-net-active' : ''}`}>
             <path
               className="recon-edge-line"
               d={p.d}
               fill="none"
               stroke={p.color}
-              strokeWidth={live ? 2.4 : solid ? 1.8 : internal ? 1.2 : 1.5}
-              strokeOpacity={live ? 1 : solid ? 0.8 : internal ? 0.42 : 0.7}
+              strokeWidth={live ? 2.4 : netActive ? 2.1 : netDim ? 1 : solid ? 1.8 : internal ? 1.2 : 1.5}
+              strokeOpacity={live ? 1 : netActive ? 0.95 : netDim ? 0.22 : solid ? 0.8 : internal ? 0.42 : 0.7}
               strokeDasharray={solid ? undefined : internal ? '1.5 5' : '6 4'}
               markerEnd={solid ? undefined : `url(#recon-arrow-${p.id})`}
             />

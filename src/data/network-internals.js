@@ -224,15 +224,20 @@ const ovsEdges = (ovsId) => [
     'br-int ↔ br-ex', 'The patch-port pair splicing the integration bridge to the provider bridge.'),
 ]
 
-// The realization chain inside an ovnkube-node, ending at its OVS.
-const ovnNodeEdges = (nodeId, ovsId) => [
+// The realization chain INSIDE an ovnkube-node (short, stays in the card).
+const ovnNodeEdges = (nodeId) => [
   edge(`${nodeId}__kube`, `${nodeId}__dbs`, 'writes NB rows', 'k-teal',
     'ovnkube-controller → nbdb', 'Translates Pods/Services/NetworkPolicies into OVN Northbound DB rows.'),
   edge(`${nodeId}__dbs`, `${nodeId}__controller`, 'SB flows', 'k-purple',
     'sbdb → ovn-controller', 'northd renders NB rows to SB logical flows; ovn-controller consumes them.'),
-  edge(`${nodeId}__controller`, `${ovsId}__vswitchd`, 'db.sock', 'k-teal',
+]
+
+// Cross-card links between an ovnkube-node and its OVS — these would thread
+// through other boxes, so they route down the side rail (card-level anchors).
+const ovnNodeToOvsEdges = (nodeId, ovsId) => [
+  railEdge(nodeId, ovsId, 'db.sock', 'k-teal',
     'ovn-controller → ovs-vswitchd', 'ovn-controller compiles SB flows into OpenFlow and pushes them into ovs-vswitchd over /var/run/openvswitch/db.sock.'),
-  edge(`${nodeId}__cni`, `${ovsId}__brint`, 'veth', 'k-blue',
+  railEdge(nodeId, ovsId, 'veth', 'k-blue',
     'CNI → br-int', 'The CNI plugin plugs each pod’s host-side veth into br-int as its logical switch port.'),
 ]
 
@@ -240,23 +245,27 @@ const BASE_EDGES = [
   ...ovsEdges('ovs-master'),
   ...ovsEdges('ovs-host'),
   ...ovsEdges('ovs-guest'),
-  ...ovnNodeEdges('ovn-node-master', 'ovs-master'),
-  ...ovnNodeEdges('ovn-node-host', 'ovs-host'),
-  ...ovnNodeEdges('ovn-node-guest', 'ovs-guest'),
-  // MetalLB L2: the elected speaker injects the VIP's GARP out br-ex.
-  edge('metallb-speaker-master__rawsock', 'ovs-master__brex', 'GARP', 'k-orange',
-    'MetalLB Speaker → br-ex', 'A Gratuitous ARP for the VIP, injected onto br-ex via a raw AF_PACKET socket, claiming the VIP for this node’s MAC.'),
-  edge('metallb-speaker-worker__rawsock', 'ovs-host__brex', 'GARP', 'k-orange',
-    'MetalLB Speaker → br-ex', 'The elected worker injects the VIP’s Gratuitous ARP onto br-ex.'),
-  // The VM's tap0 is plugged into the guest br-int as an OVS port.
-  edge('multus-guest__tap0', 'ovs-guest__tap0', 'tap0 → br-int', 'k-purple',
-    'Multus → br-int', 'Multus delegates to ovn-k8s-cni, which plugs the VM’s tap0 into br-int — the VM joins the OVN logical network like any pod.'),
+  ...ovnNodeEdges('ovn-node-master'),
+  ...ovnNodeEdges('ovn-node-host'),
+  ...ovnNodeEdges('ovn-node-guest'),
   // OVN-K8s Master control plane: NB → northd → SB (short, inside the card).
   edge('ovn-master-control__nbdb', 'ovn-master-control__northd', 'NB rows', 'k-purple',
     'NB DB → northd', 'northd watches the northbound rows.'),
   edge('ovn-master-control__northd', 'ovn-master-control__sbdb', 'logical flows', 'k-purple',
     'northd → SB DB', 'northd renders the rows into southbound logical flows.'),
-  // ── Long cross-column links — routed down the side rail ──────────────────
+  // ── Cross-card links — routed down the side rail so they don't thread boxes ──
+  ...ovnNodeToOvsEdges('ovn-node-master', 'ovs-master'),
+  ...ovnNodeToOvsEdges('ovn-node-host', 'ovs-host'),
+  ...ovnNodeToOvsEdges('ovn-node-guest', 'ovs-guest'),
+  // MetalLB L2: the elected speaker injects the VIP's GARP out br-ex.
+  railEdge('metallb-speaker-master', 'ovs-master', 'GARP', 'k-orange',
+    'MetalLB Speaker → br-ex', 'A Gratuitous ARP for the VIP, injected onto br-ex via a raw AF_PACKET socket, claiming the VIP for this node’s MAC.'),
+  railEdge('metallb-speaker-worker', 'ovs-host', 'GARP', 'k-orange',
+    'MetalLB Speaker → br-ex', 'The elected worker injects the VIP’s Gratuitous ARP onto br-ex.'),
+  // The VM's tap0 is plugged into the guest br-int as an OVS port.
+  railEdge('multus-guest', 'ovs-guest', 'tap0 → br-int', 'k-purple',
+    'Multus → br-int', 'Multus delegates to ovn-k8s-cni, which plugs the VM’s tap0 into br-int — the VM joins the OVN logical network like any pod.'),
+  // ── Long cross-column links — also down the side rail ────────────────────
   railEdge('konnectivity-server', 'konnectivity-agent', 'control tunnel', 'k-sky',
     'Konnectivity Server → Agent', 'A persistent encrypted HTTP/2 tunnel opened by the agent up to the server; control traffic for the node rides back down it.'),
   railEdge('ovn-master-control', 'ovn-node-guest', 'SB → node', 'k-purple',

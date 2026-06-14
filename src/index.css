@@ -2126,7 +2126,7 @@ body::after {
    of crashing through the boxes; short edges stay direct). */
 .net-bigpicture--net .node-subtitle,
 .net-bigpicture--net .primitive-nest-cap { display: none; }
-.net-bigpicture--net .net-col { padding-right: 20px; }
+.net-bigpicture--net .net-col { padding-right: 50px; }
 
 /* The "kernel boundary" rule between user-space daemons and the datapath. */
 .primitive-boundary {
