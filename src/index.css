@@ -2101,14 +2101,13 @@ body::after {
    partitions the interior by placement (user space vs kernel datapath, etc.). */
 .primitive-box .primitive-band { margin-top: 8px; }
 
-/* Network mode reads cleaner with the connectors drawn BEHIND the boxes: lift the
-   columns above the edge SVG (z-index 4) so the cards occlude the wires, which
-   then show only in the gaps and tuck into each box's edge instead of crossing
-   over its text. And hide every object's subheading (the caption line) — the
-   detail is one click away in the popup. */
-.net-bigpicture--net .net-cols { position: relative; z-index: 5; }
+/* Network mode hides every object's subheading (the caption line) — the detail
+   is one click away in the popup — and reserves a right-hand gutter on each
+   column for the connector "rail" (the long cross-column edges run there instead
+   of crashing through the boxes; short edges stay direct). */
 .net-bigpicture--net .node-subtitle,
 .net-bigpicture--net .primitive-nest-cap { display: none; }
+.net-bigpicture--net .net-col { padding-right: 20px; }
 
 /* The "kernel boundary" rule between user-space daemons and the datapath. */
 .primitive-boundary {

@@ -155,6 +155,24 @@ export default function OverviewTab({
   })
   const allNetCollapsed = DRILLABLE_IDS.every((id) => netCollapsedIds.has(id))
   const toggleAllNet = () => setNetCollapsedIds(allNetCollapsed ? new Set() : new Set(DRILLABLE_IDS))
+  // Optional "connectors only on hover" mode: when on, the wiring is hidden until
+  // you point at a box, then only that box's connectors light up.
+  const [netWiresOnHover, setNetWiresOnHover] = useState(false)
+  const [netHoverId, setNetHoverId] = useState(null)
+  const onNetHover = (e) => {
+    if (!netWiresOnHover) return
+    const el = e.target.closest?.('[id^="nt-c"]')
+    setNetHoverId(el ? el.id : null)
+  }
+  // An edge belongs to a box if either endpoint is that box or one of its nested
+  // sub-boxes (ids are `<box>__<child>`), or vice-versa.
+  const netRelated = (e, h) => {
+    const rel = (a) => a === h || a.startsWith(`${h}__`) || h.startsWith(`${a}__`)
+    return rel(e.from) || rel(e.to)
+  }
+  const shownNetEdges = !netWiresOnHover
+    ? NETWORK_EDGES
+    : (netHoverId ? NETWORK_EDGES.filter((e) => netRelated(e, netHoverId)) : [])
   const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
 
@@ -512,6 +530,16 @@ export default function OverviewTab({
               {allNetCollapsed ? 'Expand all' : 'Collapse all'}
             </button>
           )}
+          {netOverlay && (
+            <button
+              type="button"
+              className={`net-bar-btn ${netWiresOnHover ? 'is-active' : ''}`}
+              onClick={() => { setNetWiresOnHover((v) => !v); setNetHoverId(null) }}
+              title="Hide the connectors until you point at a box"
+            >
+              {netWiresOnHover ? 'Wires: on hover' : 'Wires: always'}
+            </button>
+          )}
           <span className="net-bar-hint">
             {netOverlay
               ? 'Each network component box is opened to show where its abstractions live and how they’re implemented — collapse any box with its ▴ control. Click a sub-box or an edge for detail.'
@@ -527,6 +555,8 @@ export default function OverviewTab({
           ref={canvasRef}
           className={`border border-border-w rounded-lg overflow-visible overview-canvas net-bigpicture ${netOverlay ? 'net-bigpicture--net' : ''}`}
           style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
+          onMouseOver={netOverlay && netWiresOnHover ? onNetHover : undefined}
+          onMouseLeave={netWiresOnHover ? () => setNetHoverId(null) : undefined}
         >
           <div className="net-cols">
             {NET_PAIRS.map((i) => (
@@ -538,7 +568,7 @@ export default function OverviewTab({
           </div>
           {netOverlay && (
             <ReconLoopOverlay
-              edges={NETWORK_EDGES}
+              edges={shownNetEdges}
               canvasRef={canvasRef}
               activeEdgeId={null}
               signal={null}
