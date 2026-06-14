@@ -75,6 +75,22 @@ export const BADGE_GLOSSARY = {
     'Red Hat Enterprise Linux CoreOS — the immutable, container-optimised OS the guest worker node VM boots. Updates ship as whole-image swaps driven by Ignition, not in-place package upgrades.',
   'OVN ACL':
     'Access-control rule in OVN\'s logical database. A NetworkPolicy compiles into ACLs that br-int enforces as allow/drop OpenFlow rules evaluated on every packet.',
+  'NodePort':
+    'Service type that opens the same high port (30000–32767) on every node. Traffic hitting any node on that port is forwarded to the Service\'s backend Pods — the bridge a cloud LoadBalancer (or here, the management cluster\'s LB) targets to reach the guest.',
+  'Deployment':
+    'Workload controller for stateless Pods. It owns a ReplicaSet, holds the desired replica count, and rolls out updates by creating a new ReplicaSet and scaling the old one to zero.',
+  'DaemonSet':
+    'Workload controller that runs exactly one Pod per (matching) node and adds/removes them as nodes join or leave — used for node-local agents like the CNI plugin and CSI node driver.',
+  'VirtualMachine':
+    'KubeVirt Custom Resource describing a VM\'s desired state. virt-controller renders it into a virt-launcher Pod, and a running VirtualMachineInstance (VMI) is the live counterpart — here, a guest worker node.',
+  'VolumeSnapshot':
+    'Point-in-time copy of a PersistentVolume. The CSI driver coordinates with the storage backend to capture it, letting a PVC be restored or cloned from the snapshot.',
+  'ARP/NDP':
+    'Address Resolution Protocol (IPv4) / Neighbor Discovery (IPv6) — how a host claims an IP on the local segment. MetalLB L2 answers ARP/NDP for a LoadBalancer VIP so the switch forwards that traffic to the speaker node.',
+  'meta-CNI':
+    'Multus runs as a "meta" CNI plugin: kubelet calls it first, and it delegates to the primary CNI (OVN-Kubernetes) for the default network, then attaches any extra interfaces a Pod requests via NetworkAttachmentDefinitions.',
+  'CSR auto-approve':
+    'A CertificateSigningRequest is how a kubelet asks the cluster to sign its serving/client certs. The approver auto-signs only CSRs that match an expected NodePool machine, so nodes join without manual cert approval.',
 }
 
 // A badge label that is an apiGroup / apiVersion provenance stamp

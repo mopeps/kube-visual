@@ -11,6 +11,13 @@
 // kind → presentation metadata. `accent` is a CSS custom-property name so the
 // rows pick up the same palette as the rest of the app.
 export const INTERACTION_KINDS = {
+  declare: {
+    label: 'Declares',
+    accent: 'var(--k-amber)',
+    // document — states desired state on a spec/CR (no act of its own). Shares the
+    // declare→document language of hop-kinds.js / pipeline-kinds.js.
+    icon: 'document',
+  },
   observe: {
     label: 'Watches',
     accent: 'var(--k-amber)',
@@ -51,6 +58,11 @@ export const INTERACTION_KINDS = {
 
 // Leading verb → kind. Keys are lower-cased; lookup lower-cases the verb too.
 const VERB_KIND = {
+  // declare — a spec/CR stating desired state (HostedCluster, the config CRs).
+  // Not an action the object performs; just an authored intent other controllers
+  // read and reconcile.
+  declares: 'declare', declare: 'declare', declared: 'declare',
+
   // observe / read-only control loops
   watches: 'observe', watched: 'observe', watch: 'observe',
   polls: 'observe', poll: 'observe',
@@ -63,6 +75,9 @@ const VERB_KIND = {
   validates: 'observe', validate: 'observe',
   selects: 'observe', select: 'observe',
   caches: 'observe', cache: 'observe',
+  matches: 'observe', match: 'observe', matched: 'observe',
+  aggregates: 'observe', aggregate: 'observe',
+  'cross-checks': 'observe', 'cross-check': 'observe',
 
   // inbound — flows toward / acts on this component
   receives: 'inbound', receive: 'inbound',
@@ -100,6 +115,12 @@ const VERB_KIND = {
   // registering yourself with an API server / kubelet is an outbound announcement,
   // not the creation of a new object
   registers: 'outbound', register: 'outbound',
+  advertises: 'outbound', advertise: 'outbound',
+  publishes: 'outbound', publish: 'outbound', published: 'outbound',
+  populates: 'outbound', populate: 'outbound',
+  signals: 'outbound', signal: 'outbound',
+  asks: 'outbound', ask: 'outbound',
+  performs: 'outbound', perform: 'outbound',
 
   // create — brings a new object/process into existence (vs. manage, which is
   // upkeep of something that already exists)
@@ -117,6 +138,12 @@ const VERB_KIND = {
   implements: 'create', implement: 'create',
   triggers: 'create', trigger: 'create', triggered: 'create',
   instantiates: 'create', instantiate: 'create',
+  generates: 'create', generate: 'create', generated: 'create',
+  carves: 'create', carve: 'create', carved: 'create',
+  // active "Deploys X" creates an operand; passive "Deployed by X" is caught by
+  // isPassiveByAgent() above and re-read as inbound, so this never points the
+  // arrow the wrong way.
+  deploys: 'create', deploy: 'create', deployed: 'create',
 
   // manage — ongoing lifecycle / configuration / upkeep of an existing object
   manages: 'manage', manage: 'manage',
@@ -128,6 +155,20 @@ const VERB_KIND = {
   enforced: 'manage', enforces: 'manage',
   maintains: 'manage', maintain: 'manage',
   updates: 'manage', updated: 'manage', update: 'manage',
+  coordinates: 'manage', coordinate: 'manage',
+  adopts: 'manage', adopt: 'manage', adopted: 'manage',
+  reclaims: 'manage', reclaim: 'manage', reclaimed: 'manage',
+  taints: 'manage', taint: 'manage', tainted: 'manage',
+  evicts: 'manage', evict: 'manage', evicted: 'manage',
+  deletes: 'manage', delete: 'manage', deleted: 'manage',
+  drives: 'manage', drive: 'manage', driven: 'manage',
+  rejects: 'manage', reject: 'manage', rejected: 'manage',
+  blocks: 'manage', block: 'manage', blocked: 'manage',
+  keeps: 'manage', keep: 'manage', kept: 'manage',
+  hosts: 'manage', host: 'manage', hosted: 'manage',
+  pairs: 'manage', pair: 'manage', paired: 'manage',
+  fronts: 'manage', front: 'manage', fronted: 'manage',
+  backs: 'manage', back: 'manage',
 
   // pipeline mechanics — the verbs that lead the kubelet/CRI-O/kernel-primitive
   // detail bullets (see pipeline-model.js / primitives.js). Classed so the

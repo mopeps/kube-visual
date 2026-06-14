@@ -16,7 +16,7 @@ export default function InteractionList({ interactions, onSelectComponent, selfI
 
   // Only legend-list the kinds actually present in this component's rows, in a
   // stable order, so the key never advertises an icon the user can't see below.
-  const order = ['inbound', 'outbound', 'observe', 'create', 'manage', 'note']
+  const order = ['declare', 'inbound', 'outbound', 'observe', 'create', 'manage', 'note']
   const presentKinds = order.filter((k) => kinds.includes(k))
 
   return (

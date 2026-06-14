@@ -612,7 +612,7 @@
     "role": "STORAGE PROVISIONER",
     "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "kubevirt-csi-driver binary + CSI gRPC sidecars (external-provisioner / external-attacher)",
-    "problemSolved": "Turns a guest PersistentVolumeClaim into real storage by provisioning a backing PVC in the management cluster and hot-plugging that volume into the worker VMI — the guest never needs a storage backend of its own.",
+    "problemSolved": "Turns a guest PersistentVolumeClaim into real storage: it provisions a backing PVC in the management cluster and hot-plugs that volume into the worker VMI, so the guest needs no storage backend of its own.",
     "interactions": [
       "Watches the Guest API Server for PersistentVolumeClaims and VolumeAttachments via its external-provisioner and external-attacher sidecars.",
       "Creates the backing infra PersistentVolumeClaim in the management cluster's HCP namespace through the Management Kube API Server, bound by a management-cluster StorageClass.",
@@ -1089,7 +1089,7 @@
     "role": "NETWORK CONTROL",
     "runtimeForm": "Deployment · openshift-ovn-kubernetes",
     "linuxPrimitive": "ovnkube-control-plane (interconnect: cluster manager)",
-    "problemSolved": "The guest cluster's lightweight OVN control plane — in interconnect mode it allocates each node a pod subnet and coordinates the interconnect; the NB/SB DBs live per-node in OVN-K8s Node.",
+    "problemSolved": "The guest cluster's lightweight OVN control plane: in interconnect mode it allocates each node a pod subnet and stitches the per-node zones together. The NB/SB DBs themselves live in OVN-K8s Node.",
     "interactions": [
       "Carves the guest's pod CIDR into a /23 per node and hands each ovnkube-node its slice.",
       "Coordinates the interconnect (transit switch / remote-port info) so each node's OVN zone is stitched to the others.",
@@ -1116,7 +1116,7 @@
     "role": "NETWORK CONTROL",
     "runtimeForm": "Deployment · openshift-ovn-kubernetes (management)",
     "linuxPrimitive": "ovnkube-control-plane (interconnect: cluster manager)",
-    "problemSolved": "The management cluster is itself a normal OpenShift cluster, so it runs its OWN OVN control plane on its control-plane nodes — the counterpart to the guest's, for the bare-metal pod network.",
+    "problemSolved": "The management cluster runs its OWN OVN control plane on its control-plane nodes — the counterpart to the guest's, driving the bare-metal pod network.",
     "interactions": [
       "Allocates each bare-metal node (master + workers) its pod subnet for the management cluster's own network.",
       "Coordinates the management cluster's interconnect; the NB/SB DBs live in each bare-metal node's ovnkube-node.",
@@ -1850,7 +1850,7 @@
     "role": "VIRTUAL SWITCH",
     "runtimeForm": "systemd unit · guest worker node (in VM)",
     "linuxPrimitive": "ovs-vswitchd (in VM)",
-    "problemSolved": "The in-VM data-plane switch all guest application Pods plug into — its br-int flows (including the Service load-balancer and NetworkPolicy ACLs realized on it) are programmed by the guest OVN-K8s Node via OpenFlow.",
+    "problemSolved": "The in-VM data-plane switch every guest application Pod plugs into. The guest OVN-K8s Node programs its br-int flows via OpenFlow — including the realized Service load-balancer and NetworkPolicy ACLs.",
     "interactions": [
       "Manages the in-VM br-int OVS bridge for guest Pod networking.",
       "Receives OpenFlow rules from the guest OVN-Kubernetes node DaemonSet.",
@@ -3425,7 +3425,7 @@
     "role": "LB CONTROLLER",
     "runtimeForm": "Deployment · metallb-system",
     "linuxPrimitive": "Go binary + controller-runtime",
-    "problemSolved": "Gives a bare-metal cluster the cloud-style LoadBalancer it otherwise lacks: it watches LoadBalancer Services and hands each one an external IP. The hosted cluster is a 'cloud-hosted' cluster whose cloud IS this management cluster, so its LoadBalancer Services are fulfilled here.",
+    "problemSolved": "Gives a bare-metal cluster the cloud-style LoadBalancer it otherwise lacks: it watches LoadBalancer Services and hands each one an external IP. The hosted cluster's 'cloud' IS this management cluster, so its LoadBalancer Services are fulfilled here too.",
     "interactions": [
       "Watches Services of type LoadBalancer across the management cluster (including the guest's apps + control-plane LB Services in each HCP namespace) and allocates each an address from an IPAddressPool, writing it to the Service's status.",
       "A cluster-wide singleton Deployment — it does the IP allocation only; the per-node speakers do the actual L2 advertisement.",
