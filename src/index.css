@@ -2064,16 +2064,20 @@ body::after {
    Linux primitives + integrations (see network-internals.js / PrimitiveBoxCard). */
 .net-bigpicture { position: relative; }
 
-/* The three parallel pair-columns. */
+/* The three parallel pair-columns. They share the width evenly but never crush
+   below a readable minimum — past that the row scrolls horizontally rather than
+   squeezing the opened component internals. */
 .net-cols {
   display: flex;
   align-items: flex-start;
   gap: 18px;
   margin: 12px 0;
+  overflow-x: auto;
+  padding-bottom: 6px;
 }
 .net-col {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 1 0 400px;
+  min-width: 400px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -2132,12 +2136,6 @@ body::after {
   flex: 0 1 auto;
 }
 
-@media (max-width: 1100px) {
-  /* Network mode is a wide-desktop affordance; if shown narrow, let the three
-     columns wrap two-up rather than crush. */
-  .net-cols { flex-wrap: wrap; }
-  .net-col { flex: 1 1 46%; }
-}
 
 /* Quiet edge labels — plain coloured text riding the line (a halo of page
    background keeps it readable), like the bare "100.64.0.1/16" annotations of
