@@ -85,6 +85,11 @@ export default function PrimitiveBoxCard({
         </div>
       )
     }
+    // A standalone interface primitive (a band box, not a bridge child — tap0,
+    // the raw socket, the tunnel endpoint) renders as the same small pill so
+    // every interface reads alike; it just sits in its band row rather than on
+    // a bridge rim.
+    if (b.variant === 'iface') return renderPort(b)
     return (
       <NodeCard
         key={b.id}
