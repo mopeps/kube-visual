@@ -171,10 +171,20 @@ export default function OverviewTab({
   // detail modal, so tapping is a pure trace gesture. Mouse hover still works
   // alongside; this just makes the mode usable on touch and adds click-to-pin.
   const onNetFocusTap = (e) => {
+    const el = e.target.closest?.('[id^="nt-c"]')
+    if (!el) return
+    // Don't swallow clicks on a box's real controls: the collapse ▴ / title ⓘ /
+    // nested container headers (<button>s), a collapsed box's expand toggle
+    // ([aria-expanded]), or a leaf sub-box nested inside an opened box (it opens
+    // a detail popup). Capture-phase stopPropagation would otherwise eat them and
+    // break collapsing/expanding the objects. Focus mode only repurposes a tap on
+    // a top-level component card, whose sole action would be opening its modal —
+    // there we light its wires instead.
+    const nested = el.parentElement?.closest('[id^="nt-c"]')
+    if (nested || e.target.closest('button, [aria-expanded]')) return
     e.preventDefault()
     e.stopPropagation()
-    const el = e.target.closest?.('[id^="nt-c"]')
-    setNetHoverId((prev) => (el && el.id === prev ? null : el ? el.id : null))
+    setNetHoverId((prev) => (el.id === prev ? null : el.id))
   }
   // An edge belongs to a box if either endpoint is that box or one of its nested
   // sub-boxes (ids are `<box>__<child>`), or vice-versa.
