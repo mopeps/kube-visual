@@ -2130,10 +2130,58 @@ body::after {
   gap: 8px;
 }
 /* The sub-boxes size to content (a row of primitives), not the fixed node width. */
-.primitive-band-boxes > .node {
+.primitive-band-boxes > .node,
+.primitive-nest-body > .node {
   width: auto;
   min-width: 116px;
   flex: 0 1 auto;
+}
+
+/* ── Nested boxes: a port drawn ON a bridge, a row INSIDE the NB DB ───────
+   A container box is a small framed object whose body holds its child boxes —
+   so br-int shows its interfaces on it and the NB DB shows its rows inside it. */
+.primitive-nest {
+  flex: 0 1 auto;
+  align-self: flex-start;
+  border: 1px solid color-mix(in srgb, var(--node-accent) 55%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--node-accent) 8%, #0a0f1e);
+  padding: 5px;
+}
+.primitive-nest-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 7px;
+  width: 100%;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  padding: 2px 3px 5px;
+  font-family: inherit;
+}
+.primitive-nest-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.primitive-nest-head:hover .primitive-nest-title { text-decoration: underline; }
+.primitive-nest-cap {
+  color: var(--tx-muted);
+  font-size: 0.56rem;
+}
+.primitive-nest-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.22);
+}
+/* Interface/port chips read smaller than a full primitive card. */
+.primitive-nest-body > .node--iface,
+.primitive-band-boxes > .node--iface {
+  min-width: 92px;
 }
 
 

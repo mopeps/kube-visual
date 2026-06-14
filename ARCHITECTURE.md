@@ -413,22 +413,37 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
      operators (Cluster Network / Multus / Ingress / DNS) lifted out of the CPO/CVO
      operator-set cards; everything else and any now-empty zone is dropped.
    - **Each drillable component box opens *in place* to show its own internals** —
-     never a zone. `PrimitiveBoxCard.jsx` (the generalised expand-in-place card)
-     partitions the component's own card body into placement bands (e.g. user space
-     vs a `── kernel boundary ──` vs the `openvswitch.ko` datapath) holding the
-     primitive sub-boxes. **Default expanded**; a `▴` control collapses any one
-     independently (`netCollapsedIds` Set). The five integrations live in
-     `src/data/network-internals.js` (`INTERNAL_TOPOLOGY`): Open vSwitch →
-     ovsdb-server/ovs-vswitchd/br-int/br-ex; OVN-K8s Master → NB-DB rows
-     `ovn_cluster_router (100.64.0.1)` + `LS "join"` + SB DB (so the logical objects
-     live inside the real pod, not floating); MetalLB Speaker → AF_PACKET GARP;
-     Multus → the VM's `tap0`; Konnectivity Server → its tunnel endpoint.
-   - **Integration edges** (`buildNetworkEdges` → one `ReconLoopOverlay`, `idPrefix=''`)
-     wire the boxes with their mechanism labels — `db.sock` (OVN-K8s Node → ovs-vswitchd),
-     `GARP` (MetalLB Speaker → br-ex), `tap0 → br-int` (Multus → br-int), the
-     Konnectivity tunnel, `NB→SB→node`. Sub-box and card DOM ids are namespaced per
-     column (`nt-c{N}-…`) so the three columns never collide. Sub-box clicks open a
-     `DeepDiveModal`.
+     never a zone. `PrimitiveBoxCard.jsx` partitions the component's own card body
+     into placement bands (user space vs a `── kernel boundary ──` vs the
+     `openvswitch.ko` datapath) holding the primitive sub-boxes. Boxes **nest** (a
+     recursive `renderBox`): a bridge box draws its interfaces ON it and the NB DB
+     box holds its rows INSIDE it. **Default expanded**; a `▴` control collapses any
+     one independently (`netCollapsedIds` Set), and a Collapse-all/Expand-all button
+     toggles them together. The internals live in `src/data/network-internals.js`
+     (`INTERNAL_TOPOLOGY`):
+       - **Open vSwitch** → ovsdb-server / ovs-vswitchd over the kernel boundary →
+         `br-ex` (carrying its `eth0` NIC port) and `br-int` (carrying its ports:
+         `patch → br-ex`, `genev_sys :6081`, pod veths, and — guest — `tap0` plus the
+         realized **Service LB flows** / **NetworkPolicy ACL flows**).
+       - **OVN-K8s Master** → a **Northbound DB box** whose rows are
+         `ovn_cluster_router (100.64.0.1)`, `LS "join"`, the per-node switch, the
+         **Load_Balancer rows** (Services) and **ACL rows** (NetworkPolicy) → `northd`
+         → **Southbound DB**.
+       - **OVN-K8s Node** → ovnkube-controller / node-local nbdb·sbdb·northd /
+         ovn-controller / the `ovn-k8s-cni-overlay` plugin.
+       - **MetalLB Speaker** → AF_PACKET GARP; **Multus** → the VM's `tap0`;
+         **Konnectivity Server** → its tunnel endpoint.
+   - **Services & NetworkPolicy have no card** — they're declared as NB-DB rows and
+     realized as br-int flows (joined by a "realized as" edge); `filterNetworkZone`
+     drops service-like nodes (`isServiceLike`) from the columns.
+   - **Topology edges** (`buildNetworkEdges` → one `ReconLoopOverlay`, `idPrefix=''`)
+     wire ports/rows at any nesting depth with mechanism labels — `OpenFlow`
+     (ovs-vswitchd → br-int), `patch port` (br-int ↔ br-ex), `db.sock` (ovn-controller
+     → ovs-vswitchd), `veth` (CNI → br-int), `GARP` (MetalLB → br-ex), `tap0 → br-int`,
+     the Konnectivity tunnel, `NB → northd → SB → node`, and `realized as`
+     (Load_Balancer/ACL rows → br-int flows). Card and sub-box DOM ids are namespaced
+     per column (`nt-c{N}-…`); an edge draws only when both endpoints are expanded.
+     Sub-box clicks open a `DeepDiveModal`.
 
    On phones the OVN deep-dive topic carries the same story instead.
 ## 3. Reference Data Schemas
