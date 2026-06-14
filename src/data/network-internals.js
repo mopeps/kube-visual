@@ -209,6 +209,12 @@ const edge = (from, to, label, accent, title, summary) => ({
   from, to, label, accent, step: '', solid: true, quiet: true,
   title, detail: summary ? detail('INTEGRATION', summary) : undefined,
 })
+// A "rail" edge is a long cross-column link that routes down the column's side
+// gutter (orthogonal) instead of crashing diagonally through the boxes. It wires
+// the two COMPONENT cards (not deep sub-boxes) so its stubs stay at the edge.
+const railEdge = (from, to, label, accent, title, summary) => ({
+  ...edge(from, to, label, accent, title, summary), rail: true,
+})
 
 // Intra-OVS wiring: the daemons program the datapath; the bridges patch together.
 const ovsEdges = (ovsId) => [
@@ -245,20 +251,18 @@ const BASE_EDGES = [
   // The VM's tap0 is plugged into the guest br-int as an OVS port.
   edge('multus-guest__tap0', 'ovs-guest__tap0', 'tap0 → br-int', 'k-purple',
     'Multus → br-int', 'Multus delegates to ovn-k8s-cni, which plugs the VM’s tap0 into br-int — the VM joins the OVN logical network like any pod.'),
-  // Konnectivity reverse tunnel, server in the namespace ↔ agent in the VM.
-  edge('konnectivity-server__tunnel', 'konnectivity-agent', 'control tunnel', 'k-sky',
-    'Konnectivity Server → Agent', 'A persistent encrypted HTTP/2 tunnel opened by the agent up to the server; control traffic for the node rides back down it.'),
-  // OVN-K8s Master control plane: NB → northd → SB → the node; rows realized as flows.
+  // OVN-K8s Master control plane: NB → northd → SB (short, inside the card).
   edge('ovn-master-control__nbdb', 'ovn-master-control__northd', 'NB rows', 'k-purple',
     'NB DB → northd', 'northd watches the northbound rows.'),
   edge('ovn-master-control__northd', 'ovn-master-control__sbdb', 'logical flows', 'k-purple',
     'northd → SB DB', 'northd renders the rows into southbound logical flows.'),
-  edge('ovn-master-control__sbdb', 'ovn-node-guest__controller', 'SB → node', 'k-purple',
-    'SB DB → ovn-controller', 'Each guest node’s ovn-controller reads the SB DB and realizes it locally.'),
-  edge('ovn-master-control__lb', 'ovs-guest__lbflows', 'realized as', 'k-green',
-    'Load_Balancer rows → br-int flows', 'The Service Load_Balancer rows in the NB DB are realized as DNAT OpenFlow on the guest br-int — declaration above, datapath below.'),
-  edge('ovn-master-control__acl', 'ovs-guest__aclflows', 'realized as', 'k-green',
-    'ACL rows → br-int flows', 'The NetworkPolicy ACL rows are realized as allow/drop OpenFlow on the guest br-int.'),
+  // ── Long cross-column links — routed down the side rail ──────────────────
+  railEdge('konnectivity-server', 'konnectivity-agent', 'control tunnel', 'k-sky',
+    'Konnectivity Server → Agent', 'A persistent encrypted HTTP/2 tunnel opened by the agent up to the server; control traffic for the node rides back down it.'),
+  railEdge('ovn-master-control', 'ovn-node-guest', 'SB → node', 'k-purple',
+    'OVN-K8s Master → ovn-controller', 'Each guest node’s ovn-controller reads the SB DB the master publishes and realizes it locally as OpenFlow.'),
+  railEdge('ovn-master-control', 'ovs-guest', 'realized as', 'k-green',
+    'Load_Balancer / ACL rows → br-int flows', 'The Service Load_Balancer rows and NetworkPolicy ACL rows declared in the NB DB are realized as DNAT / allow-drop OpenFlow on the guest br-int — declaration above, datapath below.'),
 ]
 
 // Build the per-column edge list (one canvas-level overlay, idPrefix=''); each

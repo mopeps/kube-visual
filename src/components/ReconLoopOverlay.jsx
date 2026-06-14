@@ -83,6 +83,37 @@ function buildEdge(srcEl, tgtEl, canvasEl, bias, labelT = 0.5, axis, spread) {
   return { d: `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${tx} ${ty}`, labelX, labelY }
 }
 
+// A "rail" edge (network mode) routes orthogonally down a column's right-hand
+// gutter instead of cutting diagonally across the boxes: out of the source's
+// right edge, along a vertical lane near the column edge, into the target's right
+// edge. `lane` offsets parallel rails so they don't overlap. Rounded corners keep
+// it reading as cable management rather than a hard L.
+function buildRailEdge(srcEl, tgtEl, canvasEl, colEl, lane = 0) {
+  const c = canvasEl.getBoundingClientRect()
+  const s = srcEl.getBoundingClientRect()
+  const t = tgtEl.getBoundingClientRect()
+  const col = colEl.getBoundingClientRect()
+
+  const railX = col.right - c.left - 7 - lane * 7
+  const sx = s.right - c.left
+  const sy = s.top + s.height / 2 - c.top
+  const tx = t.right - c.left
+  const ty = t.top + t.height / 2 - c.top
+  const down = ty >= sy
+  const r = Math.min(7, Math.abs(ty - sy) / 2)
+  // M → horizontal to the rail (rounded) → vertical down/up the rail (rounded) →
+  // horizontal back into the target.
+  const d = [
+    `M ${sx} ${sy}`,
+    `L ${railX - r} ${sy}`,
+    `Q ${railX} ${sy} ${railX} ${down ? sy + r : sy - r}`,
+    `L ${railX} ${down ? ty - r : ty + r}`,
+    `Q ${railX} ${ty} ${railX - r} ${ty}`,
+    `L ${tx} ${ty}`,
+  ].join(' ')
+  return { d, labelX: railX, labelY: (sy + ty) / 2 }
+}
+
 // `idPrefix` namespaces the DOM lookups: the deep dives' boxes render as
 // dd-<boxId> (the default), while the Overview's network overlay passes '' to
 // connect raw ids — its own chips and real component cards alike.
@@ -95,11 +126,22 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
     if (!edges?.length || !canvas) { setPaths([]); return }
 
     const next = []
+    const railLanes = {}
     for (const edge of edges) {
       const srcEl = document.getElementById(idPrefix ? `${idPrefix}-${edge.from}` : edge.from)
       const tgtEl = document.getElementById(idPrefix ? `${idPrefix}-${edge.to}` : edge.to)
       if (!srcEl || !tgtEl) continue
-      const built = buildEdge(srcEl, tgtEl, canvas, edge.bias, edge.labelT, edge.axis, edge.spread)
+      // Rail edges route down the owning column's gutter (network mode); fall back
+      // to the normal bezier if the column can't be resolved.
+      const colIdx = edge.rail ? (/nt-c(\d+)-/.exec(edge.from) || [])[1] : null
+      const colEl = colIdx != null ? document.getElementById(`net-col-${colIdx}`) : null
+      let built
+      if (colEl) {
+        const lane = (railLanes[colEl.id] = (railLanes[colEl.id] ?? -1) + 1)
+        built = buildRailEdge(srcEl, tgtEl, canvas, colEl, lane)
+      } else {
+        built = buildEdge(srcEl, tgtEl, canvas, edge.bias, edge.labelT, edge.axis, edge.spread)
+      }
       next.push({
         ...edge,
         color: `var(--${edge.accent || 'k-cyan'})`,

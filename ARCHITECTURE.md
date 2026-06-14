@@ -443,7 +443,11 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
      the Konnectivity tunnel, `NB → northd → SB → node`, and `realized as`
      (Load_Balancer/ACL rows → br-int flows). Card and sub-box DOM ids are namespaced
      per column (`nt-c{N}-…`); an edge draws only when both endpoints are expanded.
-     Sub-box clicks open a `DeepDiveModal`.
+     Sub-box clicks open a `DeepDiveModal`. **Routing:** short links draw direct;
+     long cross-column links carry `rail: true` and route down the column's right
+     gutter (orthogonal, `buildRailEdge`) instead of crashing through the boxes. A
+     **Wires: always / on hover** control (`netWiresOnHover`) can hide the wiring
+     until you point at a box, then lights up only that box's connectors.
 
    On phones the OVN deep-dive topic carries the same story instead.
 ## 3. Reference Data Schemas
