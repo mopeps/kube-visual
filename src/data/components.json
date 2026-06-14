@@ -148,7 +148,7 @@
     "interactions": [
       "Reconciles the HostedControlPlane CR created by the HyperShift Operator.",
       "Creates and manages the Deployments/StatefulSets for every guest control-plane component in the HCP namespace.",
-      "Wires up certificates, kubeconfigs, and service endpoints between the components.",
+      "Generates this guest cluster's entire PKI — a self-signed root CA plus the serving and client certificates for every component (API server, etcd, OAuth, Konnectivity, the kubelet bootstrap kubeconfig) — and stores them as Secrets in the HCP namespace, then mounts those certs, kubeconfigs, and service endpoints into each Deployment. The guest's PKI is minted a cluster up, never inside a guest VM.",
       "While the HyperShift Operator is one cluster-wide controller, the CPO is deployed per HCP namespace to reconcile this guest's own etcd, API server, OAuth, Konnectivity, Ignition, and OVN control plane.",
       "Operator set: the cards grouped under this node are the control-plane operands the CPO builds for THIS hosted cluster — the OpenShift API extension servers, the Hosted Cluster Config Operator, the network and policy controllers, and the HyperShift lifecycle controllers (Machine Approver, Cluster Autoscaler). Every one is a real, separate Deployment Pod — nested under the CPO only to keep the canvas legible, not because they share a process. Contrast the Cluster Version Operator, which version-pins the standard release-payload cluster operators."
     ],
@@ -413,6 +413,7 @@
     "interactions": [
       "Watches the Guest API Server for pending kubelet client and serving CSRs from new nodes.",
       "Cross-checks each CSR against the expected NodePool machines before approving it.",
+      "Only approves — it never signs. The guest cluster's kube-controller-manager CSR signer mints the kubelet's client certificate from the guest CA (the CA the Control Plane Operator generated and stored as a Secret in the HCP namespace), so the bootstrap credential graduates into a node-specific cert.",
       "Runs in the HCP namespace, deployed by the Control Plane Operator alongside the Cluster API stack that creates the machines."
     ],
     "explorationCommands": [
@@ -854,7 +855,8 @@
       "Exposes the guest cluster's API on a dedicated Service port.",
       "Persists objects to the guest Etcd StatefulSet Pod in the same namespace — a regular Pod, not a static pod.",
       "Notifies guest controllers (scheduler, controller-manager) of state changes via watch events.",
-      "Runs as a Pod in the management cluster (not inside a guest VM), handling authentication, authorization, and admission for all guest API traffic."
+      "Runs as a Pod in the management cluster (not inside a guest VM), handling authentication, authorization, and admission for all guest API traffic.",
+      "Its serving certificate and the client-auth CA it trusts are mounted from Secrets the Control Plane Operator minted in the HCP namespace — the guest cluster's whole PKI is generated and stored a cluster up, so the API server has its identity before any guest node exists."
     ],
     "explorationCommands": [
       "# Get guest API server URL\noc get hostedcluster <name> -n <ns> -o jsonpath='{.status.controlPlaneEndpoint}'",
@@ -1167,11 +1169,11 @@
     "role": "TUNNEL",
     "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "konnectivity-server + GRPC tunnel",
-    "problemSolved": "Lets the guest API server reach node kubelets (exec, logs, port-forward) across a network it can't route to directly.",
+    "problemSolved": "Lets the guest API server reach guest worker nodes — kubelet exec/logs/port-forward, metrics scrapes, and pod-proxied aggregated APIs — across a node network the split control plane has no route into.",
     "interactions": [
-      "Maintains persistent tunnels from the bare metal cluster to Konnectivity Agents on each guest worker node.",
-      "Proxies API Server → kubelet calls (exec, logs, port-forward) through the tunnel.",
-      "Used by the Guest API Server for all node-targeted traffic."
+      "Accepts the persistent gRPC tunnels the Konnectivity Agents on the guest nodes dial OUT to it. The control plane has no route INTO the guest node network, so the node opens the connection and the server rides it backwards — a reverse tunnel.",
+      "Proxies every API-Server-initiated call to a node down those tunnels: 'oc exec'/attach, 'oc logs', 'oc port-forward', kubelet metrics scrapes, and apiserver→pod proxy for aggregated APIs / webhooks that resolve to a guest node.",
+      "Carries traffic in ONE direction only (API server → node). The guest kubelet's own watch of the API server is a separate outbound connection and does NOT ride this tunnel."
     ],
     "explorationCommands": [
       "# Check konnectivity server\noc logs -n <hcp-namespace> deployment/konnectivity-server --tail=50",
@@ -1195,7 +1197,7 @@
     "problemSolved": "Hands each booting worker node the config it needs to join the guest cluster — enabling zero-touch provisioning.",
     "interactions": [
       "Provides a TLS-secured endpoint serving node-specific Ignition configs.",
-      "Injects the kubelet bootstrap credentials and the machine config (systemd units, kubelet config, pull secrets, certificates) the node applies on first boot.",
+      "Injects the kubelet bootstrap credentials and the machine config (systemd units, kubelet config, pull secrets, certificates) the node applies on first boot. The bootstrap kubeconfig and cluster CA it serves were minted by the Control Plane Operator and live as Secrets in the HCP namespace; the bootstrap credential only lets the kubelet submit its first CSR, which graduates to a node-specific client cert once approved.",
       "Called once per node boot; after that, the node's kubelet manages its own certs."
     ],
     "explorationCommands": [
@@ -1767,6 +1769,7 @@
     "problemSolved": "A full RHCOS VM that acts as a guest cluster worker node — where application Pods actually run.",
     "interactions": [
       "Registers with the Guest API Server as a standard Kubernetes Node.",
+      "Boots from a DataVolume root disk — KubeVirt's Containerized Data Importer (CDI) imports the RHCOS image into a PVC in the management cluster's HCP namespace, so the VM disk is itself a bare-metal PersistentVolume, distinct from the application PVCs later hot-plugged in as extra disks.",
       "Runs guest kubelet, CRI-O, and OVN-Kubernetes node DaemonSet inside the VM.",
       "Network traffic enters and exits through the tap0 virtual NIC managed by the KubeVirt Launcher.",
       "Runs a complete Kubernetes node stack (kubelet, CRI-O, OVS) inside the VM."
@@ -1902,11 +1905,11 @@
     "role": "TUNNEL",
     "runtimeForm": "DaemonSet · kube-system (in VM)",
     "linuxPrimitive": "konnectivity-agent + gRPC tunnel",
-    "problemSolved": "The node-side tunnel that lets the guest API server reach this node's kubelet for exec, logs, and port-forward.",
+    "problemSolved": "The node-side half of the reverse tunnel — it dials out from inside the VM so the guest API server can reach this node for exec, logs, port-forward, and metrics.",
     "interactions": [
-      "Opens a persistent TLS connection to the Konnectivity Server in the bare metal cluster.",
-      "Proxies API Server → kubelet traffic through the established tunnel.",
-      "Required for 'oc exec', 'oc logs', and 'oc port-forward' to work on guest Pods."
+      "Dials OUT from inside the guest VM to the Konnectivity Server in the management cluster and holds the connection open — the control plane can't reach into the node network, so the node has to establish the path itself.",
+      "Proxies every API-Server-initiated call for this node back through that tunnel: 'oc exec'/attach, 'oc logs', 'oc port-forward', kubelet metrics scrapes, and apiserver→pod proxy for aggregated APIs / webhooks landing on this node.",
+      "Carries nothing the kubelet itself originates — the kubelet watches and updates the Guest API Server over its own separate outbound connection, not this tunnel."
     ],
     "explorationCommands": [
       "# Check konnectivity agent inside VM\nvirtctl ssh core@<vmi> -- oc get pods -n kube-system -l app=konnectivity-agent",
