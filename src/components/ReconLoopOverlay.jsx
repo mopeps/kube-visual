@@ -239,8 +239,11 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
                 The wrap re-enables pointer events (the SVG layer itself is
                 transparent) so the chip can be clicked to open its detail. */}
             {/* An edge with nothing to say draws no chip at all — a plain line,
-                like the unlabeled links of a textbook diagram. */}
-            {(lines.length > 0 || p.kind || p.kindLabel || p.step !== '') && (
+                like the unlabeled links of a textbook diagram. `showLabel` (network
+                mode) further gates the chip so a descriptor only appears where it
+                can't cover a box — rail edges, or the hovered box's edges. Deep
+                dives leave it undefined → always labelled. */}
+            {(p.showLabel ?? true) && (lines.length > 0 || p.kind || p.kindLabel || p.step !== '') && (
             <foreignObject
               x={p.labelX - CHIP_W / 2}
               y={p.labelY - CHIP_H / 2}
