@@ -186,12 +186,13 @@ export default function OverviewTab({
     !netWiresOnHover
       ? NETWORK_EDGES
       : (netHoverId ? NETWORK_EDGES.filter((e) => netRelated(e, netHoverId)) : [])
-  ).map((e) => ({
-    // A label shows only when it can't block a box: rail edges live in the gutter;
-    // every other edge reveals its label only while a box it touches is hovered.
-    ...e,
-    showLabel: e.rail || (netHoverId != null && netRelated(e, netHoverId)),
-  }))
+  ).map((e) => {
+    // Every connector is faint (`dim`) by default so the canvas reads calmly; the
+    // connectors of the box you hover light up (`active`) and reveal their label
+    // (a label only ever appears on an active edge, so it never blocks a box).
+    const active = netHoverId != null && netRelated(e, netHoverId)
+    return { ...e, dim: true, active, showLabel: active }
+  })
   const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
 

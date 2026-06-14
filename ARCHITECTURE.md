@@ -444,14 +444,16 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
      the Konnectivity tunnel, `NB → northd → SB → node`, and `realized as`
      (Load_Balancer/ACL rows → br-int flows). Card and sub-box DOM ids are namespaced
      per column (`nt-c{N}-…`); an edge draws only when both endpoints are expanded.
-     Sub-box clicks open a `DeepDiveModal`. **Routing:** short links draw direct;
-     long cross-column links carry `rail: true` and route down the column's right
-     gutter (orthogonal, `buildRailEdge`) instead of crashing through the boxes.
-     **Descriptor labels never cover a box:** a chip shows only for a rail edge (in
-     the empty gutter) or for the edges of the box currently hovered (`showLabel`,
-     gated by `netHoverId`); otherwise the connector is a plain line. A
-     **Wires: always / on hover** control (`netWiresOnHover`) can additionally hide
-     the lines themselves until you point at a box.
+     Sub-box clicks open a `DeepDiveModal`. **Routing:** only the few intra-card
+     links (inside one component) draw direct; every cross-card link carries
+     `rail: true` and routes down the column's right gutter (orthogonal,
+     `buildRailEdge`, card-level anchors, lanes cycled to fit) instead of threading
+     through other boxes. **Calm by default:** every connector is faint (`dim`); only
+     the box you **hover/tap** lights its connectors brighter (`active`) and reveals
+     their labels (`showLabel` — so a label never covers a box). A
+     **Wires: all / on focus** control (`netWiresOnHover`) can additionally hide the
+     lines themselves until you hover (or, on touch, tap) a box — a capture-phase tap
+     focuses without opening the box's modal.
 
    On phones the OVN deep-dive topic carries the same story instead.
 ## 3. Reference Data Schemas
