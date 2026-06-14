@@ -400,13 +400,14 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    line. A topic sets `reconciliation` *or* `topology`, never both (their canvas gap
    rules conflict); the static wiring hides under 640px where the stacked columns
    would make it criss-cross.
- * **Big view & Network mode (Overview, wide desktop ≥1280px):** two header
-   toggles. **Big view** renders the **whole normal Overview three times in
+ * **Big view & Network mode (Overview, wide desktop ≥1280px):** a single
+   header **view-mode control** (`overviewMode` = `single` · `big` · `network`,
+   one segmented pill so exactly one mode is lit and it's always the one on
+   screen). **Big view** renders the **whole normal Overview three times in
    parallel columns** — one per node pair (`#net-col-N`), reusing
    `renderOverviewStack()` so every card still opens its true `AncestryModal`. The
    trailing replica rows are suppressed (the three columns are the three pairs).
-   **Network** (enabled only once Big view is on) turns those columns into a
-   **detailed networking topology**:
+   **Network** turns those columns into a **detailed networking topology**:
    - The columns are pruned to network-only by `filterNetworkZone()` —
      `isNetworkComponent` (`src/data/network-components.js`) keeps components whose
      `role` (components.json) is a network role, plus the network control-plane

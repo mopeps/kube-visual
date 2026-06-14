@@ -829,6 +829,37 @@ body::after {
   border-bottom-color: var(--k-cyan);
 }
 
+/* The overview view-mode control — one segmented pill (Single · Big view ·
+   Network) so exactly one mode is highlighted and it's always the one on screen
+   (no more "highlighted but nothing shown"). */
+.seg {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-self: center;
+  border: 1px solid var(--border-w);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.seg-btn {
+  background: none;
+  border: none;
+  color: var(--tx-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
+  padding: 6px 13px;
+  cursor: pointer;
+  transition: color 0.18s, background 0.18s;
+}
+.seg-btn + .seg-btn { border-left: 1px solid var(--border-w); }
+.seg-btn:hover { color: var(--tx-bright); }
+.seg-btn.is-active {
+  color: #0a0f1e;
+  background: var(--k-cyan);
+}
+
 /* ── Wide-desktop dock layout ──────────────────────────────────────── */
 .dock-layout {
   display: flex;
@@ -2082,18 +2113,6 @@ body::after {
   flex-direction: column;
   gap: 8px;
   position: relative;
-}
-.net-col-cap {
-  align-self: center;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.66rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--tx-muted);
-  padding: 3px 12px;
-  border: 1px solid var(--border-w);
-  border-radius: 999px;
-  background: var(--bg-2);
 }
 
 /* ── A component box opened to show its internals (PrimitiveBoxCard) ──────
