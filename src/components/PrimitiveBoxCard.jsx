@@ -21,18 +21,43 @@ export default function PrimitiveBoxCard({
   const domId = `nt-c${colIndex}-${node.id}`
   const subId = (id) => `nt-c${colIndex}-${id}`
 
+  // An interface/port (variant: 'iface') is no longer a full card stacked inside
+  // its bridge — it's a small pill tab docked on the bridge's bottom rim, so it
+  // reads as a port plugged into the switch (distinct from, and smaller than, the
+  // primitive cards). Keeps its per-column DOM id for edge wiring.
+  const renderPort = (p) => {
+    const accent = `var(--${p.colorVar || 'k-teal'})`
+    return (
+      <button
+        key={p.id}
+        id={subId(p.id)}
+        type="button"
+        className="primitive-port"
+        style={{ '--node-accent': accent }}
+        onClick={(e) => { e.stopPropagation(); onSelectBox(p) }}
+        title={p.caption ? `${p.title} — ${p.caption}` : p.title}
+      >
+        <span className="primitive-port-dot" aria-hidden />
+        <span className="primitive-port-label" style={{ color: accent }}>{p.title}</span>
+      </button>
+    )
+  }
+
   // A box may nest child boxes (ports drawn ON a bridge, rows INSIDE the NB DB).
-  // Leaf → a plain NodeCard; container → a framed box with a clickable header
-  // over a body of recursively-rendered children. Every box keeps a per-column
-  // DOM id so the canvas edge overlay can wire ports/rows at any depth.
+  // Leaf → a plain NodeCard; container → a framed box with a clickable header.
+  // Interface children peel off onto the rim as port tabs; the rest stay in the
+  // body, recursively rendered (the NB DB rows, the guest's realized OpenFlow).
+  // Every box keeps a per-column DOM id so the canvas edge overlay can wire it.
   const renderBox = (b) => {
     const accent = `var(--${b.colorVar || 'k-amber'})`
     if (b.children?.length) {
+      const ports = b.children.filter((c) => c.variant === 'iface')
+      const inner = b.children.filter((c) => c.variant !== 'iface')
       return (
         <div
           key={b.id}
           id={subId(b.id)}
-          className={`primitive-nest ${b.variant ? `primitive-nest--${b.variant}` : ''}`}
+          className={`primitive-nest ${b.variant ? `primitive-nest--${b.variant}` : ''} ${ports.length ? 'primitive-nest--has-ports' : ''}`}
           style={{ '--node-accent': accent }}
         >
           <button
@@ -47,9 +72,16 @@ export default function PrimitiveBoxCard({
             <span className="primitive-nest-title" style={{ color: accent }}>{b.title}</span>
             {b.caption && <span className="primitive-nest-cap">{b.caption}</span>}
           </button>
-          <div className="primitive-nest-body">
-            {b.children.map(renderBox)}
-          </div>
+          {inner.length > 0 && (
+            <div className="primitive-nest-body">
+              {inner.map(renderBox)}
+            </div>
+          )}
+          {ports.length > 0 && (
+            <div className="primitive-nest-ports">
+              {ports.map(renderPort)}
+            </div>
+          )}
         </div>
       )
     }
