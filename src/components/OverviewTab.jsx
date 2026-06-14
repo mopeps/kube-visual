@@ -166,6 +166,16 @@ export default function OverviewTab({
     const el = e.target.closest?.('[id^="nt-c"]')
     setNetHoverId(el ? el.id : null)
   }
+  // Touch has no hover, so in "wires on focus" mode a TAP focuses a box (lights
+  // its wires) — and we stop the tap (capture phase) from opening the box's
+  // detail modal, so tapping is a pure trace gesture. Mouse hover still works
+  // alongside; this just makes the mode usable on touch and adds click-to-pin.
+  const onNetFocusTap = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const el = e.target.closest?.('[id^="nt-c"]')
+    setNetHoverId((prev) => (el && el.id === prev ? null : el ? el.id : null))
+  }
   // An edge belongs to a box if either endpoint is that box or one of its nested
   // sub-boxes (ids are `<box>__<child>`), or vice-versa.
   const netRelated = (e, h) => {
@@ -544,15 +554,17 @@ export default function OverviewTab({
               type="button"
               className={`net-bar-btn ${netWiresOnHover ? 'is-active' : ''}`}
               onClick={() => { setNetWiresOnHover((v) => !v); setNetHoverId(null) }}
-              title="Hide the connectors until you point at a box"
+              title={netWiresOnHover
+                ? 'Showing connectors only for the box you hover or tap — click to show them all'
+                : 'Hide the connectors until you hover (or tap) a box, then light up just that box’s'}
             >
-              {netWiresOnHover ? 'Wires: on hover' : 'Wires: always'}
+              {netWiresOnHover ? 'Wires: on focus' : 'Wires: all'}
             </button>
           )}
           <span className="net-bar-hint">
             {netOverlay
-              ? 'Each network component box is opened to show where its abstractions live and how they’re implemented — collapse any box with its ▴ control. Click a sub-box or an edge for detail.'
-              : 'The whole Overview, three node pairs in parallel. Turn on Network to open each component and trace the real networking topology.'}
+              ? 'Every network component is opened to show where its abstractions live and how they’re implemented. Hover (or tap) a box to label its connectors; ▴ collapses a box; click a sub-box for detail.'
+              : 'The whole Overview, three node pairs side by side. Switch to Network to open each component and trace the real networking topology.'}
           </span>
         </div>
       )}
@@ -565,12 +577,12 @@ export default function OverviewTab({
           className={`border border-border-w rounded-lg overflow-visible overview-canvas net-bigpicture ${netOverlay ? 'net-bigpicture--net' : ''}`}
           style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
           onMouseOver={netOverlay ? onNetHover : undefined}
-          onMouseLeave={netOverlay ? () => setNetHoverId(null) : undefined}
+          onMouseLeave={netOverlay && !netWiresOnHover ? () => setNetHoverId(null) : undefined}
+          onClickCapture={netOverlay && netWiresOnHover ? onNetFocusTap : undefined}
         >
           <div className="net-cols">
             {NET_PAIRS.map((i) => (
               <div className="net-col" id={`net-col-${i}`} key={i}>
-                <div className="net-col-cap">Node pair {i + 1}</div>
                 {renderOverviewStack(netOverlay, i)}
               </div>
             ))}

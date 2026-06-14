@@ -23,8 +23,7 @@ const TABS = [
 ]
 
 const DOCK_KEY = 'kv-dock-open'
-const BIG_KEY = 'kv-big-view'
-const NET_KEY = 'kv-net-overlay'
+const VIEW_KEY = 'kv-overview-mode'
 const REPLICAS_KEY = 'kv-replicas-open'
 
 function Header() {
@@ -90,26 +89,21 @@ export default function App() {
     try { localStorage.setItem(DOCK_KEY, dockOpen ? '1' : '0') } catch { /* ignore */ }
   }, [dockOpen])
 
-  // "Big view" — the whole Overview rendered three times in parallel columns
-  // (one per node pair). A wide-desktop affordance like the dock.
-  const [bigOpen, setBigOpen] = useState(() => {
-    try { return localStorage.getItem(BIG_KEY) === '1' } catch { return false }
+  // The Overview's view mode (a wide-desktop affordance):
+  //   'single'  — the normal one-up overview
+  //   'big'     — the whole overview three times in parallel columns (node pairs)
+  //   'network' — the parallel columns with each component opened to its
+  //               networking internals
+  // One mode at a time, so the toolbar control can't get into the old
+  // "highlighted but nothing shown" state.
+  const [overviewMode, setOverviewMode] = useState(() => {
+    try { return localStorage.getItem(VIEW_KEY) || 'single' } catch { return 'single' }
   })
   useEffect(() => {
-    try { localStorage.setItem(BIG_KEY, bigOpen ? '1' : '0') } catch { /* ignore */ }
-  }, [bigOpen])
-  const bigView = isWide && bigOpen
-
-  // The OVN network overlay — the shared logical objects floated over the big
-  // view. It only makes sense on top of the three parallel columns, so it's
-  // gated on big view (on phones the OVN deep dive carries the same story).
-  const [netOpen, setNetOpen] = useState(() => {
-    try { return localStorage.getItem(NET_KEY) === '1' } catch { return false }
-  })
-  useEffect(() => {
-    try { localStorage.setItem(NET_KEY, netOpen ? '1' : '0') } catch { /* ignore */ }
-  }, [netOpen])
-  const netOverlay = bigView && netOpen
+    try { localStorage.setItem(VIEW_KEY, overviewMode) } catch { /* ignore */ }
+  }, [overviewMode])
+  const bigView = isWide && overviewMode !== 'single'
+  const netOverlay = isWide && overviewMode === 'network'
 
   // Condensed replica nodes (master-2/3, worker-2/3) are off by default so the
   // main overview stays clean; a wide-desktop toggle reveals them. The network
@@ -385,53 +379,39 @@ export default function App() {
           <span className="search-trigger-text">Search</span>
           <kbd className="search-trigger-kbd" aria-hidden>⌘K</kbd>
         </button>
-        {isWide && tab === 'overview' && (
+        {isWide && tab === 'overview' && !bigView && (
           <button
             type="button"
             className={`dock-toggle ${replicasOpen ? 'is-active' : ''}`}
             onClick={() => setReplicasOpen(v => !v)}
             aria-pressed={replicasOpen}
-            disabled={bigView}
-            title={bigView
-              ? 'Big view already shows all three node pairs in parallel'
-              : replicasOpen
-                ? 'Hide the additional master/worker nodes'
-                : 'Show all master/worker nodes (3 + 3)'}
+            title={replicasOpen
+              ? 'Hide the additional master/worker nodes (3 + 3 → 1 + 1)'
+              : 'Show all master/worker nodes (3 + 3)'}
           >
-            <span aria-hidden>⧉</span>
-            {replicasOpen && !bigView ? 'Hide replicas' : 'All nodes'}
+            <span aria-hidden>⊞</span>
+            {replicasOpen ? 'Hide replicas' : 'All nodes'}
           </button>
         )}
         {isWide && tab === 'overview' && (
-          <button
-            type="button"
-            className={`dock-toggle ${bigOpen ? 'is-active' : ''}`}
-            onClick={() => setBigOpen(v => !v)}
-            aria-pressed={bigOpen}
-            title={bigOpen
-              ? 'Back to the single overview'
-              : 'Big view — the whole overview, three node pairs in parallel'}
-          >
-            <span aria-hidden>▦</span>
-            {bigOpen ? 'Single view' : 'Big view'}
-          </button>
-        )}
-        {isWide && tab === 'overview' && (
-          <button
-            type="button"
-            className={`dock-toggle ${netOpen ? 'is-active' : ''}`}
-            onClick={() => setNetOpen(v => !v)}
-            aria-pressed={netOpen}
-            disabled={!bigView}
-            title={!bigView
-              ? 'Turn on Big view first — the OVN core spans all three pairs'
-              : netOpen
-                ? 'Hide the OVN logical network overlay'
-                : 'Overlay the shared OVN join switch & cluster router'}
-          >
-            <span aria-hidden>⌗</span>
-            {netOpen ? 'Hide network' : 'Network'}
-          </button>
+          <div className="seg" role="group" aria-label="Overview view mode">
+            {[
+              { id: 'single', label: 'Single', title: 'The normal one-up overview' },
+              { id: 'big', label: 'Big view', title: 'The whole overview, three node pairs side by side' },
+              { id: 'network', label: 'Network', title: 'The three node pairs with every component opened to its networking internals — OVN, Open vSwitch, MetalLB, Konnectivity…' },
+            ].map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                className={`seg-btn ${overviewMode === m.id ? 'is-active' : ''}`}
+                aria-pressed={overviewMode === m.id}
+                onClick={() => setOverviewMode(m.id)}
+                title={m.title}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
         )}
         {isWide && (
           <button
