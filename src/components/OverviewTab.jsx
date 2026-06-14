@@ -155,12 +155,14 @@ export default function OverviewTab({
   })
   const allNetCollapsed = DRILLABLE_IDS.every((id) => netCollapsedIds.has(id))
   const toggleAllNet = () => setNetCollapsedIds(allNetCollapsed ? new Set() : new Set(DRILLABLE_IDS))
-  // Optional "connectors only on hover" mode: when on, the wiring is hidden until
-  // you point at a box, then only that box's connectors light up.
+  // Optional "connectors only on hover" mode: when on, the wiring lines are
+  // hidden until you point at a box. Independently, the descriptor LABELS are
+  // shown only for rail edges (in the empty gutter) or for edges of the box you're
+  // hovering — so a label never covers a box at rest. Hover is tracked whenever
+  // network mode is on.
   const [netWiresOnHover, setNetWiresOnHover] = useState(false)
   const [netHoverId, setNetHoverId] = useState(null)
   const onNetHover = (e) => {
-    if (!netWiresOnHover) return
     const el = e.target.closest?.('[id^="nt-c"]')
     setNetHoverId(el ? el.id : null)
   }
@@ -170,9 +172,16 @@ export default function OverviewTab({
     const rel = (a) => a === h || a.startsWith(`${h}__`) || h.startsWith(`${a}__`)
     return rel(e.from) || rel(e.to)
   }
-  const shownNetEdges = !netWiresOnHover
-    ? NETWORK_EDGES
-    : (netHoverId ? NETWORK_EDGES.filter((e) => netRelated(e, netHoverId)) : [])
+  const shownNetEdges = (
+    !netWiresOnHover
+      ? NETWORK_EDGES
+      : (netHoverId ? NETWORK_EDGES.filter((e) => netRelated(e, netHoverId)) : [])
+  ).map((e) => ({
+    // A label shows only when it can't block a box: rail edges live in the gutter;
+    // every other edge reveals its label only while a box it touches is hovered.
+    ...e,
+    showLabel: e.rail || (netHoverId != null && netRelated(e, netHoverId)),
+  }))
   const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
 
@@ -555,8 +564,8 @@ export default function OverviewTab({
           ref={canvasRef}
           className={`border border-border-w rounded-lg overflow-visible overview-canvas net-bigpicture ${netOverlay ? 'net-bigpicture--net' : ''}`}
           style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
-          onMouseOver={netOverlay && netWiresOnHover ? onNetHover : undefined}
-          onMouseLeave={netWiresOnHover ? () => setNetHoverId(null) : undefined}
+          onMouseOver={netOverlay ? onNetHover : undefined}
+          onMouseLeave={netOverlay ? () => setNetHoverId(null) : undefined}
         >
           <div className="net-cols">
             {NET_PAIRS.map((i) => (
