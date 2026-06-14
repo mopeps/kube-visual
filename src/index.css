@@ -2193,6 +2193,82 @@ body::after {
   min-width: 92px;
 }
 
+/* OVS bridges read as datapath bars instead of generic nested cards. Ports are
+   shown as small tabs attached to the bridge, while realized OpenFlow rules live
+   in a separate lane so interfaces are not confused with programmed behavior. */
+.primitive-nest--ovs-bridge {
+  flex: 1 1 100%;
+  width: 100%;
+  border-width: 2px;
+  border-radius: 12px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--node-accent) 20%, transparent), transparent 34%),
+    color-mix(in srgb, var(--node-accent) 9%, #0a0f1e);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--node-accent) 18%, transparent);
+}
+.primitive-nest--ovs-bridge .primitive-nest-head {
+  align-items: center;
+  padding-bottom: 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--node-accent) 30%, transparent);
+}
+.primitive-bridge-body {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 7px 6px 6px;
+}
+.primitive-bridge-body::before {
+  content: '';
+  position: absolute;
+  inset: 24px 8px auto;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--node-accent) 65%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--node-accent) 24%, transparent);
+  opacity: 0.72;
+}
+.primitive-bridge-label {
+  position: relative;
+  z-index: 1;
+  justify-self: start;
+  color: var(--tx-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.primitive-bridge-label--flows { margin-top: 2px; }
+.primitive-bridge-ports,
+.primitive-bridge-flows {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0 0;
+}
+.primitive-bridge-ports > .node--iface {
+  min-width: 76px;
+  padding: 5px 8px;
+  border-radius: 999px 999px 8px 8px;
+  border-color: color-mix(in srgb, var(--node-accent) 62%, transparent);
+  background: color-mix(in srgb, var(--node-accent) 16%, #0a0f1e);
+}
+.primitive-bridge-ports > .node--iface::before {
+  content: '';
+  display: block;
+  width: 2px;
+  height: 7px;
+  margin: -8px auto 3px;
+  background: color-mix(in srgb, var(--node-accent) 70%, transparent);
+  border-radius: 999px;
+}
+.primitive-bridge-ports > .node--iface .node-title { font-size: 0.68rem; }
+.primitive-bridge-flows > .node {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--k-green) 10%, #0a0f1e);
+}
+
 
 /* Quiet edge labels — plain coloured text riding the line (a halo of page
    background keeps it readable), like the bare "100.64.0.1/16" annotations of
