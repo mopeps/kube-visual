@@ -81,62 +81,75 @@ const ovsInternal = (ovsId, where, { guest = false } = {}) => {
   }
 }
 
-// ── OVN-K8s Master — the logical databases; rows live INSIDE the NB DB box ───
-const ovnMasterInternal = {
+// ── OVN-K8s Master = ovnkube-control-plane (interconnect: lightweight) ───────
+// In OVN interconnect mode the control plane no longer holds the cluster NB/SB
+// DB — that lives per-node (see ovnNodeInternal). It just hands each node a pod
+// subnet and coordinates the interconnect. The SAME box exists for the management
+// cluster (on the bare-metal master) and the guest cluster (in its HCP namespace).
+const ovnControlPlaneInternal = (prefix, where) => ({
   bands: [
     {
-      label: 'OVN control plane · logical intent → flows',
+      label: `ovnkube-control-plane · ${where}`,
       boxes: [
-        box('ovn-master-control__nbdb', 'Northbound DB', 'OVSDB', {
-          variant: 'bridge', colorVar: 'k-purple', caption: 'logical intent · rows, not devices',
-          detail: detail('NORTHBOUND DB', 'The logical space itself — a database whose rows describe what should exist. ovnkube-controller writes these rows from Kubernetes objects; northd renders them into the SB DB. The router, switches, load balancers and ACLs below are all rows in here.'),
-          children: [
-            box('ovn-master-control__router', 'ovn_cluster_router', 'OVN Cluster Router', {
-              variant: 'ellipse', colorVar: 'k-green', caption: '100.64.0.1 · distributed',
-              detail: detail('DISTRIBUTED LOGICAL ROUTER · A ROW', 'ovn_cluster_router — the router every pod subnet hangs off, but not a device anywhere. A row in this DB; every node’s ovn-controller instantiates it as OpenFlow in br-int, so routing happens on the source node.') }),
-            box('ovn-master-control__join', 'LS "join"', 'Logical Switch', {
-              variant: 'switch', colorVar: 'k-sky', caption: '100.64.0.0/16 · router ports only',
-              detail: detail('ROUTER INTERCONNECT · A ROW', 'OVN routers can’t peer directly, so the join switch on 100.64.0.0/16 wires the distributed cluster router to every per-node gateway router. No pod ever lives here.') }),
-            box('ovn-master-control__ls', 'LS <node>', 'Logical Switch', {
-              variant: 'switch', colorVar: 'k-sky', caption: 'one per node · owns the pod subnet',
-              detail: detail('PER-NODE LOGICAL SWITCH · A ROW', 'One logical switch per node owns that node’s pod subnet; pod logical ports hang off it, and same-node pod traffic is delivered directly.') }),
-            box('ovn-master-control__lb', 'Load_Balancer rows', 'OVN LB', {
-              variant: 'switch', colorVar: 'k-green', caption: 'the ClusterIP Services',
-              detail: detail('SERVICE DECLARATION · LOAD_BALANCER ROWS', 'Each ClusterIP/NodePort/LoadBalancer Service is a Load_Balancer row attached to switches/routers here. It has no datapath — it is realized as DNAT flows on br-int.') }),
-            box('ovn-master-control__acl', 'ACL rows', 'OVN ACL', {
-              variant: 'switch', colorVar: 'k-green', caption: 'the NetworkPolicy',
-              detail: detail('NETWORKPOLICY DECLARATION · ACL ROWS', 'A NetworkPolicy compiles to ACL rows + address sets here, realized as allow/drop OpenFlow on br-int.') }),
-          ],
-        }),
-        box('ovn-master-control__northd', 'ovn-northd', 'process', {
-          colorVar: 'k-purple', caption: 'NB → SB',
-          detail: detail('NORTHD · TRANSLATOR', 'Watches the NB DB and renders its rows into concrete logical flows in the SB DB.') }),
-        box('ovn-master-control__sbdb', 'Southbound DB', 'OVSDB', {
-          variant: 'bridge', colorVar: 'k-purple', caption: 'logical flows · read by every node',
-          detail: detail('SOUTHBOUND DB', 'The logical flows northd produced; each node’s ovn-controller watches it and compiles those flows into OpenFlow on its local br-int.') }),
+        box(`${prefix}__clustermgr`, 'cluster manager', 'Deployment', {
+          colorVar: 'k-sky', caption: 'allocates each node a /23',
+          detail: detail('CLUSTER MANAGER · SUBNET ALLOCATION', 'The interconnect control plane is lightweight: it carves the cluster pod CIDR into a per-node /23 and hands each ovnkube-node its slice. It does NOT hold the cluster NB/SB DB — that lives on each node.') }),
+        box(`${prefix}__ic`, 'interconnect coordinator', 'process', {
+          colorVar: 'k-sky', caption: 'stitches the per-node zones',
+          detail: detail('INTERCONNECT COORDINATOR', 'Each node is its own OVN "zone". This coordinates the transit switch / remote-port info so the zones interconnect, without a central database every node must reach.') }),
       ],
     },
   ],
-}
+})
 
-// ── OVN-K8s Node — where logical rows become real OpenFlow ──────────────────
+// ── OVN-K8s Node = ovnkube-node (interconnect: the node IS its own OVN zone) ─
+// Holds the node-local nbdb (with this zone's rows), northd, sbdb, ovn-controller
+// and the CNI — the logical topology lives here, and ovn-controller realizes it
+// as OpenFlow on this node's br-int.
 const ovnNodeInternal = (nodeId, where) => ({
   bands: [
     {
-      label: `ovnkube-node pod · ${where}`,
+      label: `ovnkube-node pod · ${where} · its own OVN zone`,
       boxes: [
         box(`${nodeId}__kube`, 'ovnkube-controller', 'container', {
           colorVar: 'k-teal', caption: 'K8s API → NB rows',
-          detail: detail('OVNKUBE-CONTROLLER', 'Watches Pods / Services / NetworkPolicies on the API server and writes the matching rows into the OVN Northbound DB.') }),
-        box(`${nodeId}__dbs`, 'nbdb · sbdb · northd', 'OVSDB', {
-          colorVar: 'k-purple', caption: 'node-local (interconnect)',
-          detail: detail('NODE-LOCAL OVN DBs', 'Since OVN moved to interconnect mode, each ovnkube-node runs its own nbdb/sbdb/northd, so the node’s slice of the logical space lives entirely on the node.') }),
+          detail: detail('OVNKUBE-CONTROLLER', 'Watches Pods / Services / NetworkPolicies on the API server and writes the matching rows into THIS node’s local Northbound DB.') }),
+        box(`${nodeId}__nbdb`, 'Northbound DB', 'OVSDB', {
+          variant: 'bridge', colorVar: 'k-purple', caption: 'node-local · this zone',
+          detail: detail('NODE-LOCAL NORTHBOUND DB', 'In interconnect mode every node runs its own nbdb. Its rows describe this node’s zone — the cluster router, the join switch, this node’s logical switch, a transit switch to the other zones, and the cluster-scoped Load_Balancer / ACL rows it needs.'),
+          children: [
+            box(`${nodeId}__router`, 'ovn_cluster_router', 'OVN Cluster Router', {
+              variant: 'ellipse', colorVar: 'k-green', caption: '100.64.0.1 · distributed',
+              detail: detail('DISTRIBUTED LOGICAL ROUTER · A ROW', 'A row in every node’s local nbdb; ovn-controller instantiates it as OpenFlow in this node’s br-int, so routing happens on the source node.') }),
+            box(`${nodeId}__join`, 'LS "join"', 'Logical Switch', {
+              variant: 'switch', colorVar: 'k-sky', caption: '100.64.0.0/16',
+              detail: detail('ROUTER INTERCONNECT · A ROW', 'Wires the distributed cluster router to the node’s gateway router. Router ports only — no pod lives here.') }),
+            box(`${nodeId}__ls`, 'LS (this node)', 'Logical Switch', {
+              variant: 'switch', colorVar: 'k-sky', caption: 'this node’s pod subnet',
+              detail: detail('NODE LOGICAL SWITCH · A ROW', 'Owns this node’s /23 pod subnet; the local pods’ logical ports hang off it.') }),
+            box(`${nodeId}__transit`, 'transit switch', 'Logical Switch', {
+              variant: 'switch', colorVar: 'k-teal', caption: 'IC · to the other zones',
+              detail: detail('TRANSIT SWITCH · INTERCONNECT', 'The interconnect construct: a logical switch with a remote port for every other node’s zone, so cross-node traffic is routed zone-to-zone over Geneve without a shared central DB.') }),
+            box(`${nodeId}__lb`, 'Load_Balancer rows', 'OVN LB', {
+              variant: 'switch', colorVar: 'k-green', caption: 'ClusterIP Services',
+              detail: detail('SERVICE DECLARATION · LOAD_BALANCER ROWS', 'Each Service is a Load_Balancer row (replicated into every node’s nbdb). No datapath of its own — realized as DNAT flows on this node’s br-int.') }),
+            box(`${nodeId}__acl`, 'ACL rows', 'OVN ACL', {
+              variant: 'switch', colorVar: 'k-green', caption: 'NetworkPolicy',
+              detail: detail('NETWORKPOLICY DECLARATION · ACL ROWS', 'NetworkPolicy compiles to ACL rows + address sets, realized as allow/drop OpenFlow on this node’s br-int.') }),
+          ],
+        }),
+        box(`${nodeId}__northd`, 'ovn-northd', 'process', {
+          colorVar: 'k-purple', caption: 'NB → SB',
+          detail: detail('NORTHD · TRANSLATOR', 'Renders this node’s NB DB rows into concrete logical flows in its local SB DB.') }),
+        box(`${nodeId}__sbdb`, 'Southbound DB', 'OVSDB', {
+          variant: 'bridge', colorVar: 'k-purple', caption: 'node-local logical flows',
+          detail: detail('NODE-LOCAL SOUTHBOUND DB', 'The logical flows northd produced for this zone; ovn-controller watches it and compiles them into OpenFlow on the local br-int.') }),
         box(`${nodeId}__controller`, 'ovn-controller', 'container', {
-          colorVar: 'k-teal', caption: 'SB rows → OpenFlow',
-          detail: detail('OVN-CONTROLLER', 'Watches the southbound DB and compiles its logical flows into OpenFlow on the local br-int, pushed over /var/run/openvswitch/db.sock.') }),
+          colorVar: 'k-teal', caption: 'SB → OpenFlow',
+          detail: detail('OVN-CONTROLLER', 'Watches the local SB DB and compiles its flows into OpenFlow on the local br-int, pushed over /var/run/openvswitch/db.sock.') }),
         box(`${nodeId}__cni`, 'ovn-k8s-cni-overlay', 'CNI', {
           colorVar: 'k-blue', caption: 'pod veth → br-int',
-          detail: detail('CNI PLUGIN', 'Invoked per pod by the kubelet/CRI-O: creates the veth pair, wires one end into the pod netns as eth0 and plugs the other into br-int as the pod’s logical switch port.') }),
+          detail: detail('CNI PLUGIN', 'Invoked per pod by the kubelet/CRI-O: creates the veth pair and plugs the host end into br-int as the pod’s logical switch port.') }),
       ],
     },
   ],
@@ -194,7 +207,8 @@ export const INTERNAL_TOPOLOGY = {
   'ovs-master': ovsInternal('ovs-master', 'systemd on the master node'),
   'ovs-host': ovsInternal('ovs-host', 'systemd on the worker node'),
   'ovs-guest': ovsInternal('ovs-guest', 'systemd inside the VM', { guest: true }),
-  'ovn-master-control': ovnMasterInternal,
+  'ovn-control-mgmt': ovnControlPlaneInternal('ovn-control-mgmt', 'management cluster · on the master node'),
+  'ovn-master-control': ovnControlPlaneInternal('ovn-master-control', 'guest control-plane namespace'),
   'ovn-node-master': ovnNodeInternal('ovn-node-master', 'master node'),
   'ovn-node-host': ovnNodeInternal('ovn-node-host', 'worker node'),
   'ovn-node-guest': ovnNodeInternal('ovn-node-guest', 'inside the VM'),
@@ -224,12 +238,17 @@ const ovsEdges = (ovsId) => [
     'br-int ↔ br-ex', 'The patch-port pair splicing the integration bridge to the provider bridge.'),
 ]
 
-// The realization chain INSIDE an ovnkube-node (short, stays in the card).
+// The realization chain INSIDE an ovnkube-node (node-local, stays in the card):
+// K8s objects → this node's NB DB → northd → SB DB → ovn-controller.
 const ovnNodeEdges = (nodeId) => [
-  edge(`${nodeId}__kube`, `${nodeId}__dbs`, 'writes NB rows', 'k-teal',
-    'ovnkube-controller → nbdb', 'Translates Pods/Services/NetworkPolicies into OVN Northbound DB rows.'),
-  edge(`${nodeId}__dbs`, `${nodeId}__controller`, 'SB flows', 'k-purple',
-    'sbdb → ovn-controller', 'northd renders NB rows to SB logical flows; ovn-controller consumes them.'),
+  edge(`${nodeId}__kube`, `${nodeId}__nbdb`, 'writes NB rows', 'k-teal',
+    'ovnkube-controller → nbdb', 'Translates Pods/Services/NetworkPolicies into rows in this node’s local Northbound DB.'),
+  edge(`${nodeId}__nbdb`, `${nodeId}__northd`, 'NB rows', 'k-purple',
+    'nbdb → northd', 'northd watches this node’s northbound rows.'),
+  edge(`${nodeId}__northd`, `${nodeId}__sbdb`, 'logical flows', 'k-purple',
+    'northd → sbdb', 'northd renders the rows into this node’s southbound logical flows.'),
+  edge(`${nodeId}__sbdb`, `${nodeId}__controller`, 'SB flows', 'k-purple',
+    'sbdb → ovn-controller', 'ovn-controller consumes this node’s SB flows.'),
 ]
 
 // Cross-card links between an ovnkube-node and its OVS — these would thread
@@ -239,7 +258,14 @@ const ovnNodeToOvsEdges = (nodeId, ovsId) => [
     'ovn-controller → ovs-vswitchd', 'ovn-controller compiles SB flows into OpenFlow and pushes them into ovs-vswitchd over /var/run/openvswitch/db.sock.'),
   railEdge(nodeId, ovsId, 'veth', 'k-blue',
     'CNI → br-int', 'The CNI plugin plugs each pod’s host-side veth into br-int as its logical switch port.'),
+  railEdge(nodeId, ovsId, 'realized as', 'k-green',
+    'NB-DB rows → br-int flows', 'This node’s own Load_Balancer / ACL rows are realized as DNAT / allow-drop OpenFlow on its br-int — declaration and datapath on the same node.'),
 ]
+
+// The lightweight control plane hands each ovnkube-node its pod subnet.
+const subnetEdge = (cpId, nodeId) =>
+  railEdge(cpId, nodeId, 'pod subnet', 'k-sky',
+    'ovnkube-control-plane → node', 'The cluster manager assigns this node its /23 pod subnet and interconnect config; the node’s own nbdb does the rest.')
 
 const BASE_EDGES = [
   ...ovsEdges('ovs-master'),
@@ -248,15 +274,16 @@ const BASE_EDGES = [
   ...ovnNodeEdges('ovn-node-master'),
   ...ovnNodeEdges('ovn-node-host'),
   ...ovnNodeEdges('ovn-node-guest'),
-  // OVN-K8s Master control plane: NB → northd → SB (short, inside the card).
-  edge('ovn-master-control__nbdb', 'ovn-master-control__northd', 'NB rows', 'k-purple',
-    'NB DB → northd', 'northd watches the northbound rows.'),
-  edge('ovn-master-control__northd', 'ovn-master-control__sbdb', 'logical flows', 'k-purple',
-    'northd → SB DB', 'northd renders the rows into southbound logical flows.'),
   // ── Cross-card links — routed down the side rail so they don't thread boxes ──
   ...ovnNodeToOvsEdges('ovn-node-master', 'ovs-master'),
   ...ovnNodeToOvsEdges('ovn-node-host', 'ovs-host'),
   ...ovnNodeToOvsEdges('ovn-node-guest', 'ovs-guest'),
+  // Each cluster's lightweight control plane allocates its nodes' subnets:
+  // the management ovnkube-control-plane for the bare-metal nodes, the guest's
+  // (in the HCP namespace) for the VM.
+  subnetEdge('ovn-control-mgmt', 'ovn-node-master'),
+  subnetEdge('ovn-control-mgmt', 'ovn-node-host'),
+  subnetEdge('ovn-master-control', 'ovn-node-guest'),
   // MetalLB L2: the elected speaker injects the VIP's GARP out br-ex.
   railEdge('metallb-speaker-master', 'ovs-master', 'GARP', 'k-orange',
     'MetalLB Speaker → br-ex', 'A Gratuitous ARP for the VIP, injected onto br-ex via a raw AF_PACKET socket, claiming the VIP for this node’s MAC.'),
@@ -265,13 +292,9 @@ const BASE_EDGES = [
   // The VM's tap0 is plugged into the guest br-int as an OVS port.
   railEdge('multus-guest', 'ovs-guest', 'tap0 → br-int', 'k-purple',
     'Multus → br-int', 'Multus delegates to ovn-k8s-cni, which plugs the VM’s tap0 into br-int — the VM joins the OVN logical network like any pod.'),
-  // ── Long cross-column links — also down the side rail ────────────────────
+  // ── Long cross-column link — also down the side rail ─────────────────────
   railEdge('konnectivity-server', 'konnectivity-agent', 'control tunnel', 'k-sky',
     'Konnectivity Server → Agent', 'A persistent encrypted HTTP/2 tunnel opened by the agent up to the server; control traffic for the node rides back down it.'),
-  railEdge('ovn-master-control', 'ovn-node-guest', 'SB → node', 'k-purple',
-    'OVN-K8s Master → ovn-controller', 'Each guest node’s ovn-controller reads the SB DB the master publishes and realizes it locally as OpenFlow.'),
-  railEdge('ovn-master-control', 'ovs-guest', 'realized as', 'k-green',
-    'Load_Balancer / ACL rows → br-int flows', 'The Service Load_Balancer rows and NetworkPolicy ACL rows declared in the NB DB are realized as DNAT / allow-drop OpenFlow on the guest br-int — declaration above, datapath below.'),
 ]
 
 // Build the per-column edge list (one canvas-level overlay, idPrefix=''); each
