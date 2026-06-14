@@ -28,11 +28,15 @@ export default function PrimitiveBoxCard({
   const renderBox = (b) => {
     const accent = `var(--${b.colorVar || 'k-amber'})`
     if (b.children?.length) {
+      const isBridge = b.variant === 'bridge' && b.typePrefix === 'OVS bridge'
+      const portChildren = isBridge ? b.children.filter((child) => child.typePrefix === 'netdev') : b.children
+      const flowChildren = isBridge ? b.children.filter((child) => child.typePrefix !== 'netdev') : []
+
       return (
         <div
           key={b.id}
           id={subId(b.id)}
-          className={`primitive-nest ${b.variant ? `primitive-nest--${b.variant}` : ''}`}
+          className={`primitive-nest ${b.variant ? `primitive-nest--${b.variant}` : ''} ${isBridge ? 'primitive-nest--ovs-bridge' : ''}`}
           style={{ '--node-accent': accent }}
         >
           <button
@@ -47,9 +51,26 @@ export default function PrimitiveBoxCard({
             <span className="primitive-nest-title" style={{ color: accent }}>{b.title}</span>
             {b.caption && <span className="primitive-nest-cap">{b.caption}</span>}
           </button>
-          <div className="primitive-nest-body">
-            {b.children.map(renderBox)}
-          </div>
+          {isBridge ? (
+            <div className="primitive-bridge-body">
+              <div className="primitive-bridge-label">ports / interfaces</div>
+              <div className="primitive-bridge-ports">
+                {portChildren.map(renderBox)}
+              </div>
+              {flowChildren.length > 0 && (
+                <>
+                  <div className="primitive-bridge-label primitive-bridge-label--flows">realized OpenFlow</div>
+                  <div className="primitive-bridge-flows">
+                    {flowChildren.map(renderBox)}
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="primitive-nest-body">
+              {b.children.map(renderBox)}
+            </div>
+          )}
         </div>
       )
     }
