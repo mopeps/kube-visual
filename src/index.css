@@ -2100,6 +2100,16 @@ body::after {
    Reuses .intent-store-expanded for the full-width opened card; .primitive-band
    partitions the interior by placement (user space vs kernel datapath, etc.). */
 .primitive-box .primitive-band { margin-top: 8px; }
+
+/* Network mode reads cleaner with the connectors drawn BEHIND the boxes: lift the
+   columns above the edge SVG (z-index 4) so the cards occlude the wires, which
+   then show only in the gaps and tuck into each box's edge instead of crossing
+   over its text. And hide every object's subheading (the caption line) — the
+   detail is one click away in the popup. */
+.net-bigpicture--net .net-cols { position: relative; z-index: 5; }
+.net-bigpicture--net .node-subtitle,
+.net-bigpicture--net .primitive-nest-cap { display: none; }
+
 /* The "kernel boundary" rule between user-space daemons and the datapath. */
 .primitive-boundary {
   display: flex;
