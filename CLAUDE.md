@@ -52,7 +52,7 @@ src/
     ovn-topology.js          # the ovn-topology deep-dive topic + its OVN teaching content (box/edge details, flows) + three twin topics: the "big view" (same boxes inside greyed OpenShift component containers), the guest-cluster view (the same wiring run by the hosted cluster — VMI nodes riding the mgmt pod network), and the full HCP picture (both SDNs at once, the guest chain nested inside each bare-metal column, every group in its OpenShift container)
     network-zones.js         # Overview network-MODE: NET_PAIRS — the three node pairs the #net-col-N columns iterate over
     network-components.js    # isNetworkComponent(node) — classifies a zone node as network or not (by components.json `role`, + an allow-list of network operators); OverviewTab's filterNetworkZone() uses it to prune the columns to network-only when Network is on
-    network-internals.js     # Network-MODE drill-downs: INTERNAL_TOPOLOGY[componentId] = the placement bands + primitive sub-boxes shown INSIDE a component's own opened box (OVS→ovsdb-server/ovs-vswitchd/br-int/br-ex, OVN-K8s Master→NB-DB rows cluster_router/join, MetalLB→GARP, Multus→tap0, Konnectivity→tunnel) + buildNetworkEdges() integration edges (db.sock / GARP / tap0→br-int / tunnel), namespaced per column
+    network-internals.js     # Network-MODE drill-downs: INTERNAL_TOPOLOGY[componentId] = placement bands + NESTED primitive sub-boxes shown INSIDE a component's own opened box (br-int/br-ex carry their interface ports; OVN-K8s Master's Northbound DB box holds rows cluster_router/join/LB/ACL → northd → SB DB; OVN-K8s Node→ovn-controller/ovnkube-controller/cni; OVS guest br-int holds the realized Service-LB/NetworkPolicy-ACL flows; MetalLB→GARP, Multus→tap0, Konnectivity→tunnel) + buildNetworkEdges() topology edges (OpenFlow / patch port / db.sock / veth / GARP / tap0→br-int / NB→SB→node / realized-as), namespaced per column
     pipeline-model.js        # builds a component's pipeline-tree band model
     interaction-kinds.js     # classifies interaction sentences (icon + accent)
     hop-kinds.js             # classifies a packet-flow step/sentence into an action keyword + glyph (Resolves/Routes/Terminates…); hopPoints() splits a step into per-sentence bullets
@@ -77,7 +77,7 @@ src/
     IntentStoreCard.jsx      # an etcd node that expands in place to show its records
     ControllerManagerCard.jsx # a controller-manager node that expands to show its control loops
     OperatorSetCard.jsx      # a CPO/CVO node that expands to show the operator Pods it owns
-    PrimitiveBoxCard.jsx     # Network-MODE only: a drillable component box opened IN PLACE (default expanded; ▴ collapses) to show its internal primitives partitioned into placement bands (network-internals.js); sub-box ids namespaced per column (nt-c{N}-…) for the integration-edge overlay
+    PrimitiveBoxCard.jsx     # Network-MODE only: a drillable component box opened IN PLACE (default expanded; ▴ collapses) to show its internal primitives partitioned into placement bands (network-internals.js); a recursive renderBox nests container boxes (ports ON a bridge, rows INSIDE the NB DB); sub-box ids namespaced per column (nt-c{N}-…) for the integration-edge overlay
     ArrowLines.jsx           # the hand-rolled SVG arrow core: measures node rects + draws bezier connectors (shared)
     ArrowOverlay.jsx         # Overview adapter: maps event hops → ArrowLines steps
     DeepDiveArrowOverlay.jsx # Deep Dive adapter: maps flow hops (dd-<boxId>) → ArrowLines steps

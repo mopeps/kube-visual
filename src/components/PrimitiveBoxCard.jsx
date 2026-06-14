@@ -21,6 +21,52 @@ export default function PrimitiveBoxCard({
   const domId = `nt-c${colIndex}-${node.id}`
   const subId = (id) => `nt-c${colIndex}-${id}`
 
+  // A box may nest child boxes (ports drawn ON a bridge, rows INSIDE the NB DB).
+  // Leaf → a plain NodeCard; container → a framed box with a clickable header
+  // over a body of recursively-rendered children. Every box keeps a per-column
+  // DOM id so the canvas edge overlay can wire ports/rows at any depth.
+  const renderBox = (b) => {
+    const accent = `var(--${b.colorVar || 'k-amber'})`
+    if (b.children?.length) {
+      return (
+        <div
+          key={b.id}
+          id={subId(b.id)}
+          className={`primitive-nest ${b.variant ? `primitive-nest--${b.variant}` : ''}`}
+          style={{ '--node-accent': accent }}
+        >
+          <button
+            type="button"
+            className="primitive-nest-head"
+            onClick={(e) => { e.stopPropagation(); onSelectBox(b) }}
+            title={`Open ${b.title} details`}
+          >
+            {b.typePrefix && (
+              <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>[{b.typePrefix}]</span>
+            )}
+            <span className="primitive-nest-title" style={{ color: accent }}>{b.title}</span>
+            {b.caption && <span className="primitive-nest-cap">{b.caption}</span>}
+          </button>
+          <div className="primitive-nest-body">
+            {b.children.map(renderBox)}
+          </div>
+        </div>
+      )
+    }
+    return (
+      <NodeCard
+        key={b.id}
+        id={subId(b.id)}
+        title={b.title}
+        typePrefix={b.typePrefix}
+        variant={b.variant}
+        color={accent}
+        subtitle={b.caption}
+        onClick={() => onSelectBox(b)}
+      />
+    )
+  }
+
   if (!isOpen) {
     return (
       <div
@@ -91,18 +137,7 @@ export default function PrimitiveBoxCard({
           )}
           <div className="primitive-band-label">{band.label}</div>
           <div className="primitive-band-boxes">
-            {band.boxes.map((b) => (
-              <NodeCard
-                key={b.id}
-                id={subId(b.id)}
-                title={b.title}
-                typePrefix={b.typePrefix}
-                variant={b.variant}
-                color={`var(--${b.colorVar || 'k-amber'})`}
-                subtitle={b.caption}
-                onClick={() => onSelectBox(b)}
-              />
-            ))}
+            {band.boxes.map(renderBox)}
           </div>
         </div>
       ))}

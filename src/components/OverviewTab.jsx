@@ -90,15 +90,23 @@ function replicaDetail(title, parentZone) {
   }
 }
 
+// Services & NetworkPolicy have no datapath of their own — in network mode they
+// live inside the layer that realizes them (Load_Balancer / ACL rows in the OVN
+// NB DB, realized as flows on br-int), so they don't get a standalone card.
+const isServiceLike = (node) =>
+  node.typePrefix === 'Service' || node.typePrefix === 'NWPOLICY' || !!node.serviceType
+
 // Network mode (Big view): prune a zone to its network components. Keeps network
-// nodes; surfaces the network control-plane operators out of the CPO/CVO
-// operator-set cards as standalone nodes; drops everything else and any zone
-// that ends up empty (no labelled empty boxes). Preserves zone metadata
-// (hideWrapper / componentId / replicaNodes / …) via spread.
+// nodes (minus the service-like ones now shown inside br-int / the NB DB);
+// surfaces the network control-plane operators out of the CPO/CVO operator-set
+// cards as standalone nodes; drops everything else and any zone that ends up
+// empty. Preserves zone metadata (hideWrapper / componentId / replicaNodes / …).
 function filterNetworkZone(zone) {
   const nodes = []
   for (const node of zone.nodes ?? []) {
-    if (isNetworkComponent(node)) {
+    if (isServiceLike(node)) {
+      continue
+    } else if (isNetworkComponent(node)) {
       nodes.push(node)
     } else if (node.operators) {
       // A non-network operator set (CPO/CVO): lift out its network operators.
