@@ -29,6 +29,10 @@ const SPOTLIGHT_MS = 1300 * 2
 // / expanded). Static — built once.
 const NETWORK_EDGES = buildNetworkEdges(NET_PAIRS)
 
+// The components that open to an internal topology in Network mode — used by the
+// "collapse all / expand all" control.
+const DRILLABLE_IDS = Object.keys(INTERNAL_TOPOLOGY)
+
 // Map componentId → step number it first appears in the active event.
 function buildStepNumMap(activeEvent) {
   const map = new Map()
@@ -141,6 +145,8 @@ export default function OverviewTab({
     next.has(id) ? next.delete(id) : next.add(id)
     return next
   })
+  const allNetCollapsed = DRILLABLE_IDS.every((id) => netCollapsedIds.has(id))
+  const toggleAllNet = () => setNetCollapsedIds(allNetCollapsed ? new Set() : new Set(DRILLABLE_IDS))
   const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
 
@@ -493,6 +499,11 @@ export default function OverviewTab({
       {bigView && (
         <div className="net-bar">
           <span className="net-bar-label">{netOverlay ? 'Network map' : 'Big view'}</span>
+          {netOverlay && (
+            <button type="button" className="net-bar-btn" onClick={toggleAllNet}>
+              {allNetCollapsed ? 'Expand all' : 'Collapse all'}
+            </button>
+          )}
           <span className="net-bar-hint">
             {netOverlay
               ? 'Each network component box is opened to show where its abstractions live and how they’re implemented — collapse any box with its ▴ control. Click a sub-box or an edge for detail.'
