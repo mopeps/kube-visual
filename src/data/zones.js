@@ -127,6 +127,16 @@ export const ZONES = [
             programs: 'ovs-master',
             badges: [{ label: 'CNI', color: 'var(--k-blue)' }],
           },
+          // The MANAGEMENT cluster's own OVN control plane (ovnkube-control-plane).
+          // In interconnect mode it's lightweight — it allocates each bare-metal
+          // node its pod subnet; the NB/SB DBs live per-node in OVN-K8s Node. The
+          // guest cluster has its own copy in the Guest Control Plane Namespace.
+          {
+            id: 'ovn-control-mgmt',
+            title: 'OVN-K8s Master',
+            typePrefix: 'Pod',
+            badges: [{ label: 'control-plane', color: 'var(--k-sky)' }],
+          },
           // MetalLB speaker — a DaemonSet Pod on every bare metal node. This is
           // the per-node L2 announcer: it answers ARP/NDP for the LoadBalancer
           // VIPs assigned by the MetalLB controller, so external traffic for the

@@ -426,24 +426,31 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
          `br-ex` (carrying its `eth0` NIC port) and `br-int` (carrying its ports:
          `patch → br-ex`, `genev_sys :6081`, pod veths, and — guest — `tap0` plus the
          realized **Service LB flows** / **NetworkPolicy ACL flows**).
-       - **OVN-K8s Master** → a **Northbound DB box** whose rows are
-         `ovn_cluster_router (100.64.0.1)`, `LS "join"`, the per-node switch, the
-         **Load_Balancer rows** (Services) and **ACL rows** (NetworkPolicy) → `northd`
-         → **Southbound DB**.
-       - **OVN-K8s Node** → ovnkube-controller / node-local nbdb·sbdb·northd /
-         ovn-controller / the `ovn-k8s-cni-overlay` plugin.
+       - **OVN-K8s Master** = `ovnkube-control-plane` — **lightweight in interconnect
+         mode**: a `cluster manager` (allocates each node a /23 pod subnet) + an
+         `interconnect coordinator`. **No central NB/SB DB.** There are **two** of
+         these: the management cluster's (`ovn-control-mgmt`, on the bare-metal master
+         node) and the guest cluster's (`ovn-master-control`, in the HCP namespace) —
+         one OVN control plane per cluster.
+       - **OVN-K8s Node** = `ovnkube-node` — **the node IS its own OVN zone**:
+         ovnkube-controller → its **own node-local Northbound DB box** (rows:
+         `ovn_cluster_router (100.64.0.1)`, `LS "join"`, this node's switch, the
+         **transit switch** (IC), **Load_Balancer rows**, **ACL rows**) → `northd` →
+         **Southbound DB** → ovn-controller → the `ovn-k8s-cni-overlay` plugin. This is
+         where the NB/SB DBs actually live since OVN interconnect (OpenShift default
+         ≥ 4.14).
        - **MetalLB Speaker** → AF_PACKET GARP; **Multus** → the VM's `tap0`;
          **Konnectivity Server** → its tunnel endpoint.
-   - **Services & NetworkPolicy have no card** — they're declared as NB-DB rows and
-     realized as br-int flows (joined by a "realized as" edge); `filterNetworkZone`
-     drops service-like nodes (`isServiceLike`) from the columns.
+   - **Services & NetworkPolicy have no card** — they're declared as NB-DB rows (now
+     node-local) and realized as br-int flows on the same node (a node-local "realized
+     as" edge); `filterNetworkZone` drops service-like nodes (`isServiceLike`).
    - **Topology edges** (`buildNetworkEdges` → one `ReconLoopOverlay`, `idPrefix=''`)
-     wire ports/rows at any nesting depth with mechanism labels — `OpenFlow`
-     (ovs-vswitchd → br-int), `patch port` (br-int ↔ br-ex), `db.sock` (ovn-controller
-     → ovs-vswitchd), `veth` (CNI → br-int), `GARP` (MetalLB → br-ex), `tap0 → br-int`,
-     the Konnectivity tunnel, `NB → northd → SB → node`, and `realized as`
-     (Load_Balancer/ACL rows → br-int flows). Card and sub-box DOM ids are namespaced
-     per column (`nt-c{N}-…`); an edge draws only when both endpoints are expanded.
+     wire ports/rows with mechanism labels — intra-node `writes NB rows` / `NB rows` /
+     `logical flows` / `SB flows`; intra-OVS `OpenFlow` + `patch port`; the rail-routed
+     `db.sock`, `veth`, `realized as` (node's own rows → its br-int), `pod subnet`
+     (control-plane → node), `GARP`, `tap0 → br-int`, and the Konnectivity tunnel. Card
+     and sub-box DOM ids are namespaced per column (`nt-c{N}-…`); an edge draws only
+     when both endpoints are expanded.
      Sub-box clicks open a `DeepDiveModal`. **Routing:** only the few intra-card
      links (inside one component) draw direct; every cross-card link carries
      `rail: true` and routes down the column's right gutter (orthogonal,

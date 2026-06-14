@@ -1088,22 +1088,48 @@
     "layer": "Guest Control Plane",
     "role": "NETWORK CONTROL",
     "runtimeForm": "Deployment · openshift-ovn-kubernetes",
-    "linuxPrimitive": "ovnkube-control-plane + OVN NB DB",
-    "problemSolved": "Translates the guest cluster's Services and NetworkPolicies into the logical network OVN enforces.",
+    "linuxPrimitive": "ovnkube-control-plane (interconnect: cluster manager)",
+    "problemSolved": "The guest cluster's lightweight OVN control plane — in interconnect mode it allocates each node a pod subnet and coordinates the interconnect; the NB/SB DBs live per-node in OVN-K8s Node.",
     "interactions": [
-      "Watches the Guest API Server for Pod, Service, and NetworkPolicy events.",
-      "Writes to the OVN Northbound Database to update logical switch topology.",
-      "Northbound DB is synced to the OVN Southbound DB and pushed to each node's OVN controller.",
-      "Runs as a Pod in the management cluster, programming the OVN Northbound DB for the guest."
+      "Carves the guest's pod CIDR into a /23 per node and hands each ovnkube-node its slice.",
+      "Coordinates the interconnect (transit switch / remote-port info) so each node's OVN zone is stitched to the others.",
+      "Does NOT hold a central Northbound/Southbound DB — since interconnect, those run inside each ovnkube-node.",
+      "Runs as a Pod in the management cluster's guest control-plane namespace."
     ],
     "explorationCommands": [
       "# View OVN control-plane logs\noc logs -n openshift-ovn-kubernetes deployment/ovnkube-control-plane --tail=50",
-      "# Inspect logical switches\novn-nbctl show",
-      "# Check OVN southbound flows\novn-sbctl lflow-list | head -30"
+      "# Per-node databases live in the ovnkube-node pod\noc rsh -n openshift-ovn-kubernetes <ovnkube-node-pod> ovn-nbctl show",
+      "# Confirm interconnect (one zone per node)\noc get pods -n openshift-ovn-kubernetes -l app=ovnkube-node"
     ],
     "docLinks": [
       {
         "label": "OpenShift",
+        "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ovn-kubernetes_network_plugin/about-ovn-kubernetes"
+      }
+    ]
+  },
+  {
+    "componentId": "ovn-control-mgmt",
+    "displayName": "OVN-K8s Master",
+    "typePrefix": "Pod",
+    "layer": "Bare Metal Master Node",
+    "role": "NETWORK CONTROL",
+    "runtimeForm": "Deployment · openshift-ovn-kubernetes (management)",
+    "linuxPrimitive": "ovnkube-control-plane (interconnect: cluster manager)",
+    "problemSolved": "The management cluster is itself a normal OpenShift cluster, so it runs its OWN OVN control plane on its control-plane nodes — the counterpart to the guest's, for the bare-metal pod network.",
+    "interactions": [
+      "Allocates each bare-metal node (master + workers) its pod subnet for the management cluster's own network.",
+      "Coordinates the management cluster's interconnect; the NB/SB DBs live in each bare-metal node's ovnkube-node.",
+      "Independent of the guest cluster's OVN — two separate SDNs, one per cluster.",
+      "Scheduled onto the management control-plane (master) nodes."
+    ],
+    "explorationCommands": [
+      "# Management cluster's OVN control plane\noc --kubeconfig $MGMT_KUBECONFIG logs -n openshift-ovn-kubernetes deployment/ovnkube-control-plane --tail=50",
+      "# Its per-node databases\noc --kubeconfig $MGMT_KUBECONFIG get pods -n openshift-ovn-kubernetes -l app=ovnkube-node"
+    ],
+    "docLinks": [
+      {
+        "label": "OVN-K8s interconnect",
         "url": "https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/ovn-kubernetes_network_plugin/about-ovn-kubernetes"
       }
     ]
