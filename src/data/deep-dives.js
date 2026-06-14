@@ -3562,7 +3562,252 @@ const ETCD_RAFT = {
   ],
 }
 
-export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, OVN_TOPOLOGY, OVN_TOPOLOGY_BIG, OVN_TOPOLOGY_GUEST, OVN_TOPOLOGY_FULL, API_REQUEST_PATH, ETCD_RAFT, TMUX_SUDO, LINUX_FDS]
+// ── Cluster PKI · where every cert comes from ───────────────────────────────
+// The defining-but-invisible HCP fact: a guest cluster never mints its own
+// certificates. A standalone cluster bootstraps trust on its install node; a
+// hosted cluster has no install node — its control plane is just Pods — so the
+// management cluster (the Control Plane Operator) generates the guest's entire
+// PKI, stores it as Secrets in the HCP namespace, mounts it into the
+// control-plane Pods, folds it into each node's Ignition, and signs every
+// kubelet that joins. This topic follows that one trust chain top to bottom.
+const CLUSTER_PKI = {
+  topicId: 'cluster-pki',
+  title: 'Cluster PKI — where every cert comes from',
+  tagline:
+    'A standalone cluster bootstraps its own certificates on the install node. A hosted cluster has no install node — its control plane is just Pods in someone else’s cluster — so the management cluster mints the guest’s entire PKI: a root CA and scoped signers, stored as Secrets in the HCP namespace, mounted into the control-plane Pods, folded into each node’s Ignition, and used to sign every kubelet that joins. Every cert in the hosted cluster traces back to that mint a layer up.',
+  colorVar: 'k-amber',
+  flows: [
+    {
+      flowId: 'pki-bootstrap',
+      flowName: 'Mint the guest PKI',
+      description:
+        'How a hosted cluster gets its certificates without ever generating one itself. When the Control Plane Operator reconciles the HostedControlPlane, it builds the whole certificate tree — root CA, scoped signer CAs, and the leaf certs each component needs — writes them as Secrets in the HCP namespace, and mounts them into the control-plane Pods. The guest API server has a TLS identity before a single guest node exists.',
+      steps: [
+        { step: 1, sourceBoxId: 'pki-cpo', targetBoxId: 'pki-roots',
+          description: 'Reconciling the HostedControlPlane, the CPO generates a self-signed root CA and the scoped signer CAs beneath it. No guest machine is involved — there isn’t one yet.' },
+        { step: 2, sourceBoxId: 'pki-roots', targetBoxId: 'pki-secrets',
+          description: 'Each CA and every leaf cert it signs is written as an ordinary Kubernetes Secret in the hosted cluster’s HCP namespace — never on a node, never in the guest etcd.' },
+        { step: 3, sourceBoxId: 'pki-secrets', targetBoxId: 'pki-apiserver', bow: 44,
+          description: 'The Guest API Server mounts its serving cert (so clients trust it) and the client-auth CA bundle (so it can verify the X.509 certs admins and kubelets present).' },
+        { step: 4, sourceBoxId: 'pki-secrets', targetBoxId: 'pki-etcd', bow: -40,
+          description: 'etcd mounts its peer + server mTLS certs and the API server gets its etcd client cert — every etcd connection is mutually authenticated.' },
+        { step: 5, sourceBoxId: 'pki-secrets', targetBoxId: 'pki-konnectivity', bow: -68,
+          description: 'Konnectivity gets its server identity, so the reverse tunnel the nodes dial is mutually authenticated end to end.' },
+      ],
+    },
+    {
+      flowId: 'pki-node-cert',
+      flowName: 'A node earns its cert',
+      description:
+        'A booting worker has no certificates. It’s handed exactly one weak credential — a short-lived bootstrap kubeconfig — whose only power is to ask for a real one. The kubelet submits a CSR, machine-approver permits it, and the guest kube-controller-manager signer issues the cert from the same CA the CPO minted at the top of this page. The throwaway credential is spent for a long-lived, node-specific identity.',
+      steps: [
+        { step: 1, sourceBoxId: 'pki-secrets', targetBoxId: 'pki-ignition',
+          description: 'The cluster CA and a short-lived bootstrap kubeconfig are folded into the node’s Ignition payload — the only credentials that cross from the mint into a node.' },
+        { step: 2, sourceBoxId: 'pki-ignition', targetBoxId: 'pki-csr',
+          description: 'The node boots; using the bootstrap kubeconfig the kubelet submits a CertificateSigningRequest for its own client (and serving) cert.' },
+        { step: 3, sourceBoxId: 'pki-csr', targetBoxId: 'pki-approver',
+          description: 'machine-approver cross-checks the pending CSR against the machines the NodePool expects and sets the Approved condition. It permits — it does not sign.' },
+        { step: 4, sourceBoxId: 'pki-approver', targetBoxId: 'pki-signer',
+          description: 'Approved CSRs are picked up by the guest kube-controller-manager’s signing controller, which issues the certificate from the kubelet signer CA.' },
+        { step: 5, sourceBoxId: 'pki-signer', targetBoxId: 'pki-csr', bow: -52,
+          description: 'The kubelet installs its signed, node-specific cert and discards the bootstrap credential. The trust chain now reaches from the mint a cluster up all the way down to this node.' },
+      ],
+    },
+  ],
+  zones: [
+    {
+      id: 'pki-mint',
+      label: 'The mint · management cluster',
+      colorVar: 'k-amber',
+      boxes: [
+        {
+          id: 'pki-cpo',
+          componentId: 'control-plane-operator',
+          title: 'Control Plane Operator',
+          typePrefix: 'THE MINT',
+          subtitle: 'generates the whole tree on first reconcile',
+          detail: {
+            role: 'GENERATOR',
+            summary:
+              'A standalone cluster bootstraps its PKI on the install node. A hosted cluster has no install node — its control plane is just Pods — so when the CPO reconciles the HostedControlPlane it mints the entire certificate tree itself: a root CA, the scoped signer CAs, and the leaf certs every component needs. Nothing inside a guest VM ever generates a CA.',
+            sections: [
+              { heading: 'Why here', body: 'The chicken-and-egg of trust: certs must exist before any component can serve TLS, but in HCP the components are workloads with no machine to bootstrap on. So the operator a cluster up does it for them.' },
+              { heading: 'Explore', commands: [
+                '# The cert Secrets the CPO has minted for this hosted cluster\noc get secret -n <hcp-namespace> | grep -Ei "ca|cert|kubeconfig|signer"',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'pki-roots',
+          title: 'Root & signer CAs',
+          typePrefix: 'CA',
+          subtitle: 'one anchor, several scoped signers',
+          badges: [{ label: 'rotated on a schedule', kind: 'stat' }],
+          detail: {
+            role: 'TRUST ANCHORS',
+            summary:
+              'HCP doesn’t sign everything with one key. A root CA anchors trust; beneath it sit scoped signers, each issuing certs for one purpose. Scoping is blast-radius control — a leaked serving key can’t mint a client cert, and rotating one signer doesn’t touch the others.',
+            sections: [
+              { heading: 'The signers', facts: [
+                { k: 'kube-apiserver', v: 'serving cert + the client-auth CA it trusts' },
+                { k: 'etcd', v: 'peer + server mTLS' },
+                { k: 'aggregator', v: 'front-proxy CA for extension APIs' },
+                { k: 'kubelet', v: 'the signer that issues node client certs (CSR)' },
+                { k: 'konnectivity', v: 'tunnel mTLS (server ↔ agent)' },
+              ] },
+              { heading: 'Note', bullets: [
+                'HyperShift rotates these on a schedule: rotation re-writes the Secret and rolls the consumers that mount it.',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'pki-secrets',
+          title: 'Secrets · HCP namespace',
+          typePrefix: 'Secret',
+          subtitle: 'where every private key actually lives',
+          detail: {
+            role: 'THE STORE',
+            summary:
+              'Every CA, leaf cert, and kubeconfig is a Kubernetes Secret in the hosted cluster’s HCP namespace, in the management cluster — not on any guest node, not in the guest etcd. They’re mounted into the control-plane Pods as projected volumes, and (for nodes) folded into Ignition. etcd-at-rest encryption protects them like any Secret.',
+            sections: [
+              { heading: 'Explore', commands: [
+                '# Decode a CA and read its subject + validity window\noc get secret -n <hcp-namespace> root-ca -o jsonpath="{.data.ca\\.crt}" | base64 -d | openssl x509 -noout -subject -dates',
+              ] },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'pki-consumers',
+      label: 'Consumers · control-plane Pods',
+      colorVar: 'k-sky',
+      boxes: [
+        {
+          id: 'pki-apiserver',
+          componentId: 'guest-api-server',
+          title: 'Guest API Server',
+          typePrefix: 'SERVES TLS',
+          subtitle: 'serving cert + the client CA it verifies against',
+          detail: {
+            role: 'IDENTITY + TRUST',
+            summary:
+              'Mounts two things from the Secrets above: its serving cert (so oc/kubectl trust the endpoint) and the client-auth CA bundle (so it can verify X.509 clients — an admin or kubelet presents a cert with CN=username, O=groups, signed by one of these CAs). It also carries the aggregator client cert to call extension API servers.',
+            sections: [
+              { heading: 'See also', body: 'The API-request deep dive’s Authentication box: X.509 client certs are verified against exactly this client CA.' },
+            ],
+          },
+        },
+        {
+          id: 'pki-etcd',
+          componentId: 'guest-etcd',
+          title: 'Guest etcd',
+          typePrefix: 'PEER mTLS',
+          subtitle: 'members + API server all speak mutual TLS',
+          detail: {
+            role: 'MUTUAL TLS',
+            summary:
+              'Every etcd connection is mutually authenticated — member-to-member (peer) and API-server-to-etcd (client) — using the etcd CA’s certs. A StatefulSet member that reschedules re-mounts the same Secret and rejoins the quorum with the same identity.',
+          },
+        },
+        {
+          id: 'pki-oauth',
+          componentId: 'guest-oauth-server',
+          title: 'OAuth Server',
+          typePrefix: 'SIGNS TOKENS',
+          subtitle: 'the signing key behind every bearer token',
+          detail: {
+            role: 'TOKEN SIGNING',
+            summary:
+              'On `oc login` the OAuth server validates the user against the configured identity provider and issues a bearer token signed with a key from these Secrets. The oauth-apiserver validates that signature on later requests. Rotate the key and every outstanding token is invalidated at once.',
+          },
+        },
+        {
+          id: 'pki-konnectivity',
+          componentId: 'konnectivity-server',
+          title: 'Konnectivity',
+          typePrefix: 'TUNNEL mTLS',
+          subtitle: 'server ↔ agent identity for the reverse tunnel',
+          detail: {
+            role: 'TUNNEL TRUST',
+            summary:
+              'The reverse tunnel is mutually authenticated: the agent presents a client cert and the server a serving cert, both from the konnectivity CA. So a node can’t impersonate the server, and the server only proxies traffic to authenticated agents.',
+          },
+        },
+      ],
+    },
+    {
+      id: 'pki-node',
+      label: 'Down to the node · bootstrap & CSR',
+      colorVar: 'k-green',
+      boxes: [
+        {
+          id: 'pki-ignition',
+          componentId: 'ignition-server',
+          title: 'Ignition Server',
+          typePrefix: 'BOOTSTRAP',
+          subtitle: 'hands the node a CA + a one-shot credential',
+          detail: {
+            role: 'HAND-DOWN',
+            summary:
+              'A fresh node has no certs. The Ignition payload it fetches on first boot carries the cluster CA (so the kubelet can trust the API server) and a short-lived bootstrap kubeconfig — a deliberately weak credential whose only power is to submit a CSR. That is the one and only credential that crosses from the mint into a node.',
+            sections: [
+              { heading: 'Note', bullets: [
+                'The bootstrap credential can request a cert and nothing else — it grants no real cluster access on its own.',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'pki-csr',
+          title: 'kubelet CSR',
+          typePrefix: 'CSR',
+          subtitle: 'spend the bootstrap credential, ask for a real cert',
+          detail: {
+            role: 'THE ASK',
+            summary:
+              'Using the bootstrap kubeconfig, the kubelet submits a CertificateSigningRequest for its own client (and serving) cert. This is the graduation: the throwaway bootstrap credential is spent to obtain a long-lived, node-specific identity. Until the CSR is both approved AND signed, the node can’t join.',
+            sections: [
+              { heading: 'Explore', commands: [
+                '# Pending CSRs from joining nodes (against the hosted cluster)\noc get csr | grep -i pending',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'pki-approver',
+          componentId: 'machine-approver',
+          title: 'Machine Approver',
+          typePrefix: 'APPROVES',
+          subtitle: 'checks the CSR against the NodePool — never signs',
+          detail: {
+            role: 'THE GATE',
+            summary:
+              'machine-approver cross-checks each pending CSR against the machines the NodePool expects and auto-approves the legitimate ones. It is purely a gate: it sets the Approved condition and stops. Approval is permission, not a certificate.',
+          },
+        },
+        {
+          id: 'pki-signer',
+          title: 'KCM signer',
+          typePrefix: 'SIGNS',
+          subtitle: 'issues the cert from the CA — closes the loop',
+          detail: {
+            role: 'THE SIGNER',
+            summary:
+              'The guest cluster’s kube-controller-manager runs the CSR signing controllers. Once a CSR is Approved, the signer issues the certificate from the kubelet signer CA — one of the CAs the CPO minted at the very top of this page. The kubelet installs the signed cert, drops the bootstrap credential, and the chain is complete.',
+            sections: [
+              { heading: 'The chain', body: 'CPO mints the CA → Ignition hands the node the bootstrap credential → kubelet asks (CSR) → approver permits → KCM signer issues from that same CA. Every node cert traces back to the mint a cluster up.' },
+            ],
+          },
+        },
+      ],
+    },
+  ],
+}
+
+export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, OVN_TOPOLOGY, OVN_TOPOLOGY_BIG, OVN_TOPOLOGY_GUEST, OVN_TOPOLOGY_FULL, API_REQUEST_PATH, ETCD_RAFT, CLUSTER_PKI, TMUX_SUDO, LINUX_FDS]
 
 export const findDeepDive = (topicId) =>
   DEEP_DIVES.find((t) => t.topicId === topicId) || null
