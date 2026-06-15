@@ -12,8 +12,12 @@
 // between br-int and br-ex; a NB-DB Load_Balancer row realized as a br-int flow.
 
 // — small helpers ————————————————————————————————————————————————————————————
-const box = (id, title, typePrefix, { variant, colorVar = 'k-amber', caption, detail, children } = {}) =>
-  ({ id, title, typePrefix, variant, colorVar, caption, detail, children })
+// `realized: true` marks a box as a realized datapath object a packet actually
+// traverses (br-int / br-ex and the OpenFlow flows on them) — drawn solid + lit,
+// vs the OVN logical objects which are "just rows" (drawn dashed/logical). See the
+// "Network-mode internals" labeling rules in ARCHITECTURE.md.
+const box = (id, title, typePrefix, { variant, colorVar = 'k-amber', caption, detail, children, realized } = {}) =>
+  ({ id, title, typePrefix, variant, colorVar, caption, detail, children, realized })
 const port = (id, title, opts = {}) => box(id, title, 'netdev', { variant: 'iface', colorVar: 'k-teal', ...opts })
 
 const detail = (role, summary, sections = []) => ({ role, summary, sections })
@@ -41,9 +45,9 @@ const ovsInternal = (ovsId, where, { guest = false } = {}) => {
   // OpenFlow on br-int. Shown here (guest) as the flows they compile to; declared
   // as rows in the OVN-K8s Master NB DB (wired by a "realized as" edge).
   const brintFlows = guest ? [
-    box(`${ovsId}__lbflows`, 'Service LB flows', 'OpenFlow', { colorVar: 'k-green', caption: 'ClusterIP → DNAT',
+    box(`${ovsId}__lbflows`, 'Service LB flows', 'OpenFlow', { colorVar: 'k-green', caption: 'ClusterIP → DNAT', realized: true,
       detail: detail('REALIZED · LOAD-BALANCER FLOWS', 'The ClusterIP Services compiled into OVN Load_Balancer flows on br-int: a single rule DNATs the virtual IP to a backing pod IP. No process, just flows.') }),
-    box(`${ovsId}__aclflows`, 'NetworkPolicy ACLs', 'OpenFlow', { colorVar: 'k-green', caption: 'allow / drop',
+    box(`${ovsId}__aclflows`, 'NetworkPolicy ACLs', 'OpenFlow', { colorVar: 'k-green', caption: 'allow / drop', realized: true,
       detail: detail('REALIZED · ACL FLOWS', 'The NetworkPolicy compiled into OVN ACLs — allow/drop OpenFlow rules checked on the pod ports before the veth, dropping non-matching east-west traffic.') }),
   ] : []
 
@@ -63,7 +67,7 @@ const ovsInternal = (ovsId, where, { guest = false } = {}) => {
         boundary: 'kernel boundary',
         boxes: [
           box(`${ovsId}__brex`, 'br-ex', 'OVS bridge', {
-            variant: 'bridge', colorVar: 'k-sky', caption: 'provider bridge',
+            variant: 'bridge', colorVar: 'k-sky', caption: 'provider bridge', realized: true,
             detail: detail('EXTERNAL BRIDGE · ON-RAMP TO THE WIRE', 'The host IP moves onto br-ex and the NIC becomes its uplink, so OVN can splice logical traffic onto the L2 segment. Egress SNAT leaves here; MetalLB GARPs are injected here.'),
             children: [
               port(`${ovsId}__eth0`, 'eth0 (NIC)', { caption: 'uplink port',
@@ -71,7 +75,7 @@ const ovsInternal = (ovsId, where, { guest = false } = {}) => {
             ],
           }),
           box(`${ovsId}__brint`, 'br-int', 'OVS bridge', {
-            variant: 'bridge', colorVar: 'k-amber', caption: 'the data plane',
+            variant: 'bridge', colorVar: 'k-amber', caption: 'the data plane', realized: true,
             detail: detail('INTEGRATION BRIDGE · THE DATA PLANE', 'The punchline: every switch and router is just rows in OVN’s DB — br-int is the only thing that actually exists on the node. ovn-controller compiles the whole logical topology into OpenFlow here; one lookup does what the diagram draws as a multi-hop journey.'),
             children: [...brintPorts, ...brintFlows],
           }),

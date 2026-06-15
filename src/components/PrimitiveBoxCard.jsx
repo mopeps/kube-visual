@@ -90,7 +90,7 @@ export default function PrimitiveBoxCard({
         <div
           key={b.id}
           id={subId(b.id)}
-          className={`primitive-nest ${b.variant ? `primitive-nest--${b.variant}` : ''} ${ports.length ? 'primitive-nest--has-ports' : ''}`}
+          className={`primitive-nest ${b.variant ? `primitive-nest--${b.variant}` : ''} ${ports.length ? 'primitive-nest--has-ports' : ''} ${b.realized ? 'primitive-realized' : ''}`}
           style={{ '--node-accent': accent }}
         >
           <button
@@ -132,6 +132,7 @@ export default function PrimitiveBoxCard({
         variant={b.variant}
         color={accent}
         subtitle={b.caption}
+        className={b.realized ? 'primitive-realized' : undefined}
         onClick={() => onSelectBox(b)}
       />
     )
