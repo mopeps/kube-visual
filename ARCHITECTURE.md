@@ -464,62 +464,58 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
 
    **Network-mode internals — labeling & inclusion rules.** Opening a card adds a
    level the §1 overview whitelist never governed; the No-Abstractions Rule
-   (`DESIGN_GOAL.md`) still applies here — *more* so, since this layer is the
-   drill-to-the-metal made literal. These rules keep it honest:
-   - **The box prefix names what actually *runs* at its band — never a desired-state
-     kind.** Once a card opens, the prefix stops naming a Kubernetes object and
-     names the execution primitive:
+   (`DESIGN_GOAL.md`) still applies — *more* so, this layer being drill-to-the-metal
+   made literal. These keep it honest:
+   - **The box prefix names what *runs* at its band — never a desired-state kind.**
+     Once a card opens, the prefix names the execution primitive, not a K8s object:
        - **`[systemd]`** — a host daemon (OVS's `ovsdb-server` / `ovs-vswitchd`):
-         supervised by systemd on the host, *not* in a pod. The prefix carries the
-         load-bearing fact about OVS ("on the host, not in a pod"); the band label
-         already says where.
-       - **`[container]`** — a box that maps 1:1 to a distinct container in the pod's
+         supervised by systemd on the host, not in a pod (the load-bearing fact about
+         OVS; the band label says where).
+       - **`[container]`** — a box mapping 1:1 to a distinct container in the pod's
          PodSpec (own image, independently restartable): `ovnkube-node`'s
-         `ovnkube-controller`, `ovn-northd`, and `ovn-controller`. The enclosing Pod
-         card carries the packaging boundary, so a box earns `[container]` only when
-         the pod is genuinely multi-container and this is one of those containers.
-       - **`[process]`** — a function / goroutine / mode that *shares* a container
-         with its siblings: `ovnkube-control-plane`'s `cluster manager` +
-         `interconnect coordinator`, MetalLB's `memberlist`, the Konnectivity
-         endpoint.
+         `ovnkube-controller`, `ovn-northd`, `ovn-controller`. The Pod card carries
+         the packaging boundary, so this is earned only when the pod is genuinely
+         multi-container and the box is one of those containers.
+       - **`[process]`** — a function / goroutine / mode *sharing* a container with
+         its siblings: `ovnkube-control-plane`'s `cluster manager` + `interconnect
+         coordinator`, MetalLB's `memberlist`, the Konnectivity endpoint.
        - below the kernel boundary, the concrete kernel object — `[OVS bridge]`,
          `[netdev]`, `[syscall]`.
-     A `[Deployment]`/`[ReplicaSet]`/etc. is a record in the API server, not a
-     process: it must never be a process box down here — that is the §1 whitelist's
-     category error, one level down.
+     A `[Deployment]`/`[ReplicaSet]`/etc. is a record, not a process: never a box
+     down here — the §1 whitelist's category error, one level down.
    - **Intent appears as rows inside its store, never as a process box** — the
      network-mode mirror of the etcd intent store (§2). The OVN logical constructs
      (`ovn_cluster_router`, the logical switches, the `Load_Balancer` / `ACL` rows)
-     live INSIDE the node-local Northbound DB box and are tied to the one thing that
-     really exists — the `br-int` OpenFlow flow — by the "realized as" edge. A new
-     logical object is a row in that DB box, not a new standalone card. *Visually*
-     the logical objects are drawn dashed/faint (the app's logical-zone language)
-     and the realized datapath (`br-int`/`br-ex` + the OpenFlow flows, tagged
-     `realized` in `network-internals.js`) solid and lit — so the collapse from a
-     multi-hop logical diagram to one real `br-int` reads at a glance.
+     live INSIDE the node-local Northbound DB box, tied to the one thing that really
+     exists — the `br-int` OpenFlow flow — by the "realized as" edge. A new logical
+     object is a row in that box, not a standalone card. *Visually* the logical
+     objects draw dashed/faint (the app's logical-zone language) and the realized
+     datapath (`br-int`/`br-ex` + the OpenFlow flows, tagged `realized`) solid and
+     lit — so the collapse from a multi-hop diagram to one real `br-int` reads at a
+     glance.
    - **Inclusion test — what earns a box (the internals-layer whitelist).** The
-     kernel is bottomless here (fds, conntrack, nftables chains, IPAM, rbac-proxy
-     sidecars, qdiscs all really exist); a box earns its place only if it sits on the
-     one path this view teaches — **intent → flow → realized packet**: (1) it holds
-     or transforms the network intent (the DBs + their rows, `northd`,
-     `ovn-controller`, `ovnkube-controller`); (2) it is a realized datapath object a
-     packet traverses (`br-int`, `br-ex`, the OpenFlow flows); or (3) it is a seam
-     where the packet crosses a boundary (the patch port, the `genev_sys` tunnel
-     port, a pod veth, `tap0`, the `AF_PACKET` socket, the Konnectivity tunnel).
-     Everything off that path is omitted — not because it isn't real, but because it
-     doesn't change *where a packet goes* or *how intent becomes a flow*. (We
-     deliberately do NOT draw `nftables`/`conntrack`: OVN-K forwards in OpenFlow on
-     `br-int`, not through netfilter, so drawing them would plant a *wrong* model —
-     "omit what doesn't serve the focus" and "omit what would mislead" coincide.)
-   - **The network control-plane operators are control plane, not data path.** The
-     Cluster Network / Ingress / DNS operators stay on the map (the view teaches
-     *how the data plane gets programmed*, so amputating its programmers would leave
-     a data plane that appears to configure itself), but they read as the control
-     plane: a flat **"control plane · configures"** card wired by a `configures` edge
-     to the datapath component each renders (CNO → guest OVN-K control plane,
-     Ingress → the in-VM router, DNS → CoreDNS) — never a drillable datapath box. A
-     control-plane component that programs *nothing* on the packet path (the Multus
-     *admission* webhook) fails the inclusion test and stays off the map.
+     kernel is bottomless here (fds, conntrack, nftables, IPAM, rbac-proxy sidecars
+     all exist); a box earns its place only on the path this view teaches —
+     **intent → flow → realized packet**: (1) it holds/transforms intent (the DBs +
+     rows, `northd`, `ovn-controller`, `ovnkube-controller`); (2) it is a realized
+     datapath object a packet traverses (`br-int`, `br-ex`, the OpenFlow flows); or
+     (3) it is a seam where the packet crosses a boundary (the patch port, the
+     `genev_sys` port, a pod veth, `tap0`, the `AF_PACKET` socket, the Konnectivity
+     tunnel). Everything off that path is omitted — not for being unreal, but for not
+     changing *where a packet goes* or *how intent becomes a flow*. (We deliberately
+     do NOT draw `nftables`/`conntrack`: OVN-K forwards in OpenFlow on `br-int`, not
+     netfilter, so drawing them would plant a *wrong* model — "omit what doesn't
+     serve the focus" and "omit what would mislead" coincide.)
+   - **The network control plane reads as control plane, not data path.** The
+     components that *program* the network stay on the map (amputating them would
+     leave a data plane that configures itself), but as a dashed **"control plane ·
+     configures"** card wired by a `configures` edge to what each programs — never a
+     drillable datapath box. The allow-list (`NETWORK_CONTROL_PLANE_IDS`): CNO →
+     guest OVN-K control plane, Ingress → the in-VM router, DNS → CoreDNS, the
+     kubevirt CCM → the app-ingress LoadBalancer fronting the guest router, MetalLB
+     Controller → the VIPs its speaker announces. A control-plane component that
+     programs *nothing* on the packet path (the Multus *admission* webhook) fails the
+     test and stays off the map.
 
    On phones the OVN deep-dive topic carries the same story instead.
 ## 3. Reference Data Schemas
@@ -629,8 +625,3 @@ Adding a component touches several places — keep them in sync:
 
 The `componentId` must be unique: `ArrowOverlay` locates nodes via
 `document.getElementById(componentId)`, so a duplicate id silently drops connector steps.
-
-## Agent Implementation Strategy
- 1. **Layout Grid Scaffolding:** Code a highly flexible viewport grid supporting the multi-tier nested node tree. Ensure strict sub-component scale limits to guarantee parts can tile side-by-side on mobile devices.
- 2. **Modal Portaling:** Connect global onClick handlers across canvas components to mount data-driven pop-ups fed by components.json.
- 3. **Vector Vectorization:** Implement react-xarrows or leader-line rendering modules to capture bounding coordinates of active IDs from events.json and cleanly project adaptive connectors.
