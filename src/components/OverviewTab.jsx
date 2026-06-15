@@ -5,7 +5,7 @@ import NodeCard from './NodeCard'
 import DeepDiveModal from './DeepDiveModal'
 import ReconLoopOverlay from './ReconLoopOverlay'
 import { NET_PAIRS } from '../data/network-zones'
-import { isNetworkComponent, NETWORK_OPERATOR_IDS } from '../data/network-components'
+import { isNetworkComponent, NETWORK_CONTROL_PLANE_IDS } from '../data/network-components'
 import { INTERNAL_TOPOLOGY, buildNetworkEdges } from '../data/network-internals'
 import PrimitiveBoxCard from './PrimitiveBoxCard'
 import { serviceAlias } from '../data/service-alias'
@@ -415,13 +415,14 @@ export default function OverviewTab({
         isOnPath={isOnPath}
         isDimmed={isDimmed}
         isHighlighted={node.id === highlightId}
-        // In network mode the surfaced control-plane operators (CNO / Ingress /
-        // DNS) don't drill to a datapath — they read as control plane that
-        // configures the components below them (wired by a "configures" edge).
-        // `net-control-plane` re-shows the subtitle (hidden for other net cards)
-        // and draws the card dashed = not the realized datapath.
-        subtitle={netOverlay && NETWORK_OPERATOR_IDS.has(node.id) ? 'control plane · configures' : undefined}
-        className={netOverlay && NETWORK_OPERATOR_IDS.has(node.id) ? 'net-control-plane' : undefined}
+        // In network mode the surfaced control-plane components (CNO / Ingress /
+        // DNS operators, the kubevirt CCM, the MetalLB Controller) don't drill to a
+        // datapath — they read as control plane that configures the components
+        // below them (wired by a "configures" edge). `net-control-plane` re-shows
+        // the subtitle (hidden for other net cards) and draws the card dashed =
+        // not the realized datapath.
+        subtitle={netOverlay && NETWORK_CONTROL_PLANE_IDS.has(node.id) ? 'control plane · configures' : undefined}
+        className={netOverlay && NETWORK_CONTROL_PLANE_IDS.has(node.id) ? 'net-control-plane' : undefined}
         // Open the canonical component's modal regardless of the (possibly
         // namespaced) DOM id — a replica mirrors its canonical component.
         onClick={() => onSelectComponent(node.mirror || node.id)}
