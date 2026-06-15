@@ -89,11 +89,14 @@ export default function App() {
     try { localStorage.setItem(DOCK_KEY, dockOpen ? '1' : '0') } catch { /* ignore */ }
   }, [dockOpen])
 
-  // The Overview's view mode (a wide-desktop affordance):
-  //   'single'  — the normal one-up overview
-  //   'big'     — the whole overview three times in parallel columns (node pairs)
-  //   'network' — the parallel columns with each component opened to its
-  //               networking internals
+  // The Overview's view mode:
+  //   'single'     — the normal one-up overview
+  //   'big'        — the whole overview three times in parallel columns (node pairs)
+  //   'network'    — the parallel columns with each component opened to its
+  //                  networking internals
+  //   'primitives' — the one-up overview where each runtime instance (Pod /
+  //                  systemd / VMI) opens in place to its Linux kernel primitives
+  //                  (collapsed by default; open the one you want)
   // One mode at a time, so the toolbar control can't get into the old
   // "highlighted but nothing shown" state.
   const [overviewMode, setOverviewMode] = useState(() => {
@@ -107,8 +110,12 @@ export default function App() {
   // (every component opened to its networking internals) works at any width: on
   // wide it rides the three big-view columns; below that it renders a single
   // pair-column that fits a phone screen (see OverviewTab's single-column path).
-  const bigView = isWide && overviewMode !== 'single'
+  // Only "Big view" and "Network" use the three parallel columns. "Primitives"
+  // is a one-up overview (depth per component, not per node), so it must NOT be
+  // treated as big-view.
+  const bigView = isWide && (overviewMode === 'big' || overviewMode === 'network')
   const netOverlay = overviewMode === 'network'
+  const primOverlay = overviewMode === 'primitives'
 
   // Condensed replica nodes (master-2/3, worker-2/3) are off by default so the
   // main overview stays clean; a wide-desktop toggle reveals them. The network
@@ -330,6 +337,7 @@ export default function App() {
       onClearHighlight={clearHighlight}
       bigView={bigView}
       netOverlay={netOverlay}
+      primOverlay={primOverlay}
       showReplicas={showReplicas}
     />
   )
@@ -409,6 +417,7 @@ export default function App() {
               { id: 'network', label: 'Network', title: isWide
                 ? 'The three node pairs with every component opened to its networking internals — OVN, Open vSwitch, MetalLB, Konnectivity…'
                 : 'One node pair with every component opened to its networking internals — OVN, Open vSwitch, MetalLB, Konnectivity…' },
+              { id: 'primitives', label: 'Primitives', title: 'Each runtime instance (Pod / systemd / VMI) opens in place to reveal its Linux kernel primitives — netns, veth, cgroups, KVM…' },
             ].map((m) => {
               // Off wide there's no "Big view" button, so a persisted 'big' mode
               // lights "Single" (which is what it falls back to renders-wise).

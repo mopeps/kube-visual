@@ -7,6 +7,7 @@ import ReconLoopOverlay from './ReconLoopOverlay'
 import { NET_PAIRS } from '../data/network-zones'
 import { isNetworkComponent, NETWORK_CONTROL_PLANE_IDS } from '../data/network-components'
 import { INTERNAL_TOPOLOGY, buildNetworkEdges } from '../data/network-internals'
+import { buildPrimitiveInternals, isRuntimeInstance } from '../data/primitive-internals'
 import PrimitiveBoxCard from './PrimitiveBoxCard'
 import { serviceAlias } from '../data/service-alias'
 import IntentStoreCard from './IntentStoreCard'
@@ -135,6 +136,9 @@ export default function OverviewTab({
   bigView = false,
   // On top of the big view, float the shared OVN logical core + connectors.
   netOverlay = false,
+  // Primitives mode: a one-up overview where each runtime instance opens in
+  // place to its Linux kernel primitives. Collapsed by default.
+  primOverlay = false,
   // Whether the condensed replica nodes (master-2/3, worker-2/3) are shown —
   // off by default so the main overview stays clean.
   showReplicas = false,
@@ -157,6 +161,22 @@ export default function OverviewTab({
   })
   const allNetCollapsed = DRILLABLE_IDS.every((id) => netCollapsedIds.has(id))
   const toggleAllNet = () => setNetCollapsedIds(allNetCollapsed ? new Set() : new Set(DRILLABLE_IDS))
+  // Primitives-mode state: which runtime instances the user has opened. Default
+  // COLLAPSED (the inverse of network mode) so the canvas stays quiet and the
+  // word "internals" never sits on every card — an id is in the set only once
+  // expanded.
+  const [primExpandedIds, setPrimExpandedIds] = useState(() => new Set())
+  const togglePrimExpand = (id) => setPrimExpandedIds((prev) => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+  // A node opens to its primitives only if it's a runtime instance AND isn't one
+  // of the expand-in-place cards (etcd store / controller set / operator set /
+  // OVS realized flows) or a mirrored replica — those keep their own behaviour.
+  const isPrimDrillable = (node) =>
+    isRuntimeInstance(node) && !node.mirror &&
+    !node.intentObjects && !node.controllers && !node.operators && !node.realizes
   // Optional "connectors only on hover" mode: when on, the wiring lines are
   // hidden until you point at a box. Independently, the descriptor LABELS are
   // shown only for rail edges (in the empty gutter) or for edges of the box you're
@@ -298,6 +318,18 @@ export default function OverviewTab({
     collectZoneNodeIds(zone).some(id => activeComponentIds?.has?.(id))
   )
 
+  // Primitives mode: every drillable runtime-instance id in the visible tree,
+  // driving the bar's Expand-all / Collapse-all control.
+  const collectPrimDrillable = (zone, ids = []) => {
+    zone.nodes?.forEach((n) => { if (isPrimDrillable(n)) ids.push(n.id) })
+    zone.zones?.forEach((z) => collectPrimDrillable(z, ids))
+    zone.replicaNodes?.forEach((z) => collectPrimDrillable(z, ids))
+    return ids
+  }
+  const primDrillableIds = primOverlay ? visibleZones.flatMap((z) => collectPrimDrillable(z)) : []
+  const allPrimExpanded = primDrillableIds.length > 0 && primDrillableIds.every((id) => primExpandedIds.has(id))
+  const toggleAllPrim = () => setPrimExpandedIds(allPrimExpanded ? new Set() : new Set(primDrillableIds))
+
   function renderNode(node, zone, colIndex = 0) {
     const { isActive, isOnPath, isDimmed } = traceStates(node.id)
     // Network mode: a drillable component opens in place to show its own internal
@@ -317,6 +349,29 @@ export default function OverviewTab({
           onSelectBox={selectNetBox}
         />
       )
+    }
+    // Primitives mode: a runtime instance opens in place to its Linux kernel
+    // primitives (collapsed by default; no "internals" label). Built from
+    // PRIMITIVES_BY_TYPE + the component's linuxPrimitive (primitive-internals.js).
+    if (primOverlay && isPrimDrillable(node)) {
+      const internal = buildPrimitiveInternals(node)
+      if (internal) {
+        return (
+          <PrimitiveBoxCard
+            key={node.id}
+            node={node}
+            internal={internal}
+            colIndex={colIndex}
+            idPrefix="pr-c"
+            hint={null}
+            color={zone.color}
+            isOpen={primExpandedIds.has(node.id)}
+            onToggle={() => togglePrimExpand(node.id)}
+            onSelectComponent={onSelectComponent}
+            onSelectBox={selectNetBox}
+          />
+        )
+      }
     }
     // Nodes carrying intent objects (the etcd "intent store") render as an
     // expandable card instead of a plain box.
@@ -405,7 +460,7 @@ export default function OverviewTab({
         // Network mode renders the same tree in three columns, so card ids are
         // namespaced per column to stay unique (integration edges anchor to them);
         // the normal canvas keeps the raw componentId.
-        id={netOverlay ? `nt-c${colIndex}-${node.id}` : node.id}
+        id={netOverlay ? `nt-c${colIndex}-${node.id}` : primOverlay ? `pr-c${colIndex}-${node.id}` : node.id}
         title={node.title}
         typePrefix={node.typePrefix}
         typeAlias={serviceAlias(node)}
@@ -567,21 +622,32 @@ export default function OverviewTab({
           : [renderZone(zone, 0, null, colIndex)]
       )
 
-  // Both "Big view" and "Network" render the parallel-column canvas; network
-  // mode below wide collapses it to a single pair-column (the mobile-friendly
-  // network view). Plain "Single" mode keeps the one-up overview + arrow trace.
-  const columnsView = bigView || netOverlay
+  // "Big view", "Network", and "Primitives" all render through the column
+  // canvas; Big/Network use three pair-columns on wide, while Network (below
+  // wide) and Primitives (always) use a single column. Plain "Single" mode keeps
+  // the one-up overview + arrow trace.
+  const columnsView = bigView || netOverlay || primOverlay
   const cols = bigView ? NET_PAIRS : [0]
 
   return (
     <>
       {columnsView && (
         <div className="net-bar">
-          <span className="net-bar-label">{netOverlay ? 'Network map' : 'Big view'}</span>
+          <span className="net-bar-label">{netOverlay ? 'Network map' : primOverlay ? 'Primitives' : 'Big view'}</span>
           {netOverlay && (
             <button type="button" className="net-bar-btn" onClick={toggleAllNet}>
               {allNetCollapsed ? 'Expand all' : 'Collapse all'}
             </button>
+          )}
+          {primOverlay && (
+            <button type="button" className="net-bar-btn" onClick={toggleAllPrim}>
+              {allPrimExpanded ? 'Collapse all' : 'Expand all'}
+            </button>
+          )}
+          {primOverlay && (
+            <span className="net-bar-hint">
+              Each Pod / systemd / VMI opens in place to its Linux kernel primitives — click a card to drill in.
+            </span>
           )}
           {netOverlay && (
             <button
@@ -595,7 +661,7 @@ export default function OverviewTab({
               {netWiresOnHover ? 'Wires: on focus' : 'Wires: all'}
             </button>
           )}
-          {!netOverlay && (
+          {!netOverlay && !primOverlay && (
             <span className="net-bar-hint">
               The whole Overview, three node pairs side by side. Switch to Network to open each component and trace the real networking topology.
             </span>
