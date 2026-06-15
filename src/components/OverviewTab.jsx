@@ -587,11 +587,11 @@ export default function OverviewTab({
               {netWiresOnHover ? 'Wires: on focus' : 'Wires: all'}
             </button>
           )}
-          <span className="net-bar-hint">
-            {netOverlay
-              ? 'Every network component is opened to show where its abstractions live and how they’re implemented. Hover (or tap) a box to label its connectors; ▴ collapses a box; click a sub-box for detail.'
-              : 'The whole Overview, three node pairs side by side. Switch to Network to open each component and trace the real networking topology.'}
-          </span>
+          {!netOverlay && (
+            <span className="net-bar-hint">
+              The whole Overview, three node pairs side by side. Switch to Network to open each component and trace the real networking topology.
+            </span>
+          )}
         </div>
       )}
       {columnsView ? (
