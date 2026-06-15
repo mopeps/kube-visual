@@ -433,10 +433,14 @@ export default function OverviewTab({
     const nodes = zone.nodes ?? []
     const byId = new Map(nodes.map(n => [n.id, n]))
     // Either relation references its target by id; the target renders inside the
-    // pair, not standalone. Network mode skips pairing — an opened Open vSwitch
-    // is full-width, and its OVN-K8s Node link reads as a db.sock edge instead.
-    const targetOf = (n) => n.exposes || n.programs
-    const pairedTargets = netOverlay ? new Set() : new Set(
+    // pair, not standalone. Network mode skips pairing entirely — an opened Open
+    // vSwitch is full-width, and its OVN-K8s Node link reads as a db.sock edge
+    // instead. (targetOf must return null in network mode for BOTH steps below:
+    // otherwise pairedTargets stays empty yet the loop still forms a ServicePair,
+    // pulling the target — e.g. ovs-master — into the pair AND leaving it
+    // standalone, so it draws twice.)
+    const targetOf = (n) => netOverlay ? null : (n.exposes || n.programs)
+    const pairedTargets = new Set(
       nodes.filter(n => targetOf(n) && byId.has(targetOf(n))).map(n => targetOf(n))
     )
     const out = []
