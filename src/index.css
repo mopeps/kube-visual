@@ -2257,6 +2257,57 @@ body::after {
   border-radius: 4px;
 }
 
+/* ── A socket endpoint (not a NIC) ────────────────────────────────────────
+   A syscall-level endpoint — MetalLB's AF_PACKET raw socket, Konnectivity's
+   gRPC tunnel — drawn as a socket "jack" the process writes into, with an
+   egress arrow for the frame / stream shot out (the raw GARP onto the wire,
+   the tunnel up to the agent). Deliberately unlike the NIC port blocks. */
+.primitive-socket {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 7px;
+  padding: 4px 9px;
+  border: 1px solid color-mix(in srgb, var(--node-accent) 55%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--node-accent) 12%, #0a111f);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  line-height: 1.4;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.primitive-socket:hover { background: color-mix(in srgb, var(--node-accent) 24%, #0a111f); }
+/* the jack — a recessed socket hole the process plugs into */
+.primitive-socket-jack {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--node-accent);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--node-accent) 60%, transparent);
+  flex: none;
+}
+.primitive-socket-label { font-weight: 600; }
+/* the egress — a dashed wire ending in an arrowhead: the frame/stream shot out */
+.primitive-socket-egress {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+.primitive-socket-egress::before {
+  content: '';
+  width: 14px;
+  border-top: 1.5px dashed var(--node-accent);
+}
+.primitive-socket-egress::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 5px solid var(--node-accent);
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+}
+
 
 /* Quiet edge labels — plain coloured text riding the line (a halo of page
    background keeps it readable), like the bare "100.64.0.1/16" annotations of

@@ -43,6 +43,29 @@ export default function PrimitiveBoxCard({
     )
   }
 
+  // A socket endpoint (variant: 'socket') is not a NIC — it's a syscall-level
+  // endpoint (MetalLB's AF_PACKET raw socket, Konnectivity's gRPC tunnel). Drawn
+  // as a "jack" ring the process writes into + an egress arrow for the frame /
+  // stream shot out, so it reads as a socket rather than a switch port.
+  const renderSocket = (s) => {
+    const accent = `var(--${s.colorVar || 'k-orange'})`
+    return (
+      <button
+        key={s.id}
+        id={subId(s.id)}
+        type="button"
+        className="primitive-socket"
+        style={{ '--node-accent': accent }}
+        onClick={(e) => { e.stopPropagation(); onSelectBox(s) }}
+        title={s.caption ? `${s.title} — ${s.caption}` : s.title}
+      >
+        <span className="primitive-socket-jack" aria-hidden />
+        <span className="primitive-socket-label" style={{ color: accent }}>{s.title}</span>
+        <span className="primitive-socket-egress" aria-hidden />
+      </button>
+    )
+  }
+
   // A box may nest child boxes (ports drawn ON a bridge, rows INSIDE the NB DB).
   // Leaf → a plain NodeCard; container → a framed box with a clickable header.
   // Interface children peel off onto the rim as port tabs; the rest stay in the
@@ -85,10 +108,10 @@ export default function PrimitiveBoxCard({
         </div>
       )
     }
-    // A standalone interface primitive (a band box, not a bridge child — tap0,
-    // the raw socket, the tunnel endpoint) renders as the same small pill so
-    // every interface reads alike; it just sits in its band row rather than on
-    // a bridge rim.
+    // Standalone band primitives: a socket endpoint gets the socket form; a
+    // real interface (tap0) gets the same port block as a bridge child, just
+    // sitting in its band row rather than on a bridge rim.
+    if (b.variant === 'socket') return renderSocket(b)
     if (b.variant === 'iface') return renderPort(b)
     return (
       <NodeCard

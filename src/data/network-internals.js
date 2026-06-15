@@ -165,7 +165,7 @@ const metallbSpeakerInternal = (id) => ({
           colorVar: 'k-orange', caption: 'leader election per VIP',
           detail: detail('L2 LEADER ELECTION', 'Speakers gossip over memberlist and elect one node as the L2 leader for each LoadBalancer VIP, so only one node answers for it.') }),
         box(`${id}__rawsock`, 'AF_PACKET raw socket', 'syscall', {
-          variant: 'iface', colorVar: 'k-orange', caption: 'socket(AF_PACKET, SOCK_RAW)',
+          variant: 'socket', colorVar: 'k-orange', caption: 'socket(AF_PACKET, SOCK_RAW)',
           detail: detail('GRATUITOUS ARP INJECTION', 'When this node owns a VIP, the speaker bypasses the host IP stack and pushes a Gratuitous ARP for the VIP out br-ex and the NIC, so upstream switches steer the VIP to this node’s MAC.') }),
       ],
     },
@@ -196,7 +196,7 @@ const konnectivityServerInternal = {
       label: 'guest control-plane namespace',
       boxes: [
         box('konnectivity-server__tunnel', 'gRPC tunnel endpoint', 'process', {
-          variant: 'iface', colorVar: 'k-sky', caption: 'HTTP/2 · :8091',
+          variant: 'socket', colorVar: 'k-sky', caption: 'HTTP/2 · :8091',
           detail: detail('CONTROL TUNNEL · SERVER SIDE', 'Holds persistent HTTP/2 tunnels opened from the agents and proxies API-originated traffic (kubectl exec, metrics scrape) down them — so no host management port is ever exposed.') }),
       ],
     },
