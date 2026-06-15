@@ -17,9 +17,17 @@ export default function PrimitiveBoxCard({
   onToggle,
   onSelectComponent,
   onSelectBox,
+  // DOM-id namespace prefix — Network mode uses the default `nt-c` (its three
+  // columns + edge overlay anchor to it); Primitives mode passes `pr-c` so its
+  // cards never collide with another mode's raw / `nt-c` ids.
+  idPrefix = 'nt-c',
+  // The word shown beside the ▸ chevron when collapsed. Network mode shows
+  // "internals"; Primitives mode passes null so the box carries no such label
+  // (just the drill chevron).
+  hint = 'internals',
 }) {
-  const domId = `nt-c${colIndex}-${node.id}`
-  const subId = (id) => `nt-c${colIndex}-${id}`
+  const domId = `${idPrefix}${colIndex}-${node.id}`
+  const subId = (id) => `${idPrefix}${colIndex}-${id}`
 
   // An interface/port (variant: 'iface') is no longer a full card stacked inside
   // its bridge — it's a small pill tab docked on the bridge's bottom rim, so it
@@ -145,21 +153,21 @@ export default function PrimitiveBoxCard({
         role="button"
         tabIndex={0}
         aria-expanded={false}
-        aria-label={`[${node.typePrefix}] ${node.title} — show internals`}
+        aria-label={`[${node.typePrefix}] ${node.title} — ${hint ? `show ${hint}` : 'open'}`}
         onClick={(e) => { e.stopPropagation(); onToggle() }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onToggle() }
         }}
         className="node intent-store"
         style={{ '--node-accent': color }}
-        title="Show internals"
+        title={hint ? `Show ${hint}` : 'Open'}
       >
         {node.typePrefix !== 'Pod' && (
           <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>[{node.typePrefix}]</span>
         )}
         <div className="node-title" style={{ color }}>{node.title}</div>
         <div className="intent-store-hint" style={{ color }}>
-          <span className="intent-store-chevron">▸</span>internals
+          <span className="intent-store-chevron">▸</span>{hint || ''}
         </div>
       </div>
     )
@@ -192,7 +200,7 @@ export default function PrimitiveBoxCard({
           type="button"
           className="intent-store-collapse"
           onClick={(e) => { e.stopPropagation(); onToggle() }}
-          aria-label="Collapse internals"
+          aria-label={`Collapse${hint ? ` ${hint}` : ''}`}
           title="Collapse"
         >
           ▴
