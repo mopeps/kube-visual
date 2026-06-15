@@ -2206,36 +2206,38 @@ body::after {
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.22);
 }
-/* ── Interfaces as pill tabs ──────────────────────────────────────────────
-   A bridge's interfaces no longer stack as cards inside it; they dock as small
-   pill tabs straddling the bridge's bottom border, like ports plugged into a
-   switch. Distinct from (and smaller than) the primitive cards, and they make
-   the bridge box itself read as a single object. */
-.primitive-nest--has-ports { padding-bottom: 15px; }
+/* ── Interfaces as switch-style port blocks ───────────────────────────────
+   A bridge's interfaces are drawn the way a switch's ports are in a topology
+   diagram: a contiguous strip of small port blocks welded onto the bridge's
+   bottom edge — no gap, the bridge border itself is the seam, hairline gaps
+   divide one port from the next. Standalone interface primitives (not a bridge
+   child) reuse the same squared-port block on their own. */
+.primitive-nest--has-ports { padding-bottom: 0; overflow: hidden; }
 .primitive-nest-ports {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px 6px;
-  padding: 0 4px;
-  margin: 7px 0 -13px;     /* pull the tabs down so they straddle the bottom rim */
-  position: relative;
-  z-index: 1;
+  gap: 1px;                                  /* hairline dividers between ports */
+  margin: 7px -5px -5px;                     /* bleed to the bridge's inner edges, flush at the bottom */
+  padding-top: 1px;                          /* the seam line welding the strip to the bridge */
+  background: color-mix(in srgb, var(--node-accent) 42%, transparent);
 }
+/* The interface block — a small squared device port, contiguous in the strip. */
 .primitive-port {
+  flex: 1 1 auto;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
-  padding: 2px 9px;
-  border: 1px solid color-mix(in srgb, var(--node-accent) 60%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--node-accent) 16%, #0a0f1e);
+  padding: 5px 11px;
+  border: 0;
+  background: color-mix(in srgb, var(--node-accent) 14%, #0a111f);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.58rem;
-  line-height: 1.45;
+  line-height: 1.4;
   cursor: pointer;
   white-space: nowrap;
 }
-.primitive-port:hover { background: color-mix(in srgb, var(--node-accent) 28%, #0a0f1e); }
+.primitive-port:hover { background: color-mix(in srgb, var(--node-accent) 30%, #0a111f); }
 .primitive-port-dot {
   width: 5px;
   height: 5px;
@@ -2245,6 +2247,15 @@ body::after {
   flex: none;
 }
 .primitive-port-label { font-weight: 600; }
+
+/* A standalone interface (a band box, not welded into a bridge strip) is a
+   single small port block carrying its own border — no strip to sit in. */
+.primitive-band-boxes > .primitive-port {
+  flex: 0 1 auto;
+  align-self: center;     /* a compact block, not stretched to a sibling card's height */
+  border: 1px solid color-mix(in srgb, var(--node-accent) 55%, transparent);
+  border-radius: 4px;
+}
 
 
 /* Quiet edge labels — plain coloured text riding the line (a halo of page
