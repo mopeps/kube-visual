@@ -492,7 +492,11 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
      (`ovn_cluster_router`, the logical switches, the `Load_Balancer` / `ACL` rows)
      live INSIDE the node-local Northbound DB box and are tied to the one thing that
      really exists — the `br-int` OpenFlow flow — by the "realized as" edge. A new
-     logical object is a row in that DB box, not a new standalone card.
+     logical object is a row in that DB box, not a new standalone card. *Visually*
+     the logical objects are drawn dashed/faint (the app's logical-zone language)
+     and the realized datapath (`br-int`/`br-ex` + the OpenFlow flows, tagged
+     `realized` in `network-internals.js`) solid and lit — so the collapse from a
+     multi-hop logical diagram to one real `br-int` reads at a glance.
    - **Inclusion test — what earns a box (the internals-layer whitelist).** The
      kernel is bottomless here (fds, conntrack, nftables chains, IPAM, rbac-proxy
      sidecars, qdiscs all really exist); a box earns its place only if it sits on the

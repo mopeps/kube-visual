@@ -22,6 +22,9 @@ export default function NodeCard({
   subtitle,
   badges,
   variant,
+  // Optional extra class (Network mode tags realized-datapath leaf boxes with
+  // `primitive-realized` so they read solid + lit).
+  className,
 }) {
   return (
     <div
@@ -37,7 +40,7 @@ export default function NodeCard({
           onClick?.(id)
         }
       }}
-      className={`node ${variant ? `node--${variant}` : ''} ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''}`}
+      className={`node ${variant ? `node--${variant}` : ''} ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''} ${className || ''}`}
       style={{
         '--node-accent': color,
         background: isActive

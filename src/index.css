@@ -2137,6 +2137,19 @@ body::after {
 .net-bigpicture--net .primitive-nest-cap { display: none; }
 .net-bigpicture--net .net-col { padding-right: 50px; }
 
+/* The surfaced network operators are control plane, not data path: dashed (like
+   the logical OVN rows — not the realized datapath) and they keep their
+   "control plane · configures" subtitle, which is wired to the component each
+   one programs by a "configures" edge. See ARCHITECTURE.md "Network-mode
+   internals". */
+.net-bigpicture--net .node.net-control-plane { border-style: dashed; }
+.net-bigpicture--net .node.net-control-plane .node-subtitle {
+  display: block;
+  color: color-mix(in srgb, var(--node-accent) 65%, var(--tx-muted));
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
 /* Single-column network view (below wide — the mobile-friendly network map):
    one pair-column that fills the canvas instead of holding a fixed 400px width,
    so it never forces a horizontal scroll on a phone. The connector rail still
@@ -2225,6 +2238,26 @@ body::after {
   padding: 4px;
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.22);
+}
+
+/* ── Logical vs realized: the view's punchline ────────────────────────────
+   The OVN logical objects are "just rows" in a DB — drawn dashed/faint, the
+   same solid=real / dashed=logical language the Overview uses for machine vs
+   namespace zones. The realized datapath that a packet actually traverses
+   (br-int / br-ex and the OpenFlow flows on them, tagged `realized`) reads
+   solid and lit: the one thing that truly exists on the node. Everything in
+   between (daemons, the DBs, the CNI) stays neutral. See ARCHITECTURE.md
+   "Network-mode internals". */
+.primitive-nest-body > .node--switch,
+.primitive-nest-body > .node--ellipse {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--node-accent) 5%, transparent);
+}
+.primitive-realized {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--node-accent) 80%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--node-accent) 32%, transparent),
+              0 0 16px color-mix(in srgb, var(--node-accent) 20%, transparent);
 }
 /* ── Interfaces as switch-style port blocks ───────────────────────────────
    A bridge's interfaces are drawn the way a switch's ports are in a topology

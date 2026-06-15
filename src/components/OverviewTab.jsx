@@ -418,7 +418,10 @@ export default function OverviewTab({
         // In network mode the surfaced control-plane operators (CNO / Ingress /
         // DNS) don't drill to a datapath — they read as control plane that
         // configures the components below them (wired by a "configures" edge).
+        // `net-control-plane` re-shows the subtitle (hidden for other net cards)
+        // and draws the card dashed = not the realized datapath.
         subtitle={netOverlay && NETWORK_OPERATOR_IDS.has(node.id) ? 'control plane · configures' : undefined}
+        className={netOverlay && NETWORK_OPERATOR_IDS.has(node.id) ? 'net-control-plane' : undefined}
         // Open the canonical component's modal regardless of the (possibly
         // namespaced) DOM id — a replica mirrors its canonical component.
         onClick={() => onSelectComponent(node.mirror || node.id)}
