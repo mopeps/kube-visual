@@ -860,6 +860,15 @@ body::after {
   background: var(--k-cyan);
 }
 
+/* Compact / touch: the view-mode toggle can't share the tab strip's row without
+   squeezing the tab labels (Overview gets clipped, Packet Flow shoved off), so
+   it wraps onto its own full-width row below the tabs — a clean two-up toggle. */
+@media (max-width: 1023px) {
+  .tabs-row { flex-wrap: wrap; row-gap: 8px; }
+  .tabs-row .seg { order: 2; flex: 1 0 100%; }
+  .tabs-row .seg .seg-btn { flex: 1; text-align: center; }
+}
+
 /* ── Wide-desktop dock layout ──────────────────────────────────────── */
 .dock-layout {
   display: flex;
