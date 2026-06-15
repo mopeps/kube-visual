@@ -25,15 +25,23 @@ const NETWORK_ROLES = new Set([
   'NETWORK POLICY',
 ])
 
-// The network control-plane operators carry a generic OPERATOR / ADMISSION role
-// that doesn't distinguish them from the dozens of non-network operators, so
-// they're kept by an explicit allow-list. They live nested inside the CPO/CVO
-// operator-set cards; the network filter surfaces them as standalone cards.
+// The network control-plane operators carry a generic OPERATOR role that doesn't
+// distinguish them from the dozens of non-network operators, so they're kept by an
+// explicit allow-list. They live nested inside the CPO/CVO operator-set cards; the
+// network filter surfaces them as standalone "control plane" cards, wired to the
+// data-plane components they program by "configures" edges (network-internals.js).
+//
+// Inclusion test (see ARCHITECTURE.md "Network-mode internals"): a card earns a
+// place only if it sits on the intent→flow→packet path — either it moves/switches
+// packets, or it PROGRAMS something that does. These three render config that
+// becomes the data plane (CNO → OVN-K, Ingress → the in-VM router, DNS → CoreDNS).
+// The Multus *admission controller* is deliberately NOT here: it is a validating
+// webhook that gates net-attach-def admission — it neither moves packets nor
+// programs the datapath, so it stays in the operator set and off the network map.
 export const NETWORK_OPERATOR_IDS = new Set([
-  'cluster-network-operator',    // in control-plane-operator's set
-  'multus-admission-controller', // in control-plane-operator's set
-  'ingress-operator',            // in cluster-version-operator's set
-  'dns-operator',                // in cluster-version-operator's set
+  'cluster-network-operator', // CPO's set → configures the guest OVN-K control plane
+  'ingress-operator',         // CVO's set → deploys the in-VM router
+  'dns-operator',             // CVO's set → deploys CoreDNS
 ])
 
 // Is this zone node part of the network? (Unknown ids — e.g. condensed replica

@@ -91,7 +91,7 @@ const ovnControlPlaneInternal = (prefix, where) => ({
     {
       label: `ovnkube-control-plane · ${where}`,
       boxes: [
-        box(`${prefix}__clustermgr`, 'cluster manager', 'Deployment', {
+        box(`${prefix}__clustermgr`, 'cluster manager', 'process', {
           colorVar: 'k-sky', caption: 'allocates each node a /23',
           detail: detail('CLUSTER MANAGER · SUBNET ALLOCATION', 'The interconnect control plane is lightweight: it carves the cluster pod CIDR into a per-node /23 and hands each ovnkube-node its slice. It does NOT hold the cluster NB/SB DB — that lives on each node.') }),
         box(`${prefix}__ic`, 'interconnect coordinator', 'process', {
@@ -138,7 +138,7 @@ const ovnNodeInternal = (nodeId, where) => ({
               detail: detail('NETWORKPOLICY DECLARATION · ACL ROWS', 'NetworkPolicy compiles to ACL rows + address sets, realized as allow/drop OpenFlow on this node’s br-int.') }),
           ],
         }),
-        box(`${nodeId}__northd`, 'ovn-northd', 'process', {
+        box(`${nodeId}__northd`, 'ovn-northd', 'container', {
           colorVar: 'k-purple', caption: 'NB → SB',
           detail: detail('NORTHD · TRANSLATOR', 'Renders this node’s NB DB rows into concrete logical flows in its local SB DB.') }),
         box(`${nodeId}__sbdb`, 'Southbound DB', 'OVSDB', {
@@ -295,6 +295,17 @@ const BASE_EDGES = [
   // ── Long cross-column link — also down the side rail ─────────────────────
   railEdge('konnectivity-server', 'konnectivity-agent', 'control tunnel', 'k-sky',
     'Konnectivity Server → Agent', 'A persistent encrypted HTTP/2 tunnel opened by the agent up to the server; control traffic for the node rides back down it.'),
+  // ── Control plane → data plane: the operators that PROGRAM the SDN ─────────
+  // These operators don't move packets and don't drill to a kernel datapath —
+  // they render config / deploy the components that do. Drawn as "configures"
+  // rail edges so they read as the control plane UPSTREAM of the data path, not
+  // as datapath boxes (see the network-internals labeling rule in ARCHITECTURE.md).
+  railEdge('cluster-network-operator', 'ovn-master-control', 'configures', 'k-purple',
+    'Cluster Network Operator → OVN-K control plane', 'CNO reads the Network CR and renders the guest OVN-Kubernetes control-plane Deployment + node DaemonSet manifests; the OVN control plane it deploys runs here in the HCP namespace.'),
+  railEdge('ingress-operator', 'openshift-ingress-router-guest', 'configures', 'k-purple',
+    'Ingress Operator → router-default', 'The Ingress Operator reconciles the default IngressController and creates the router-default Deployment that runs as the OpenShift router inside the guest VMs.'),
+  railEdge('dns-operator', 'coredns-node', 'configures', 'k-purple',
+    'DNS Operator → CoreDNS', 'The DNS Operator reconciles the DNS CR and deploys the CoreDNS (dns-default) DaemonSet onto the guest worker nodes.'),
 ]
 
 // Build the per-column edge list (one canvas-level overlay, idPrefix=''); each
