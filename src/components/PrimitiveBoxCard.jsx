@@ -43,25 +43,35 @@ export default function PrimitiveBoxCard({
     )
   }
 
-  // A socket endpoint (variant: 'socket') is not a NIC — it's a syscall-level
-  // endpoint (MetalLB's AF_PACKET raw socket, Konnectivity's gRPC tunnel). Drawn
-  // as a "jack" ring the process writes into + an egress arrow for the frame /
-  // stream shot out, so it reads as a socket rather than a switch port.
+  // A socket endpoint (variant: 'socket' / 'tunnel') is not a NIC — it's a
+  // syscall-level endpoint. Both share a "jack" ring (the hole the process
+  // writes into) but differ in their trailing cue:
+  //   • socket → radiating broadcast arcs ))) : a raw frame announced onto the
+  //     wire (MetalLB's gratuitous ARP)
+  //   • tunnel → a nested bore/mouth: the persistent two-way reverse tunnel the
+  //     agent dials into (Konnectivity)
   const renderSocket = (s) => {
     const accent = `var(--${s.colorVar || 'k-orange'})`
+    const tunnel = s.variant === 'tunnel'
     return (
       <button
         key={s.id}
         id={subId(s.id)}
         type="button"
-        className="primitive-socket"
+        className={`primitive-socket${tunnel ? ' primitive-socket--tunnel' : ''}`}
         style={{ '--node-accent': accent }}
         onClick={(e) => { e.stopPropagation(); onSelectBox(s) }}
         title={s.caption ? `${s.title} — ${s.caption}` : s.title}
       >
         <span className="primitive-socket-jack" aria-hidden />
         <span className="primitive-socket-label" style={{ color: accent }}>{s.title}</span>
-        <span className="primitive-socket-egress" aria-hidden />
+        {tunnel ? (
+          <span className="primitive-tunnel-bore" aria-hidden />
+        ) : (
+          <span className="primitive-socket-emit" aria-hidden>
+            <i /><i /><i />
+          </span>
+        )}
       </button>
     )
   }
@@ -111,7 +121,7 @@ export default function PrimitiveBoxCard({
     // Standalone band primitives: a socket endpoint gets the socket form; a
     // real interface (tap0) gets the same port block as a bridge child, just
     // sitting in its band row rather than on a bridge rim.
-    if (b.variant === 'socket') return renderSocket(b)
+    if (b.variant === 'socket' || b.variant === 'tunnel') return renderSocket(b)
     if (b.variant === 'iface') return renderPort(b)
     return (
       <NodeCard

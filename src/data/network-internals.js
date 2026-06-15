@@ -196,7 +196,7 @@ const konnectivityServerInternal = {
       label: 'guest control-plane namespace',
       boxes: [
         box('konnectivity-server__tunnel', 'gRPC tunnel endpoint', 'process', {
-          variant: 'socket', colorVar: 'k-sky', caption: 'HTTP/2 · :8091',
+          variant: 'tunnel', colorVar: 'k-sky', caption: 'HTTP/2 · :8091',
           detail: detail('CONTROL TUNNEL · SERVER SIDE', 'Holds persistent HTTP/2 tunnels opened from the agents and proxies API-originated traffic (kubectl exec, metrics scrape) down them — so no host management port is ever exposed.') }),
       ],
     },
