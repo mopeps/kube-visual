@@ -2128,6 +2128,17 @@ body::after {
 .net-bigpicture--net .primitive-nest-cap { display: none; }
 .net-bigpicture--net .net-col { padding-right: 50px; }
 
+/* Single-column network view (below wide — the mobile-friendly network map):
+   one pair-column that fills the canvas instead of holding a fixed 400px width,
+   so it never forces a horizontal scroll on a phone. The connector rail still
+   needs a gutter, but a single column has far fewer long edges, so it's slimmer. */
+.net-bigpicture--single .net-cols { overflow-x: visible; }
+.net-bigpicture--single .net-col {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.net-bigpicture--single.net-bigpicture--net .net-col { padding-right: 34px; }
+
 /* The "kernel boundary" rule between user-space daemons and the datapath. */
 .primitive-boundary {
   display: flex;

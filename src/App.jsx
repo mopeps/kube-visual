@@ -102,8 +102,13 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem(VIEW_KEY, overviewMode) } catch { /* ignore */ }
   }, [overviewMode])
+  // "Big view" — the three parallel node-pair columns — only makes sense where
+  // there's room for them, so it stays a wide-desktop layout. "Network" mode
+  // (every component opened to its networking internals) works at any width: on
+  // wide it rides the three big-view columns; below that it renders a single
+  // pair-column that fits a phone screen (see OverviewTab's single-column path).
   const bigView = isWide && overviewMode !== 'single'
-  const netOverlay = isWide && overviewMode === 'network'
+  const netOverlay = overviewMode === 'network'
 
   // Condensed replica nodes (master-2/3, worker-2/3) are off by default so the
   // main overview stays clean; a wide-desktop toggle reveals them. The network
@@ -393,24 +398,34 @@ export default function App() {
             {replicasOpen ? 'Hide replicas' : 'All nodes'}
           </button>
         )}
-        {isWide && tab === 'overview' && (
+        {tab === 'overview' && (
           <div className="seg" role="group" aria-label="Overview view mode">
             {[
               { id: 'single', label: 'Single', title: 'The normal one-up overview' },
-              { id: 'big', label: 'Big view', title: 'The whole overview, three node pairs side by side' },
-              { id: 'network', label: 'Network', title: 'The three node pairs with every component opened to its networking internals — OVN, Open vSwitch, MetalLB, Konnectivity…' },
-            ].map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                className={`seg-btn ${overviewMode === m.id ? 'is-active' : ''}`}
-                aria-pressed={overviewMode === m.id}
-                onClick={() => setOverviewMode(m.id)}
-                title={m.title}
-              >
-                {m.label}
-              </button>
-            ))}
+              // "Big view" needs the room for three parallel columns, so it's
+              // wide-desktop only; "Network" is always offered (single-column
+              // below wide, so it works on a phone).
+              ...(isWide ? [{ id: 'big', label: 'Big view', title: 'The whole overview, three node pairs side by side' }] : []),
+              { id: 'network', label: 'Network', title: isWide
+                ? 'The three node pairs with every component opened to its networking internals — OVN, Open vSwitch, MetalLB, Konnectivity…'
+                : 'One node pair with every component opened to its networking internals — OVN, Open vSwitch, MetalLB, Konnectivity…' },
+            ].map((m) => {
+              // Off wide there's no "Big view" button, so a persisted 'big' mode
+              // lights "Single" (which is what it falls back to renders-wise).
+              const active = (!isWide && overviewMode === 'big' ? 'single' : overviewMode) === m.id
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={`seg-btn ${active ? 'is-active' : ''}`}
+                  aria-pressed={active}
+                  onClick={() => setOverviewMode(m.id)}
+                  title={m.title}
+                >
+                  {m.label}
+                </button>
+              )
+            })}
           </div>
         )}
         {isWide && (
