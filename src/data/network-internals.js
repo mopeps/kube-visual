@@ -299,11 +299,14 @@ const BASE_EDGES = [
 
 // Build the per-column edge list (one canvas-level overlay, idPrefix=''); each
 // edge only draws when both endpoints are in the DOM (the owning cards expanded).
+// The id carries the source index `j` because several edges share the same
+// from/to pair (the OVN-K8s Node → OVS rail carries db.sock + veth + realized-as);
+// without it those siblings would collide on their React key in the overlay.
 export const buildNetworkEdges = (pairs) =>
   pairs.flatMap((i) =>
-    BASE_EDGES.map((e) => ({
+    BASE_EDGES.map((e, j) => ({
       ...e,
-      id: `nt-c${i}-${e.from}__${e.to}`,
+      id: `nt-c${i}-${e.from}__${e.to}__${j}`,
       from: `nt-c${i}-${e.from}`,
       to: `nt-c${i}-${e.to}`,
     })),
