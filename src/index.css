@@ -2288,24 +2288,41 @@ body::after {
   flex: none;
 }
 .primitive-socket-label { font-weight: 600; }
-/* the egress — a dashed wire ending in an arrowhead: the frame/stream shot out */
-.primitive-socket-egress {
+/* the emission — radiating broadcast arcs ))) : the raw frame announced onto
+   the wire (MetalLB's gratuitous-ARP broadcast). Each arc is a circle showing
+   only its right edge; they grow + fade outward like a ripple. */
+.primitive-socket-emit {
   display: inline-flex;
   align-items: center;
+  gap: 2px;
   flex: none;
 }
-.primitive-socket-egress::before {
-  content: '';
-  width: 14px;
-  border-top: 1.5px dashed var(--node-accent);
+.primitive-socket-emit i {
+  display: block;
+  border: 1.5px solid transparent;
+  border-right-color: var(--node-accent);
+  border-radius: 50%;
 }
-.primitive-socket-egress::after {
+.primitive-socket-emit i:nth-child(1) { width: 4px;  height: 7px;  opacity: 1; }
+.primitive-socket-emit i:nth-child(2) { width: 6px;  height: 11px; opacity: 0.65; }
+.primitive-socket-emit i:nth-child(3) { width: 8px;  height: 15px; opacity: 0.4; }
+
+/* the tunnel bore — nested rounded rings, a conduit mouth you look into: the
+   persistent two-way reverse tunnel the agent dials into. No arrow. */
+.primitive-tunnel-bore {
+  position: relative;
+  width: 22px;
+  height: 13px;
+  border: 1.5px solid var(--node-accent);
+  border-radius: 7px;
+  flex: none;
+}
+.primitive-tunnel-bore::after {
   content: '';
-  width: 0;
-  height: 0;
-  border-left: 5px solid var(--node-accent);
-  border-top: 3px solid transparent;
-  border-bottom: 3px solid transparent;
+  position: absolute;
+  inset: 3px;
+  border: 1px solid color-mix(in srgb, var(--node-accent) 45%, transparent);
+  border-radius: 5px;
 }
 
 
