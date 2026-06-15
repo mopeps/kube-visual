@@ -24,10 +24,12 @@ import { scrollIntoUpperThird } from '../lib/scroll'
 const SPOTLIGHT_MS = 1300 * 2
 
 // Network-mode integration edges (db.sock, GARP→br-ex, tap0→br-int, tunnel…),
-// pre-namespaced for the three columns. Drawn by one canvas-level overlay; each
-// edge only renders when both its boxes are present (the owning components shown
-// / expanded). Static — built once.
+// pre-namespaced per column. Drawn by one canvas-level overlay; each edge only
+// renders when both its boxes are present (the owning components shown /
+// expanded). Static — built once. The full set wires all three big-view columns;
+// the single set wires the lone column used below wide (the mobile network view).
 const NETWORK_EDGES = buildNetworkEdges(NET_PAIRS)
+const NETWORK_EDGES_SINGLE = buildNetworkEdges([0])
 
 // The components that open to an internal topology in Network mode — used by the
 // "collapse all / expand all" control.
@@ -192,10 +194,13 @@ export default function OverviewTab({
     const rel = (a) => a === h || a.startsWith(`${h}__`) || h.startsWith(`${a}__`)
     return rel(e.from) || rel(e.to)
   }
+  // Below wide, network mode renders a single pair-column, so it only wires that
+  // one column's edges; the big view wires all three.
+  const netEdges = bigView ? NETWORK_EDGES : NETWORK_EDGES_SINGLE
   const shownNetEdges = (
     !netWiresOnHover
-      ? NETWORK_EDGES
-      : (netHoverId ? NETWORK_EDGES.filter((e) => netRelated(e, netHoverId)) : [])
+      ? netEdges
+      : (netHoverId ? netEdges.filter((e) => netRelated(e, netHoverId)) : [])
   ).map((e) => {
     // Every connector is faint (`dim`) by default so the canvas reads calmly; the
     // connectors of the box you hover light up (`active`) and reveal their label
@@ -554,9 +559,15 @@ export default function OverviewTab({
           : [renderZone(zone, 0, null, colIndex)]
       )
 
+  // Both "Big view" and "Network" render the parallel-column canvas; network
+  // mode below wide collapses it to a single pair-column (the mobile-friendly
+  // network view). Plain "Single" mode keeps the one-up overview + arrow trace.
+  const columnsView = bigView || netOverlay
+  const cols = bigView ? NET_PAIRS : [0]
+
   return (
     <>
-      {bigView && (
+      {columnsView && (
         <div className="net-bar">
           <span className="net-bar-label">{netOverlay ? 'Network map' : 'Big view'}</span>
           {netOverlay && (
@@ -583,20 +594,22 @@ export default function OverviewTab({
           </span>
         </div>
       )}
-      {bigView ? (
-        // Big view: the normal canvas rendered three times in parallel columns
-        // (one per node pair). Network mode opens each drillable component box to
-        // show its internals, wired by the integration edges (network-internals.js).
+      {columnsView ? (
+        // Columns canvas: the normal canvas rendered once per node pair — three
+        // parallel columns in Big view (wide only), or a single pair-column for
+        // the network view below wide. Network mode opens each drillable component
+        // box to show its internals, wired by the integration edges
+        // (network-internals.js).
         <div
           ref={canvasRef}
-          className={`border border-border-w rounded-lg overflow-visible overview-canvas net-bigpicture ${netOverlay ? 'net-bigpicture--net' : ''}`}
+          className={`border border-border-w rounded-lg overflow-visible overview-canvas net-bigpicture ${netOverlay ? 'net-bigpicture--net' : ''} ${columnsView && !bigView ? 'net-bigpicture--single' : ''}`}
           style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
           onMouseOver={netOverlay ? onNetHover : undefined}
           onMouseLeave={netOverlay && !netWiresOnHover ? () => setNetHoverId(null) : undefined}
           onClickCapture={netOverlay && netWiresOnHover ? onNetFocusTap : undefined}
         >
           <div className="net-cols">
-            {NET_PAIRS.map((i) => (
+            {cols.map((i) => (
               <div className="net-col" id={`net-col-${i}`} key={i}>
                 {renderOverviewStack(netOverlay, i)}
               </div>
