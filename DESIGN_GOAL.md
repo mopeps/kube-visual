@@ -76,7 +76,7 @@ flow.
    a centered modal on desktop, a full-height bottom sheet on mobile (swipe- or
    tap-outside to dismiss). It is never inline — the diagram stays put behind it.
 5. **Tab navigation adapts to width.** On touch / narrow screens (≤1023px) the
-   two views are a horizontally swipeable pager. On mid-width desktop they are
+   tabs are a horizontally swipeable pager. On mid-width desktop they are
    a classic single-column tab strip. On wide desktop (≥1280px) a *Dock flow*
    toggle pins the Step-by-Step Packet Flow as a sticky side panel next to the
    Architecture Overview, so the trace and the diagram are read together (the
@@ -95,16 +95,18 @@ flow.
   `crictl`, …). Object names in the prose are lifted into clickable chips that
   jump to the referenced node. `ESC` (or tap-outside / swipe-down on mobile)
   closes it.
-- **Pick a trace flow** → done from inside the **Packet Flow** view: an
-  EventGallery of flow cards when nothing is selected, collapsing to an inline
-  pill switcher once one is. Selecting a flow transitions its nodes to full
-  opacity with the packet outline and `01`, `02` step badges; numbered SVG
-  connectors are drawn between them; the hop list populates; and a bottom-docked
-  hop inspector reads out the selected hop on the Overview tab.
-- **Switch tabs** to see the same components from two angles:
+- **Pick a trace flow** → done from inside the **Packet Flow** view: a gallery
+  of flow cards when nothing is selected, collapsing to an inline pill switcher
+  once one is. Selecting a flow transitions its nodes to full opacity with the
+  packet outline and `01`, `02` step badges; numbered SVG connectors are drawn
+  between them; the hop list populates; and a bottom-docked hop inspector reads
+  out the selected hop on the Overview tab.
+- **Switch tabs** to see the same components from different angles:
   1. **Architecture Overview** — the zoned diagram.
   2. **Step-by-Step Packet Flow** — the active event's hops as an expandable
      vertical list.
+  3. **Deep Dive** — ground-up explainers one level below the cluster (the
+     systemd loop, Linux/HCP boot, OVN topology); see `ARCHITECTURE.md`.
 
 ## Non-goals
 
@@ -114,8 +116,7 @@ flow.
   trace is active, and their step ordering comes from `events.json`, not from
   hand-placed geometry.
 - No sidebar event buffer — flows are picked from within the Packet Flow view
-  (a gallery of flow cards that collapses to an inline pill switcher once one is
-  active), not a persistent event log; the canvas stays uncluttered.
+  (above), not a persistent event log; the canvas stays uncluttered.
 
 ## Source of inspiration
 
