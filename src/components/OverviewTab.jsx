@@ -5,7 +5,7 @@ import NodeCard from './NodeCard'
 import DeepDiveModal from './DeepDiveModal'
 import ReconLoopOverlay from './ReconLoopOverlay'
 import { NET_PAIRS } from '../data/network-zones'
-import { isNetworkComponent } from '../data/network-components'
+import { isNetworkComponent, NETWORK_OPERATOR_IDS } from '../data/network-components'
 import { INTERNAL_TOPOLOGY, buildNetworkEdges } from '../data/network-internals'
 import PrimitiveBoxCard from './PrimitiveBoxCard'
 import { serviceAlias } from '../data/service-alias'
@@ -415,6 +415,10 @@ export default function OverviewTab({
         isOnPath={isOnPath}
         isDimmed={isDimmed}
         isHighlighted={node.id === highlightId}
+        // In network mode the surfaced control-plane operators (CNO / Ingress /
+        // DNS) don't drill to a datapath — they read as control plane that
+        // configures the components below them (wired by a "configures" edge).
+        subtitle={netOverlay && NETWORK_OPERATOR_IDS.has(node.id) ? 'control plane · configures' : undefined}
         // Open the canonical component's modal regardless of the (possibly
         // namespaced) DOM id — a replica mirrors its canonical component.
         onClick={() => onSelectComponent(node.mirror || node.id)}

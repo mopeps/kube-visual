@@ -25,7 +25,12 @@ governs everything else:
    raw Linux primitives behind a component — the `cgroups` slice path, the
    network-namespace (`netns`) identity, the host-side `veth`/`tap` tags — plus
    copy-paste exploration commands (`nsenter`, `crictl`, …) to see the same thing
-   on a live cluster.
+   on a live cluster. This governs Network mode's opened-box internals too: a
+   sub-box names what actually *runs* at its band (`[systemd]` host daemon ·
+   `[container]` a pod's container · `[process]` a function inside one), never a
+   desired-state kind like `[Deployment]`; pure intent (the OVN logical objects)
+   appears only as rows inside the DB box that holds them. See the
+   "Network-mode internals" rules in `ARCHITECTURE.md`.
 
 ## Intent
 
