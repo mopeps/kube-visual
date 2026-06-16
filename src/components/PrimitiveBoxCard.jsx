@@ -262,7 +262,8 @@ export default function PrimitiveBoxCard({
         variant={b.variant}
         color={accent}
         subtitle={b.caption}
-        className={b.realized ? 'primitive-realized' : undefined}
+        className={`${b.realized ? 'primitive-realized' : ''} ${isHL(b.id) ? 'is-hl' : ''}`}
+        hoverProps={b.linkIds ? linkHover(b.linkIds) : undefined}
         onClick={() => onSelectBox(b)}
       />
     )
