@@ -154,7 +154,8 @@ export default function PrimitiveBoxCard({
         onClick={(e) => { e.stopPropagation(); onSelectBox(f) }}
         title={f.source ? `${f.title} — ${f.source}` : f.title}
       >
-        <span className="fsrow-path">{f.title}</span>
+        <span className="fsrow-path fsrow-path--full">{f.title}</span>
+        <span className="fsrow-path fsrow-path--short">{f.shortPath || f.title}</span>
         <span className="fsrow-type">{f.fsType}</span>
         <span className="fsrow-kind" style={{ color: accent }}>{f.kindLabel}</span>
         {f.source && <span className="fsrow-src">{f.source}</span>}
@@ -245,7 +246,7 @@ export default function PrimitiveBoxCard({
         <div
           key={b.id}
           id={subId(b.id)}
-          className={`primitive-nest ${b.variant ? `primitive-nest--${b.variant}` : ''} ${ports.length ? 'primitive-nest--has-ports' : ''} ${b.realized ? 'primitive-realized' : ''} ${isHL(b.id) ? 'is-hl' : ''}`}
+          className={`primitive-nest ${b.variant ? `primitive-nest--${b.variant}` : ''} ${b.stretch ? `primitive-nest--${b.stretch}` : ''} ${ports.length ? 'primitive-nest--has-ports' : ''} ${b.realized ? 'primitive-realized' : ''} ${isHL(b.id) ? 'is-hl' : ''}`}
           style={{ '--node-accent': accent }}
         >
           <button

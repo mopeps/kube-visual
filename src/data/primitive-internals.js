@@ -137,9 +137,15 @@ const mountSyn = (desc, i) => {
   const name = m.named && desc.source ? `"${desc.source}"` : null
   const keys = desc.keys?.join(' · ')
   const source = desc.note || [name, keys].filter(Boolean).join(' → ') || keys || ''
+  // A short form (…/<last segment>) shown in place of the full path when the list
+  // is narrow, so a long secret path keeps its meaningful tail instead of being
+  // clipped mid-word.
+  const seg = desc.path.replace(/\/+$/, '').split('/').pop()
+  const shortPath = !seg || desc.path === '/' || desc.path === seg ? desc.path : `…/${seg}`
   return {
     id: `fs-${i}`,
     title: desc.path,
+    shortPath,
     fsType,
     kindLabel: m.kind,
     colorVar: m.color,
@@ -213,7 +219,7 @@ const podLayout = (ctx) => {
       // … wrapping the shared network namespace (the isolation boundary every
       // container joins). lo + eth0 are welded onto its rim; the other pod-shared
       // namespaces and the container sit inside it.
-      { id: 'pod-netns', variant: 'ns', children: [
+      { id: 'pod-netns', variant: 'ns', stretch: 'grow', children: [
         // lo + eth0 are the netns's L2/L3 edges (rim ports); the listen socket is
         // its L4 endpoint — all three live in the netns. The socket sits in the
         // body (not the rim) and its links cross-light lo/eth0 + the owning process.
@@ -226,11 +232,11 @@ const podLayout = (ctx) => {
         // it (chips), then the two namespaces it owns — the mount ns as a tight
         // filesystem listing, the PID ns nesting the PID-1 process (which holds
         // the netns-level socket via its fd chip).
-        { synthetic: CONTAINER_BOX, variant: 'envelope', children: [
+        { synthetic: CONTAINER_BOX, variant: 'envelope', stretch: 'row', children: [
           { id: 'pod-selinux', variant: 'guard' },
           { id: 'pod-seccomp', variant: 'guard' },
           { id: 'pod-capabilities', variant: 'guard' },
-          { id: 'pod-mountns', variant: 'ns', children: mounts.map((d, i) => ({ synthetic: mountSyn(d, i), variant: 'fsrow' })) },
+          { id: 'pod-mountns', variant: 'ns', stretch: 'fsrow', children: mounts.map((d, i) => ({ synthetic: mountSyn(d, i), variant: 'fsrow' })) },
           { id: 'pod-pidns', variant: 'ns', children: [
             { id: 'container-process', memberships: POD_PROCESS_NS, holds: POD_PROCESS_FD },
           ] },
@@ -314,15 +320,18 @@ const buildSynthetic = (ctx, syn, variant) => ({
 const buildNode = (spec, ctx) => {
   if (typeof spec === 'string') return buildBox(ctx, spec)
 
+  let box
   if (spec.synthetic) {
-    const box = buildSynthetic(ctx, spec.synthetic, spec.variant)
+    box = buildSynthetic(ctx, spec.synthetic, spec.variant)
     // Spec-level links (e.g. lo / eth0 → the socket) override the synthetic's own.
     if (spec.links) box.linkIds = spec.links.map((r) => `${ctx.componentId}__${r}`)
-    if (spec.children) box.children = spec.children.map((c) => buildNode(c, ctx)).filter(Boolean)
-    return box
+  } else {
+    box = buildBox(ctx, spec.id, { title: spec.title, variant: spec.variant, memberships: spec.memberships, holds: spec.holds, links: spec.links })
   }
-
-  const box = buildBox(ctx, spec.id, { title: spec.title, variant: spec.variant, memberships: spec.memberships, holds: spec.holds, links: spec.links })
+  // `stretch` makes a frame fill its parent ('row' = a full-width row, 'grow' =
+  // grow to fill) so the nested filesystem list inherits a real, parent-driven
+  // width its container queries can respond to (instead of collapsing to content).
+  if (box && spec.stretch) box.stretch = spec.stretch
   if (box && spec.children) box.children = spec.children.map((c) => buildNode(c, ctx)).filter(Boolean)
   return box
 }
