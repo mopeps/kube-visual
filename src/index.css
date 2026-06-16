@@ -2293,11 +2293,19 @@ body::after {
   white-space: nowrap;
 }
 .primitive-guard:hover { background: color-mix(in srgb, var(--node-accent) 22%, #0a111f); }
+/* The guard chips claim their own full-width row so they never push the bigger
+   namespace frames in the same body off to the side. */
+.primitive-guard-strip {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 
 /* ── Process namespace-membership chips (Primitives mode) ──────────────────
    A process holds one membership per namespace type at once and sits at their
    intersection — it is not "inside" any single one. The chips name those
-   memberships; hovering one lights up that namespace's frame (.is-ns-hl), so the
+   memberships; hovering one lights up that namespace's frame (.is-hl), so the
    orthogonal relationship is legible: the [mnt] chip points at the mount-ns box
    that holds the rootfs the process sees, [net] at the shared netns, and so on. */
 .node.primitive-process { width: auto; min-width: 190px; }
@@ -2333,8 +2341,13 @@ body::after {
   background: color-mix(in srgb, var(--node-accent) 32%, transparent);
   border-color: var(--node-accent);
 }
-/* The frame a hovered/pinned membership chip points at. */
-.primitive-nest.is-ns-hl {
+/* The box a hovered/pinned relationship chip (or the socket) points at — lit in
+   its own accent so the link reads across the diagram. Applies to namespace /
+   cgroup frames, interface ports, the socket, and the process card. */
+.primitive-nest.is-hl,
+.primitive-port.is-hl,
+.primitive-socket.is-hl,
+.node.primitive-process.is-hl {
   border-color: var(--node-accent);
   box-shadow: 0 0 0 1px var(--node-accent),
               0 0 20px color-mix(in srgb, var(--node-accent) 38%, transparent);
@@ -2469,6 +2482,30 @@ body::after {
 .primitive-socket-emit i:nth-child(1) { width: 4px;  height: 7px;  opacity: 1; }
 .primitive-socket-emit i:nth-child(2) { width: 6px;  height: 11px; opacity: 0.65; }
 .primitive-socket-emit i:nth-child(3) { width: 8px;  height: 15px; opacity: 0.4; }
+
+/* the listening inlet — the mirror of the emission: arcs open LEFT, *toward* the
+   socket, growing + fading the further out they start, so inbound connections
+   read as funnelling into the jack. The jack gains a filled bullseye centre to
+   mark a bound, passive TCP_LISTEN endpoint (vs the hollow emit/tunnel jack). */
+.primitive-socket--listen .primitive-socket-jack {
+  background:
+    radial-gradient(circle, var(--node-accent) 0 2px, transparent 2.5px);
+}
+.primitive-socket-inlet {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.primitive-socket-inlet i {
+  display: block;
+  border: 1.5px solid transparent;
+  border-left-color: var(--node-accent);
+  border-radius: 50%;
+}
+.primitive-socket-inlet i:nth-child(1) { width: 8px;  height: 15px; opacity: 0.4; }
+.primitive-socket-inlet i:nth-child(2) { width: 6px;  height: 11px; opacity: 0.65; }
+.primitive-socket-inlet i:nth-child(3) { width: 4px;  height: 7px;  opacity: 1; }
 
 /* the tunnel bore — nested rounded rings, a conduit mouth you look into: the
    persistent two-way reverse tunnel the agent dials into. No arrow. */
