@@ -81,7 +81,6 @@ export default function DeepDiveRevealCard({
           </div>
         )}
         <div className="dd-reveal-hint" style={{ color: accent }}>
-          <span className="intent-store-chevron">▸</span>
           {steps.length} {steps.length === 1 ? 'step' : 'steps'}
           {reveal?.hint ? ` · ${reveal.hint}` : ''}
         </div>

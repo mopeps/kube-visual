@@ -72,7 +72,13 @@ const META = {
 const buildBox = (componentId, item, meta, linuxPrimitive) => {
   let title = item.label
   let caption = meta.caption
-  if (meta.fold === 'title' && linuxPrimitive) title = `PID 1 · ${linuxPrimitive}`
+  // Fold the per-instance realisation into the process row the same way
+  // pipeline-model.js does: keep the primitive's own label prefix and swap its
+  // generic tail for the realisation. A Pod's row keeps "PID 1" (its entrypoint
+  // really is PID 1 *inside the container's* PID namespace) → "PID 1 · <binary>";
+  // a systemd service keeps "systemd Process" (it is a CHILD of PID 1, never PID
+  // 1 itself) → "systemd Process · <binary>".
+  if (meta.fold === 'title' && linuxPrimitive) title = `${item.label.split(' · ')[0]} · ${linuxPrimitive}`
   else if (meta.fold === 'caption' && linuxPrimitive) caption = linuxPrimitive
 
   const sections = []
