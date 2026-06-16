@@ -107,46 +107,47 @@ const POD_PROCESS_NS = [
 
 // The mount namespace is drawn as a real filesystem: a tight list of slim
 // one-line rows (variant 'fsrow'), one per mount, derived per-pod from its role
-// (pod-internals.js). Backing → how a row reads; the accent is the teaching
-// shorthand: tmpfs (RAM) sky, block (disk) amber, hostPath (the node) orange,
-// overlayfs (image) green, procfs (kernel) ghost.
+// (pod-internals.js). Each row is columnar: path · fs type (plain white — the
+// kernel mount mechanism) · source-kind chip (the coloured column: what K8s
+// object backs it — Secret / ConfigMap / token / PVC / hostPath) · source name.
 const MOUNT_META = {
-  overlayfs: { tag: 'overlayfs', colorVar: 'k-green', role: 'OVERLAYFS ROOT',
+  overlayfs: { type: 'overlayfs', kind: 'image', color: 'k-green', role: 'OVERLAYFS ROOT',
     summary: "The container's root filesystem: an overlayfs merging the read-only image layers with a per-container writable layer. Ephemeral — the writable layer is discarded with the container." },
-  secret: { tag: 'tmpfs', colorVar: 'k-sky', src: 'Secret', role: 'SECRET MOUNT · tmpfs',
+  secret: { type: 'tmpfs', kind: 'Secret', color: 'k-orange', named: true, role: 'SECRET MOUNT · tmpfs',
     summary: "A tmpfs (RAM-backed) mount projecting a Secret's keys as files — it never touches disk; the kubelet materialises it and CRI-O bind-mounts it before the container starts." },
-  configmap: { tag: 'tmpfs', colorVar: 'k-sky', src: 'ConfigMap', role: 'CONFIGMAP MOUNT · tmpfs',
+  configmap: { type: 'tmpfs', kind: 'ConfigMap', color: 'k-sky', named: true, role: 'CONFIGMAP MOUNT · tmpfs',
     summary: "A tmpfs mount projecting a ConfigMap's keys as files — the same RAM-backed mechanism as a Secret volume, for non-sensitive configuration." },
-  projected: { tag: 'projected', colorVar: 'k-sky', role: 'PROJECTED VOLUME · tmpfs',
+  projected: { type: 'tmpfs', kind: 'token', color: 'k-purple', role: 'PROJECTED VOLUME · tmpfs',
     summary: "A projected volume (tmpfs) the kubelet keeps fresh — here the audience-bound ServiceAccount token, cluster CA, and namespace the process uses to authenticate to the API server." },
-  pvc: { tag: 'block', colorVar: 'k-amber', src: 'PVC', role: 'PERSISTENT VOLUME · block',
+  pvc: { type: 'block', kind: 'PVC', color: 'k-amber', named: true, role: 'PERSISTENT VOLUME · block',
     summary: "A PersistentVolumeClaim mounted as a real filesystem on a block (or network) device — durable storage that survives the container, attached by the kubelet / CSI driver." },
-  hostpath: { tag: 'hostPath', colorVar: 'k-orange', role: 'HOSTPATH MOUNT',
+  hostpath: { type: 'bind', kind: 'hostPath', color: 'k-teal', role: 'HOSTPATH MOUNT',
     summary: "A hostPath bind mount from the node's own filesystem into the container — a direct, privileged window onto the host, used by node agents (OVS/OVN, KVM, CSI)." },
-  emptydir: { tag: 'emptyDir', colorVar: 'k-sky', role: 'EMPTYDIR · scratch',
+  emptydir: { type: 'tmpfs', kind: 'emptyDir', color: 'k-ghost', role: 'EMPTYDIR · scratch',
     summary: "An emptyDir scratch volume shared by the Pod's containers for the Pod's lifetime, then discarded." },
-  procfs: { tag: 'procfs', colorVar: 'k-ghost', role: 'PROCFS',
+  procfs: { type: 'proc', kind: 'kernel', color: 'k-ghost', role: 'PROCFS',
     summary: "A procfs mount the mount namespace provides — but its contents (which PIDs) come from the PID namespace, not the mount namespace. Two orthogonal namespaces combining." },
 }
 
-// One volume descriptor (pod-internals.js) → a slim fs-row box: the path is the
-// title, the backing is the tag, the source object + keys the trailing caption.
+// One volume descriptor (pod-internals.js) → a slim fs-row box with separate
+// columns: fsType (plain white), the source-kind chip (coloured), and the source.
 const mountSyn = (desc, i) => {
   const m = MOUNT_META[desc.kind]
-  const tag = desc.fs || m.tag
-  const src = desc.source && m.src ? `${m.src} "${desc.source}"` : null
+  const fsType = desc.fs || m.type
+  const name = m.named && desc.source ? `"${desc.source}"` : null
   const keys = desc.keys?.join(' · ')
-  const caption = desc.note || [src, keys].filter(Boolean).join(' → ') || keys || src || ''
+  const source = desc.note || [name, keys].filter(Boolean).join(' → ') || keys || ''
   return {
     id: `fs-${i}`,
     title: desc.path,
-    tag,
-    colorVar: m.colorVar,
-    caption,
+    fsType,
+    kindLabel: m.kind,
+    colorVar: m.color,
+    source,
     links: desc.linksPidns ? ['pod-pidns'] : undefined,
     detail: {
-      role: `${m.role} · ${tag}`,
-      summary: src ? `${m.summary} (${src})` : m.summary,
+      role: `${m.role} · ${fsType}`,
+      summary: name ? `${m.summary} (${m.kind} ${name})` : m.summary,
       sections: [{ heading: 'Explore', commands: [`# Inspect this mount\nnsenter -t <pid> -m findmnt ${desc.path}`] }],
     },
   }
@@ -299,14 +300,13 @@ const resolveRefs = (ctx, refs) =>
   refs?.map((m) => ({ tag: m.tag, view: m.view, colorVar: m.colorVar, boxId: `${ctx.componentId}__${m.ref}` }))
 
 const buildSynthetic = (ctx, syn, variant) => ({
+  // Spread first so fs-row extras (fsType / kindLabel / source) pass through; the
+  // overrides below namespace the id, map `tag` → typePrefix, and resolve links.
+  ...syn,
   id: `${ctx.componentId}__${syn.id}`,
-  title: syn.title,
   typePrefix: syn.tag,
   variant: variant || syn.variant,
-  colorVar: syn.colorVar,
-  caption: syn.caption,
   linkIds: syn.links?.map((r) => `${ctx.componentId}__${r}`),
-  detail: syn.detail,
 })
 
 // Resolve one spec node (and its subtree) into the box shape PrimitiveBoxCard's
