@@ -81,8 +81,13 @@ const CONTAINER_BOX = {
   detail: {
     role: 'CONTAINER CGROUP',
     summary:
-      "One container in the Pod, drawn as its own cgroup boundary: crun creates its cgroup nested under the Pod slice (kubepods.slice/…/crio-<id>) with its own CPU/memory limits, gives it a private mount and PID namespace, and applies the SELinux label, seccomp filter, and capability set — then execs the entrypoint as PID 1. It joins the network, IPC, and UTS namespaces the pause (sandbox) container already holds open, so every container in the Pod shares one network identity.",
+      "The container, drawn as its own cgroup: the CPU/memory ceiling under the Pod slice that holds the PID-1 process and its private mount + PID namespaces.",
     sections: [
+      { heading: 'Interactions', bullets: [
+        "Enforces this container's CPU, memory, and I/O limits under the Pod cgroup slice.",
+        'Created by crun at container start, nested beneath the Pod slice.',
+        "Holds the PID-1 process and the container's own mount and PID namespaces.",
+      ] },
       { heading: 'Explore', commands: [
         '# Find the container cgroup (nested under the Pod slice)\ncrictl inspect <id> | jq .info.runtimeSpec.linux.cgroupsPath',
         '# Its CPU / memory ceiling\ncat /sys/fs/cgroup/<cgroup_path>/memory.max\ncat /sys/fs/cgroup/<cgroup_path>/cpu.max',
@@ -112,21 +117,54 @@ const POD_PROCESS_NS = [
 // object backs it — Secret / ConfigMap / token / PVC / hostPath) · source name.
 const MOUNT_META = {
   overlayfs: { type: 'overlayfs', kind: 'image', color: 'k-green', role: 'OVERLAYFS ROOT',
-    summary: "The container's root filesystem: an overlayfs merging the read-only image layers with a per-container writable layer. Ephemeral — the writable layer is discarded with the container." },
-  secret: { type: 'tmpfs', kind: 'Secret', color: 'k-orange', named: true, role: 'SECRET MOUNT · tmpfs',
-    summary: "A tmpfs (RAM-backed) mount projecting a Secret's keys as files — it never touches disk; the kubelet materialises it and CRI-O bind-mounts it before the container starts." },
-  configmap: { type: 'tmpfs', kind: 'ConfigMap', color: 'k-sky', named: true, role: 'CONFIGMAP MOUNT · tmpfs',
-    summary: "A tmpfs mount projecting a ConfigMap's keys as files — the same RAM-backed mechanism as a Secret volume, for non-sensitive configuration." },
-  projected: { type: 'tmpfs', kind: 'token', color: 'k-purple', role: 'PROJECTED VOLUME · tmpfs',
-    summary: "A projected volume (tmpfs) the kubelet keeps fresh — here the audience-bound ServiceAccount token, cluster CA, and namespace the process uses to authenticate to the API server." },
-  pvc: { type: 'block', kind: 'PVC', color: 'k-amber', named: true, role: 'PERSISTENT VOLUME · block',
-    summary: "A PersistentVolumeClaim mounted as a real filesystem on a block (or network) device — durable storage that survives the container, attached by the kubelet / CSI driver." },
+    summary: "The container's root filesystem — image layers plus a throwaway writable layer.",
+    bullets: [
+      'Assembles the rootfs from read-only image layers + a per-container writable layer.',
+      'Discards the writable layer when the container is removed.',
+    ] },
+  secret: { type: 'tmpfs', kind: 'Secret', color: 'k-orange', named: true, role: 'SECRET MOUNT',
+    summary: 'A Secret projected as files in a tmpfs — RAM-backed, never written to disk.',
+    bullets: [
+      "Projects the Secret's keys as in-memory files.",
+      'Mounted by CRI-O before the container starts; refreshed in place on change.',
+    ] },
+  configmap: { type: 'tmpfs', kind: 'ConfigMap', color: 'k-sky', named: true, role: 'CONFIGMAP MOUNT',
+    summary: 'A ConfigMap projected as files in a tmpfs — the same RAM-backed mechanism as a Secret, for non-sensitive config.',
+    bullets: [
+      "Projects the ConfigMap's keys as in-memory files.",
+      'Mounted by CRI-O before start; updated in place when the ConfigMap changes.',
+    ] },
+  projected: { type: 'tmpfs', kind: 'token', color: 'k-purple', role: 'PROJECTED VOLUME',
+    summary: 'A tmpfs the kubelet keeps fresh — the ServiceAccount token, cluster CA, and namespace the process authenticates with.',
+    bullets: [
+      'Projects the SA token, ca.crt, and namespace as files.',
+      'Mounted by the kubelet, which rotates the token before it expires.',
+    ] },
+  pvc: { type: 'block', kind: 'PVC', color: 'k-amber', named: true, role: 'PERSISTENT VOLUME',
+    summary: 'Durable block (or network) storage — survives the container, unlike tmpfs volumes.',
+    bullets: [
+      'Mounts a real filesystem on a block / network device.',
+      'Attached by the kubelet / CSI driver before the container starts.',
+      'Persists data across restarts and reschedules.',
+    ] },
   hostpath: { type: 'bind', kind: 'hostPath', color: 'k-teal', role: 'HOSTPATH MOUNT',
-    summary: "A hostPath bind mount from the node's own filesystem into the container — a direct, privileged window onto the host, used by node agents (OVS/OVN, KVM, CSI)." },
+    summary: 'A node directory bind-mounted into the container — a privileged window onto the host, used by node agents.',
+    bullets: [
+      "Binds a path from the node's own filesystem into the container.",
+      'Exposes the host to the container — OVS/OVN, KVM, and CSI agents rely on it.',
+    ] },
   emptydir: { type: 'tmpfs', kind: 'emptyDir', color: 'k-ghost', role: 'EMPTYDIR · scratch',
-    summary: "An emptyDir scratch volume shared by the Pod's containers for the Pod's lifetime, then discarded." },
+    summary: "Scratch space shared by the Pod's containers for its lifetime, then discarded.",
+    bullets: [
+      "Provides ephemeral scratch space shared across the Pod's containers.",
+      'Discarded when the Pod is removed.',
+    ] },
   procfs: { type: 'proc', kind: 'kernel', color: 'k-ghost', role: 'PROCFS',
-    summary: "A procfs mount the mount namespace provides — but its contents (which PIDs) come from the PID namespace, not the mount namespace. Two orthogonal namespaces combining." },
+    summary: 'A procfs the mount namespace provides — its contents (the visible PIDs) come from the PID namespace.',
+    bullets: [
+      'Reads the visible process tree from the PID namespace.',
+      'Provided by the mount namespace as the /proc mount point.',
+    ] },
 }
 
 // One volume descriptor (pod-internals.js) → a slim fs-row box with separate
@@ -153,8 +191,16 @@ const mountSyn = (desc, i) => {
     links: desc.linksPidns ? ['pod-pidns'] : undefined,
     detail: {
       role: `${m.role} · ${fsType}`,
-      summary: name ? `${m.summary} (${m.kind} ${name})` : m.summary,
-      sections: [{ heading: 'Explore', commands: [`# Inspect this mount\nnsenter -t <pid> -m findmnt ${desc.path}`] }],
+      summary: m.summary,
+      sections: [
+        // The specific object + keys this mount projects, as scannable fact chips.
+        (name || keys) && { facts: [
+          name && { k: m.kind, v: desc.source },
+          keys && { k: 'keys', v: keys },
+        ].filter(Boolean) },
+        m.bullets?.length && { heading: 'Interactions', bullets: m.bullets },
+        { heading: 'Explore', commands: [`# Inspect this mount\nnsenter -t <pid> -m findmnt ${desc.path}`] },
+      ].filter(Boolean),
     },
   }
 }
@@ -164,8 +210,13 @@ const LOOPBACK_BOX = {
   detail: {
     role: 'LOOPBACK INTERFACE',
     summary:
-      "The loopback net_device every network namespace is born with: it carries 127.0.0.1 traffic that never leaves the namespace. Because all containers in the Pod share this one network namespace, a sidecar can reach the app over localhost — the co-location guarantee a Pod gives you — while staying completely invisible to other Pods.",
-    sections: [],
+      "The loopback device in the Pod's network namespace — 127.0.0.1 that never leaves the Pod, shared by all its containers so a sidecar reaches the app over localhost.",
+    sections: [
+      { heading: 'Interactions', bullets: [
+        'Carries 127.0.0.1 traffic that never leaves the network namespace.',
+        'Shared across every container in the Pod — localhost links co-located sidecars.',
+      ] },
+    ],
   },
 }
 // The listen socket is a netns object, not a container one: a struct socket the
@@ -179,8 +230,14 @@ const listenSocketBox = (listen) => ({
   detail: {
     role: `TCP LISTEN SOCKET · :${listen.port}`,
     summary:
-      `A struct socket the process created with socket() and pinned to the Pod's network namespace. bind() reserved port ${listen.port} in that netns (0.0.0.0:${listen.port}, so it answers on the Pod IP via eth0 and on 127.0.0.1 via lo); listen() moved it to TCP_LISTEN with a SYN + accept queue. The process holds it as a file descriptor — it shows up as socket:[inode] in /proc/<pid>/fd. A packet arriving on eth0 is demuxed to it by its (proto, local IP, local port, peer) tuple; accept() then forks one connected socket per client.`,
+      `A TCP socket bound on the Pod IP and put in LISTEN — the network-namespace endpoint where inbound connections terminate, held by the process as a file descriptor.`,
     sections: [
+      { heading: 'Interactions', bullets: [
+        `Binds 0.0.0.0:${listen.port} in the Pod's network namespace.`,
+        'Receives the packets eth0 demuxes to it by their 4-tuple.',
+        'Spawns one connected socket per client on accept().',
+        'Held by the process as a file descriptor — socket:[inode] in /proc/<pid>/fd.',
+      ] },
       { heading: 'Explore', commands: [
         '# The listening sockets and the pids holding them\noc exec <pod> -n <ns> -- ss -tlnp',
         "# The socket inodes in the process's fd table\nls -l /proc/<pid>/fd | grep socket",
