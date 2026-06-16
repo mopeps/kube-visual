@@ -25,6 +25,9 @@ export default function NodeCard({
   // Optional extra class (Network mode tags realized-datapath leaf boxes with
   // `primitive-realized` so they read solid + lit).
   className,
+  // Optional hover/focus handlers (Primitives mode spreads cross-highlight
+  // handlers here so a leaf mount like /proc can light its PID-ns frame).
+  hoverProps,
 }) {
   return (
     <div
@@ -32,6 +35,7 @@ export default function NodeCard({
       role="button"
       tabIndex={0}
       aria-label={`${typePrefix ? `[${typePrefix}] ` : ''}${title}`}
+      {...(hoverProps || {})}
       onClick={(e) => { e.stopPropagation(); onClick?.(id) }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {

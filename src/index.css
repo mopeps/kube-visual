@@ -2347,7 +2347,7 @@ body::after {
 .primitive-nest.is-hl,
 .primitive-port.is-hl,
 .primitive-socket.is-hl,
-.node.primitive-process.is-hl {
+.node.is-hl {
   border-color: var(--node-accent);
   box-shadow: 0 0 0 1px var(--node-accent),
               0 0 20px color-mix(in srgb, var(--node-accent) 38%, transparent);
