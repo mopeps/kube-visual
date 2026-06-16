@@ -199,6 +199,23 @@ const VERB_KIND = {
   decapsulates: 'inbound',
   enslaves: 'manage', enslave: 'manage',
   compiles: 'create', compile: 'create', compiled: 'create',
+
+  // kernel / filesystem primitive verbs — lead the Primitives-mode popup bullets
+  // (namespaces, cgroups, sockets, volume mounts). Isolating / capping / holding /
+  // sharing / projecting are upkeep of a boundary or projection (manage); binding a
+  // port, mounting a filesystem, or assembling a rootfs brings something into
+  // existence (create). ("Mounted by CRI-O…" still reads inbound via the passive
+  // "…ed by <agent>" rule.)
+  isolates: 'manage', isolate: 'manage', isolated: 'manage',
+  holds: 'manage', hold: 'manage', held: 'manage',
+  shares: 'manage', share: 'manage', shared: 'manage',
+  caps: 'manage', cap: 'manage', capped: 'manage',
+  limits: 'manage', limit: 'manage', limited: 'manage',
+  projects: 'manage', project: 'manage', projected: 'manage',
+  binds: 'create', bind: 'create', bound: 'create',
+  mounts: 'create', mount: 'create', mounted: 'create',
+  reserves: 'create', reserve: 'create', reserved: 'create',
+  merges: 'create', merge: 'create', merged: 'create',
 }
 
 // Pull the leading verb token off a sentence: first run of letters/hyphens.
