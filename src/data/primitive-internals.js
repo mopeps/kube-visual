@@ -125,18 +125,32 @@ const LOOPBACK_BOX = {
     sections: [],
   },
 }
+// The listen socket is a netns object, not a container one: a struct socket the
+// process created and bound in the Pod's network namespace. It lives beside
+// lo/eth0 (its links light them + the process, drawing residence + termination +
+// fd-ownership) and is held by the process as a file descriptor.
 const LISTEN_SOCKET_BOX = {
-  id: 'listen-sock', title: 'listen socket', tag: 'socket', colorVar: 'k-orange',
-  caption: 'AF_INET · Pod IP',
+  id: 'listen-sock', title: 'listen :port', tag: 'socket', colorVar: 'k-orange',
+  caption: 'TCP · bound on the Pod IP',
+  links: ['pod-veth', 'lo', 'container-process'],
   detail: {
-    role: 'LISTEN SOCKET',
+    role: 'TCP LISTEN SOCKET',
     summary:
-      "The process binds an AF_INET socket on the Pod's private Pod IP and listens for inbound connections. Because it lives in the Pod's shared network namespace, a packet that arrives on eth0 is delivered straight to this socket — a ClusterIP is only a Service VIP that ultimately resolves to this Pod IP.",
+      "A struct socket the process created with socket() and pinned to the Pod's network namespace. bind() reserved its port in that netns (0.0.0.0:<port>, so it answers on the Pod IP via eth0 and on 127.0.0.1 via lo); listen() moved it to TCP_LISTEN with a SYN + accept queue. The process holds it as a file descriptor — it shows up as socket:[inode] in /proc/<pid>/fd. A packet arriving on eth0 is demuxed to it by its (proto, local IP, local port, peer) tuple; accept() then forks one connected socket per client.",
     sections: [
-      { heading: 'Explore', commands: ['# List the listening sockets in the container\noc exec <pod> -n <ns> -- ss -tlnp'] },
+      { heading: 'Explore', commands: [
+        '# The listening sockets and the pids holding them\noc exec <pod> -n <ns> -- ss -tlnp',
+        "# The socket inodes in the process's fd table\nls -l /proc/<pid>/fd | grep socket",
+      ] },
     ],
   },
 }
+// The process holds the socket as a file descriptor (distinct from a namespace
+// membership): the [fd] chip points back at the socket so the ownership link is
+// visible alongside the namespace-membership chips.
+const POD_PROCESS_FD = [
+  { tag: 'fd → socket', ref: 'listen-sock', view: 'the listen socket it bound (an fd in /proc/<pid>/fd)', colorVar: 'k-orange' },
+]
 
 // The containment tree per type. Every node is one of a small visual vocabulary
 // keyed by `variant`, so a primitive's *kind* is legible at a glance:
@@ -159,13 +173,18 @@ const LAYOUT_BY_TYPE = {
       // container joins). lo + eth0 are welded onto its rim; the other pod-shared
       // namespaces and the container sit inside it.
       { id: 'pod-netns', variant: 'ns', children: [
-        { synthetic: LOOPBACK_BOX, variant: 'iface' },
-        { id: 'pod-veth', variant: 'iface', title: 'eth0' },
+        // lo + eth0 are the netns's L2/L3 edges (rim ports); the listen socket is
+        // its L4 endpoint — all three live in the netns. The socket sits in the
+        // body (not the rim) and its links cross-light lo/eth0 + the owning process.
+        { synthetic: LOOPBACK_BOX, variant: 'iface', links: ['listen-sock'] },
+        { id: 'pod-veth', variant: 'iface', title: 'eth0', links: ['listen-sock'] },
+        { synthetic: LISTEN_SOCKET_BOX, variant: 'listen' },
         { id: 'pod-ipcns', variant: 'ns' },
         { id: 'pod-utsns', variant: 'ns' },
         // The container = its own cgroup boundary. Inside: the guards applied to
         // it (chips), then the two namespaces it owns — mount ns nesting the
-        // rootfs it isolates, PID ns nesting the PID-1 process (+ its socket).
+        // rootfs it isolates, PID ns nesting the PID-1 process. The process holds
+        // the (netns-level) socket via its fd chip.
         { synthetic: CONTAINER_BOX, variant: 'envelope', children: [
           { id: 'pod-selinux', variant: 'guard' },
           { id: 'pod-seccomp', variant: 'guard' },
@@ -174,8 +193,7 @@ const LAYOUT_BY_TYPE = {
             { synthetic: ROOTFS_BOX },
           ] },
           { id: 'pod-pidns', variant: 'ns', children: [
-            { id: 'container-process', memberships: POD_PROCESS_NS },
-            { synthetic: LISTEN_SOCKET_BOX, variant: 'socket' },
+            { id: 'container-process', memberships: POD_PROCESS_NS, holds: POD_PROCESS_FD },
           ] },
         ] },
       ] },
@@ -223,15 +241,20 @@ const buildBox = (ctx, id, opts = {}) => {
     variant: opts.variant,
     colorVar: meta.colorVar,
     caption,
-    // Resolve each namespace membership to the DOM-stable id of its target box
-    // so the renderer can highlight that frame when the chip is hovered.
-    memberships: opts.memberships?.map((m) => ({
-      tag: m.tag, view: m.view, colorVar: m.colorVar,
-      boxId: `${ctx.componentId}__${m.ref}`,
-    })),
+    // Resolve cross-highlight refs to the logical box ids the renderer compares
+    // against: namespace memberships + held fds (process), and link targets
+    // (eth0/lo → the socket they reach; the socket → its interfaces + process).
+    memberships: resolveRefs(ctx, opts.memberships),
+    holds: resolveRefs(ctx, opts.holds),
+    linkIds: opts.links?.map((r) => `${ctx.componentId}__${r}`),
     detail: { role: item.label.toUpperCase(), summary: item.description, sections },
   }
 }
+
+// Resolve a chip list's `ref` (a local primitive id) to the logical box id its
+// hover should light, keeping the chip's display fields.
+const resolveRefs = (ctx, refs) =>
+  refs?.map((m) => ({ tag: m.tag, view: m.view, colorVar: m.colorVar, boxId: `${ctx.componentId}__${m.ref}` }))
 
 const buildSynthetic = (ctx, syn, variant) => ({
   id: `${ctx.componentId}__${syn.id}`,
@@ -240,6 +263,7 @@ const buildSynthetic = (ctx, syn, variant) => ({
   variant: variant || syn.variant,
   colorVar: syn.colorVar,
   caption: syn.caption,
+  linkIds: syn.links?.map((r) => `${ctx.componentId}__${r}`),
   detail: syn.detail,
 })
 
@@ -254,7 +278,7 @@ const buildNode = (spec, ctx) => {
     return box
   }
 
-  const box = buildBox(ctx, spec.id, { title: spec.title, variant: spec.variant, memberships: spec.memberships })
+  const box = buildBox(ctx, spec.id, { title: spec.title, variant: spec.variant, memberships: spec.memberships, holds: spec.holds, links: spec.links })
   if (box && spec.children) box.children = spec.children.map((c) => buildNode(c, ctx)).filter(Boolean)
   return box
 }

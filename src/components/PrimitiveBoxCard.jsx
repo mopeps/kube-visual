@@ -30,11 +30,25 @@ export default function PrimitiveBoxCard({
   const domId = `${idPrefix}${colIndex}-${node.id}`
   const subId = (id) => `${idPrefix}${colIndex}-${id}`
 
-  // The namespace frame currently lit by a process membership chip — hover sets
-  // the transient one, a click pins it (so touch users get the highlight too).
-  const [hoverNs, setHoverNs] = useState(null)
-  const [pinNs, setPinNs] = useState(null)
-  const activeNs = hoverNs || pinNs
+  // Cross-highlight: hovering/focusing a relationship chip — or the socket / an
+  // interface — lights up the boxes it links to. The [mnt] chip lights the
+  // mount-ns frame; the process's [fd] chip lights its socket; the socket lights
+  // eth0/lo + the process (residence + termination + fd-ownership). `hover` is the
+  // transient set; clicking a chip pins a set so touch users get the highlight too.
+  const [hover, setHover] = useState(null)
+  const [pin, setPin] = useState(null)
+  const hlSet = hover || pin?.ids
+  const isHL = (id) => !!hlSet && hlSet.has(id)
+  const linkHover = (ids) => ({
+    onMouseEnter: () => setHover(new Set(ids)),
+    onMouseLeave: () => setHover(null),
+    onFocus: () => setHover(new Set(ids)),
+    onBlur: () => setHover(null),
+  })
+  const pinToggle = (key, ids) => (e) => {
+    e.stopPropagation()
+    setPin((p) => (p?.key === key ? null : { key, ids: new Set(ids) }))
+  }
 
   // An interface/port (variant: 'iface') is no longer a full card stacked inside
   // its bridge — it's a small pill tab docked on the bridge's bottom rim, so it
@@ -47,8 +61,9 @@ export default function PrimitiveBoxCard({
         key={p.id}
         id={subId(p.id)}
         type="button"
-        className="primitive-port"
+        className={`primitive-port ${isHL(p.id) ? 'is-hl' : ''}`}
         style={{ '--node-accent': accent }}
+        {...(p.linkIds ? linkHover(p.linkIds) : {})}
         onClick={(e) => { e.stopPropagation(); onSelectBox(p) }}
         title={p.caption ? `${p.title} — ${p.caption}` : p.title}
       >
@@ -58,23 +73,29 @@ export default function PrimitiveBoxCard({
     )
   }
 
-  // A socket endpoint (variant: 'socket' / 'tunnel') is not a NIC — it's a
-  // syscall-level endpoint. Both share a "jack" ring (the hole the process
-  // writes into) but differ in their trailing cue:
+  // A socket endpoint (variant: 'socket' / 'tunnel' / 'listen') is not a NIC —
+  // it's a syscall-level endpoint. All share a "jack" ring (the bound port the
+  // process holds an fd to) but differ in their trailing cue:
   //   • socket → radiating broadcast arcs ))) : a raw frame announced onto the
-  //     wire (MetalLB's gratuitous ARP)
-  //   • tunnel → a nested bore/mouth: the persistent two-way reverse tunnel the
-  //     agent dials into (Konnectivity)
+  //     wire (MetalLB's gratuitous ARP — emission)
+  //   • tunnel → a nested bore/mouth: the persistent two-way reverse tunnel
+  //     (Konnectivity)
+  //   • listen → concentric inlet rings pointing inward: a passive TCP_LISTEN
+  //     endpoint where inbound connections terminate (the Pod's app socket)
+  // A listen socket carries `linkIds`, so hovering it lights eth0/lo (where its
+  // packets arrive) and the process that owns its fd.
   const renderSocket = (s) => {
     const accent = `var(--${s.colorVar || 'k-orange'})`
     const tunnel = s.variant === 'tunnel'
+    const listen = s.variant === 'listen'
     return (
       <button
         key={s.id}
         id={subId(s.id)}
         type="button"
-        className={`primitive-socket${tunnel ? ' primitive-socket--tunnel' : ''}`}
+        className={`primitive-socket${tunnel ? ' primitive-socket--tunnel' : ''}${listen ? ' primitive-socket--listen' : ''} ${isHL(s.id) ? 'is-hl' : ''}`}
         style={{ '--node-accent': accent }}
+        {...(s.linkIds ? linkHover(s.linkIds) : {})}
         onClick={(e) => { e.stopPropagation(); onSelectBox(s) }}
         title={s.caption ? `${s.title} — ${s.caption}` : s.title}
       >
@@ -82,6 +103,10 @@ export default function PrimitiveBoxCard({
         <span className="primitive-socket-label" style={{ color: accent }}>{s.title}</span>
         {tunnel ? (
           <span className="primitive-tunnel-bore" aria-hidden />
+        ) : listen ? (
+          <span className="primitive-socket-inlet" aria-hidden>
+            <i /><i /><i />
+          </span>
         ) : (
           <span className="primitive-socket-emit" aria-hidden>
             <i /><i /><i />
@@ -118,6 +143,22 @@ export default function PrimitiveBoxCard({
   // click for touch), making the orthogonal process↔namespace relationship legible
   // — the [mnt] chip → the mount-ns box (which holds the rootfs) is the
   // "this process sees those files" link.
+  // One chip → one link to the box it references; hovering lights that box,
+  // clicking pins it. Used for both the namespace memberships and the held fd.
+  const renderLinkChip = (c, suffixTitle) => (
+    <button
+      key={c.tag}
+      type="button"
+      className={`primitive-membership ${isHL(c.boxId) ? 'is-active' : ''}`}
+      style={{ '--node-accent': `var(--${c.colorVar})` }}
+      {...linkHover([c.boxId])}
+      onClick={pinToggle(c.boxId, [c.boxId])}
+      title={`${c.tag} · ${c.view}${suffixTitle || ''}`}
+    >
+      {c.tag}
+    </button>
+  )
+
   const renderProcess = (b) => {
     const accent = `var(--${b.colorVar || 'k-green'})`
     return (
@@ -126,7 +167,7 @@ export default function PrimitiveBoxCard({
         id={subId(b.id)}
         role="button"
         tabIndex={0}
-        className="node primitive-process"
+        className={`node primitive-process ${isHL(b.id) ? 'is-hl' : ''}`}
         style={{ '--node-accent': accent }}
         onClick={(e) => { e.stopPropagation(); onSelectBox(b) }}
         onKeyDown={(e) => {
@@ -138,25 +179,18 @@ export default function PrimitiveBoxCard({
         )}
         <div className="node-title" style={{ color: accent }}>{b.title}</div>
         {b.caption && <div className="node-subtitle">{b.caption}</div>}
-        <div className="primitive-memberships">
-          <span className="primitive-memberships-lead">member of</span>
-          {b.memberships.map((m) => (
-            <button
-              key={m.tag}
-              type="button"
-              className={`primitive-membership ${m.boxId === activeNs ? 'is-active' : ''}`}
-              style={{ '--node-accent': `var(--${m.colorVar})` }}
-              onMouseEnter={() => setHoverNs(m.boxId)}
-              onMouseLeave={() => setHoverNs(null)}
-              onFocus={() => setHoverNs(m.boxId)}
-              onBlur={() => setHoverNs(null)}
-              onClick={(e) => { e.stopPropagation(); setPinNs((p) => (p === m.boxId ? null : m.boxId)) }}
-              title={`${m.tag}${m.tag === 'cgroup' ? '' : ' namespace'} · ${m.view} — hover to find its box`}
-            >
-              {m.tag}
-            </button>
-          ))}
-        </div>
+        {b.memberships?.length > 0 && (
+          <div className="primitive-memberships">
+            <span className="primitive-memberships-lead">member of</span>
+            {b.memberships.map((m) => renderLinkChip(m, ' — hover to find its box'))}
+          </div>
+        )}
+        {b.holds?.length > 0 && (
+          <div className="primitive-memberships">
+            <span className="primitive-memberships-lead">holds</span>
+            {b.holds.map((h) => renderLinkChip(h, ' — hover to find it'))}
+          </div>
+        )}
       </div>
     )
   }
@@ -175,12 +209,15 @@ export default function PrimitiveBoxCard({
     if (b.children?.length || b.variant === 'ns' || b.variant === 'envelope') {
       const kids = b.children || []
       const ports = kids.filter((c) => c.variant === 'iface')
-      const inner = kids.filter((c) => c.variant !== 'iface')
+      // Guard chips are collected into their own full-width strip so a row of
+      // small chips never shoves the bigger namespace frames off to the right.
+      const guards = kids.filter((c) => c.variant === 'guard')
+      const inner = kids.filter((c) => c.variant !== 'iface' && c.variant !== 'guard')
       return (
         <div
           key={b.id}
           id={subId(b.id)}
-          className={`primitive-nest ${b.variant ? `primitive-nest--${b.variant}` : ''} ${ports.length ? 'primitive-nest--has-ports' : ''} ${b.realized ? 'primitive-realized' : ''} ${b.id === activeNs ? 'is-ns-hl' : ''}`}
+          className={`primitive-nest ${b.variant ? `primitive-nest--${b.variant}` : ''} ${ports.length ? 'primitive-nest--has-ports' : ''} ${b.realized ? 'primitive-realized' : ''} ${isHL(b.id) ? 'is-hl' : ''}`}
           style={{ '--node-accent': accent }}
         >
           <button
@@ -195,8 +232,11 @@ export default function PrimitiveBoxCard({
             <span className="primitive-nest-title" style={{ color: accent }}>{b.title}</span>
             {b.caption && <span className="primitive-nest-cap">{b.caption}</span>}
           </button>
-          {inner.length > 0 && (
+          {(inner.length > 0 || guards.length > 0) && (
             <div className="primitive-nest-body">
+              {guards.length > 0 && (
+                <div className="primitive-guard-strip">{guards.map(renderBox)}</div>
+              )}
               {inner.map(renderBox)}
             </div>
           )}
@@ -211,7 +251,7 @@ export default function PrimitiveBoxCard({
     // Standalone band primitives: a socket endpoint gets the socket form; a
     // real interface (tap0) gets the same port block as a bridge child, just
     // sitting in its band row rather than on a bridge rim.
-    if (b.variant === 'socket' || b.variant === 'tunnel') return renderSocket(b)
+    if (b.variant === 'socket' || b.variant === 'tunnel' || b.variant === 'listen') return renderSocket(b)
     if (b.variant === 'iface') return renderPort(b)
     return (
       <NodeCard
