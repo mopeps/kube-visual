@@ -2124,6 +2124,15 @@ body::after {
    partitions the interior by placement (user space vs kernel datapath, etc.). */
 .primitive-box .primitive-band { margin-top: 8px; }
 
+/* Tighten the Primitives card: the default .intent-store-expanded padding (and
+   the padding compounding at every nested frame) left a big inset between the
+   kernel primitives and the pod boundary. Scoped to .primitive-box so the etcd /
+   controller stores and Network mode keep their original spacing. */
+.intent-store-expanded.primitive-box { padding: 6px 7px 7px; }
+.primitive-box .primitive-band { margin-top: 5px; }
+.primitive-box .primitive-nest { padding: 4px; }
+.primitive-box .primitive-nest-body { padding: 3px; }
+
 /* Network mode hides every object's subheading (the caption line) — the detail
    is one click away in the popup — and reserves a right-hand gutter on each
    column for the connector "rail" (the long cross-column edges run there instead
