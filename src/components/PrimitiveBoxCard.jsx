@@ -152,11 +152,12 @@ export default function PrimitiveBoxCard({
         style={{ '--node-accent': accent }}
         {...(f.linkIds ? linkHover(f.linkIds) : {})}
         onClick={(e) => { e.stopPropagation(); onSelectBox(f) }}
-        title={f.caption ? `${f.title} — ${f.caption}` : f.title}
+        title={f.source ? `${f.title} — ${f.source}` : f.title}
       >
         <span className="fsrow-path">{f.title}</span>
-        <span className="fsrow-tag" style={{ color: accent }}>{f.typePrefix}</span>
-        {f.caption && <span className="fsrow-src">{f.caption}</span>}
+        <span className="fsrow-type">{f.fsType}</span>
+        <span className="fsrow-kind" style={{ color: accent }}>{f.kindLabel}</span>
+        {f.source && <span className="fsrow-src">{f.source}</span>}
       </button>
     )
   }

@@ -2338,18 +2338,28 @@ body::after {
 }
 .fsrow-path {
   flex: 0 0 auto;
-  min-width: 200px;
+  min-width: 190px;
   color: var(--tx-bright);
   font-weight: 600;
 }
-.fsrow-tag {
+/* fs type — the kernel mount mechanism, plain white in its own column. */
+.fsrow-type {
   flex: 0 0 auto;
+  min-width: 74px;
+  color: rgba(255, 255, 255, 0.92);
+}
+/* source kind — the coloured chip column: which K8s object backs the mount. */
+.fsrow-kind {
+  flex: 0 0 auto;
+  min-width: 78px;
+  display: inline-flex;
+  justify-content: center;
   font-size: 0.55rem;
   letter-spacing: 0.02em;
-  padding: 0 5px;
+  padding: 0 6px;
   border-radius: 3px;
-  border: 1px solid color-mix(in srgb, var(--node-accent) 42%, transparent);
-  background: color-mix(in srgb, var(--node-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--node-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--node-accent) 14%, transparent);
 }
 .fsrow-src {
   flex: 1 1 auto;
