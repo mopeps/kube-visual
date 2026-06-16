@@ -216,7 +216,7 @@ export default function PrimitiveBoxCard({
               <span>{band.boundary}</span>
             </div>
           )}
-          <div className="primitive-band-label">{band.label}</div>
+          {band.label && <div className="primitive-band-label">{band.label}</div>}
           <div className="primitive-band-boxes">
             {band.boxes.map(renderBox)}
           </div>

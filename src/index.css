@@ -2235,6 +2235,21 @@ body::after {
   background: rgba(0, 0, 0, 0.22);
 }
 
+/* ── Constraint envelope (Primitives mode) ────────────────────────────────
+   A cgroup slice is a resource *ceiling*, not a namespace *containment*: it
+   caps what its contents may consume without isolating them. So the Pod cgroup
+   slice (and the systemd service slice) wrap their contents as a dashed, lighter
+   frame — visually distinct from the solid namespace boxes nested inside, the
+   same dashed=not-a-boundary cue the network mode uses for logical objects. */
+.primitive-nest--envelope {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--node-accent) 4%, #0a0f1e);
+  flex: 1 1 auto;
+}
+.primitive-nest--envelope > .primitive-nest-body {
+  background: rgba(0, 0, 0, 0.12);
+}
+
 /* ── Logical vs realized: the view's punchline ────────────────────────────
    The OVN logical objects are "just rows" in a DB — drawn dashed/faint, the
    same solid=real / dashed=logical language the Overview uses for machine vs
