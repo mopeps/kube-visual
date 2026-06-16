@@ -2250,6 +2250,60 @@ body::after {
   background: rgba(0, 0, 0, 0.12);
 }
 
+/* ── Namespace boundary (Primitives mode) ─────────────────────────────────
+   A namespace *isolates* — it's a bounded region a process is sealed into. We
+   draw it as a solid frame filled with a faint diagonal hatch (the universal
+   "restricted / isolated zone" cue), so a namespace never reads like the flat
+   component cards of the main Overview: it reads like a perimeter that nests
+   whatever it isolates (pid ns → the process, mount ns → the rootfs, net ns →
+   the interfaces + the container). */
+.primitive-nest--ns {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--node-accent) 42%, transparent);
+  background:
+    repeating-linear-gradient(135deg,
+      transparent 0, transparent 7px,
+      color-mix(in srgb, var(--node-accent) 8%, transparent) 7px,
+      color-mix(in srgb, var(--node-accent) 8%, transparent) 8px),
+    color-mix(in srgb, var(--node-accent) 5%, #0a0f1e);
+}
+/* The body sits on a flat fill so nested boxes stay legible over the hatch. */
+.primitive-nest--ns > .primitive-nest-body {
+  background: rgba(0, 0, 0, 0.30);
+}
+
+/* ── Guard chip (Primitives mode) ─────────────────────────────────────────
+   SELinux / seccomp / capabilities aren't places anything lives — they're
+   filters clamped onto the container's process. Drawn as a small shield chip,
+   grouped on the container frame, distinct from both the namespace frames and
+   the process card. */
+.primitive-guard {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  padding: 3px 9px 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--node-accent) 45%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--node-accent) 10%, #0a111f);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.56rem;
+  line-height: 1.4;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.primitive-guard:hover { background: color-mix(in srgb, var(--node-accent) 22%, #0a111f); }
+/* A tiny shield silhouette — the "guarded / restricted" mark. */
+.primitive-guard-ic {
+  width: 10px;
+  height: 12px;
+  flex: none;
+  background: var(--node-accent);
+  clip-path: polygon(50% 0, 100% 22%, 100% 58%, 50% 100%, 0 58%, 0 22%);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--node-accent) 60%, transparent);
+}
+.primitive-guard-label { font-weight: 600; letter-spacing: 0.03em; }
+
 /* ── Logical vs realized: the view's punchline ────────────────────────────
    The OVN logical objects are "just rows" in a DB — drawn dashed/faint, the
    same solid=real / dashed=logical language the Overview uses for machine vs
