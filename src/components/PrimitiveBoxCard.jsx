@@ -168,7 +168,7 @@ export default function PrimitiveBoxCard({
         <div className="node-title" style={{ color }}>{node.title}</div>
         {hint && (
           <div className="intent-store-hint" style={{ color }}>
-            <span className="intent-store-chevron">▸</span>{hint}
+            {hint}
           </div>
         )}
       </div>

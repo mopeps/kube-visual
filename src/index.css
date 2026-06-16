@@ -556,11 +556,6 @@ body::after {
   font-weight: 600;
   opacity: 0.85;
 }
-.intent-store-chevron {
-  font-size: 0.7rem;
-  line-height: 1;
-}
-
 /* Expanded: takes its own full row inside the flex-wrap zone. */
 .intent-store-expanded {
   flex: 1 1 100%;

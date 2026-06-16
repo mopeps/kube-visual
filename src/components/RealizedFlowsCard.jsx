@@ -77,7 +77,6 @@ export default function RealizedFlowsCard({
         )}
         <div className="node-title" style={{ color }}>{node.title}</div>
         <div className="intent-store-hint" style={{ color }}>
-          <span className="intent-store-chevron">▸</span>
           {node.realizes.length} {node.realizes.length === 1 ? 'flow' : 'flows'}
         </div>
       </div>

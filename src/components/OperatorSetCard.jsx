@@ -84,7 +84,6 @@ export default function OperatorSetCard({
         )}
         <div className="node-title" style={{ color }}>{node.title}</div>
         <div className="intent-store-hint" style={{ color }}>
-          <span className="intent-store-chevron">▸</span>
           {node.operators.length} {node.operators.length === 1 ? 'operator' : 'operators'}
         </div>
       </div>

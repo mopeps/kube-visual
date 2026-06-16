@@ -74,7 +74,6 @@ export default function IntentStoreCard({
         )}
         <div className="node-title" style={{ color }}>{node.title}</div>
         <div className="intent-store-hint" style={{ color }}>
-          <span className="intent-store-chevron">▸</span>
           {node.intentObjects.length} {node.intentObjects.length === 1 ? 'object' : 'objects'}
         </div>
       </div>

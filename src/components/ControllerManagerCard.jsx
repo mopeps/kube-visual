@@ -77,7 +77,6 @@ export default function ControllerManagerCard({
         )}
         <div className="node-title" style={{ color }}>{node.title}</div>
         <div className="intent-store-hint" style={{ color }}>
-          <span className="intent-store-chevron">▸</span>
           {node.controllers.length} {node.controllers.length === 1 ? 'loop' : 'loops'}
         </div>
       </div>
