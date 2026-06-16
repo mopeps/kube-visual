@@ -6,6 +6,13 @@
 export const PRIMITIVES_BY_TYPE = {
 
   // ── Container-based components (Pod, Static Pod) ────────────────────────
+  // `scope` splits these into the two real boundaries the kernel enforces:
+  //   'pod'       — held open by the pause (sandbox) container and shared by
+  //                 every container in the Pod (the network namespace and the
+  //                 veth that plugs it into the node).
+  //   'container' — created fresh per container (its mount namespace, cgroup,
+  //                 SELinux MCS label, and PID-1 process).
+  // The pipeline tree (pipeline-model.js) reads this to label the two groups.
   Pod: {
     sectionTitle: 'Kernel Primitives',
     color: '#10b981',
@@ -13,6 +20,7 @@ export const PRIMITIVES_BY_TYPE = {
       {
         id: 'pod-netns',
         label: 'Network Namespace',
+        scope: 'pod',
         description:
           'Gives the container its own private network stack — a dedicated IP address, routing table, and iptables chains — fully isolated from the host and other Pods. Created by the CNI plugin when the Pod sandbox initialises.',
         interactions: [
@@ -28,6 +36,7 @@ export const PRIMITIVES_BY_TYPE = {
       {
         id: 'pod-veth',
         label: 'veth Pair (eth0)',
+        scope: 'pod',
         description:
           "A virtual Ethernet (veth) pair connecting the Pod to the node network — the Pod's eth0 is one end; its peer lives in the host root netns and is enslaved to the OVS integration bridge br-int, stitching the Pod's private network namespace into the node's OVN datapath. Created by the CNI plugin (OVN-Kubernetes) when the Pod sandbox is set up.",
         interactions: [
@@ -43,6 +52,7 @@ export const PRIMITIVES_BY_TYPE = {
       {
         id: 'pod-mountns',
         label: 'Mount Namespace',
+        scope: 'container',
         description:
           "Gives the container its own view of the filesystem — an overlayfs root built from the image layers, with each volume bind-mounted in: Secrets and ConfigMaps as in-memory tmpfs files, PersistentVolumeClaims as real block-device mounts. Isolated from the host and from other Pods.",
         interactions: [
@@ -58,6 +68,7 @@ export const PRIMITIVES_BY_TYPE = {
       {
         id: 'pod-cgroups',
         label: 'cgroups v2',
+        scope: 'container',
         description:
           'Enforces the CPU, memory, and I/O resource limits declared in the Pod spec. The container runtime translates requests/limits into cgroup knobs so the kernel can account for and cap resource usage per container.',
         interactions: [
@@ -74,6 +85,7 @@ export const PRIMITIVES_BY_TYPE = {
       {
         id: 'pod-selinux',
         label: 'SELinux MCS Label',
+        scope: 'container',
         description:
           "A unique SELinux Multi-Category Security label per container — e.g. system_u:system_r:container_t:s0:c14,c742 — tagged onto its process and files. The kernel's SELinux LSM only permits access between matching categories, so even a container escape can't read another Pod's files.",
         interactions: [
@@ -90,6 +102,7 @@ export const PRIMITIVES_BY_TYPE = {
       {
         id: 'container-process',
         label: 'PID 1 · Process',
+        scope: 'container',
         description:
           'The application binary running as PID 1 inside the container\'s PID namespace. It is the terminal point of the entire HCP ownership chain — from the external client request down through every networking and runtime layer.',
         interactions: [
