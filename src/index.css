@@ -2302,6 +2302,67 @@ body::after {
   gap: 6px;
 }
 
+/* ── Filesystem listing (Primitives mode) ─────────────────────────────────
+   The mount namespace renders as a real filesystem: a tight, monospace list of
+   slim one-line rows — path · backing tag · source — hairline-separated, the way
+   `findmnt` / a file manager reads. Each row is clickable for its mount detail. */
+.primitive-fslist {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.30);
+  overflow: hidden;
+}
+.primitive-fsrow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 3px 10px;
+  background: none;
+  border: 0;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  line-height: 1.5;
+  color: var(--tx-muted);
+}
+.primitive-fsrow + .primitive-fsrow { border-top: 1px solid rgba(255, 255, 255, 0.045); }
+.primitive-fsrow:hover { background: rgba(255, 255, 255, 0.04); }
+.primitive-fsrow.is-hl {
+  border-left-color: var(--node-accent);
+  background: color-mix(in srgb, var(--node-accent) 12%, transparent);
+}
+.fsrow-path {
+  flex: 0 0 auto;
+  min-width: 200px;
+  color: var(--tx-bright);
+  font-weight: 600;
+}
+.fsrow-tag {
+  flex: 0 0 auto;
+  font-size: 0.55rem;
+  letter-spacing: 0.02em;
+  padding: 0 5px;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--node-accent) 42%, transparent);
+  background: color-mix(in srgb, var(--node-accent) 12%, transparent);
+}
+.fsrow-src {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--tx-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 640px) {
+  .fsrow-path { min-width: 120px; }
+}
+
 /* ── Process namespace-membership chips (Primitives mode) ──────────────────
    A process holds one membership per namespace type at once and sits at their
    intersection — it is not "inside" any single one. The chips name those

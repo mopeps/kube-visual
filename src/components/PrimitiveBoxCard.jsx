@@ -137,6 +137,30 @@ export default function PrimitiveBoxCard({
     )
   }
 
+  // A filesystem row (variant:'fsrow') — the mount namespace is drawn as a real
+  // filesystem: a tight list of slim one-liners, each a path + the backing that
+  // mounts it (overlayfs / tmpfs / block / hostPath / procfs) + its source. /proc
+  // carries a link so hovering it lights the PID-ns frame whose contents it shows.
+  const renderFsRow = (f) => {
+    const accent = `var(--${f.colorVar || 'k-ghost'})`
+    return (
+      <button
+        key={f.id}
+        id={subId(f.id)}
+        type="button"
+        className={`primitive-fsrow ${isHL(f.id) ? 'is-hl' : ''}`}
+        style={{ '--node-accent': accent }}
+        {...(f.linkIds ? linkHover(f.linkIds) : {})}
+        onClick={(e) => { e.stopPropagation(); onSelectBox(f) }}
+        title={f.caption ? `${f.title} — ${f.caption}` : f.title}
+      >
+        <span className="fsrow-path">{f.title}</span>
+        <span className="fsrow-tag" style={{ color: accent }}>{f.typePrefix}</span>
+        {f.caption && <span className="fsrow-src">{f.caption}</span>}
+      </button>
+    )
+  }
+
   // The process card carries a row of namespace-membership chips: the process
   // isn't "inside" one namespace, it's a member of several at once. Each chip
   // lights up the frame of the namespace it joins on hover/focus (and pins it on
@@ -212,7 +236,10 @@ export default function PrimitiveBoxCard({
       // Guard chips are collected into their own full-width strip so a row of
       // small chips never shoves the bigger namespace frames off to the right.
       const guards = kids.filter((c) => c.variant === 'guard')
-      const inner = kids.filter((c) => c.variant !== 'iface' && c.variant !== 'guard')
+      // Filesystem rows render as one tight list (a real-filesystem listing), not
+      // loose boxes in the flex body.
+      const fsrows = kids.filter((c) => c.variant === 'fsrow')
+      const inner = kids.filter((c) => c.variant !== 'iface' && c.variant !== 'guard' && c.variant !== 'fsrow')
       return (
         <div
           key={b.id}
@@ -232,10 +259,13 @@ export default function PrimitiveBoxCard({
             <span className="primitive-nest-title" style={{ color: accent }}>{b.title}</span>
             {b.caption && <span className="primitive-nest-cap">{b.caption}</span>}
           </button>
-          {(inner.length > 0 || guards.length > 0) && (
+          {(inner.length > 0 || guards.length > 0 || fsrows.length > 0) && (
             <div className="primitive-nest-body">
               {guards.length > 0 && (
                 <div className="primitive-guard-strip">{guards.map(renderBox)}</div>
+              )}
+              {fsrows.length > 0 && (
+                <div className="primitive-fslist">{fsrows.map(renderFsRow)}</div>
               )}
               {inner.map(renderBox)}
             </div>
@@ -252,6 +282,7 @@ export default function PrimitiveBoxCard({
     // real interface (tap0) gets the same port block as a bridge child, just
     // sitting in its band row rather than on a bridge rim.
     if (b.variant === 'socket' || b.variant === 'tunnel' || b.variant === 'listen') return renderSocket(b)
+    if (b.variant === 'fsrow') return renderFsRow(b)
     if (b.variant === 'iface') return renderPort(b)
     return (
       <NodeCard
