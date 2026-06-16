@@ -166,9 +166,11 @@ export default function PrimitiveBoxCard({
           <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>[{node.typePrefix}]</span>
         )}
         <div className="node-title" style={{ color }}>{node.title}</div>
-        <div className="intent-store-hint" style={{ color }}>
-          <span className="intent-store-chevron">▸</span>{hint || ''}
-        </div>
+        {hint && (
+          <div className="intent-store-hint" style={{ color }}>
+            <span className="intent-store-chevron">▸</span>{hint}
+          </div>
+        )}
       </div>
     )
   }
