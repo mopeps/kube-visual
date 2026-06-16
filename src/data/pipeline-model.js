@@ -89,6 +89,7 @@ function primitiveNodes(typePrefix) {
   return set.items.map(it => ({
     id: it.id,
     label: it.label,
+    scope: it.scope,
     definition: it.description,
     detail: {
       bullets: it.interactions,
@@ -225,10 +226,21 @@ function podBands(component) {
     enrich('pod-mountns', kernelRealization.mountNamespace)
     enrich('pod-cgroups', kernelRealization.cgroupPath)
   }
+  // Split the canonical Pod primitives along the boundary the kernel actually
+  // enforces (the `scope` field in PRIMITIVES_BY_TYPE): the network namespace
+  // and its veth are held open by the pause (sandbox) container and shared by
+  // every container in the Pod, while the mount namespace, cgroup, SELinux
+  // label, and PID-1 process are created fresh per container. Labelling the two
+  // groups is what lets the reader tell the pod-scoped primitives apart from the
+  // per-container ones.
+  const sandbox = base.filter(n => n.scope === 'pod')
+  const perContainer = base.filter(n => n.scope !== 'pod')
+  const groups = []
+  if (sandbox.length) groups.push({ subhead: 'pod sandbox · shared by every container', nodes: sandbox })
+  if (perContainer.length) groups.push({ subhead: 'per container', nodes: perContainer })
   // The consumed resources reappear here as a "projected volumes" group: band 2
   // names each as an API object, while this kernel-layer view names the actual
   // mount (its Linux primitive + host path) that realises it.
-  const groups = [{ nodes: base }]
   if (cr.length) {
     groups.push({
       subhead: 'projected volumes',
