@@ -49,7 +49,7 @@ const META = {
   'pod-ipcns':         { tag: 'ipcns',   colorVar: 'k-purple', caption: 'shared shm / sem' },
   'pod-utsns':         { tag: 'utsns',   colorVar: 'k-purple', caption: 'shared hostname' },
   'pod-cgroup-slice':  { tag: 'cgroup',  colorVar: 'k-purple', caption: 'pod QoS resource ceiling' },
-  'pod-mountns':       { tag: 'mountns', colorVar: 'k-purple', caption: 'overlayfs rootfs' },
+  'pod-mountns':       { tag: 'mountns', colorVar: 'k-purple', caption: 'private filesystem view' },
   'pod-pidns':         { tag: 'pidns',   colorVar: 'k-purple', caption: 'own PID 1' },
   'pod-cgroups':       { tag: 'cgroup',  colorVar: 'k-orange', caption: 'per-container limits' },
   'pod-selinux':       { tag: 'LSM',     colorVar: 'k-orange', caption: 'MCS isolation' },
@@ -65,16 +65,38 @@ const META = {
   'vmi-tap':           { tag: 'netdev',  colorVar: 'k-teal',   caption: 'tap0 ↔ k6t-eth0' },
 }
 
-// Two synthetic grouping boxes with no PRIMITIVES_BY_TYPE item — defined here so
-// the change stays scoped to this view (no new primitives.js items that other
-// consumers like pipeline-model.js / the DetailPanel would have to account for).
+// Synthetic boxes with no PRIMITIVES_BY_TYPE item — defined here so the change
+// stays scoped to this view (no new primitives.js items that other consumers
+// like pipeline-model.js / the DetailPanel would have to account for).
+//
+// The container box *is* the container's cgroup envelope: rather than drawing
+// the per-container cgroup as one more box inside the container, we merge the
+// two — the container's outer boundary is the cgroup that bounds it (mirroring
+// how the Pod cgroup slice is the Pod's outer boundary). Its detail folds in the
+// per-container cgroup explore commands.
 const CONTAINER_BOX = {
-  id: 'container', title: 'container', tag: 'container', colorVar: 'k-green',
-  caption: 'overlayfs rootfs · isolated',
+  id: 'container', title: 'container', tag: 'container', colorVar: 'k-teal',
+  caption: 'cgroup-bounded · its own mount + PID ns',
   detail: {
-    role: 'CONTAINER',
+    role: 'CONTAINER · CGROUP-BOUNDED',
     summary:
-      "One container in the Pod: an overlayfs root assembled from the image layers, its entrypoint running as PID 1. CRI-O/crun creates its mount and PID namespaces and its own cgroup nested beneath the Pod slice, then applies the SELinux MCS label, seccomp filter, and capability set before exec — but it joins the network, IPC, and UTS namespaces the pause (sandbox) container already holds open, so every container in the Pod shares one network identity.",
+      "One container in the Pod, drawn as its own cgroup boundary: crun creates its cgroup nested under the Pod slice (kubepods.slice/…/crio-<id>) with its own CPU/memory limits, gives it a private mount and PID namespace, and applies the SELinux label, seccomp filter, and capability set — then execs the entrypoint as PID 1. It joins the network, IPC, and UTS namespaces the pause (sandbox) container already holds open, so every container in the Pod shares one network identity.",
+    sections: [
+      { heading: 'Explore', commands: [
+        '# Find the container cgroup (nested under the Pod slice)\ncrictl inspect <id> | jq .info.runtimeSpec.linux.cgroupsPath',
+        '# Its CPU / memory ceiling\ncat /sys/fs/cgroup/<cgroup_path>/memory.max\ncat /sys/fs/cgroup/<cgroup_path>/cpu.max',
+      ] },
+    ],
+  },
+}
+// What the mount namespace isolates: the container's private filesystem view.
+const ROOTFS_BOX = {
+  id: 'rootfs', title: 'overlayfs /', tag: 'rootfs', colorVar: 'k-sky',
+  caption: 'image layers + tmpfs secrets',
+  detail: {
+    role: 'CONTAINER ROOTFS',
+    summary:
+      "The root filesystem the mount namespace isolates: an overlayfs assembled from the image layers, with each volume bind-mounted in — Secrets and ConfigMaps as in-memory tmpfs, PersistentVolumeClaims as real block devices. Private to this container, invisible to the host and other Pods.",
     sections: [],
   },
 }
@@ -101,36 +123,53 @@ const LISTEN_SOCKET_BOX = {
   },
 }
 
-// The containment tree per type. Spec node forms:
-//   'id'                         → a primitive leaf card (PRIMITIVES_BY_TYPE item)
-//   { id, as:'iface', title? }   → that primitive as an interface port pill
-//   { id, variant?, children }   → that primitive as a nest wrapping children
-//   { synthetic, variant?, children? } → a synthetic box (CONTAINER_BOX / socket)
+// The containment tree per type. Every node is one of a small visual vocabulary
+// keyed by `variant`, so a primitive's *kind* is legible at a glance:
+//   (default)         → a solid leaf card — the thing that runs / is isolated
+//   variant:'envelope'→ a dashed frame: a cgroup, a resource *ceiling* (pod slice,
+//                        and the container, which we draw AS its own cgroup)
+//   variant:'ns'      → a hatched solid frame: a namespace *isolation boundary*
+//                        that nests whatever it isolates (pid ns → process,
+//                        mount ns → rootfs, net ns → interfaces + the container)
+//   variant:'guard'   → a small shield chip: a filter applied to the container
+//                        (SELinux label, seccomp profile, capability set)
+//   variant:'iface'   → a port pill welded onto a namespace's rim (lo / eth0)
+//   variant:'socket'  → a syscall jack endpoint (the process's listen socket)
+// Spec node forms: 'id' | { id, variant?, title?, children } | { synthetic, variant?, children }
 const LAYOUT_BY_TYPE = {
   Pod: [
-    // Pod cgroup slice = the outer resource ceiling (a constraint, hence the
-    // dashed 'envelope' frame), wrapping the shared netns sandbox.
+    // Pod cgroup slice = the outer resource ceiling (dashed envelope) …
     { id: 'pod-cgroup-slice', variant: 'envelope', children: [
-      // Shared network namespace = the containment box every container joins;
-      // eth0 is welded onto its rim, the other pod-shared namespaces sit beside
-      // the container as context.
-      { id: 'pod-netns', children: [
+      // … wrapping the shared network namespace (the isolation boundary every
+      // container joins). lo + eth0 are welded onto its rim; the other pod-shared
+      // namespaces and the container sit inside it.
+      { id: 'pod-netns', variant: 'ns', children: [
         { synthetic: LOOPBACK_BOX, variant: 'iface' },
-        { id: 'pod-veth', as: 'iface', title: 'eth0' },
-        'pod-ipcns',
-        'pod-utsns',
-        { synthetic: CONTAINER_BOX, children: [
-          'container-process',
-          { synthetic: LISTEN_SOCKET_BOX, variant: 'socket' },
-          'pod-mountns', 'pod-pidns',
-          'pod-cgroups', 'pod-selinux', 'pod-seccomp', 'pod-capabilities',
+        { id: 'pod-veth', variant: 'iface', title: 'eth0' },
+        { id: 'pod-ipcns', variant: 'ns' },
+        { id: 'pod-utsns', variant: 'ns' },
+        // The container = its own cgroup boundary. Inside: the guards applied to
+        // it (chips), then the two namespaces it owns — mount ns nesting the
+        // rootfs it isolates, PID ns nesting the PID-1 process (+ its socket).
+        { synthetic: CONTAINER_BOX, variant: 'envelope', children: [
+          { id: 'pod-selinux', variant: 'guard' },
+          { id: 'pod-seccomp', variant: 'guard' },
+          { id: 'pod-capabilities', variant: 'guard' },
+          { id: 'pod-mountns', variant: 'ns', children: [
+            { synthetic: ROOTFS_BOX },
+          ] },
+          { id: 'pod-pidns', variant: 'ns', children: [
+            'container-process',
+            { synthetic: LISTEN_SOCKET_BOX, variant: 'socket' },
+          ] },
         ] },
       ] },
     ] },
   ],
   systemd: [
     // The .service declaration, then the cgroup slice the process actually lives
-    // in (the host-service analogue of the container box).
+    // in (the host-service analogue of the container's cgroup boundary). A host
+    // service runs in the root namespaces, so there is no namespace nesting.
     'systemd-unit',
     { id: 'cgroup-slice', variant: 'envelope', children: ['service-process'] },
   ],
@@ -138,7 +177,7 @@ const LAYOUT_BY_TYPE = {
     // The QEMU process owns the VM: its vCPU threads and vhost offload live
     // inside it, and tap0 is the guest NIC welded onto its rim.
     { id: 'qemu-process', children: [
-      { id: 'vmi-tap', as: 'iface', title: 'tap0' },
+      { id: 'vmi-tap', variant: 'iface', title: 'tap0' },
       'kvm-vcpu', 'vhost-net',
     ] },
   ],
@@ -194,7 +233,7 @@ const buildNode = (spec, ctx) => {
     return box
   }
 
-  const box = buildBox(ctx, spec.id, { title: spec.title, variant: spec.as === 'iface' ? 'iface' : spec.variant })
+  const box = buildBox(ctx, spec.id, { title: spec.title, variant: spec.variant })
   if (box && spec.children) box.children = spec.children.map((c) => buildNode(c, ctx)).filter(Boolean)
   return box
 }

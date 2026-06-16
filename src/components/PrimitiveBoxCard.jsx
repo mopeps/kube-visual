@@ -84,16 +84,41 @@ export default function PrimitiveBoxCard({
     )
   }
 
+  // A guard (variant:'guard') is a filter the runtime applies to the container —
+  // a SELinux MCS label, a seccomp profile, a capability set. It isn't a place
+  // anything lives, so it reads as a small shield chip rather than a box.
+  const renderGuard = (g) => {
+    const accent = `var(--${g.colorVar || 'k-orange'})`
+    return (
+      <button
+        key={g.id}
+        id={subId(g.id)}
+        type="button"
+        className="primitive-guard"
+        style={{ '--node-accent': accent }}
+        onClick={(e) => { e.stopPropagation(); onSelectBox(g) }}
+        title={g.caption ? `${g.title} — ${g.caption}` : g.title}
+      >
+        <span className="primitive-guard-ic" aria-hidden />
+        <span className="primitive-guard-label" style={{ color: accent }}>{g.title}</span>
+      </button>
+    )
+  }
+
   // A box may nest child boxes (ports drawn ON a bridge, rows INSIDE the NB DB).
   // Leaf → a plain NodeCard; container → a framed box with a clickable header.
+  // A cgroup 'envelope' or a namespace 'ns' is always a frame even when it nests
+  // nothing (an empty IPC/UTS boundary still reads as an isolation boundary).
   // Interface children peel off onto the rim as port tabs; the rest stay in the
   // body, recursively rendered (the NB DB rows, the guest's realized OpenFlow).
   // Every box keeps a per-column DOM id so the canvas edge overlay can wire it.
   const renderBox = (b) => {
     const accent = `var(--${b.colorVar || 'k-amber'})`
-    if (b.children?.length) {
-      const ports = b.children.filter((c) => c.variant === 'iface')
-      const inner = b.children.filter((c) => c.variant !== 'iface')
+    if (b.variant === 'guard') return renderGuard(b)
+    if (b.children?.length || b.variant === 'ns' || b.variant === 'envelope') {
+      const kids = b.children || []
+      const ports = kids.filter((c) => c.variant === 'iface')
+      const inner = kids.filter((c) => c.variant !== 'iface')
       return (
         <div
           key={b.id}
