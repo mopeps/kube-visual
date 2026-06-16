@@ -31,10 +31,14 @@ export const isRuntimeInstance = (node) => RUNTIME_TYPES.has(typeOf(node))
 // bottom (kernel). A `boundary` label draws the faded "── kernel boundary ──"
 // divider above that band.
 const BANDS_BY_TYPE = {
+  // Three Pod bands so the kernel set (now 11 items) doesn't crowd one band and
+  // the layout mirrors the pipeline tree's pod-sandbox vs per-container split.
   Pod: [
     { label: 'user space · container process', ids: ['container-process'] },
-    { label: 'kernel · namespaces & cgroups', boundary: 'kernel boundary',
-      ids: ['pod-netns', 'pod-veth', 'pod-mountns', 'pod-cgroups', 'pod-selinux'] },
+    { label: 'kernel · pod sandbox (shared)', boundary: 'kernel boundary',
+      ids: ['pod-netns', 'pod-veth', 'pod-ipcns', 'pod-utsns', 'pod-cgroup-slice'] },
+    { label: 'kernel · per container',
+      ids: ['pod-mountns', 'pod-pidns', 'pod-cgroups', 'pod-selinux', 'pod-seccomp', 'pod-capabilities'] },
   ],
   systemd: [
     { label: 'unit · supervised by PID 1', ids: ['systemd-unit'] },
@@ -43,8 +47,8 @@ const BANDS_BY_TYPE = {
   ],
   VirtualMachineInstance: [
     { label: 'user space · QEMU', ids: ['qemu-process'] },
-    { label: 'kernel · KVM & vhost', boundary: 'kernel boundary',
-      ids: ['kvm-vcpu', 'vhost-net'] },
+    { label: 'kernel · KVM & net', boundary: 'kernel boundary',
+      ids: ['kvm-vcpu', 'vhost-net', 'vmi-tap'] },
   ],
 }
 
@@ -57,9 +61,15 @@ const BANDS_BY_TYPE = {
 const META = {
   'pod-netns':         { tag: 'netns',   colorVar: 'k-purple', caption: 'private network stack' },
   'pod-veth':          { tag: 'netdev',  colorVar: 'k-teal',   caption: 'eth0 ↔ br-int' },
+  'pod-ipcns':         { tag: 'ipcns',   colorVar: 'k-purple', caption: 'shared shm / sem' },
+  'pod-utsns':         { tag: 'utsns',   colorVar: 'k-purple', caption: 'shared hostname' },
+  'pod-cgroup-slice':  { tag: 'cgroup',  colorVar: 'k-purple', caption: 'pod QoS slice' },
   'pod-mountns':       { tag: 'mountns', colorVar: 'k-purple', caption: 'overlayfs rootfs' },
-  'pod-cgroups':       { tag: 'cgroup',  colorVar: 'k-purple', caption: 'cpu / mem limits' },
+  'pod-pidns':         { tag: 'pidns',   colorVar: 'k-purple', caption: 'own PID 1' },
+  'pod-cgroups':       { tag: 'cgroup',  colorVar: 'k-purple', caption: 'per-container limits' },
   'pod-selinux':       { tag: 'LSM',     colorVar: 'k-purple', caption: 'MCS isolation' },
+  'pod-seccomp':       { tag: 'seccomp', colorVar: 'k-purple', caption: 'BPF syscall filter' },
+  'pod-capabilities':  { tag: 'caps',    colorVar: 'k-purple', caption: 'dropped capabilities' },
   'container-process': { tag: 'process', colorVar: 'k-green',  caption: 'application binary', fold: 'title' },
   'systemd-unit':      { tag: 'unit',    colorVar: 'k-amber',  caption: '.service file' },
   'cgroup-slice':      { tag: 'cgroup',  colorVar: 'k-purple', caption: 'per-service accounting' },
@@ -67,6 +77,7 @@ const META = {
   'kvm-vcpu':          { tag: 'KVM',     colorVar: 'k-purple', caption: '/dev/kvm vCPU thread' },
   'qemu-process':      { tag: 'process', colorVar: 'k-teal',   caption: 'machine emulator', fold: 'caption' },
   'vhost-net':         { tag: 'vhost',   colorVar: 'k-purple', caption: 'in-kernel virtio' },
+  'vmi-tap':           { tag: 'netdev',  colorVar: 'k-teal',   caption: 'tap0 ↔ k6t-eth0' },
 }
 
 const buildBox = (componentId, item, meta, linuxPrimitive) => {

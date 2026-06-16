@@ -8,10 +8,13 @@ export const PRIMITIVES_BY_TYPE = {
   // ── Container-based components (Pod, Static Pod) ────────────────────────
   // `scope` splits these into the two real boundaries the kernel enforces:
   //   'pod'       — held open by the pause (sandbox) container and shared by
-  //                 every container in the Pod (the network namespace and the
-  //                 veth that plugs it into the node).
-  //   'container' — created fresh per container (its mount namespace, cgroup,
-  //                 SELinux MCS label, and PID-1 process).
+  //                 every container in the Pod: the network namespace + the veth
+  //                 that plugs it into the node, the IPC and UTS namespaces, and
+  //                 the Pod-level cgroup slice that caps the Pod's aggregate.
+  //   'container' — created fresh per container: its mount and PID namespaces,
+  //                 its own cgroup nested under the Pod slice, and the SELinux
+  //                 MCS label, seccomp filter, and capability set that guard its
+  //                 PID-1 process.
   // The pipeline tree (pipeline-model.js) reads this to label the two groups.
   Pod: {
     sectionTitle: 'Kernel Primitives',
@@ -50,6 +53,53 @@ export const PRIMITIVES_BY_TYPE = {
         ],
       },
       {
+        id: 'pod-ipcns',
+        label: 'IPC Namespace',
+        scope: 'pod',
+        description:
+          "Gives the Pod its own System V IPC and POSIX message-queue / shared-memory space — isolated from the host and other Pods, but shared by every container in this Pod, so sidecars can talk over /dev/shm while staying invisible to the rest of the node. Held open by the pause (sandbox) container.",
+        interactions: [
+          'Created with the sandbox via clone(CLONE_NEWIPC) and joined by every container in the Pod.',
+          'Backs the /dev/shm tmpfs mount; its size is governed by the Pod’s shared-memory settings.',
+          "Containers in other Pods cannot see this Pod's semaphores, message queues, or shared-memory segments.",
+        ],
+        commands: [
+          "# List the Pod's System V IPC objects from inside its IPC namespace\nPID=$(crictl inspect <container_id> | jq .info.pid)\nnsenter -t $PID -i ipcs",
+          '# Show the shared-memory tmpfs the namespace backs\nnsenter -t $PID -m df -h /dev/shm',
+        ],
+      },
+      {
+        id: 'pod-utsns',
+        label: 'UTS Namespace',
+        scope: 'pod',
+        description:
+          "Isolates the hostname and NIS domain name, so the Pod reports its own hostname (its Pod name) rather than the node's — and every container in the Pod sees the same one. Held open by the pause (sandbox) container and shared across the Pod.",
+        interactions: [
+          'Created with the sandbox via clone(CLONE_NEWUTS); the kubelet sets the hostname to the Pod name (or spec.hostname).',
+          'Shared by every container in the Pod, so `hostname` returns an identical value across them.',
+          'Independent of the network namespace — changing the UTS hostname does not change DNS resolution or the Pod IP.',
+        ],
+        commands: [
+          '# Show the hostname the Pod sees\nPID=$(crictl inspect <container_id> | jq .info.pid)\nnsenter -t $PID -u hostname',
+        ],
+      },
+      {
+        id: 'pod-cgroup-slice',
+        label: 'Pod cgroup Slice',
+        scope: 'pod',
+        description:
+          "The pod-level cgroups v2 slice the kubelet creates for the whole Pod — kubepods.slice/<qos>/pod<uid>.slice, under the Pod's QoS class (Guaranteed / Burstable / BestEffort). It caps the Pod's *aggregate* CPU, memory, and I/O and is the parent of every per-container cgroup nested beneath it, so the containers can never collectively exceed the Pod's budget.",
+        interactions: [
+          "Created by the kubelet (not the runtime) when the sandbox is set up, under the slice matching the Pod's QoS class.",
+          "Each container's own cgroup is nested inside this slice, so per-container limits roll up into the Pod total.",
+          'memory.max here caps the whole Pod; breaching it lets the kernel OOM-killer terminate a container in the Pod.',
+        ],
+        commands: [
+          '# Show the Pod-level slice (the parent of the container cgroups)\nsystemd-cgls /kubepods.slice | grep pod<uid>',
+          '# Aggregate memory limit for the whole Pod\ncat /sys/fs/cgroup/kubepods.slice/.../kubepods-pod<uid>.slice/memory.max',
+        ],
+      },
+      {
         id: 'pod-mountns',
         label: 'Mount Namespace',
         scope: 'container',
@@ -66,15 +116,30 @@ export const PRIMITIVES_BY_TYPE = {
         ],
       },
       {
-        id: 'pod-cgroups',
-        label: 'cgroups v2',
+        id: 'pod-pidns',
+        label: 'PID Namespace',
         scope: 'container',
         description:
-          'Enforces the CPU, memory, and I/O resource limits declared in the Pod spec. The container runtime translates requests/limits into cgroup knobs so the kernel can account for and cap resource usage per container.',
+          "Gives the container its own process-ID space, so its entrypoint runs as PID 1 and can only see and signal its own descendants — never the host's processes or those of other containers. Per-container by default; setting spec.shareProcessNamespace: true makes all containers in the Pod share one instead.",
         interactions: [
-          'Hierarchy is created by CRI-O/runc at container start under /sys/fs/cgroup/<pod-slice>.',
+          'Created per container by the runtime via clone(CLONE_NEWPID); the entrypoint becomes PID 1 inside it.',
+          'PID 1 reaps zombies and receives termination signals — a process that ignores SIGTERM stalls Pod shutdown until the grace period expires.',
+          "With shareProcessNamespace: true the pause container is PID 1 and every container can see the others' processes.",
+        ],
+        commands: [
+          "# Show the container's isolated process tree (its own PID 1)\nPID=$(crictl inspect <container_id> | jq .info.pid)\nnsenter -t $PID -p ps -ef",
+        ],
+      },
+      {
+        id: 'pod-cgroups',
+        label: 'Container cgroup',
+        scope: 'container',
+        description:
+          "The per-container cgroups v2 the runtime (crun/runc) creates *beneath* the Pod slice — one for each container — enforcing that single container's own CPU, memory, and I/O requests and limits. Nested inside the Pod slice, so its usage rolls up into the Pod's aggregate budget.",
+        interactions: [
+          'Hierarchy is created by CRI-O/crun at container start, nested under the Pod slice at /sys/fs/cgroup/<pod-slice>/crio-<id>.',
           'Kubelet polls cgroup stats and reports resource consumption back to the API server.',
-          'If memory.max is breached the kernel OOM-killer terminates the container process.',
+          'If this container’s memory.max is breached the kernel OOM-killer terminates its process.',
         ],
         commands: [
           '# Find the cgroup path for a container\ncrictl inspect <container_id> | jq .info.runtimeSpec.linux.cgroupsPath',
@@ -97,6 +162,37 @@ export const PRIMITIVES_BY_TYPE = {
           "# Show the container process's SELinux context\nps -eZ | grep container_t",
           '# Watch for AVC denials on the host node\nausearch -m avc -ts recent',
           "# View a Pod's requested SELinux options\noc get pod <pod> -n <ns> -o jsonpath='{.spec.securityContext.seLinuxOptions}'",
+        ],
+      },
+      {
+        id: 'pod-seccomp',
+        label: 'seccomp Profile',
+        scope: 'container',
+        description:
+          "A seccomp-BPF syscall filter the kernel attaches to the container's processes, restricting which of the ~350 Linux system calls they may make. OpenShift applies the RuntimeDefault profile by default, blocking dangerous calls (mount, ptrace, kexec, …) so a compromised process has a far smaller kernel attack surface.",
+        interactions: [
+          'CRI-O loads the profile’s BPF program and attaches it at container exec (no_new_privs + SECCOMP_SET_MODE_FILTER).',
+          "A blocked syscall returns EPERM or kills the process, per the profile's default action.",
+          'Set per workload via spec.securityContext.seccompProfile; RuntimeDefault is the cluster default under the restricted-v2 SCC.',
+        ],
+        commands: [
+          "# Check the seccomp mode of the container's process (2 = filtered)\nPID=$(crictl inspect <container_id> | jq .info.pid)\ngrep Seccomp /proc/$PID/status",
+          "# View a Pod's requested seccomp profile\noc get pod <pod> -n <ns> -o jsonpath='{.spec.securityContext.seccompProfile}'",
+        ],
+      },
+      {
+        id: 'pod-capabilities',
+        label: 'Linux Capabilities',
+        scope: 'container',
+        description:
+          "The kernel splits root's power into ~40 distinct capabilities (CAP_NET_ADMIN, CAP_SYS_ADMIN, …); the runtime sets the container's bounding and effective sets from the Pod spec. OpenShift's restricted-v2 SCC drops ALL capabilities by default, so even a process running as uid 0 inside the container holds almost none of root's real privileges.",
+        interactions: [
+          'crun applies the cap sets from config.json after creating the namespaces and before exec — the drop happens at container start.',
+          'A dropped capability makes its guarded syscall fail with EPERM regardless of the process UID.',
+          "Workloads request extras via securityContext.capabilities.add, gated by the namespace's SCC / Pod Security admission.",
+        ],
+        commands: [
+          '# Decode the effective capability set of the container process\nPID=$(crictl inspect <container_id> | jq .info.pid)\ngrep CapEff /proc/$PID/status\n# capsh --decode=<CapEff hex value>',
         ],
       },
       {
@@ -145,7 +241,7 @@ export const PRIMITIVES_BY_TYPE = {
         id: 'cgroup-slice',
         label: 'cgroup Slice',
         description:
-          'systemd automatically places each service in its own cgroup hierarchy slice, giving the kernel a stable handle for per-service resource accounting. This is separate from the Pod cgroups managed by the container runtime above it.',
+          "systemd automatically places each service in its own cgroup hierarchy slice, giving the kernel a stable handle for per-service resource accounting. It is the host-service analogue of a Pod's cgroup slice — but parented under system.slice and supervised by PID 1 directly, never by the kubelet.",
         interactions: [
           'CPU and memory limits can be set in the unit file via CPUQuota= and MemoryMax=.',
           'All child processes forked by the service inherit the slice automatically.',
@@ -160,7 +256,7 @@ export const PRIMITIVES_BY_TYPE = {
         id: 'service-process',
         label: 'systemd Process',
         description:
-          'The long-running kernel process spawned by systemd. Unlike a containerised process it runs directly in the host\'s root PID namespace (unless explicitly sandboxed) and communicates with the kernel via direct syscalls, netlink sockets, and device files.',
+          "The long-running kernel process spawned by systemd. Unlike a containerised process it runs directly in the host's root PID, network, and mount namespaces (unless a unit opts into sandboxing via PrivateTmp=, ProtectSystem=, or NetworkNamespacePath=) and communicates with the kernel via direct syscalls, netlink sockets, and device files.",
         interactions: [
           'Writes structured log lines to the systemd journal (journalctl -u).',
           'Communicates with the kernel via netlink, ioctls, and /proc without a container shim.',
@@ -228,6 +324,21 @@ export const PRIMITIVES_BY_TYPE = {
           '# Verify OVS port for the tap\novs-vsctl show | grep -A3 tap0',
         ],
       },
+      {
+        id: 'vmi-tap',
+        label: 'tap0 / k6t-eth0 Bridge',
+        description:
+          "The guest's virtual NIC at the kernel level: QEMU's tap0 device sits on a Pod-local Linux bridge (k6t-eth0) inside the virt-launcher Pod. With KubeVirt's default masquerade binding the guest gets a private link to that bridge, NATed onto the launcher Pod's own eth0 — the veth that plugs into the host OVS br-int — so the VM rides the same OVN overlay as ordinary Pods without exposing its MAC to the node network.",
+        interactions: [
+          'virt-launcher creates the k6t-eth0 bridge and the tap0 device, then hands tap0’s file descriptor to QEMU.',
+          'vhost-net moves packets between the virtio ring and tap0; masquerade NAT rules bridge tap0 ↔ the Pod’s eth0.',
+          "From the host OVS view the VM is just the launcher Pod's veth port on br-int — the guest IP is hidden behind the Pod IP.",
+        ],
+        commands: [
+          '# Show the tap device and pod-local bridge (inside the launcher pod)\noc exec -n <hcp-namespace> <launcher-pod> -- ip link show tap0\noc exec -n <hcp-namespace> <launcher-pod> -- bridge link',
+          '# Match the launcher Pod veth to its OVS port on the host\novs-vsctl show | grep -A3 <pod-veth>',
+        ],
+      },
     ],
   },
 }
@@ -238,7 +349,9 @@ PRIMITIVES_BY_TYPE['Static Pod'] = PRIMITIVES_BY_TYPE.Pod
 // Convenience: the primitive component IDs that ARE the expandable entries
 // (used to suppress the section on those entries themselves)
 export const SELF_PRIMITIVE_IDS = new Set([
-  'pod-netns', 'pod-veth', 'pod-mountns', 'pod-cgroups', 'pod-selinux', 'container-process',
+  'pod-netns', 'pod-veth', 'pod-ipcns', 'pod-utsns', 'pod-cgroup-slice',
+  'pod-mountns', 'pod-pidns', 'pod-cgroups', 'pod-selinux', 'pod-seccomp',
+  'pod-capabilities', 'container-process',
   'systemd-unit', 'cgroup-slice', 'service-process',
-  'kvm-vcpu', 'qemu-process', 'vhost-net',
+  'kvm-vcpu', 'qemu-process', 'vhost-net', 'vmi-tap',
 ])

@@ -224,7 +224,9 @@ function podBands(component) {
     }
     enrich('pod-netns', kernelRealization.networkNamespace)
     enrich('pod-mountns', kernelRealization.mountNamespace)
-    enrich('pod-cgroups', kernelRealization.cgroupPath)
+    // cgroupPath in the data is the *Pod-level* slice (kubepods.slice/pod<uid>/),
+    // so it grounds the Pod cgroup slice — the per-container cgroup is a child of it.
+    enrich('pod-cgroup-slice', kernelRealization.cgroupPath)
   }
   // Split the canonical Pod primitives along the boundary the kernel actually
   // enforces (the `scope` field in PRIMITIVES_BY_TYPE): the network namespace
