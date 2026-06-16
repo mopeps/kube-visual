@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import NodeCard from './NodeCard'
 
 // A network-mode component box that opens *in place* to show its own internal
@@ -28,6 +29,12 @@ export default function PrimitiveBoxCard({
 }) {
   const domId = `${idPrefix}${colIndex}-${node.id}`
   const subId = (id) => `${idPrefix}${colIndex}-${id}`
+
+  // The namespace frame currently lit by a process membership chip — hover sets
+  // the transient one, a click pins it (so touch users get the highlight too).
+  const [hoverNs, setHoverNs] = useState(null)
+  const [pinNs, setPinNs] = useState(null)
+  const activeNs = hoverNs || pinNs
 
   // An interface/port (variant: 'iface') is no longer a full card stacked inside
   // its bridge — it's a small pill tab docked on the bridge's bottom rim, so it
@@ -105,6 +112,55 @@ export default function PrimitiveBoxCard({
     )
   }
 
+  // The process card carries a row of namespace-membership chips: the process
+  // isn't "inside" one namespace, it's a member of several at once. Each chip
+  // lights up the frame of the namespace it joins on hover/focus (and pins it on
+  // click for touch), making the orthogonal process↔namespace relationship legible
+  // — the [mnt] chip → the mount-ns box (which holds the rootfs) is the
+  // "this process sees those files" link.
+  const renderProcess = (b) => {
+    const accent = `var(--${b.colorVar || 'k-green'})`
+    return (
+      <div
+        key={b.id}
+        id={subId(b.id)}
+        role="button"
+        tabIndex={0}
+        className="node primitive-process"
+        style={{ '--node-accent': accent }}
+        onClick={(e) => { e.stopPropagation(); onSelectBox(b) }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onSelectBox(b) }
+        }}
+      >
+        {b.typePrefix && (
+          <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>[{b.typePrefix}]</span>
+        )}
+        <div className="node-title" style={{ color: accent }}>{b.title}</div>
+        {b.caption && <div className="node-subtitle">{b.caption}</div>}
+        <div className="primitive-memberships">
+          <span className="primitive-memberships-lead">member of</span>
+          {b.memberships.map((m) => (
+            <button
+              key={m.tag}
+              type="button"
+              className={`primitive-membership ${m.boxId === activeNs ? 'is-active' : ''}`}
+              style={{ '--node-accent': `var(--${m.colorVar})` }}
+              onMouseEnter={() => setHoverNs(m.boxId)}
+              onMouseLeave={() => setHoverNs(null)}
+              onFocus={() => setHoverNs(m.boxId)}
+              onBlur={() => setHoverNs(null)}
+              onClick={(e) => { e.stopPropagation(); setPinNs((p) => (p === m.boxId ? null : m.boxId)) }}
+              title={`${m.tag}${m.tag === 'cgroup' ? '' : ' namespace'} · ${m.view} — hover to find its box`}
+            >
+              {m.tag}
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   // A box may nest child boxes (ports drawn ON a bridge, rows INSIDE the NB DB).
   // Leaf → a plain NodeCard; container → a framed box with a clickable header.
   // A cgroup 'envelope' or a namespace 'ns' is always a frame even when it nests
@@ -115,6 +171,7 @@ export default function PrimitiveBoxCard({
   const renderBox = (b) => {
     const accent = `var(--${b.colorVar || 'k-amber'})`
     if (b.variant === 'guard') return renderGuard(b)
+    if (b.memberships?.length) return renderProcess(b)
     if (b.children?.length || b.variant === 'ns' || b.variant === 'envelope') {
       const kids = b.children || []
       const ports = kids.filter((c) => c.variant === 'iface')
@@ -123,7 +180,7 @@ export default function PrimitiveBoxCard({
         <div
           key={b.id}
           id={subId(b.id)}
-          className={`primitive-nest ${b.variant ? `primitive-nest--${b.variant}` : ''} ${ports.length ? 'primitive-nest--has-ports' : ''} ${b.realized ? 'primitive-realized' : ''}`}
+          className={`primitive-nest ${b.variant ? `primitive-nest--${b.variant}` : ''} ${ports.length ? 'primitive-nest--has-ports' : ''} ${b.realized ? 'primitive-realized' : ''} ${b.id === activeNs ? 'is-ns-hl' : ''}`}
           style={{ '--node-accent': accent }}
         >
           <button

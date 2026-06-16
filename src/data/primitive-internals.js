@@ -75,10 +75,10 @@ const META = {
 // how the Pod cgroup slice is the Pod's outer boundary). Its detail folds in the
 // per-container cgroup explore commands.
 const CONTAINER_BOX = {
-  id: 'container', title: 'container', tag: 'container', colorVar: 'k-teal',
-  caption: 'cgroup-bounded · its own mount + PID ns',
+  id: 'container', title: 'container cgroup', tag: 'cgroup', colorVar: 'k-teal',
+  caption: 'under the Pod slice · its own mount + PID ns',
   detail: {
-    role: 'CONTAINER · CGROUP-BOUNDED',
+    role: 'CONTAINER CGROUP',
     summary:
       "One container in the Pod, drawn as its own cgroup boundary: crun creates its cgroup nested under the Pod slice (kubepods.slice/…/crio-<id>) with its own CPU/memory limits, gives it a private mount and PID namespace, and applies the SELinux label, seccomp filter, and capability set — then execs the entrypoint as PID 1. It joins the network, IPC, and UTS namespaces the pause (sandbox) container already holds open, so every container in the Pod shares one network identity.",
     sections: [
@@ -89,6 +89,21 @@ const CONTAINER_BOX = {
     ],
   },
 }
+// The PID-1 process is not "inside" one namespace — it holds one membership per
+// namespace type at once and sits at their intersection. We surface that as a row
+// of membership chips on the process card: each points at the box of the
+// namespace it joins, so hovering a chip lights up that frame (the [mnt] chip →
+// the mount-ns box that holds the rootfs is the "this process sees those files"
+// link). `view` is the lens that namespace grants the process.
+const POD_PROCESS_NS = [
+  { tag: 'mnt',    ref: 'pod-mountns', view: 'sees its files',  colorVar: 'k-purple' },
+  { tag: 'pid',    ref: 'pod-pidns',   view: 'is PID 1',        colorVar: 'k-purple' },
+  { tag: 'net',    ref: 'pod-netns',   view: 'binds sockets',   colorVar: 'k-purple' },
+  { tag: 'ipc',    ref: 'pod-ipcns',   view: 'shares /dev/shm', colorVar: 'k-purple' },
+  { tag: 'uts',    ref: 'pod-utsns',   view: 'its hostname',    colorVar: 'k-purple' },
+  { tag: 'cgroup', ref: 'container',   view: 'resource caps',   colorVar: 'k-teal' },
+]
+
 // What the mount namespace isolates: the container's private filesystem view.
 const ROOTFS_BOX = {
   id: 'rootfs', title: 'overlayfs /', tag: 'rootfs', colorVar: 'k-sky',
@@ -159,7 +174,7 @@ const LAYOUT_BY_TYPE = {
             { synthetic: ROOTFS_BOX },
           ] },
           { id: 'pod-pidns', variant: 'ns', children: [
-            'container-process',
+            { id: 'container-process', memberships: POD_PROCESS_NS },
             { synthetic: LISTEN_SOCKET_BOX, variant: 'socket' },
           ] },
         ] },
@@ -208,6 +223,12 @@ const buildBox = (ctx, id, opts = {}) => {
     variant: opts.variant,
     colorVar: meta.colorVar,
     caption,
+    // Resolve each namespace membership to the DOM-stable id of its target box
+    // so the renderer can highlight that frame when the chip is hovered.
+    memberships: opts.memberships?.map((m) => ({
+      tag: m.tag, view: m.view, colorVar: m.colorVar,
+      boxId: `${ctx.componentId}__${m.ref}`,
+    })),
     detail: { role: item.label.toUpperCase(), summary: item.description, sections },
   }
 }
@@ -233,7 +254,7 @@ const buildNode = (spec, ctx) => {
     return box
   }
 
-  const box = buildBox(ctx, spec.id, { title: spec.title, variant: spec.variant })
+  const box = buildBox(ctx, spec.id, { title: spec.title, variant: spec.variant, memberships: spec.memberships })
   if (box && spec.children) box.children = spec.children.map((c) => buildNode(c, ctx)).filter(Boolean)
   return box
 }
