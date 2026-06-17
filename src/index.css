@@ -195,11 +195,15 @@ body::after {
 @media (max-width: 640px) {
   .overview-canvas {
     gap: 4px;
-    padding: 4px;
+    padding: 2px;
   }
 
   .zone-content {
-    padding: 12px 14px;
+    padding: 10px 8px;
+  }
+
+  .zone--nested > .zone-content {
+    padding: 8px 6px;
   }
 
   .zone-content-inner {
