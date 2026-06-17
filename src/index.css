@@ -199,7 +199,7 @@ body::after {
   }
 
   .zone-content {
-    padding: 12px 14px;
+    padding: 8px 8px;
   }
 
   .zone-content-inner {
@@ -227,6 +227,20 @@ body::after {
 /* Reduce padding at depth > 0 so nested zones don't balloon */
 .zone--nested > .zone-content {
   padding: 12px 14px;
+}
+
+@media (max-width: 640px) {
+  .zone--nested > .zone-content {
+    padding: 6px;
+  }
+
+  .zone:has(> .zone-content > .zone-content-inner > .zone--nested) > .zone-content {
+    padding: 4px;
+  }
+
+  .zone--nested > .zone-content > .zone-content-inner {
+    gap: 6px;
+  }
 }
 
 /* ── Column zones ──────────────────────────────────────────────────────
@@ -767,10 +781,18 @@ body::after {
 }
 
 @media (max-width: 640px) {
-  /* Two intent objects per row on mobile. Gap is 10px, so each takes half
+  .intent-store-expanded {
+    padding: 10px 10px 9px;
+  }
+
+  .intent-store-objects {
+    gap: 8px;
+  }
+
+  /* Two intent objects per row on mobile. Gap is 8px, so each takes half
      the row minus half the gap; min-width:0 lets them shrink past content. */
   .intent-object {
-    flex: 1 1 calc(50% - 5px);
+    flex: 1 1 calc(50% - 4px);
     min-width: 0;
   }
   /* Long-named objects don't fit at half-width, so they take their own full
