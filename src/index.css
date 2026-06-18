@@ -195,11 +195,11 @@ body::after {
 @media (max-width: 640px) {
   .overview-canvas {
     gap: 4px;
-    padding: 4px;
+    padding: 2px;
   }
 
   .zone-content {
-    padding: 12px 14px;
+    padding: 12px 8px;
   }
 
   .zone-content-inner {
@@ -227,6 +227,12 @@ body::after {
 /* Reduce padding at depth > 0 so nested zones don't balloon */
 .zone--nested > .zone-content {
   padding: 12px 14px;
+}
+
+@media (max-width: 640px) {
+  .zone--nested > .zone-content {
+    padding-inline: 8px;
+  }
 }
 
 /* ── Column zones ──────────────────────────────────────────────────────
@@ -975,10 +981,14 @@ body::after {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   /* Reserve the floating chrome's height up top so content starts just below
-     it; the 12px sides replace the inset the shell padding used to give. A
+     it; the 6px sides keep compact content close to the viewport edge. A
      little room at the bottom to scroll past the last object. */
-  padding: var(--compact-chrome-h, 0px) 12px 4rem;
+  padding: var(--compact-chrome-h, 0px) 6px 4rem;
+  /* Keep the compact canvas visually centred. The pane still scrolls, but its
+     scrollbar no longer adds an extra gutter on the right. */
+  scrollbar-width: none;
 }
+.swipe-pane::-webkit-scrollbar { width: 0; height: 0; }
 /* Let wide code blocks scroll horizontally without arming the pager. */
 .swipe-viewport pre.code-block { touch-action: pan-x; }
 
