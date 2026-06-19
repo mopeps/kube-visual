@@ -405,8 +405,8 @@ export function buildPrimitiveInternals(node) {
   const layout = LAYOUT_BY_TYPE[key]
   if (!set || !layout) return null
 
-  const component = findComponent(node?.id)
-  const componentId = node?.id || component?.componentId
+  const component = findComponent(node?.mirror || node?.id)
+  const componentId = node?.mirror || node?.id || component?.componentId
   const linuxPrimitive = component?.linuxPrimitive || node?.linuxPrimitive
   const ctx = { componentId, component, byId: new Map(set.items.map((i) => [i.id, i])), linuxPrimitive }
 

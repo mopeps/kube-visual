@@ -53,7 +53,8 @@ export const NETWORK_CONTROL_PLANE_IDS = new Set([
 // rendered in Big view anyway.)
 export const isNetworkComponent = (node) => {
   if (!node) return false
-  if (NETWORK_CONTROL_PLANE_IDS.has(node.id)) return true
-  const role = findComponent(node.id)?.role
+  const id = node.mirror || node.id
+  if (NETWORK_CONTROL_PLANE_IDS.has(id)) return true
+  const role = findComponent(id)?.role
   return role ? NETWORK_ROLES.has(role) : false
 }

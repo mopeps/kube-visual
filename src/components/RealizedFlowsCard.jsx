@@ -102,7 +102,7 @@ export default function RealizedFlowsCard({
           type="button"
           className="intent-store-title"
           style={{ color }}
-          onClick={(e) => { e.stopPropagation(); onSelectComponent(node.id) }}
+          onClick={(e) => { e.stopPropagation(); onSelectComponent(node.mirror || node.id) }}
           title="Open Open vSwitch details"
         >
           {node.typePrefix !== 'Pod' && (
@@ -142,7 +142,7 @@ export default function RealizedFlowsCard({
               id={obj.id}
               className={`intent-object ${isWide ? 'intent-object--wide' : ''} ${obj.id === highlightId ? 'is-highlighted' : ''}`}
               style={{ '--node-accent': color }}
-              onClick={(e) => { e.stopPropagation(); onSelectComponent(obj.id) }}
+              onClick={(e) => { e.stopPropagation(); onSelectComponent(obj.mirror || obj.id) }}
               title={`Open ${obj.title} details`}
             >
               <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>

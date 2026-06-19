@@ -28,6 +28,7 @@ export default function NodeCard({
   // Optional hover/focus handlers (Primitives mode spreads cross-highlight
   // handlers here so a leaf mount like /proc can light its PID-ns frame).
   hoverProps,
+  replicaBadge,
 }) {
   return (
     <div
@@ -68,6 +69,11 @@ export default function NodeCard({
       )}
       <div className="node-title" style={{ color }}>{title}</div>
       {subtitle && <div className="node-subtitle">{subtitle}</div>}
+      {replicaBadge && (
+        <div className="node-badges">
+          <span className="node-badge node-badge--static" style={{ color }}>{replicaBadge}</span>
+        </div>
+      )}
       {badges?.length > 0 && (
         <div className="node-badges">
           {badges.map((b) => (

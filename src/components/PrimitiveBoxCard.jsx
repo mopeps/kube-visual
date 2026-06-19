@@ -325,6 +325,7 @@ export default function PrimitiveBoxCard({
           <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>[{node.typePrefix}]</span>
         )}
         <div className="node-title" style={{ color }}>{node.title}</div>
+        {node.replicaBadge && <div className="node-replica-label" style={{ color }}>{node.replicaBadge}</div>}
         {hint && (
           <div className="intent-store-hint" style={{ color }}>
             {hint}
@@ -346,7 +347,7 @@ export default function PrimitiveBoxCard({
           type="button"
           className="intent-store-title"
           style={{ color }}
-          onClick={(e) => { e.stopPropagation(); onSelectComponent(node.id) }}
+          onClick={(e) => { e.stopPropagation(); onSelectComponent(node.mirror || node.id) }}
           title={`Open ${node.title} details`}
         >
           {node.typePrefix !== 'Pod' && (
@@ -355,6 +356,7 @@ export default function PrimitiveBoxCard({
             </span>
           )}
           {node.title}
+          {node.replicaBadge && <span className="node-replica-label">{node.replicaBadge}</span>}
           <span className="intent-store-info" aria-hidden="true">ⓘ</span>
         </button>
         <button

@@ -10,44 +10,88 @@
 // detail popup at the canonical component's metadata, since the software is
 // identical to the primary node's. Shown only when "All nodes" is toggled on
 // (or the network overlay is active). See OverviewTab's renderZone.
-function replicaNode({ id, title, colorVar, kind }) {
+function replicaCard(id, title, typePrefix, mirror, color, extra = {}) {
+  return { id, title, typePrefix, mirror, badges: [], ...extra,
+    replicaBadge: extra.replicaBadge,
+    color,
+  }
+}
+
+function guestRealizations(suffix, color) {
+  return [
+    replicaCard(`svc-frontend-${suffix}-flow`, 'Front-End LB flow', 'LB flow', 'svc-frontend', color),
+    replicaCard(`svc-backend-${suffix}-flow`, 'Back-End LB flow', 'LB flow', 'svc-backend', color),
+    replicaCard(`netpol-ecommerce-${suffix}-flow`, 'E-Commerce ACL flow', 'ACL flow', 'netpol-ecommerce', color),
+    replicaCard(`svc-router-${suffix}-flow`, 'Router LB flow', 'LB flow', 'svc-router-internal-default', color),
+  ]
+}
+
+function guestReplicaZone({ hostId, ordinal, colorVar }) {
+  const color = `var(--${colorVar})`
+  const suffix = hostId
+  const workerNodes = [
+    replicaCard(`kubelet-guest-${suffix}`, 'Kubelet', 'systemd', 'kubelet-guest', color),
+    replicaCard(`crio-guest-${suffix}`, 'CRI-O', 'systemd', 'crio-guest', color),
+    replicaCard(`ovn-node-guest-${suffix}`, 'OVN-K8s Node', 'Pod', 'ovn-node-guest', color, { programs: `ovs-guest-${suffix}` }),
+    replicaCard(`ovs-guest-${suffix}`, 'Open vSwitch', 'systemd', 'ovs-guest', color, { realizes: guestRealizations(suffix, color) }),
+    replicaCard(`konnectivity-agent-${suffix}`, 'Konnectivity Agent', 'Pod', 'konnectivity-agent', color),
+    replicaCard(`coredns-node-${suffix}`, 'CoreDNS Node', 'Pod', 'coredns-node', color),
+    replicaCard(`multus-guest-${suffix}`, 'Multus CNI', 'Pod', 'multus-guest', color),
+    replicaCard(`tuned-guest-${suffix}`, 'Node Tuning (TuneD)', 'Pod', 'tuned-guest', color),
+    replicaCard(`csi-node-guest-${suffix}`, 'CSI Node Driver', 'Pod', 'csi-node-guest', color),
+    replicaCard(`frontend-application-pod-${suffix}`, 'Front-End Application', 'Pod', 'frontend-application-pod', color, { replicaBadge: `replica ${ordinal}/3` }),
+    replicaCard(`backend-application-pod-${suffix}`, 'Back-End Application', 'Pod', 'backend-application-pod', color, { replicaBadge: `replica ${ordinal}/3` }),
+  ]
+  return {
+    id: `guest-vm-zone-${suffix}`,
+    componentId: `guest-worker-node-vm-${suffix}`,
+    mirrorComponentId: 'guest-worker-node-vm',
+    label: `Worker Node ${ordinal} · VirtualMachineInstance`,
+    color,
+    colorVar,
+    nodes: workerNodes,
+  }
+}
+
+function replicaNode({ id, title, colorVar, kind, ordinal }) {
   const c = `var(--${colorVar})`
-  const canon = kind === 'master'
-    ? { ovs: 'ovs-master', ovn: 'ovn-node-master', mlb: 'metallb-speaker-master' }
-    : { ovs: 'ovs-host', ovn: 'ovn-node-host', mlb: 'metallb-speaker-worker' }
+  const isMaster = kind === 'master'
+  const nodes = isMaster
+    ? [
+        replicaCard(`kubelet-${id}`, 'Kubelet', 'systemd', 'kubelet-master', c),
+        replicaCard(`crio-${id}`, 'CRI-O', 'systemd', 'crio-master', c),
+        replicaCard(`ovn-node-${id}`, 'OVN-K8s Node', 'Pod', 'ovn-node-master', c, { programs: `ovs-${id}` }),
+        replicaCard(`ovs-${id}`, 'Open vSwitch', 'systemd', 'ovs-master', c),
+        replicaCard(`metallb-${id}`, 'MetalLB Speaker', 'Pod', 'metallb-speaker-master', c),
+        replicaCard(`mgmt-kube-apiserver-${id}`, 'Kube API Server', 'Static Pod', 'mgmt-kube-apiserver', c),
+        replicaCard(`mgmt-etcd-${id}`, 'Etcd', 'Static Pod', 'mgmt-etcd', c),
+        replicaCard(`mgmt-controller-manager-${id}`, 'Controller Manager', 'Static Pod', 'mgmt-controller-manager', c),
+        replicaCard(`mgmt-scheduler-${id}`, 'Scheduler', 'Static Pod', 'mgmt-scheduler', c),
+      ]
+    : [
+        replicaCard(`kubelet-${id}`, 'Kubelet', 'systemd', 'kubelet-host', c),
+        replicaCard(`crio-${id}`, 'CRI-O', 'systemd', 'crio-host', c),
+        replicaCard(`ovn-node-${id}`, 'OVN-K8s Node', 'Pod', 'ovn-node-host', c, { programs: `ovs-${id}` }),
+        replicaCard(`ovs-${id}`, 'Open vSwitch', 'systemd', 'ovs-host', c),
+        replicaCard(`metallb-${id}`, 'MetalLB Speaker', 'Pod', 'metallb-speaker-worker', c),
+        replicaCard(`virt-handler-${id}`, 'KubeVirt virt-handler', 'Pod', 'virt-handler', c),
+      ]
   return {
     id,
     label: title,
     color: c,
     colorVar,
-    replica: true,
-    nodes: [
-      {
-        id: `ovn-node-${id}`,
-        title: 'OVN-K8s Node',
-        typePrefix: 'Pod',
-        programs: `ovs-${id}`,
-        mirror: canon.ovn,
-        badges: [{ label: 'CNI', color: c }],
-      },
-      {
-        id: `ovs-${id}`,
-        title: 'Open vSwitch',
-        typePrefix: 'systemd',
-        mirror: canon.ovs,
-        badges: [
-          { label: 'br-int', color: c },
-          { label: 'OpenFlow', color: c },
-        ],
-      },
-      {
-        id: `metallb-${id}`,
-        title: 'MetalLB Speaker',
-        typePrefix: 'Pod',
-        mirror: canon.mlb,
-        badges: [{ label: 'ARP/NDP', color: c }],
-      },
-    ],
+    modeledReplica: true,
+    nodes,
+    zones: isMaster ? [] : [{
+      id: `kubevirt-launcher-zone-${id}`,
+      componentId: `kubevirt-launcher-${id}`,
+      mirrorComponentId: 'kubevirt-launcher',
+      label: `KubeVirt Launcher ${ordinal} · Pod`,
+      color: 'var(--k-teal)',
+      colorVar: 'k-teal',
+      zones: [guestReplicaZone({ hostId: id, ordinal, colorVar: 'k-green' })],
+    }],
   }
 }
 
@@ -88,8 +132,8 @@ export const ZONES = [
         // render as condensed-but-real node zones after this one (replicaNode),
         // carrying just the inter-node network data plane.
         replicaNodes: [
-          replicaNode({ id: 'master-2', title: 'master-2', colorVar: 'k-blue', kind: 'master' }),
-          replicaNode({ id: 'master-3', title: 'master-3', colorVar: 'k-blue', kind: 'master' }),
+          replicaNode({ id: 'master-2', title: 'master-2', colorVar: 'k-blue', kind: 'master', ordinal: 2 }),
+          replicaNode({ id: 'master-3', title: 'master-3', colorVar: 'k-blue', kind: 'master', ordinal: 3 }),
         ],
         // The master node's own host-level agents — the same node stack every
         // bare metal node runs (mirrors the worker node), distinct from the
@@ -831,8 +875,8 @@ export const ZONES = [
         colorVar: 'k-blue-worker',
         // Three workers in the cluster; two condensed replica nodes (see master-node).
         replicaNodes: [
-          replicaNode({ id: 'worker-2', title: 'worker-2', colorVar: 'k-blue-worker', kind: 'worker' }),
-          replicaNode({ id: 'worker-3', title: 'worker-3', colorVar: 'k-blue-worker', kind: 'worker' }),
+          replicaNode({ id: 'worker-2', title: 'worker-2', colorVar: 'k-blue-worker', kind: 'worker', ordinal: 2 }),
+          replicaNode({ id: 'worker-3', title: 'worker-3', colorVar: 'k-blue-worker', kind: 'worker', ordinal: 3 }),
         ],
         nodes: [
           {
@@ -1090,6 +1134,7 @@ export const ZONES = [
                     id: 'frontend-application-pod',
                     title: 'Front-End Application',
                     typePrefix: 'Pod',
+                    replicaBadge: 'replica 1/3',
                     badges: [
                       { label: 'e-commerce-prod', color: 'var(--k-green)' },
                       { label: ':8080', color: 'var(--k-green)' },
@@ -1099,6 +1144,7 @@ export const ZONES = [
                     id: 'backend-application-pod',
                     title: 'Back-End Application',
                     typePrefix: 'Pod',
+                    replicaBadge: 'replica 1/3',
                     badges: [
                       { label: 'e-commerce-prod', color: 'var(--k-green)' },
                       { label: ':3000', color: 'var(--k-green)' },

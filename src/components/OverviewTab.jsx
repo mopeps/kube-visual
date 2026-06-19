@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ZONES, INTENT_OBJECT_STORE, CONTROLLER_PARENT, OPERATOR_PARENT, FLOW_PARENT } from '../data/zones'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
@@ -139,9 +139,6 @@ export default function OverviewTab({
   // Primitives mode: a one-up overview where each runtime instance opens in
   // place to its Linux kernel primitives. Collapsed by default.
   primOverlay = false,
-  // Whether the condensed replica nodes (master-2/3, worker-2/3) are shown —
-  // off by default so the main overview stays clean.
-  showReplicas = false,
 }) {
   const canvasRef = useRef(null)
   const [expandedStoreId, setExpandedStoreId] = useState(null)
@@ -175,7 +172,7 @@ export default function OverviewTab({
   // of the expand-in-place cards (etcd store / controller set / operator set /
   // OVS realized flows) or a mirrored replica — those keep their own behaviour.
   const isPrimDrillable = (node) =>
-    isRuntimeInstance(node) && !node.mirror &&
+    isRuntimeInstance(node) &&
     !node.intentObjects && !node.controllers && !node.operators && !node.realizes
   // Optional "connectors only on hover" mode: when on, the wiring lines are
   // hidden until you point at a box. Independently, the descriptor LABELS are
@@ -323,7 +320,7 @@ export default function OverviewTab({
   const collectPrimDrillable = (zone, ids = []) => {
     zone.nodes?.forEach((n) => { if (isPrimDrillable(n)) ids.push(n.id) })
     zone.zones?.forEach((z) => collectPrimDrillable(z, ids))
-    zone.replicaNodes?.forEach((z) => collectPrimDrillable(z, ids))
+    if (bigView) zone.replicaNodes?.forEach((z) => collectPrimDrillable(z, ids))
     return ids
   }
   const primDrillableIds = primOverlay ? visibleZones.flatMap((z) => collectPrimDrillable(z)) : []
@@ -332,17 +329,19 @@ export default function OverviewTab({
 
   function renderNode(node, zone, colIndex = 0) {
     const { isActive, isOnPath, isDimmed } = traceStates(node.id)
+    const canonicalId = node.mirror || node.id
     // Network mode: a drillable component opens in place to show its own internal
     // primitives + integrations inside its own box (never a zone). Takes
     // precedence over the other expand cards (e.g. ovs-guest's realized flows).
-    if (netOverlay && INTERNAL_TOPOLOGY[node.id]) {
+    if (netOverlay && INTERNAL_TOPOLOGY[canonicalId]) {
       return (
         <PrimitiveBoxCard
           key={node.id}
           node={node}
-          internal={INTERNAL_TOPOLOGY[node.id]}
+          internal={INTERNAL_TOPOLOGY[canonicalId]}
           colIndex={colIndex}
           color={zone.color}
+          domIdOverride={`nt-c${colIndex}-${canonicalId}`}
           isOpen={!netCollapsedIds.has(node.id)}
           onToggle={() => toggleNetCollapse(node.id)}
           onSelectComponent={onSelectComponent}
@@ -462,7 +461,7 @@ export default function OverviewTab({
         // namespaced per column to stay unique (integration edges anchor to them);
         // the normal canvas keeps the raw componentId.
         id={netOverlay
-          ? `nt-c${colIndex}-${node.id}`
+          ? `nt-c${colIndex}-${canonicalId}`
           : primOverlay && bigView
             ? `pr-c${colIndex}-${node.id}`
             : node.id}
@@ -481,8 +480,9 @@ export default function OverviewTab({
         // below them (wired by a "configures" edge). `net-control-plane` re-shows
         // the subtitle (hidden for other net cards) and draws the card dashed =
         // not the realized datapath.
-        subtitle={netOverlay && NETWORK_CONTROL_PLANE_IDS.has(node.id) ? 'control plane · configures' : undefined}
-        className={netOverlay && NETWORK_CONTROL_PLANE_IDS.has(node.id) ? 'net-control-plane' : undefined}
+        subtitle={netOverlay && NETWORK_CONTROL_PLANE_IDS.has(canonicalId) ? 'control plane · configures' : undefined}
+        className={netOverlay && NETWORK_CONTROL_PLANE_IDS.has(canonicalId) ? 'net-control-plane' : undefined}
+        replicaBadge={node.replicaBadge}
         // Open the canonical component's modal regardless of the (possibly
         // namespaced) DOM id — a replica mirrors its canonical component.
         onClick={() => onSelectComponent(node.mirror || node.id)}
@@ -562,7 +562,9 @@ export default function OverviewTab({
         isHighlighted={zone.componentId ? zone.componentId === highlightId : false}
         onClick={isReplica
           ? () => { setNetSheet(null); setReplica({ title: zone.label, zone: parentZone }) }
-          : onSelectComponent}
+          : zone.mirrorComponentId
+            ? () => onSelectComponent(zone.mirrorComponentId)
+            : onSelectComponent}
       >
         {/* Nodes in this zone (Service→target pairs stacked together) */}
         {renderZoneNodes(zone, colIndex)}
@@ -570,18 +572,7 @@ export default function OverviewTab({
         {zone.zones?.map(child => renderZone(child, depth + 1, null, colIndex))}
       </Zone>
     )
-    if (!zone.replicaNodes?.length || !showReplicas) return zoneEl
-    // The zone's condensed siblings (master-2/3, worker-2/3) trail it as a row
-    // of real node zones — same border/label as the primary, but holding only
-    // the inter-node network plane (OVN-K8s Node → Open vSwitch, MetalLB).
-    return (
-      <Fragment key={zone.id}>
-        {zoneEl}
-        <div className="replica-row">
-          {zone.replicaNodes.map((rz) => renderZone(rz, depth, zone))}
-        </div>
-      </Fragment>
-    )
+    return zoneEl
   }
 
   // Edge-label clicks on the network overlay open the shared sheet (displacing
@@ -614,8 +605,21 @@ export default function OverviewTab({
   // `networkOnly` (Network mode) prunes the tree to network components first —
   // see filterNetworkZone. The normal/big-view paths pass nothing and render the
   // full stack.
+  const zonesForColumn = (colIndex) => {
+    if (colIndex === 0) return visibleZones
+    const replicaIndex = colIndex - 1
+    return visibleZones.flatMap((zone) => {
+      if (!zone.hideWrapper) return []
+      return (zone.zones ?? [])
+        .map((child) => child.replicaNodes?.[replicaIndex])
+        .filter(Boolean)
+    })
+  }
+
   const renderOverviewStack = (networkOnly = false, colIndex = 0) =>
-    (networkOnly ? visibleZones.map(filterNetworkZone).filter(Boolean) : visibleZones)
+    (networkOnly
+      ? zonesForColumn(colIndex).map(filterNetworkZone).filter(Boolean)
+      : zonesForColumn(colIndex))
       .flatMap(zone =>
         zone.hideWrapper
           ? [
@@ -638,30 +642,23 @@ export default function OverviewTab({
     <>
       {columnsView && (
         <div className="net-bar">
-          <span className="net-bar-label">{netOverlay ? 'Network map' : primOverlay ? 'Primitives' : 'Big view'}</span>
+          <span className="net-bar-label">{netOverlay ? 'Network' : 'Architecture'}</span>
           {netOverlay && (
             <button type="button" className="net-bar-btn" onClick={toggleAllNet}>
               {allNetCollapsed ? 'Expand all' : 'Collapse all'}
             </button>
-          )}
-          {primOverlay && !bigView && (
-            <ArrowOverlay
-              activeEvent={activeEvent}
-              canvasRef={canvasRef}
-              activeStep={activeStep}
-              onSelectStep={onSelectStep}
-            />
           )}
           {primOverlay && (
             <button type="button" className="net-bar-btn" onClick={toggleAllPrim}>
               {allPrimExpanded ? 'Collapse all' : 'Expand all'}
             </button>
           )}
-          {primOverlay && (
+          {primOverlay && !bigView && (
             <span className="net-bar-hint">
               Each Pod / systemd / VMI opens in place to its Linux kernel primitives — click a card to drill in.
             </span>
           )}
+          {primOverlay && bigView && <span className="net-bar-hint">Modeled placement · three masters · three workers</span>}
           {netOverlay && (
             <button
               type="button"
@@ -710,6 +707,14 @@ export default function OverviewTab({
               signal={null}
               onSelectEdge={selectNetEdge}
               idPrefix=""
+            />
+          )}
+          {primOverlay && (
+            <ArrowOverlay
+              activeEvent={activeEvent}
+              canvasRef={canvasRef}
+              activeStep={activeStep}
+              onSelectStep={onSelectStep}
             />
           )}
         </div>

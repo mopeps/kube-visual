@@ -128,22 +128,9 @@ export default function App() {
     try { localStorage.setItem(SCOPE_KEY, nodeScope) } catch { /* ignore */ }
   }, [nodeScope])
   const effectiveNodeScope = supportsAllNodes ? nodeScope : 'pair'
-  const bigView = isWide && effectiveNodeScope === 'all'
+  const bigView = effectiveNodeScope === 'all'
   const netOverlay = overviewMode === 'network'
   const primOverlay = overviewMode === 'architecture'
-
-  // Condensed replica nodes (master-2/3, worker-2/3) are off by default so the
-  // main overview stays clean; a wide-desktop toggle reveals them. The network
-  // overlay anchors its per-node chips to them, so it forces them on.
-  const [replicasOpen, setReplicasOpen] = useState(() => {
-    try { return localStorage.getItem(REPLICAS_KEY) === '1' } catch { return false }
-  })
-  useEffect(() => {
-    try { localStorage.setItem(REPLICAS_KEY, replicasOpen ? '1' : '0') } catch { /* ignore */ }
-  }, [replicasOpen])
-  // Big view lays out its own three parallel node columns, so the normal
-  // canvas's trailing replica rows are suppressed there.
-  const showReplicas = isWide && replicasOpen && !bigView
 
   // When the packet flow is docked beside the overview it stops being a tab, so
   // it never lives in two places at once. Snap off it if it was active.
@@ -353,7 +340,6 @@ export default function App() {
       bigView={bigView}
       netOverlay={netOverlay}
       primOverlay={primOverlay}
-      showReplicas={showReplicas}
     />
   )
   const packetPanel = (
