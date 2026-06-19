@@ -134,7 +134,8 @@ export default function RealizedFlowsCard({
         {node.realizes.map((obj) => {
           // Long names can't fit when two boxes share a mobile row, so those
           // claim their own full-width line — readable names beat two-up.
-          const isWide = obj.title.length > 14
+          const displayTitle = obj.realizationTitle || obj.title
+          const isWide = displayTitle.length > 14
           return (
             <button
               type="button"
@@ -146,9 +147,9 @@ export default function RealizedFlowsCard({
               title={`Open ${obj.title} details`}
             >
               <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>
-                [{serviceAlias(obj) || obj.typePrefix}]
+                [{obj.realizationType || serviceAlias(obj) || obj.typePrefix}]
               </span>
-              <span className="node-title" style={{ color }}>{obj.title}</span>
+              <span className="node-title" style={{ color }}>{displayTitle}</span>
             </button>
           )
         })}

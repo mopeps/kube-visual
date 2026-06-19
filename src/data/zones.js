@@ -995,6 +995,8 @@ export const ZONES = [
                         id: 'svc-frontend',
                         title: 'Front-End Service',
                         typePrefix: 'Service',
+                        realizationType: 'LB flow',
+                        realizationTitle: 'Front-End LB flow',
                         serviceType: 'ClusterIP',
                         badges: [
                           { label: 'ClusterIP', color: 'var(--k-green)' },
@@ -1005,6 +1007,8 @@ export const ZONES = [
                         id: 'svc-backend',
                         title: 'Back-End Service',
                         typePrefix: 'Service',
+                        realizationType: 'LB flow',
+                        realizationTitle: 'Back-End LB flow',
                         serviceType: 'ClusterIP',
                         badges: [
                           { label: 'ClusterIP', color: 'var(--k-green)' },
@@ -1015,6 +1019,8 @@ export const ZONES = [
                         id: 'netpol-ecommerce',
                         title: 'E-Commerce Network Policy',
                         typePrefix: 'NWPOLICY',
+                        realizationType: 'ACL flow',
+                        realizationTitle: 'E-Commerce ACL flow',
                         badges: [
                           { label: 'frontend → backend', color: 'var(--k-green)' },
                           { label: 'OVN ACL', color: 'var(--k-green)' },
@@ -1027,6 +1033,8 @@ export const ZONES = [
                         id: 'svc-router-internal-default',
                         title: 'Router Internal Service',
                         typePrefix: 'Service',
+                        realizationType: 'LB flow',
+                        realizationTitle: 'Router LB flow',
                         serviceType: 'ClusterIP',
                         badges: [
                           { label: 'ClusterIP', color: 'var(--k-green)' },
