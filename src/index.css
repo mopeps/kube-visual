@@ -1066,7 +1066,7 @@ body::after {
 .catalogue-rows { display: flex; flex-direction: column; }
 .catalogue-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 8px;
   padding: 9px 10px;
@@ -1077,6 +1077,7 @@ body::after {
   cursor: pointer;
   color: var(--tx-bright);
 }
+.catalogue-row.has-icon { grid-template-columns: auto minmax(0, 1fr) auto auto; }
 .catalogue-row-icon,
 .obj-select-icon {
   width: 22px;

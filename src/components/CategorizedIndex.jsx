@@ -11,7 +11,7 @@ export default function CategorizedIndex({ categories, options, onSelect }) {
               {rows.map((option) => (
                 <button
                   type="button"
-                  className="catalogue-row"
+                  className={`catalogue-row ${option.icon ? 'has-icon' : ''}`}
                   key={option.id}
                   style={{ '--catalogue-accent': option.accent }}
                   onClick={() => onSelect(option)}

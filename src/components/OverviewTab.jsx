@@ -99,7 +99,7 @@ function replicaDetail(title, parentZone) {
 const isServiceLike = (node) =>
   node.typePrefix === 'Service' || node.typePrefix === 'NWPOLICY' || !!node.serviceType
 
-// Network mode (Big view): prune a zone to its network components. Keeps network
+// Network lens: prune a zone to its network components. Keeps network
 // nodes (minus the service-like ones now shown inside br-int / the NB DB);
 // surfaces the network control-plane operators out of the CPO/CVO operator-set
 // cards as standalone nodes; drops everything else and any zone that ends up
@@ -132,13 +132,12 @@ export default function OverviewTab({
   highlightId,
   onClearHighlight,
   onClearEvent,
-  // Wide-desktop only: "Big view" renders the whole overview three times in
-  // parallel columns (one per node pair).
+  // All-node scope renders three placement-aware node-pair columns/sections.
   bigView = false,
-  // On top of the big view, float the shared OVN logical core + connectors.
+  // Network lens opens and wires each rendered node's networking internals.
   netOverlay = false,
-  // Primitives mode: a one-up overview where each runtime instance opens in
-  // place to its Linux kernel primitives. Collapsed by default.
+  // Architecture lens: each runtime instance opens in place to its Linux
+  // kernel primitives. Collapsed by default.
   primOverlay = false,
 }) {
   const canvasRef = useRef(null)
@@ -212,8 +211,7 @@ export default function OverviewTab({
     const rel = (a) => a === h || a.startsWith(`${h}__`) || h.startsWith(`${a}__`)
     return rel(e.from) || rel(e.to)
   }
-  // Below wide, network mode renders a single pair-column, so it only wires that
-  // one column's edges; the big view wires all three.
+  // One-pair scope wires column zero; All nodes wires all three modeled pairs.
   const netEdges = bigView ? NETWORK_EDGES : NETWORK_EDGES_SINGLE
   const shownNetEdges = (
     !netWiresOnHover
@@ -316,7 +314,7 @@ export default function OverviewTab({
     collectZoneNodeIds(zone).some(id => activeComponentIds?.has?.(id))
   )
 
-  // Primitives mode: every drillable runtime-instance id in the visible tree,
+  // Architecture: every drillable runtime-instance id in the visible tree,
   // driving the bar's Expand-all / Collapse-all control.
   const collectPrimDrillable = (zone, ids = []) => {
     zone.nodes?.forEach((n) => { if (isPrimDrillable(n)) ids.push(n.id) })
@@ -343,14 +341,14 @@ export default function OverviewTab({
           colIndex={colIndex}
           color={zone.color}
           domIdOverride={`nt-c${colIndex}-${canonicalId}`}
-          isOpen={!netCollapsedIds.has(node.id)}
-          onToggle={() => toggleNetCollapse(node.id)}
+          isOpen={!netCollapsedIds.has(canonicalId)}
+          onToggle={() => toggleNetCollapse(canonicalId)}
           onSelectComponent={onSelectComponent}
           onSelectBox={selectNetBox}
         />
       )
     }
-    // Primitives mode: a runtime instance opens in place to its Linux kernel
+    // Architecture: a runtime instance opens in place to its Linux kernel
     // primitives (collapsed by default; no "internals" label). Built from
     // PRIMITIVES_BY_TYPE + the component's linuxPrimitive (primitive-internals.js).
     if (primOverlay && isPrimDrillable(node)) {
@@ -653,10 +651,8 @@ export default function OverviewTab({
           : [renderZone(zone, 0, null, colIndex)]
       )
 
-  // "Big view", "Network", and "Primitives" all render through the column
-  // canvas; Big/Network use three pair-columns on wide, while Network (below
-  // wide) and Primitives (always) use a single column. Plain "Single" mode keeps
-  // the one-up overview + arrow trace.
+  // Both lenses share the column canvas. One pair renders column zero; All
+  // nodes renders the three placement-aware master/worker pairs.
   const columnsView = bigView || netOverlay || primOverlay
   const cols = bigView ? NET_PAIRS : [0]
 
@@ -707,8 +703,8 @@ export default function OverviewTab({
       )}
       {columnsView ? (
         // Columns canvas: the normal canvas rendered once per node pair — three
-        // parallel columns in Big view (wide only), or a single pair-column for
-        // the network view below wide. Network mode opens each drillable component
+        // three placement-aware pair columns/sections, or a single primary pair.
+        // Network mode opens each drillable component
         // box to show its internals, wired by the integration edges
         // (network-internals.js).
         <div
