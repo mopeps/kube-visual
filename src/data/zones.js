@@ -393,7 +393,7 @@ export const ZONES = [
             label: 'Guest Control Plane Namespace',
             color: 'var(--k-sky)',
             colorVar: 'k-sky',
-            dashed: true,
+            boundaryKind: 'namespace',
             nodes: [
               {
                 id: 'control-plane-operator',

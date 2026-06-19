@@ -265,6 +265,7 @@ export default function DeepDiveCanvas({
       label={zone.label}
       color={accentOf(zone, topic)}
       dashed={zone.dashed}
+      boundaryKind={zone.boundaryKind}
       depth={depth}
       layout={zone.layout}
       bare={zone.bare}

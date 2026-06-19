@@ -29,7 +29,10 @@ export default function NodeCard({
   // handlers here so a leaf mount like /proc can light its PID-ns frame).
   hoverProps,
   replicaBadge,
+  declarative,
 }) {
+  const declarativeTypes = new Set(['Service', 'NWPOLICY', 'API Object', 'Custom Resource'])
+  const isDeclarative = declarative ?? declarativeTypes.has(typePrefix)
   return (
     <div
       id={id}
@@ -45,7 +48,7 @@ export default function NodeCard({
           onClick?.(id)
         }
       }}
-      className={`node ${variant ? `node--${variant}` : ''} ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''} ${className || ''}`}
+      className={`node ${isDeclarative ? 'node--declarative' : ''} ${variant ? `node--${variant}` : ''} ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''} ${className || ''}`}
       style={{
         '--node-accent': color,
         background: isActive

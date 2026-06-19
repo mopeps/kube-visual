@@ -236,7 +236,7 @@ export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep,
               stroke={p.color}
               strokeWidth={p.denied ? 1.4 : isSelected ? 2.4 : 1.5}
               strokeOpacity={p.denied ? 0.85 : isSelected ? 1 : 0.75}
-              strokeDasharray={p.denied ? '4 4' : '6 3'}
+              strokeDasharray={undefined}
               markerEnd={p.denied ? `url(#${blockedId})` : `url(#${markerId(p.step)})`}
             />
             {/* badge — a numbered step, or a ✕ for the denied edge (with a short

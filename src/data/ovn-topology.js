@@ -355,7 +355,7 @@ const nodeZone = (w, pods) => {
     id: `ovn-${w.id}-node`,
     label: `${w.node} · ${w.hostIp}`,
     colorVar: 'k-teal',
-    dashed: true,
+    boundaryKind: 'machine',
     layout: 'stack',
     boxes: [
       b.eth0, b.brint, b.ext, b.gr,
@@ -601,7 +601,7 @@ const CTLPLANE_GHOST_DETAIL = {
 // A grey container: a dashed slate zone holding topology boxes + a ghost chip
 // naming the OpenShift component (last, like a signature).
 const ghostZone = (id, label, boxes) => ({
-  id, label, ghost: true, dashed: true, layout: 'stack', colorVar: 'k-ghost', boxes,
+  id, label, ghost: true, boundaryKind: 'group', layout: 'stack', colorVar: 'k-ghost', boxes,
 })
 const ghostChip = (id, title, typePrefix, caption, detail) => ({
   id, title, typePrefix, caption, variant: 'ghost', colorVar: 'k-ghost', detail,
@@ -628,7 +628,7 @@ const nodeZoneBig = (w, pods) => {
     id: `ovnb-${w.id}-node`,
     label: `${w.node} · ${w.hostIp}`,
     colorVar: 'k-teal',
-    dashed: true,
+    boundaryKind: 'machine',
     layout: 'stack',
     zones: [
       ghostZone(`ovnb-${w.id}-ovs`, 'Open vSwitch · on the metal', [
@@ -970,7 +970,7 @@ const guestNodeZone = (w, pods) => {
     id: `ovng-${w.id}-node`,
     label: `${w.node} · VMI on ${w.metal} · ${w.hostIp}`,
     colorVar: 'k-green',
-    dashed: true,
+    boundaryKind: 'machine',
     layout: 'stack',
     boxes: [
       b.eth0, b.brint, b.ext, b.gr,
@@ -1307,7 +1307,7 @@ const fullVmZone = (g, pods) => {
     id: `ovnf-${g.id}-vm`,
     label: `${g.node} · VirtualMachineInstance`,
     colorVar: 'k-green',
-    dashed: true,
+    boundaryKind: 'machine',
     layout: 'stack',
     // The zone's own identity chip: the VMI is itself a registered overview
     // object — clicking opens its real sheet.
@@ -1340,7 +1340,7 @@ const fullMetalZone = (m, g, gPods) => {
     id: `ovnf-${m.id}-node`,
     label: `${m.node} · bare metal · ${m.hostIp}`,
     colorVar: 'k-blue',
-    dashed: true,
+    boundaryKind: 'machine',
     layout: 'stack',
     zones: [
       ghostZone(`ovnf-${m.id}-ovs`, 'Open vSwitch · systemd on RHCOS', [

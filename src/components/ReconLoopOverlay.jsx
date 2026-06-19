@@ -234,7 +234,7 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
               stroke={p.color}
               strokeWidth={live ? 2.4 : netActive ? 2.1 : netDim ? 1 : solid ? 1.8 : internal ? 1.2 : 1.5}
               strokeOpacity={live ? 1 : netActive ? 0.95 : netDim ? 0.22 : solid ? 0.8 : internal ? 0.42 : 0.7}
-              strokeDasharray={solid ? undefined : internal ? '1.5 5' : '6 4'}
+              strokeDasharray={undefined}
               markerEnd={solid ? undefined : `url(#recon-arrow-${p.id})`}
             />
             {/* The "little box" the user asked for: a solid step-numbered chip

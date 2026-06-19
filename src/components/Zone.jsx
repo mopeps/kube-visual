@@ -2,6 +2,7 @@ export default function Zone({
   label,
   color,
   dashed = false,
+  boundaryKind,
   depth = 0,
   // layout: 'columns' lays this zone's child zones out side-by-side (each an
   // equal-width column), stacking back to full width under 640px. 'stack'
@@ -30,6 +31,7 @@ export default function Zone({
   onClick,
 }) {
   const isTop = depth === 0
+  const boundary = boundaryKind || (dashed ? 'namespace' : isTop ? 'machine' : 'group')
 
   // color-mix blends the zone accent into the page background (#0a0f1e) for
   // a solid, opaque fill — no transparency.
@@ -40,14 +42,14 @@ export default function Zone({
 
   return (
     <div
-      className={`zone ${dashed ? 'zone--dashed' : ''} ${depth > 0 && !bare ? 'zone--nested' : ''} ${layout === 'columns' ? 'zone--columns' : ''} ${layout === 'stack' ? 'zone--stack' : ''} ${bare ? 'zone--bare' : ''} ${ghost ? 'zone--ghost' : ''} ${className}`}
+      className={`zone zone--${boundary} ${depth > 0 && !bare ? 'zone--nested' : ''} ${layout === 'columns' ? 'zone--columns' : ''} ${layout === 'stack' ? 'zone--stack' : ''} ${bare ? 'zone--bare' : ''} ${ghost ? 'zone--ghost' : ''} ${className}`}
       style={{
         ...(!bare && { background: fill }),
         '--zone-depth': depth,
         // nested zones pick this up via .zone--nested / .zone--dashed in index.css
         '--zone-border': line,
         // top-level zones get a clear border all around + a bolder left stripe
-        ...(isTop && !bare && {
+        ...(isTop && boundary === 'machine' && !bare && {
           border: `1px solid ${line}`,
           borderRadius: 12,
           borderLeft: `4px solid ${color}`,
@@ -73,7 +75,7 @@ export default function Zone({
           color,
           borderColor: `${color}55`,
           background: `${color}10`,
-          borderStyle: dashed ? 'dashed' : 'solid',
+        borderStyle: 'solid',
           cursor: isComponent ? 'pointer' : undefined,
           ...(isActive && {
             boxShadow: `inset 0 0 0 1px ${color}, 0 0 16px ${color}40`,

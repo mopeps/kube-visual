@@ -1523,7 +1523,7 @@ const HCP_INSTALL = {
       id: 'hi-prereq',
       label: 'Prerequisites · Management Hub',
       colorVar: 'k-purple',
-      dashed: true,
+      boundaryKind: 'group',
       boxes: [
         {
           id: 'hi-mce',

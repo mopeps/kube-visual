@@ -141,7 +141,7 @@ export default function RealizedFlowsCard({
               type="button"
               key={obj.id}
               id={obj.id}
-              className={`intent-object ${isWide ? 'intent-object--wide' : ''} ${obj.id === highlightId ? 'is-highlighted' : ''}`}
+              className={`intent-object realized-flow ${isWide ? 'intent-object--wide' : ''} ${obj.id === highlightId ? 'is-highlighted' : ''}`}
               style={{ '--node-accent': color }}
               onClick={(e) => { e.stopPropagation(); onSelectComponent(obj.mirror || obj.id) }}
               title={`Open ${obj.title} details`}

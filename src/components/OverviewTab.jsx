@@ -548,6 +548,7 @@ export default function OverviewTab({
         label={zone.label}
         color={zone.color}
         dashed={zone.dashed}
+        boundaryKind={zone.boundaryKind}
         depth={depth}
         layout={zone.layout}
         bare={zone.bare}
