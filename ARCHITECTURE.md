@@ -178,13 +178,16 @@ store, or a trace-only zone).
 
 **Replica presentation:** the modeled cluster runs **three masters and three workers**.
 The independent **One pair / All nodes** scope control keeps the default canvas compact
-without inventing placement. All nodes renders three real master/worker pairs: singleton
-Deployments stay only on their modeled primary node, while static control-plane Pods,
-DaemonSets, host services, launchers, VMIs, and guest node agents repeat only where the
-runtime model says they exist. Replica cards receive node-scoped DOM ids and open the
-canonical component through `mirror`. The Front-End and Back-End Deployments model three
-replicas each — one Pod on every guest worker — while their single Service/NetworkPolicy
-records compile into per-node LB/ACL flows.
+without inventing placement. All nodes separates physical placement from Kubernetes
+ownership: three management-master columns render first; the **single** guest-control-plane
+namespace then spans that complete row; three management-worker / guest-VMI columns render
+below it. The namespace's placement rail identifies the modeled eligible hosts and the HA
+spread policy, but does not claim a permanent Pod-to-node assignment. Node-local runtimes,
+static control-plane Pods, DaemonSets, host services, launchers, VMIs, and guest node agents
+repeat only where the runtime model says they exist. Replica cards receive node-scoped DOM
+ids and open the canonical component through `mirror`. The Front-End and Back-End
+Deployments model three replicas each — one Pod on every guest worker — while their single
+Service/NetworkPolicy records compile into per-node LB/ACL flows.
 
 1. **The Context / Zone Boundaries** — the macro physical/virtual boundaries that frame
    everything else: `[Management Cluster]`, `[Management Master Node]`,

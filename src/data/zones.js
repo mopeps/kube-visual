@@ -1,15 +1,11 @@
 // Zone tree — top-to-bottom nested layout of the HCP cluster.
 // Each zone may have `nodes` (rendered as NodeCards) and/or `zones` (nested sub-zones).
 
-// A condensed replica of a bare-metal node, rendered as a real (bordered,
-// labelled) node zone like the primary — but carrying only the components that
-// move traffic *between* nodes: the OVN-K8s Node → Open vSwitch data-plane pair
-// (programs br-int) plus the MetalLB speaker. Their componentIds are
-// replica-scoped so each is unique in the DOM (the network overlay anchors a
-// per-node gateway-router chip to each node's Open vSwitch); `mirror` points the
-// detail popup at the canonical component's metadata, since the software is
-// identical to the primary node's. Shown only when "All nodes" is toggled on
-// (or the network overlay is active). See OverviewTab's renderZone.
+// A modeled replica of a bare-metal node, rendered as a real (bordered,
+// labelled) node zone like the primary. Its componentIds are replica-scoped so
+// each is unique in the DOM; `mirror` points the detail popup at the canonical
+// component's metadata, since the software is identical to the primary node's.
+// Shown only when "All nodes" is toggled on. See OverviewTab's all-node rows.
 function replicaCard(id, title, typePrefix, mirror, color, extra = {}) {
   return { id, title, typePrefix, mirror, badges: [], ...extra,
     replicaBadge: extra.replicaBadge,
@@ -145,9 +141,9 @@ export const ZONES = [
           { id: 'control', label: 'Management control plane', nodeIds: ['mgmt-kube-apiserver', 'mgmt-etcd', 'mgmt-controller-manager', 'mgmt-scheduler'] },
           { id: 'hosted', label: 'Hosted-cluster lifecycle', nodeIds: ['hypershift-operator'] },
         ],
-        // The cluster runs three masters; one is drawn in full and these two
-        // render as condensed-but-real node zones after this one (replicaNode),
-        // carrying just the inter-node network data plane.
+        // The cluster runs three masters. In All nodes, these two replicas sit
+        // beside the canonical master-1 while the ONE guest control-plane
+        // namespace spans the complete master row below them.
         replicaNodes: [
           replicaNode({ id: 'master-2', title: 'master-2', colorVar: 'k-blue', kind: 'master', ordinal: 2 }),
           replicaNode({ id: 'master-3', title: 'master-3', colorVar: 'k-blue', kind: 'master', ordinal: 3 }),
@@ -411,6 +407,16 @@ export const ZONES = [
             color: 'var(--k-sky)',
             colorVar: 'k-sky',
             boundaryKind: 'namespace',
+            // A namespace is a cluster-scoped logical boundary, not a thing
+            // copied onto every host. All nodes lifts this zone out of master-1
+            // and renders it once across the complete management-master row.
+            // The markers communicate eligible placement without claiming an
+            // exact, permanently pinned Pod-to-node assignment.
+            allNodesShared: true,
+            placement: {
+              hosts: ['master-1', 'master-2', 'master-3'],
+              summary: 'Pod replicas are scheduled across eligible management nodes; HA workloads spread across failure domains.',
+            },
             nodes: [
               {
                 id: 'control-plane-operator',

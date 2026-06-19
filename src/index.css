@@ -2236,9 +2236,131 @@ body::after {
   position: relative;
 }
 
+/* All-node Architecture is organized by physical rows, with the single HCP
+   namespace crossing the three master columns. This keeps the orthogonal truths
+   visible at once: nodes are physical placement; the namespace is logical
+   ownership. */
+.all-nodes-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.all-nodes-band {
+  min-width: 0;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.035), transparent 55%);
+}
+.all-nodes-band-label {
+  margin: 0 12px -5px;
+  color: var(--tx-dim);
+  font-size: 0.54rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.all-nodes-band .net-cols { margin-bottom: 0; }
+.all-nodes-band--workers .net-cols { margin-top: 8px; }
+.all-nodes-shared {
+  position: relative;
+  margin: 0 12px;
+}
+.all-nodes-shared::before,
+.all-nodes-shared::after {
+  content: '';
+  position: absolute;
+  left: 16.666%;
+  top: -12px;
+  width: 33.333%;
+  height: 12px;
+  border-left: 1px solid color-mix(in srgb, var(--k-sky) 38%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--k-sky) 38%, transparent);
+  pointer-events: none;
+}
+.all-nodes-shared::after {
+  left: 50%;
+  border-left: 0;
+}
+.zone--hcp-shared {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--k-sky) 12%, transparent),
+              0 12px 40px rgba(14, 116, 144, 0.08);
+}
+.hcp-placement {
+  flex: 1 1 100%;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(220px, 1.15fr) minmax(360px, 2fr);
+  gap: 14px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--k-sky) 22%, var(--border-w));
+  border-radius: 8px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--k-sky) 8%, rgba(0, 0, 0, 0.3)),
+    rgba(0, 0, 0, 0.2));
+}
+.hcp-placement-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hcp-placement-kicker {
+  color: var(--k-sky);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.hcp-placement-summary {
+  max-width: 68ch;
+  color: var(--tx-muted);
+  font-size: 0.64rem;
+  line-height: 1.5;
+}
+.hcp-placement-hosts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.hcp-placement-host {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 2px 7px;
+  padding: 7px 9px;
+  border: 1px solid color-mix(in srgb, var(--k-sky) 30%, var(--border-w));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--k-sky) 7%, rgba(0, 0, 0, 0.4));
+  color: var(--tx-bright);
+  font-size: 0.62rem;
+}
+.hcp-placement-host small {
+  grid-column: 2;
+  color: var(--tx-dim);
+  font-size: 0.49rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.hcp-placement-dot {
+  grid-row: 1 / span 2;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--k-sky);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--k-sky) 72%, transparent);
+}
+
 @media (min-width: 768px) and (max-width: 1279px) {
   .net-cols { flex-direction: column; overflow-x: visible; }
   .net-col { flex: 0 0 auto; width: 100%; min-width: 0; }
+  .hcp-placement { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 767px) {
+  .all-nodes-shared { margin: 0; }
+  .hcp-placement { grid-template-columns: 1fr; }
+  .hcp-placement-hosts { grid-template-columns: 1fr; }
 }
 
 /* ── A component box opened to show its internals (PrimitiveBoxCard) ──────

@@ -54,17 +54,35 @@ function collectZoneNodeIds(zone, ids = []) {
   return ids
 }
 
-// Popup content for a replica node zone's label (a `zone.replicaNodes` entry):
-// the cluster runs three of each bare-metal node, but only one is drawn in
-// full — the replicas carry just the inter-node network plane. Rendered via
-// DeepDiveModal.
+function HcpPlacementSummary({ placement }) {
+  return (
+    <div className="hcp-placement" role="note" aria-label="Hosted control plane placement model">
+      <div className="hcp-placement-copy">
+        <span className="hcp-placement-kicker">One logical namespace</span>
+        <span className="hcp-placement-summary">{placement.summary}</span>
+      </div>
+      <div className="hcp-placement-hosts" aria-label="Eligible modeled hosts">
+        {placement.hosts.map((host) => (
+          <span className="hcp-placement-host" key={host}>
+            <span className="hcp-placement-dot" aria-hidden />
+            <span>{host}</span>
+            <small>eligible</small>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Popup content for a replica node zone's label (a `zone.replicaNodes` entry).
+// Rendered via DeepDiveModal.
 function replicaDetail(title, parentZone) {
   const isMaster = parentZone.id === 'master-node'
   return {
     role: 'BARE METAL NODE · CONDENSED REPLICA',
     summary:
-      `${title} runs the identical stack to the detailed "${parentZone.label}" above. ` +
-      'It is drawn condensed — only the components that move traffic *between* nodes: the OVN-K8s Node agent programming this node\'s own Open vSwitch (br-int), and the MetalLB speaker. ' +
+      `${title} runs the same node role as "${parentZone.label}". ` +
+      'Cards with a node-local runtime are repeated here; cluster-scoped logical boundaries are not. ' +
       (isMaster
         ? 'The cluster runs three masters: etcd needs an odd-sized quorum (three tolerates one node failure), and the management API servers sit behind one VIP across them.'
         : 'The cluster runs three workers: capacity and failure-domain spread for the KubeVirt VMs that make up the guest cluster’s nodes.'),
@@ -586,6 +604,9 @@ export default function OverviewTab({
             ? () => onSelectComponent(zone.mirrorComponentId)
             : onSelectComponent}
       >
+        {bigView && zone.allNodesShared && zone.placement && (
+          <HcpPlacementSummary placement={zone.placement} />
+        )}
         {/* Nodes in this zone (Service→target pairs stacked together) */}
         {renderZoneNodes(zone, colIndex)}
         {/* Child zones */}
@@ -651,6 +672,69 @@ export default function OverviewTab({
           : [renderZone(zone, 0, null, colIndex)]
       )
 
+  // All nodes separates physical placement from Kubernetes ownership:
+  // masters form one three-column row, the single HCP namespace spans that
+  // complete row, then workers/VMIs form a second three-column row. Copying the
+  // namespace into each master would falsely imply three namespaces and one
+  // replica of every workload per host.
+  const renderAllNodesStack = (networkOnly = false) => {
+    const management = visibleZones.find((zone) => zone.id === 'management-context')
+    if (!management) return renderOverviewStack(networkOnly)
+
+    const master = management.zones?.find((zone) => zone.id === 'master-node')
+    const worker = management.zones?.find((zone) => zone.id === 'worker-node')
+    const sharedHcp = master?.zones?.find((zone) => zone.allNodesShared)
+    if (!master || !worker || !sharedHcp) return renderOverviewStack(networkOnly)
+
+    const prepare = (zone) => networkOnly ? filterNetworkZone(zone) : zone
+    const masterOne = {
+      ...master,
+      label: 'master-1 · Bare Metal Master',
+      zones: (master.zones ?? []).filter((zone) => zone !== sharedHcp),
+    }
+    const workerOne = { ...worker, label: 'worker-1 · Bare Metal Worker' }
+    const masterRow = [masterOne, ...(master.replicaNodes ?? [])]
+    const workerRow = [workerOne, ...(worker.replicaNodes ?? [])]
+    const outsideManagement = visibleZones.filter((zone) => zone !== management)
+
+    const renderRow = (label, zones, rowClass) => (
+      <section className={`all-nodes-band ${rowClass}`} key={rowClass}>
+        <div className="all-nodes-band-label">{label}</div>
+        <div className="net-cols">
+          {zones.map((zone, colIndex) => {
+            const visible = prepare(zone)
+            return visible ? (
+              <div className="net-col" id={`net-col-${colIndex}-${rowClass}`} key={zone.id}>
+                {renderZone(visible, 0, null, colIndex)}
+              </div>
+            ) : null
+          })}
+        </div>
+      </section>
+    )
+
+    const visibleSharedHcp = prepare({
+      ...sharedHcp,
+      className: `${sharedHcp.className ?? ''} zone--hcp-shared`.trim(),
+    })
+
+    return (
+      <div className="all-nodes-layout">
+        {outsideManagement.map((zone) => {
+          const visible = prepare(zone)
+          return visible ? renderZone(visible, 0, null, 0) : null
+        })}
+        {renderRow('Management control-plane hosts', masterRow, 'all-nodes-band--masters')}
+        {visibleSharedHcp && (
+          <section className="all-nodes-shared" aria-label="Shared guest control plane namespace">
+            {renderZone(visibleSharedHcp, 0, null, 0)}
+          </section>
+        )}
+        {renderRow('Management compute hosts · guest workers', workerRow, 'all-nodes-band--workers')}
+      </div>
+    )
+  }
+
   // Both lenses share the column canvas. One pair renders column zero; All
   // nodes renders the three placement-aware master/worker pairs.
   const columnsView = bigView || netOverlay || primOverlay
@@ -715,13 +799,15 @@ export default function OverviewTab({
           onMouseLeave={netOverlay && !netWiresOnHover ? () => setNetHoverId(null) : undefined}
           onClickCapture={netOverlay && netWiresOnHover ? onNetFocusTap : undefined}
         >
-          <div className="net-cols">
-            {cols.map((i) => (
-              <div className="net-col" id={`net-col-${i}`} key={i}>
-                {renderOverviewStack(netOverlay, i)}
-              </div>
-            ))}
-          </div>
+          {bigView ? renderAllNodesStack(netOverlay) : (
+            <div className="net-cols">
+              {cols.map((i) => (
+                <div className="net-col" id={`net-col-${i}`} key={i}>
+                  {renderOverviewStack(netOverlay, i)}
+                </div>
+              ))}
+            </div>
+          )}
           {netOverlay && (
             <ReconLoopOverlay
               edges={shownNetEdges}
