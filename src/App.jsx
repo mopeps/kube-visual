@@ -25,6 +25,7 @@ const TABS = [
 const DOCK_KEY = 'kv-dock-open'
 const VIEW_KEY = 'kv-overview-mode'
 const REPLICAS_KEY = 'kv-replicas-open'
+const SCOPE_KEY = 'kv-node-scope'
 
 function Header() {
   return (
@@ -81,6 +82,7 @@ export default function App() {
   // classic single-column tabs.
   const isCompact = useMediaQuery('(max-width: 1023px)')
   const isWide = useMediaQuery('(min-width: 1280px)')
+  const supportsAllNodes = useMediaQuery('(min-width: 768px)')
 
   const [dockOpen, setDockOpen] = useState(() => {
     try { return localStorage.getItem(DOCK_KEY) === '1' } catch { return false }
@@ -100,7 +102,9 @@ export default function App() {
   // One mode at a time, so the toolbar control can't get into the old
   // "highlighted but nothing shown" state.
   const [overviewMode, setOverviewMode] = useState(() => {
-    try { return localStorage.getItem(VIEW_KEY) || 'single' } catch { return 'single' }
+    try {
+      return localStorage.getItem(VIEW_KEY) === 'network' ? 'network' : 'architecture'
+    } catch { return 'architecture' }
   })
   useEffect(() => {
     try { localStorage.setItem(VIEW_KEY, overviewMode) } catch { /* ignore */ }
@@ -113,9 +117,20 @@ export default function App() {
   // Only "Big view" and "Network" use the three parallel columns. "Primitives"
   // is a one-up overview (depth per component, not per node), so it must NOT be
   // treated as big-view.
-  const bigView = isWide && (overviewMode === 'big' || overviewMode === 'network')
+  const [nodeScope, setNodeScope] = useState(() => {
+    try {
+      const saved = localStorage.getItem(SCOPE_KEY)
+      if (saved === 'all' || saved === 'pair') return saved
+      return localStorage.getItem(REPLICAS_KEY) === '1' ? 'all' : 'pair'
+    } catch { return 'pair' }
+  })
+  useEffect(() => {
+    try { localStorage.setItem(SCOPE_KEY, nodeScope) } catch { /* ignore */ }
+  }, [nodeScope])
+  const effectiveNodeScope = supportsAllNodes ? nodeScope : 'pair'
+  const bigView = isWide && effectiveNodeScope === 'all'
   const netOverlay = overviewMode === 'network'
-  const primOverlay = overviewMode === 'primitives'
+  const primOverlay = overviewMode === 'architecture'
 
   // Condensed replica nodes (master-2/3, worker-2/3) are off by default so the
   // main overview stays clean; a wide-desktop toggle reveals them. The network
@@ -392,36 +407,15 @@ export default function App() {
           <span className="search-trigger-text">Search</span>
           <kbd className="search-trigger-kbd" aria-hidden>⌘K</kbd>
         </button>
-        {isWide && tab === 'overview' && !bigView && (
-          <button
-            type="button"
-            className={`dock-toggle ${replicasOpen ? 'is-active' : ''}`}
-            onClick={() => setReplicasOpen(v => !v)}
-            aria-pressed={replicasOpen}
-            title={replicasOpen
-              ? 'Hide the additional master/worker nodes (3 + 3 → 1 + 1)'
-              : 'Show all master/worker nodes (3 + 3)'}
-          >
-            <span aria-hidden>⊞</span>
-            {replicasOpen ? 'Hide replicas' : 'All nodes'}
-          </button>
-        )}
         {tab === 'overview' && (
-          <div className="seg" role="group" aria-label="Overview view mode">
+          <div className="seg" role="group" aria-label="Overview lens">
             {[
-              { id: 'single', label: 'Single', title: 'The normal one-up overview' },
-              // "Big view" needs the room for three parallel columns, so it's
-              // wide-desktop only; "Network" is always offered (single-column
-              // below wide, so it works on a phone).
-              ...(isWide ? [{ id: 'big', label: 'Big view', title: 'The whole overview, three node pairs side by side' }] : []),
+              { id: 'architecture', label: 'Architecture', title: 'Components in place; open any runtime to reveal its Linux primitives' },
               { id: 'network', label: 'Network', title: isWide
                 ? 'The three node pairs with every component opened to its networking internals — OVN, Open vSwitch, MetalLB, Konnectivity…'
                 : 'One node pair with every component opened to its networking internals — OVN, Open vSwitch, MetalLB, Konnectivity…' },
-              { id: 'primitives', label: 'Primitives', title: 'Each runtime instance (Pod / systemd / VMI) opens in place to reveal its Linux kernel primitives — netns, veth, cgroups, KVM…' },
             ].map((m) => {
-              // Off wide there's no "Big view" button, so a persisted 'big' mode
-              // lights "Single" (which is what it falls back to renders-wise).
-              const active = (!isWide && overviewMode === 'big' ? 'single' : overviewMode) === m.id
+              const active = overviewMode === m.id
               return (
                 <button
                   key={m.id}
@@ -435,6 +429,24 @@ export default function App() {
                 </button>
               )
             })}
+          </div>
+        )}
+        {tab === 'overview' && supportsAllNodes && (
+          <div className="seg seg--scope" role="group" aria-label="Node scope">
+            {[
+              { id: 'pair', label: 'One pair' },
+              { id: 'all', label: 'All nodes' },
+            ].map((scope) => (
+              <button
+                key={scope.id}
+                type="button"
+                className={`seg-btn ${nodeScope === scope.id ? 'is-active' : ''}`}
+                aria-pressed={nodeScope === scope.id}
+                onClick={() => setNodeScope(scope.id)}
+              >
+                {scope.label}
+              </button>
+            ))}
           </div>
         )}
         {isWide && (

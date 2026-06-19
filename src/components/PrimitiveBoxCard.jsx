@@ -26,8 +26,11 @@ export default function PrimitiveBoxCard({
   // "internals"; Primitives mode passes null so the box carries no such label
   // (just the drill chevron).
   hint = 'internals',
+  // Architecture's primary pair keeps canonical outer ids so packet-flow
+  // arrows can anchor to the same objects as the compact overview did.
+  domIdOverride,
 }) {
-  const domId = `${idPrefix}${colIndex}-${node.id}`
+  const domId = domIdOverride || `${idPrefix}${colIndex}-${node.id}`
   const subId = (id) => `${idPrefix}${colIndex}-${id}`
 
   // Cross-highlight: hovering/focusing a relationship chip — or the socket / an

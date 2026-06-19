@@ -363,8 +363,9 @@ export default function OverviewTab({
             internal={internal}
             colIndex={colIndex}
             idPrefix="pr-c"
-            hint={null}
-            color={zone.color}
+          hint={null}
+          color={zone.color}
+          domIdOverride={!bigView && colIndex === 0 ? node.id : undefined}
             isOpen={primExpandedIds.has(node.id)}
             onToggle={() => togglePrimExpand(node.id)}
             onSelectComponent={onSelectComponent}
@@ -460,7 +461,11 @@ export default function OverviewTab({
         // Network mode renders the same tree in three columns, so card ids are
         // namespaced per column to stay unique (integration edges anchor to them);
         // the normal canvas keeps the raw componentId.
-        id={netOverlay ? `nt-c${colIndex}-${node.id}` : primOverlay ? `pr-c${colIndex}-${node.id}` : node.id}
+        id={netOverlay
+          ? `nt-c${colIndex}-${node.id}`
+          : primOverlay && bigView
+            ? `pr-c${colIndex}-${node.id}`
+            : node.id}
         title={node.title}
         typePrefix={node.typePrefix}
         typeAlias={serviceAlias(node)}
@@ -638,6 +643,14 @@ export default function OverviewTab({
             <button type="button" className="net-bar-btn" onClick={toggleAllNet}>
               {allNetCollapsed ? 'Expand all' : 'Collapse all'}
             </button>
+          )}
+          {primOverlay && !bigView && (
+            <ArrowOverlay
+              activeEvent={activeEvent}
+              canvasRef={canvasRef}
+              activeStep={activeStep}
+              onSelectStep={onSelectStep}
+            />
           )}
           {primOverlay && (
             <button type="button" className="net-bar-btn" onClick={toggleAllPrim}>
