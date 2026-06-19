@@ -43,7 +43,7 @@
         "step": 2,
         "sourceComponentId": "svc-apps-lb-infra",
         "targetComponentId": "ovs-host",
-        "description": "The LoadBalancer Service DNATs the VIP to a virt-launcher endpoint, and the packet enters the bare metal worker node's OVS br-int bridge, which applies OVN flow rules to route it toward the KubeVirt Launcher hosting the guest router's node."
+        "description": "The management-cluster LoadBalancer Service translates the VIP toward the guest router's NodePort on a selected worker VM IP. The packet enters that VM's bare metal host through OVS br-int, whose OVN flows steer it toward the KubeVirt Launcher and tap interface for the selected guest worker."
       },
       {
         "step": 3,
@@ -94,40 +94,52 @@
     "category": "lifecycle",
     "glyph": "spawn",
     "eventName": "Guest Pod Lifecycle (Spawn)",
-    "description": "Tracing how a new application Pod is scheduled and started in the guest cluster: from a kubectl apply hitting the Guest API Server through scheduling, kubelet notification, and CRI-O container creation inside the Guest VM.",
+    "description": "Tracing how a new application Deployment becomes a running Pod in the guest cluster: the Guest API Server persists intent, the Deployment and ReplicaSet loops create the Pod, the scheduler binds it, and the guest kubelet asks CRI-O to start it inside the worker VM.",
     "steps": [
       {
         "step": 1,
         "sourceComponentId": "external-client",
         "targetComponentId": "guest-api-server",
-        "description": "Developer runs 'oc apply -f deployment.yaml'. The request reaches the Guest API Server, which validates it, persists the Deployment to etcd, and notifies controllers via watch events."
+        "description": "A developer runs 'oc apply -f deployment.yaml'. The Guest API Server validates the request and persists the Deployment desired state in Guest Etcd. No Pod exists yet."
       },
       {
         "step": 2,
         "sourceComponentId": "guest-api-server",
-        "targetComponentId": "guest-kube-scheduler",
-        "description": "The Guest Scheduler watches for Pods with no node assignment. It evaluates guest worker node capacity and affinity rules, then selects the Guest Worker Node VM."
+        "targetComponentId": "guest-controller-manager",
+        "description": "The Deployment controller inside the Guest Controller Manager observes the new Deployment, creates a ReplicaSet, and the ReplicaSet controller creates the requested Pod object through the API Server. These are control loops inside one controller-manager process, not separate Pods."
       },
       {
         "step": 3,
-        "sourceComponentId": "guest-kube-scheduler",
+        "sourceComponentId": "guest-controller-manager",
         "targetComponentId": "guest-api-server",
-        "description": "The Scheduler writes a Binding object back to the Guest API Server, officially assigning the Pod to the Guest Worker Node."
+        "description": "The Guest Controller Manager writes the ReplicaSet and unscheduled Pod records to the Guest API Server. The Pod now exists as desired state, but it has no nodeName and no container is running."
       },
       {
         "step": 4,
         "sourceComponentId": "guest-api-server",
-        "targetComponentId": "kubelet-guest",
-        "description": "The guest kubelet maintains its own outbound watch on the Guest API Server (via the exposed apiserver endpoint) and observes the newly bound Pod assigned to its node. The kubelet pulls its application over that same outbound watch — the API Server never pushes the assignment to it. (Konnectivity is not involved here; that tunnel only carries API-Server-initiated traffic such as exec/logs/port-forward.)"
+        "targetComponentId": "guest-kube-scheduler",
+        "description": "The Guest Scheduler watches for Pods with no node assignment. It evaluates guest worker capacity, taints, affinity, and topology constraints, then selects a Guest Worker Node VM."
       },
       {
         "step": 5,
-        "sourceComponentId": "kubelet-guest",
-        "targetComponentId": "crio-guest",
-        "description": "Kubelet validates the spec and issues RunPodSandbox and CreateContainer gRPC calls to guest CRI-O, which pulls the image, sets up the cgroup hierarchy, and invokes the CNI plugin to provision the Pod's network namespace."
+        "sourceComponentId": "guest-kube-scheduler",
+        "targetComponentId": "guest-api-server",
+        "description": "The Scheduler writes the binding through the Guest API Server, setting the Pod's nodeName to the selected guest worker."
       },
       {
         "step": 6,
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "kubelet-guest",
+        "description": "The guest kubelet observes the newly bound Pod through its own outbound watch of the Guest API Server. The API Server does not push the PodSpec through Konnectivity; that tunnel is reserved for API-Server-initiated traffic such as exec, logs, and port-forward."
+      },
+      {
+        "step": 7,
+        "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "crio-guest",
+        "description": "Kubelet issues RunPodSandbox and CreateContainer CRI calls. Guest CRI-O pulls the image, creates the cgroup and namespaces, and invokes the CNI path to attach the Pod to guest OVN-Kubernetes."
+      },
+      {
+        "step": 8,
         "sourceComponentId": "crio-guest",
         "targetComponentId": "frontend-application-pod",
         "description": "Guest CRI-O starts the container via runc. The application process becomes PID 1 inside its namespaces, registers with the guest network, and the Pod transitions to Running status."
@@ -172,55 +184,103 @@
     "category": "lifecycle",
     "glyph": "provision",
     "eventName": "HCP Control Plane + NodePool Provisioning",
-    "description": "Tracing how a new Hosted Control Plane and its first KubeVirt worker come up: the HyperShift Operator reconciles the HostedCluster, the per-HCP control-plane-operator brings up etcd and the Guest API Server, and the NodePool is turned into a VirtualMachineInstance via Cluster API and the KubeVirt provider.",
+    "description": "Tracing both halves of HCP creation: the cluster-wide HyperShift Operator turns HostedCluster intent into a per-HCP control plane, while its NodePool controller drives Cluster API and CAPK to create a KubeVirt worker VM that boots with Ignition and joins the guest API.",
     "steps": [
       {
         "step": 1,
         "sourceComponentId": "external-client",
         "targetComponentId": "mgmt-kube-apiserver",
-        "description": "Platform admin applies a HostedCluster and a NodePool manifest via 'oc apply'. These CRs live in the management (bare metal) cluster, so the Management Kube API Server persists them and notifies the HyperShift Operator."
+        "description": "A platform admin applies HostedCluster and NodePool manifests. These are management-cluster CRs, so the request goes to the Management Kube API Server — not to the guest API, which does not exist yet."
       },
       {
         "step": 2,
         "sourceComponentId": "mgmt-kube-apiserver",
-        "targetComponentId": "hypershift-operator",
-        "description": "The HyperShift Operator (a cluster-wide singleton in the 'hypershift' namespace) reconciles the HostedCluster CR: it creates the dedicated HCP namespace and deploys the per-HCP control-plane-operator into it."
+        "targetComponentId": "hostedcluster-cr",
+        "description": "The Management API Server persists the HostedCluster desired-state record in Management Etcd. The record declares the hosted control plane; it is not itself a running component."
       },
       {
         "step": 3,
-        "sourceComponentId": "hypershift-operator",
-        "targetComponentId": "control-plane-operator",
-        "description": "The control-plane-operator becomes the per-hosted-cluster owner of the guest control plane, reconciling each control-plane component (etcd, Guest API Server, OAuth, Konnectivity, Ignition) inside the HCP namespace."
+        "sourceComponentId": "hostedcluster-cr",
+        "targetComponentId": "hypershift-operator",
+        "description": "The cluster-wide HyperShift Operator watches HostedCluster records, creates the dedicated HCP namespace, and deploys one Control Plane Operator for this hosted cluster."
       },
       {
         "step": 4,
-        "sourceComponentId": "control-plane-operator",
-        "targetComponentId": "guest-etcd",
-        "description": "The control-plane-operator deploys the etcd StatefulSet. Once etcd reaches quorum it brings up the Guest API Server, OAuth Server, Konnectivity Server, and Ignition Server as Deployments."
+        "sourceComponentId": "hypershift-operator",
+        "targetComponentId": "control-plane-operator",
+        "description": "The Control Plane Operator becomes the per-HCP owner. It reconciles the guest control-plane Deployments and StatefulSets inside the dedicated namespace."
       },
       {
         "step": 5,
-        "sourceComponentId": "hypershift-operator",
-        "targetComponentId": "capk-provider",
-        "description": "In parallel, the HyperShift Operator reconciles the NodePool into Cluster API objects (Cluster, MachineDeployment). The cluster-api-provider-kubevirt (CAPK) running in the HCP namespace requests a KubeVirt VirtualMachine for each desired replica."
+        "sourceComponentId": "control-plane-operator",
+        "targetComponentId": "guest-etcd",
+        "description": "The Control Plane Operator deploys Guest Etcd as a StatefulSet Pod. This is not a static Pod: it runs as a normal management-cluster workload inside the HCP namespace."
       },
       {
         "step": 6,
-        "sourceComponentId": "capk-provider",
-        "targetComponentId": "kubevirt-launcher",
-        "description": "CAPK creates a VirtualMachine object; KubeVirt's virt-controller creates the virt-launcher Pod for it, and virt-handler on the bare metal worker node then signals that Pod to start the qemu-kvm process and boot the RHCOS VirtualMachineInstance."
+        "sourceComponentId": "control-plane-operator",
+        "targetComponentId": "guest-api-server",
+        "description": "Once etcd is available, the Control Plane Operator brings up the Guest API Server and the other hosted endpoints, including OAuth, Konnectivity, and Ignition, as management-cluster Deployments."
       },
       {
         "step": 7,
-        "sourceComponentId": "ignition-server",
-        "targetComponentId": "guest-worker-node-vm",
-        "description": "As RHCOS boots, the VM fetches its Ignition config from the Ignition Server over TLS. The payload carries the kubelet bootstrap certificates and machine config needed to join the guest cluster."
+        "sourceComponentId": "nodepool-cr",
+        "targetComponentId": "hypershift-operator",
+        "description": "In parallel, the HyperShift Operator's NodePool controller observes the NodePool record and renders it into Cluster API Cluster and MachineDeployment desired state."
       },
       {
         "step": 8,
+        "sourceComponentId": "hypershift-operator",
+        "targetComponentId": "capi-manager",
+        "description": "Cluster API Manager expands the MachineDeployment's desired replicas into MachineSet and Machine objects for the guest workers."
+      },
+      {
+        "step": 9,
+        "sourceComponentId": "capi-manager",
+        "targetComponentId": "capk-provider",
+        "description": "Cluster API delegates each Machine's infrastructure to CAPK through a KubevirtMachine record. CAPK creates the corresponding KubeVirt VirtualMachine object in the management cluster."
+      },
+      {
+        "step": 10,
+        "sourceComponentId": "capk-provider",
+        "targetComponentId": "kubevirt-vm-cr",
+        "description": "CAPK creates the KubeVirt VirtualMachine desired-state record in the management cluster; it does not create a launcher Pod directly."
+      },
+      {
+        "step": 11,
+        "sourceComponentId": "kubevirt-vm-cr",
+        "targetComponentId": "kubevirt-launcher",
+        "description": "KubeVirt's virt-controller observes the VirtualMachine/VMI and creates its virt-launcher Pod. The management scheduler places that Pod on a bare metal worker."
+      },
+      {
+        "step": 12,
+        "sourceComponentId": "virt-handler",
+        "targetComponentId": "kubevirt-launcher",
+        "description": "virt-handler on the selected bare metal node signals the launcher's libvirt process to start the qemu-kvm domain. virt-handler drives node-local VM boot; it does not create the launcher Pod."
+      },
+      {
+        "step": 13,
+        "sourceComponentId": "kubevirt-launcher",
+        "targetComponentId": "guest-worker-node-vm",
+        "description": "The launcher starts the RHCOS VirtualMachineInstance, creating the guest CPU, memory, disks, and virtio network device inside the qemu-kvm process."
+      },
+      {
+        "step": 14,
+        "sourceComponentId": "guest-worker-node-vm",
+        "targetComponentId": "ignition-server",
+        "description": "During first boot, RHCOS requests its Ignition payload over TLS. The response provides the bootstrap credentials and machine configuration needed to join this hosted cluster."
+      },
+      {
+        "step": 15,
         "sourceComponentId": "konnectivity-agent",
-        "targetComponentId": "kubelet-guest",
-        "description": "Inside the VM the Konnectivity Agent dials out to the Konnectivity Server, and the guest kubelet registers the node with the Guest API Server. The worker goes Ready and the hosted cluster can schedule applications."
+        "targetComponentId": "konnectivity-server",
+        "description": "The Konnectivity Agent inside the VM establishes its persistent outbound tunnel to the hosted Konnectivity Server. The tunnel is now available for later API-Server-initiated exec, logs, port-forward, webhook, and metrics traffic."
+      },
+      {
+        "step": 16,
+        "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "guest-api-server",
+        "description": "Separately, the guest kubelet connects outbound to the Guest API Server, registers its Node, and posts status until it becomes Ready. Pod watches use this direct outbound API connection, not Konnectivity."
       }
     ]
   },
@@ -258,29 +318,35 @@
       {
         "step": 5,
         "sourceComponentId": "capk-provider",
-        "targetComponentId": "kubevirt-launcher",
-        "description": "CAPK creates a KubeVirt VirtualMachine; KubeVirt's virt-controller creates the virt-launcher Pod for the resulting VMI, which the management scheduler places on a bare metal worker."
+        "targetComponentId": "kubevirt-vm-cr",
+        "description": "CAPK creates a KubeVirt VirtualMachine record for the new Machine. That record is the persistent desired state for the worker VM."
       },
       {
         "step": 6,
+        "sourceComponentId": "kubevirt-vm-cr",
+        "targetComponentId": "kubevirt-launcher",
+        "description": "KubeVirt's virt-controller creates the VMI and its virt-launcher Pod; the management scheduler places the launcher on a bare metal worker."
+      },
+      {
+        "step": 7,
         "sourceComponentId": "virt-handler",
         "targetComponentId": "kubevirt-launcher",
         "description": "virt-handler on that bare metal node signals the launcher Pod's libvirt to boot the qemu-kvm domain (it drives the boot on the node; it does not create the Pod)."
       },
       {
-        "step": 7,
+        "step": 8,
         "sourceComponentId": "kubevirt-launcher",
         "targetComponentId": "guest-worker-node-vm",
         "description": "The launcher starts the RHCOS VirtualMachineInstance for the new worker."
       },
       {
-        "step": 8,
-        "sourceComponentId": "ignition-server",
-        "targetComponentId": "guest-worker-node-vm",
+        "step": 9,
+        "sourceComponentId": "guest-worker-node-vm",
+        "targetComponentId": "ignition-server",
         "description": "As it boots, the VM fetches its Ignition config over TLS, receiving the kubelet bootstrap credentials and machine config needed to join the guest cluster."
       },
       {
-        "step": 9,
+        "step": 10,
         "sourceComponentId": "guest-worker-node-vm",
         "targetComponentId": "guest-api-server",
         "description": "The new node's kubelet registers with the Guest API Server and goes Ready; the NodePool's desired replica count is now satisfied."
@@ -292,7 +358,7 @@
     "category": "lifecycle",
     "glyph": "scale-down",
     "eventName": "NodePool Scale-Down (remove a worker)",
-    "description": "Tracing the reverse path: lowering a NodePool's replicas walks back down the Cluster API chain so CAPK deletes a KubeVirt VirtualMachine and the worker VM is drained and shut down.",
+    "description": "Tracing the ordered removal of a guest worker: lowering NodePool replicas makes Cluster API select a Machine, cordon and drain its guest Node, wait for volumes to detach, then ask CAPK to delete the KubeVirt infrastructure before removing the Node record.",
     "steps": [
       {
         "step": 1,
@@ -315,26 +381,44 @@
       {
         "step": 4,
         "sourceComponentId": "capi-manager",
-        "targetComponentId": "capk-provider",
-        "description": "Cluster API asks the KubeVirt provider to delete the VirtualMachine backing that Machine."
+        "targetComponentId": "guest-api-server",
+        "description": "Before deleting infrastructure, the Cluster API Machine controller uses the guest API to cordon the selected Node and evict drainable workloads. It waits for the drain and attached-volume cleanup to finish; shutdown does not happen first."
       },
       {
         "step": 5,
-        "sourceComponentId": "capk-provider",
-        "targetComponentId": "kubevirt-launcher",
-        "description": "Deleting the VirtualMachine makes virt-controller terminate the virt-launcher Pod for that VMI."
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "capi-manager",
+        "description": "When the guest Node is drained and its VolumeAttachments are gone, the workload-cluster side of Machine deletion is complete and Cluster API can continue."
       },
       {
         "step": 6,
-        "sourceComponentId": "kubevirt-launcher",
-        "targetComponentId": "guest-worker-node-vm",
-        "description": "The launcher gracefully shuts the RHCOS VMI down; the qemu-kvm process exits and the tap0 NIC is torn down."
+        "sourceComponentId": "capi-manager",
+        "targetComponentId": "capk-provider",
+        "description": "Cluster API now deletes the KubevirtMachine infrastructure object. CAPK removes the backing KubeVirt VirtualMachine from the management cluster."
       },
       {
         "step": 7,
-        "sourceComponentId": "guest-worker-node-vm",
+        "sourceComponentId": "capk-provider",
+        "targetComponentId": "kubevirt-vm-cr",
+        "description": "CAPK removes the KubeVirt VirtualMachine desired-state record after the infrastructure deletion request reaches the provider."
+      },
+      {
+        "step": 8,
+        "sourceComponentId": "kubevirt-vm-cr",
+        "targetComponentId": "kubevirt-launcher",
+        "description": "KubeVirt responds to VirtualMachine deletion by terminating the VirtualMachineInstance and its virt-launcher Pod."
+      },
+      {
+        "step": 9,
+        "sourceComponentId": "kubevirt-launcher",
+        "targetComponentId": "guest-worker-node-vm",
+        "description": "The launcher shuts the RHCOS VMI down; qemu-kvm exits and the VM's tap interface is removed from the host network."
+      },
+      {
+        "step": 10,
+        "sourceComponentId": "capi-manager",
         "targetComponentId": "guest-api-server",
-        "description": "The node is cordoned, drained, and deleted from the guest cluster; the NodePool now matches its desired size."
+        "description": "After the infrastructure is gone, Cluster API deletes the stale guest Node record. The NodePool, MachineDeployment, MachineSet, and Ready worker count now agree."
       }
     ]
   },
@@ -388,13 +472,13 @@
     "category": "traffic",
     "glyph": "dns",
     "eventName": "In-Cluster DNS Resolution",
-    "description": "Tracing how a application Pod turns a Service name into a ClusterIP: the Pod's stub resolver queries the node-local CoreDNS, which answers from the guest cluster's Service records before the caller opens the real connection.",
+    "description": "Tracing how an application Pod turns a Service name into a ClusterIP: the Pod's stub resolver queries the cluster DNS Service, a CoreDNS Pod answers from records synchronized from the guest API, and the caller then opens the real connection.",
     "steps": [
       {
         "step": 1,
         "sourceComponentId": "frontend-application-pod",
         "targetComponentId": "coredns-node",
-        "description": "The Front-End looks up 'backend.e-commerce-prod.svc.cluster.local'. Its /etc/resolv.conf points at the cluster DNS, so the query goes to the node-local CoreDNS Pod."
+        "description": "The Front-End looks up 'backend.e-commerce-prod.svc.cluster.local'. Its /etc/resolv.conf points at the cluster DNS Service, whose endpoint is a CoreDNS Pod running on a guest worker; CoreDNS is not assumed to be node-local to the caller."
       },
       {
         "step": 2,
@@ -421,7 +505,7 @@
     "category": "failure",
     "glyph": "vm-failure",
     "eventName": "Failure: a worker VM crashes (reconcile)",
-    "description": "A guest worker VM dies unexpectedly. virt-handler reports the loss and the NodePool → Cluster API → KubeVirt chain — the closer — detects that observed replicas no longer match desired and rebuilds the VM until the worker is healthy again.",
+    "description": "A guest worker VM dies unexpectedly. virt-handler reports the failed VMI, and KubeVirt reconciles the existing VirtualMachine's runStrategy by creating a fresh VMI and launcher. Cluster API does not replace the Machine for an ordinary guest crash because the worker infrastructure object still exists.",
     "steps": [
       {
         "step": 1,
@@ -438,44 +522,32 @@
       {
         "step": 3,
         "sourceComponentId": "mgmt-kube-apiserver",
-        "targetComponentId": "capk-provider",
-        "description": "The KubeVirt provider sees its KubevirtMachine has lost its VMI — observed state no longer matches the desired Machine."
+        "targetComponentId": "kubevirt-vm-cr",
+        "description": "The KubeVirt VirtualMachine remains the desired-state owner. With runStrategy Always (or RerunOnFailure for a failed exit), its controller sees that no healthy VMI is running and requests a replacement instance."
       },
       {
         "step": 4,
-        "sourceComponentId": "capk-provider",
-        "targetComponentId": "capi-manager",
-        "description": "CAPK reports the Machine as failed up to Cluster API, which now has fewer ready replicas than the MachineSet wants."
+        "sourceComponentId": "kubevirt-vm-cr",
+        "targetComponentId": "kubevirt-launcher",
+        "description": "KubeVirt's virt-controller creates a new VMI and its virt-launcher Pod from the existing VirtualMachine template. It is not a new CAPI Machine or a new CAPK VirtualMachine."
       },
       {
         "step": 5,
-        "sourceComponentId": "capi-manager",
-        "targetComponentId": "hypershift-operator",
-        "description": "The shortfall surfaces to the NodePool controller: the NodePool's desired replica count is no longer met."
+        "sourceComponentId": "mgmt-scheduler",
+        "targetComponentId": "kubevirt-launcher",
+        "description": "The management scheduler binds the replacement launcher Pod to a bare metal worker with sufficient capacity."
       },
       {
         "step": 6,
-        "sourceComponentId": "hypershift-operator",
-        "targetComponentId": "capi-manager",
-        "description": "Closing the loop, the NodePool controller drives Cluster API to create a replacement Machine to restore the desired count."
+        "sourceComponentId": "virt-handler",
+        "targetComponentId": "kubevirt-launcher",
+        "description": "virt-handler on the selected host signals the new launcher's libvirt process to boot the qemu-kvm domain."
       },
       {
         "step": 7,
-        "sourceComponentId": "capi-manager",
-        "targetComponentId": "capk-provider",
-        "description": "Cluster API asks CAPK for a fresh VirtualMachine to back the new Machine."
-      },
-      {
-        "step": 8,
-        "sourceComponentId": "capk-provider",
-        "targetComponentId": "kubevirt-launcher",
-        "description": "virt-controller creates a new virt-launcher Pod for the replacement VMI, scheduled onto a healthy bare metal worker."
-      },
-      {
-        "step": 9,
-        "sourceComponentId": "virt-handler",
+        "sourceComponentId": "kubevirt-launcher",
         "targetComponentId": "guest-worker-node-vm",
-        "description": "virt-handler boots the replacement RHCOS VMI; the worker rejoins the guest cluster and desired state is restored."
+        "description": "The replacement VMI boots the same RHCOS worker identity. Its kubelet reconnects to the Guest API Server and the existing Node returns Ready; desired state is restored without replacing the CAPI Machine."
       }
     ]
   },
@@ -484,7 +556,7 @@
     "category": "failure",
     "glyph": "pod-evicted",
     "eventName": "Failure: launcher Pod evicted (reconcile)",
-    "description": "Resource pressure on a bare metal worker evicts a virt-launcher Pod, killing its VM. The reconcile loop notices the VMI lost its Pod and reschedules a fresh launcher onto a node with capacity — closing the gap between desired and observed.",
+    "description": "Resource pressure evicts a virt-launcher Pod and stops its VMI. KubeVirt — not CAPK — recreates the launcher for the existing VMI/VirtualMachine intent and the management scheduler places it on a host with capacity. (A live-migratable VMI with an appropriate eviction strategy may migrate instead; this trace models restart.)",
     "steps": [
       {
         "step": 1,
@@ -501,32 +573,32 @@
       {
         "step": 3,
         "sourceComponentId": "mgmt-kube-apiserver",
-        "targetComponentId": "virt-handler",
-        "description": "virt-handler sees the VMI it was managing has lost its launcher Pod and marks the instance's observed state accordingly."
+        "targetComponentId": "kubevirt-vm-cr",
+        "description": "KubeVirt's controllers observe that the launcher is gone and reconcile the still-running VirtualMachine/VMI intent. This is a KubeVirt workload recovery path, not a Cluster API Machine replacement."
       },
       {
         "step": 4,
-        "sourceComponentId": "virt-handler",
-        "targetComponentId": "capk-provider",
-        "description": "The degraded VMI surfaces to the KubeVirt provider, whose backing Machine no longer matches the desired running state."
+        "sourceComponentId": "kubevirt-vm-cr",
+        "targetComponentId": "kubevirt-launcher",
+        "description": "virt-controller creates a fresh virt-launcher Pod from the existing VM/VMI specification."
       },
       {
         "step": 5,
-        "sourceComponentId": "capk-provider",
-        "targetComponentId": "kubevirt-launcher",
-        "description": "Reconciling toward desired state, virt-controller creates a fresh virt-launcher Pod for the VMI."
-      },
-      {
-        "step": 6,
         "sourceComponentId": "mgmt-scheduler",
         "targetComponentId": "kubevirt-launcher",
         "description": "The management scheduler binds the replacement launcher Pod to a bare metal worker that has capacity (avoiding the pressured node)."
       },
       {
-        "step": 7,
+        "step": 6,
         "sourceComponentId": "virt-handler",
+        "targetComponentId": "kubevirt-launcher",
+        "description": "virt-handler on the selected node connects the launcher to the host's KVM/libvirt stack and starts the qemu-kvm domain."
+      },
+      {
+        "step": 7,
+        "sourceComponentId": "kubevirt-launcher",
         "targetComponentId": "guest-worker-node-vm",
-        "description": "virt-handler on the new node boots the VMI again; the worker rejoins the guest cluster."
+        "description": "The VMI boots again and its guest kubelet reconnects to the Guest API Server, returning the worker Node to Ready."
       }
     ]
   },
@@ -534,56 +606,26 @@
     "eventId": "fail-control-plane-pod",
     "category": "failure",
     "glyph": "control-failure",
-    "eventName": "Failure: control-plane Pod crashes (reconcile)",
-    "description": "A hosted control-plane Pod — the Guest API Server — crashes. Because it is a Deployment managed in the management cluster, the management control loops recreate it: the guest cluster's brain is self-healing without operator intervention.",
+    "eventName": "Failure: API Server container crashes (local restart)",
+    "description": "The Guest API Server container exits inside an otherwise healthy Pod. The host kubelet's local restart loop asks CRI-O to restart that container in the same Pod; the Deployment and ReplicaSet controllers only create a replacement Pod if the Pod itself is deleted, evicted, or lost with its node.",
     "steps": [
       {
         "step": 1,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "kubelet-host",
-        "description": "The Guest API Server Pod process crashes. The bare metal kubelet running it records the container as exited."
+        "description": "The kube-apiserver process exits. CRI-O reports the terminated container to the bare metal host's kubelet, but the Pod object and its sandbox still exist."
       },
       {
         "step": 2,
         "sourceComponentId": "kubelet-host",
-        "targetComponentId": "mgmt-kube-apiserver",
-        "description": "The kubelet reports the Pod's failed status to the Management Kube API Server."
+        "targetComponentId": "crio-host",
+        "description": "Because the Pod's restartPolicy is Always, kubelet applies backoff if needed and asks host CRI-O to restart the failed container in place. No scheduler or ReplicaSet action is required."
       },
       {
         "step": 3,
-        "sourceComponentId": "mgmt-kube-apiserver",
-        "targetComponentId": "mgmt-controller-manager",
-        "description": "The ReplicaSet controller sees one fewer ready replica than the Guest API Server Deployment desires — a gap to reconcile."
-      },
-      {
-        "step": 4,
-        "sourceComponentId": "mgmt-controller-manager",
-        "targetComponentId": "mgmt-kube-apiserver",
-        "description": "Closing the loop, it creates a replacement Pod to satisfy the ReplicaSet's desired count."
-      },
-      {
-        "step": 5,
-        "sourceComponentId": "mgmt-kube-apiserver",
-        "targetComponentId": "mgmt-scheduler",
-        "description": "The new Pod is unscheduled; the management scheduler evaluates bare metal node capacity."
-      },
-      {
-        "step": 6,
-        "sourceComponentId": "mgmt-scheduler",
-        "targetComponentId": "mgmt-kube-apiserver",
-        "description": "The scheduler writes a Binding placing the replacement Pod on a healthy node."
-      },
-      {
-        "step": 7,
-        "sourceComponentId": "mgmt-kube-apiserver",
-        "targetComponentId": "kubelet-host",
-        "description": "The chosen node's kubelet is notified and starts the replacement Guest API Server container via CRI-O."
-      },
-      {
-        "step": 8,
-        "sourceComponentId": "kubelet-host",
+        "sourceComponentId": "crio-host",
         "targetComponentId": "guest-api-server",
-        "description": "The Guest API Server comes back up and resumes serving; the hosted control plane is healthy again."
+        "description": "CRI-O starts a new kube-apiserver container in the existing Pod sandbox. Readiness succeeds, the Service endpoint becomes available again, and the hosted API resumes serving."
       }
     ]
   },
@@ -610,7 +652,7 @@
         "step": 3,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "kubelet-guest",
-        "description": "For Pods that mount the ConfigMap as a VOLUME, the guest kubelet's configmap-and-secret manager notices the changed object on its next sync (~1 min + cache TTL) and atomically swaps the projected files in the Pod's volume. The container now sees new file contents — but the application process must re-read them itself (a file watcher or SIGHUP). If it's a volume mount AND the app watches the file, this is the whole story: the config is live with no rollout. Otherwise — a process that loaded config only at startup, and every env-var or subPath consumer — still runs the OLD values."
+        "description": "For Pods that mount the ConfigMap as a VOLUME, the guest kubelet's configmap-and-secret manager notices the changed object on a later sync and atomically swaps the projected files. With default sync and cache settings, propagation can take roughly two minutes. The container then sees new file contents, but the application must re-read them itself (for example via a file watcher or SIGHUP). Environment-variable and subPath consumers do not receive this update and require Pod recreation."
       },
       {
         "step": 4,
