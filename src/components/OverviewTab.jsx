@@ -516,26 +516,46 @@ export default function OverviewTab({
     const pairedTargets = new Set(
       nodes.filter(n => targetOf(n) && byId.has(targetOf(n))).map(n => targetOf(n))
     )
-    const out = []
-    for (const node of nodes) {
-      if (pairedTargets.has(node.id)) continue
-      const target = targetOf(node)
-      if (target && byId.has(target)) {
-        out.push(
-          <ServicePair
-            key={node.id}
-            color={zone.color}
-            relation={node.programs ? 'programs' : 'exposes'}
-            service={renderNode(node, zone, colIndex)}
-            target={renderNode(byId.get(target), zone, colIndex)}
-          />
-        )
-        continue
+    const renderList = (list, key) => {
+      const out = []
+      for (const node of list) {
+        if (pairedTargets.has(node.id)) continue
+        const target = targetOf(node)
+        if (target && byId.has(target)) {
+          out.push(
+            <ServicePair
+              key={node.id}
+              color={zone.color}
+              relation={node.programs ? 'programs' : 'exposes'}
+              service={renderNode(node, zone, colIndex)}
+              target={renderNode(byId.get(target), zone, colIndex)}
+            />
+          )
+          continue
+        }
+        out.push(renderNode(node, zone, colIndex))
       }
-      out.push(renderNode(node, zone, colIndex))
+      return out.length ? <Masonry key={key}>{out}</Masonry> : null
     }
-    if (out.length === 0) return null
-    return <Masonry key={`${zone.id}-nodes`}>{out}</Masonry>
+
+    if (!zone.nodeGroups?.length) return renderList(nodes, `${zone.id}-nodes`)
+    const grouped = new Set(zone.nodeGroups.flatMap((group) => group.nodeIds))
+    return (
+      <div className="zone-node-groups">
+        {zone.nodeGroups.map((group) => {
+          const groupNodes = group.nodeIds.map((id) => byId.get(id)).filter(Boolean)
+          const content = renderList(groupNodes, `${zone.id}-${group.id}`)
+          if (!content) return null
+          return (
+            <section className="zone-node-group" key={group.id} style={{ '--group-accent': zone.color }}>
+              <div className="zone-node-group-label">{group.label}</div>
+              {content}
+            </section>
+          )
+        })}
+        {renderList(nodes.filter((node) => !grouped.has(node.id)), `${zone.id}-ungrouped`)}
+      </div>
+    )
   }
 
   function renderZone(zone, depth = 0, parentZone = null, colIndex = 0) {

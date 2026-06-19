@@ -38,7 +38,7 @@ export default function Masonry({ minColWidth = 120, gap = 8, className = '', ch
     // its width alone. Reset any prior shrink so we measure the full available
     // width this pass before deciding again.
     const zone = el.closest('.zone')
-    const isLeaf = zone && el.parentElement &&
+    const isLeaf = zone && el.parentElement && !el.closest('.zone-node-groups') &&
       !el.parentElement.querySelector(':scope > .zone')
     if (isLeaf) { zone.style.flex = ''; zone.style.width = '' }
 

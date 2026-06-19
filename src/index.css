@@ -160,6 +160,32 @@ body::after {
   width: 100%;
   max-width: none;
 }
+
+.zone-node-groups {
+  flex: 1 1 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.zone-node-group {
+  position: relative;
+  padding: 18px 7px 7px;
+  border: 1px solid color-mix(in srgb, var(--group-accent) 16%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--group-accent) 4%, transparent);
+}
+.zone-node-group-label {
+  position: absolute;
+  top: 5px;
+  left: 8px;
+  color: color-mix(in srgb, var(--group-accent) 72%, var(--tx-muted));
+  font-size: 0.52rem;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
 /* Absolutely-positioned masonry children carry no intrinsic width, so a nested
    zone would otherwise collapse to its label width when it sits in a flex-wrap
    row (the desktop namespaces / launcher pod). The overview stacks its nested

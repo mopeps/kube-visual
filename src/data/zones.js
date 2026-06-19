@@ -49,6 +49,12 @@ function guestReplicaZone({ hostId, ordinal, colorVar }) {
     label: `Worker Node ${ordinal} · VirtualMachineInstance`,
     color,
     colorVar,
+    nodeGroups: [
+      { id: 'runtime', label: 'Node runtime', nodeIds: [`kubelet-guest-${suffix}`, `crio-guest-${suffix}`] },
+      { id: 'network', label: 'Networking & connectivity', nodeIds: [`ovn-node-guest-${suffix}`, `ovs-guest-${suffix}`, `konnectivity-agent-${suffix}`] },
+      { id: 'agents', label: 'Platform agents', nodeIds: [`coredns-node-${suffix}`, `multus-guest-${suffix}`, `tuned-guest-${suffix}`, `csi-node-guest-${suffix}`] },
+      { id: 'apps', label: 'Application replicas', nodeIds: [`frontend-application-pod-${suffix}`, `backend-application-pod-${suffix}`] },
+    ],
     nodes: workerNodes,
   }
 }
@@ -82,6 +88,11 @@ function replicaNode({ id, title, colorVar, kind, ordinal }) {
     color: c,
     colorVar,
     modeledReplica: true,
+    nodeGroups: isMaster ? [
+      { id: 'runtime', label: 'Host runtime', nodeIds: [`kubelet-${id}`, `crio-${id}`] },
+      { id: 'network', label: 'Node networking', nodeIds: [`ovn-node-${id}`, `ovs-${id}`, `metallb-${id}`] },
+      { id: 'control', label: 'Management control plane', nodeIds: [`mgmt-kube-apiserver-${id}`, `mgmt-etcd-${id}`, `mgmt-controller-manager-${id}`, `mgmt-scheduler-${id}`] },
+    ] : undefined,
     nodes,
     zones: isMaster ? [] : [{
       id: `kubevirt-launcher-zone-${id}`,
@@ -128,6 +139,12 @@ export const ZONES = [
         label: 'Bare Metal Master Node',
         color: 'var(--k-blue)',
         colorVar: 'k-blue',
+        nodeGroups: [
+          { id: 'runtime', label: 'Host runtime', nodeIds: ['kubelet-master', 'crio-master'] },
+          { id: 'network', label: 'Node networking', nodeIds: ['ovn-node-master', 'ovs-master', 'ovn-control-mgmt', 'metallb-speaker-master', 'metallb-controller'] },
+          { id: 'control', label: 'Management control plane', nodeIds: ['mgmt-kube-apiserver', 'mgmt-etcd', 'mgmt-controller-manager', 'mgmt-scheduler'] },
+          { id: 'hosted', label: 'Hosted-cluster lifecycle', nodeIds: ['hypershift-operator'] },
+        ],
         // The cluster runs three masters; one is drawn in full and these two
         // render as condensed-but-real node zones after this one (replicaNode),
         // carrying just the inter-node network data plane.
@@ -957,6 +974,13 @@ export const ZONES = [
                 label: 'Worker Node · VirtualMachineInstance',
                 color: 'var(--k-green)',
                 colorVar: 'k-green',
+                nodeGroups: [
+                  { id: 'runtime', label: 'Node runtime', nodeIds: ['kubelet-guest', 'crio-guest'] },
+                  { id: 'network', label: 'Networking & connectivity', nodeIds: ['ovn-node-guest', 'ovs-guest', 'konnectivity-agent'] },
+                  { id: 'agents', label: 'Platform agents', nodeIds: ['multus-guest', 'tuned-guest', 'csi-node-guest'] },
+                  { id: 'services', label: 'Cluster services', nodeIds: ['coredns-node', 'image-registry-guest', 'svc-router-nodeport-default', 'openshift-ingress-router-guest', 'cluster-monitoring'] },
+                  { id: 'apps', label: 'Applications', nodeIds: ['frontend-application-pod', 'backend-application-pod'] },
+                ],
                 badges: [
                   { label: 'RHCOS', color: 'var(--k-green)' },
                   { label: 'virtio-net', color: 'var(--k-green)' },
