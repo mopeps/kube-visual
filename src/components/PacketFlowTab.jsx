@@ -8,8 +8,15 @@ import ObjectText from './ObjectText'
 import ExploreCommands from './ExploreCommands'
 import { TypeGlyph } from './TypeIcon'
 import HopIcon from './HopIcon'
+import CategorizedIndex from './CategorizedIndex'
 
 const hopCount = (n) => `${n} hop${n === 1 ? '' : 's'}`
+const FLOW_CATEGORIES = [
+  { id: 'traffic', label: 'Traffic paths' },
+  { id: 'lifecycle', label: 'Provisioning & scale' },
+  { id: 'failure', label: 'Failure & reconciliation' },
+  { id: 'state', label: 'Configuration & storage' },
+]
 
 // One route endpoint — its type glyph in a bordered chip (matching the bullet
 // glyph chips so every glyph on the card reads the same way) followed by the
@@ -123,6 +130,14 @@ function Hop({ step, isOpen, isSelected, onToggle, onJump, onSelectComponent }) 
 // the dropdown of every available flow IS the landing view, rather than a
 // separate card gallery. Picking one promotes it to the active trace.
 function EventGallery({ onSelectEvent }) {
+  const options = events.map((event) => ({
+    id: event.eventId,
+    title: event.eventName,
+    meta: hopCount(event.steps.length),
+    category: event.category,
+    accent: 'var(--packet)',
+    event,
+  }))
   return (
     <div>
       <div className="mb-3">
@@ -133,7 +148,11 @@ function EventGallery({ onSelectEvent }) {
           Pick a flow to step through every hop from external client to PID&nbsp;1.
         </p>
       </div>
-      <FlowSwitcher onSelectEvent={onSelectEvent} defaultOpen />
+      <CategorizedIndex
+        categories={FLOW_CATEGORIES}
+        options={options}
+        onSelect={(option) => onSelectEvent(option.event)}
+      />
     </div>
   )
 }
@@ -142,7 +161,7 @@ function EventGallery({ onSelectEvent }) {
 // the gallery. This carries the trace-picking that used to live in the header
 // dropdown, so the tab is self-sufficient. Styled as an "open an object" popover
 // (ObjectSelect), keyed to the packet accent that identifies the trace theme.
-function FlowSwitcher({ activeEvent, onSelectEvent, onClearEvent, defaultOpen }) {
+function FlowSwitcher({ activeEvent, onSelectEvent, onClearEvent }) {
   const options = events.map(e => ({
     id: e.eventId,
     title: e.eventName,
@@ -159,7 +178,6 @@ function FlowSwitcher({ activeEvent, onSelectEvent, onClearEvent, defaultOpen })
         placeholder="Choose a trace flow"
         options={options}
         activeId={activeEvent?.eventId}
-        defaultOpen={defaultOpen}
         onSelect={(opt) => { if (opt.id !== activeEvent?.eventId) onSelectEvent(opt.event) }}
         clear={onClearEvent ? { label: '× Clear — back to gallery', onClear: onClearEvent } : undefined}
       />

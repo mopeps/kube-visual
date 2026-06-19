@@ -3807,7 +3807,24 @@ const CLUSTER_PKI = {
   ],
 }
 
+const TOPIC_CATEGORY = {
+  systemd: 'linux',
+  'linux-boot': 'linux',
+  'tmux-sudo': 'linux',
+  'linux-fds-sockets': 'linux',
+  'hcp-boot': 'kubernetes',
+  'hcp-install': 'kubernetes',
+  'api-request-path': 'kubernetes',
+  'etcd-raft': 'kubernetes',
+  'cluster-pki': 'kubernetes',
+  'ovn-topology': 'network',
+  'ovn-topology-big': 'network',
+  'ovn-topology-guest': 'network',
+  'ovn-topology-full': 'network',
+}
+
 export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, OVN_TOPOLOGY, OVN_TOPOLOGY_BIG, OVN_TOPOLOGY_GUEST, OVN_TOPOLOGY_FULL, API_REQUEST_PATH, ETCD_RAFT, CLUSTER_PKI, TMUX_SUDO, LINUX_FDS]
+  .map((topic) => ({ ...topic, category: TOPIC_CATEGORY[topic.topicId] }))
 
 export const findDeepDive = (topicId) =>
   DEEP_DIVES.find((t) => t.topicId === topicId) || null

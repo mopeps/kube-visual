@@ -4,13 +4,26 @@ import DeepDiveCanvas from './DeepDiveCanvas'
 import DeepDiveModal from './DeepDiveModal'
 import ObjectSelect from './ObjectSelect'
 import { scrollIntoUpperThird } from '../lib/scroll'
+import CategorizedIndex from './CategorizedIndex'
 
 const accent = (colorVar) => `var(--${colorVar || 'k-cyan'})`
+const TOPIC_CATEGORIES = [
+  { id: 'linux', label: 'Linux foundations' },
+  { id: 'kubernetes', label: 'Kubernetes & HCP' },
+  { id: 'network', label: 'OVN networking' },
+]
 
 // Default view (no topic selected): the Deep dive picker itself, expanded — so
 // the dropdown of every in-depth page IS the landing view, rather than a
 // separate card gallery.
 function TopicIndex({ onSelectTopic }) {
+  const options = DEEP_DIVES.map((topic) => ({
+    id: topic.topicId,
+    title: topic.title,
+    meta: `${countBoxes(topic)} boxes`,
+    category: topic.category,
+    accent: accent(topic.colorVar),
+  }))
   return (
     <div>
       <div className="mb-3">
@@ -21,9 +34,11 @@ function TopicIndex({ onSelectTopic }) {
           Pick one to open it.
         </p>
       </div>
-      <div className="obj-select-row">
-        <TopicSelect activeTopic={null} topic={null} onSelectTopic={onSelectTopic} defaultOpen />
-      </div>
+      <CategorizedIndex
+        categories={TOPIC_CATEGORIES}
+        options={options}
+        onSelect={(option) => onSelectTopic(option.id)}
+      />
     </div>
   )
 }
@@ -32,7 +47,7 @@ const hops = (n) => `${n} hop${n === 1 ? '' : 's'}`
 
 // Topic picker — jump to any other deep dive, or clear to the index. Styled as
 // an "open an object" popover (ObjectSelect), echoing the etcd intent store.
-function TopicSelect({ activeTopic, topic, onSelectTopic, onClearTopic, defaultOpen }) {
+function TopicSelect({ activeTopic, topic, onSelectTopic, onClearTopic }) {
   const options = DEEP_DIVES.map((t) => ({
     id: t.topicId,
     title: t.title,
@@ -48,7 +63,6 @@ function TopicSelect({ activeTopic, topic, onSelectTopic, onClearTopic, defaultO
       placeholder="Choose a deep dive"
       options={options}
       activeId={activeTopic}
-      defaultOpen={defaultOpen}
       onSelect={(opt) => { if (opt.id !== activeTopic) onSelectTopic(opt.id) }}
       clear={onClearTopic ? { label: '← All deep dives', onClear: onClearTopic } : undefined}
     />
