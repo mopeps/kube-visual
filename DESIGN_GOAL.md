@@ -54,14 +54,15 @@ flow.
 | Body / labels | `JetBrains Mono`, uppercase mini-labels with `0.12em–0.18em` tracking |
 | Zone accents | A cool-to-green gradient that descends the stack — Cyan `#00e5ff` (external client) → Blue `#3b82f6` (bare metal master node) → lighter Blue `#60a5fa` (bare metal worker node) → Sky `#38bdf8` (guest control plane namespace) → Teal `#14b8a6` (KubeVirt launcher) → Green `#22c55e` (guest worker VMI). Used for borders, badges, and zone labels. The two bare-metal nodes take two shades of the same blue so the physical layer still reads as one band while master and worker stay distinguishable. (Three further accents — `--k-purple`, `--k-amber`, `--k-orange` — exist as CSS variables for incidental use.) |
 | Packet accent | Red-pink `#ff4d6d` — only for the active trace (nodes, arrow steps, highlighted hop) |
-| Borders | 1px solid + dashed inner separators, no rounded "card" feel beyond a soft 8px radius |
+| Borders | Solid for runtime/kernel structures; dashed only for declarative/logical records; thin-solid fields for namespaces |
 
 ## Layout rules
 
 1. **Zones are full-width horizontal rows.** Each zone carries a small
    uppercase label across the top (in its zone accent, underlined by a thin
    border) with the content area below it; nested child zones repeat the same
-   label-on-top pattern inside a bordered (or dashed) containment box.
+   label-on-top pattern inside a semantic containment field. Machines carry the
+   strong physical rail; namespaces use a quieter thin-solid field.
 2. **Inside each zone, nodes flow with `flex-wrap`.** On desktop a node is a
    fixed `width: 128px`, so a wide zone packs several compact cards per row and
    a narrow one wraps them naturally. Under 640px the cards switch to a fluid
@@ -95,14 +96,17 @@ flow.
   `crictl`, …). Object names in the prose are lifted into clickable chips that
   jump to the referenced node. `ESC` (or tap-outside / swipe-down on mobile)
   closes it.
-- **Pick a trace flow** → done from inside the **Packet Flow** view: a gallery
-  of flow cards when nothing is selected, collapsing to an inline pill switcher
+- **Pick a trace flow** → done from inside the **Packet Flow** view: compact
+  categorized rows with mechanism-specific line glyphs when nothing is selected,
+  collapsing to an inline switcher
   once one is. Selecting a flow transitions its nodes to full opacity with the
   packet outline and `01`, `02` step badges; numbered SVG connectors are drawn
   between them; the hop list populates; and a bottom-docked hop inspector reads
-  out the selected hop on the Overview tab.
+  out the selected hop on the Overview tab. Architecture also exposes a compact
+  **Clear flow** action whenever a trace is active.
 - **Switch tabs** to see the same components from different angles:
-  1. **Architecture Overview** — the zoned diagram.
+  1. **Architecture Overview** — the zoned diagram with collapsed-by-default,
+     in-place runtime-to-kernel expansion and independent One pair / All nodes scope.
   2. **Step-by-Step Packet Flow** — the active event's hops as an expandable
      vertical list.
   3. **Deep Dive** — ground-up explainers one level below the cluster (the

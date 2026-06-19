@@ -176,27 +176,24 @@ fall into one of these three categories. Anything that is not one of these three
 off the main canvas (it surfaces elsewhere — e.g. in a detail modal, the etcd intent
 store, or a trace-only zone).
 
-**Replica presentation:** the modeled cluster runs **three masters and three workers**,
-but only one of each renders as a full zone. The identical siblings render as condensed
-**replica node zones** (`zone.replicaNodes` in `zones.js`) — real bordered node zones,
-side by side in a row trailing the detailed zone, that carry *only* the components
-moving traffic between nodes: the `OVN-K8s Node → Open vSwitch` data-plane pair
-(`programs` br-int) and the MetalLB speaker. Each card keeps a replica-scoped DOM id
-(`ovs-worker-2`, …) so overlays/flows can anchor per node, but opens the **canonical**
-component's modal via its `mirror` field (the software is identical); the zone label
-opens a popup explaining the HA story (etcd quorum / capacity spread) and what is not
-drawn. Hidden by default for a clean main view — revealed by the wide-desktop
-**All nodes** toggle, and forced on by the network overlay (its per-node gateway-router
-chips anchor here).
+**Replica presentation:** the modeled cluster runs **three masters and three workers**.
+The independent **One pair / All nodes** scope control keeps the default canvas compact
+without inventing placement. All nodes renders three real master/worker pairs: singleton
+Deployments stay only on their modeled primary node, while static control-plane Pods,
+DaemonSets, host services, launchers, VMIs, and guest node agents repeat only where the
+runtime model says they exist. Replica cards receive node-scoped DOM ids and open the
+canonical component through `mirror`. The Front-End and Back-End Deployments model three
+replicas each — one Pod on every guest worker — while their single Service/NetworkPolicy
+records compile into per-node LB/ACL flows.
 
 1. **The Context / Zone Boundaries** — the macro physical/virtual boundaries that frame
    everything else: `[Management Cluster]`, `[Management Master Node]`,
    `[Dedicated Guest Control Plane Namespace]`, `[Management Worker Node]`,
    `[Guest Worker Node VM]`. Border style is a rule, not a per-zone choice:
-   **physical/virtual machine boundaries draw solid; Kubernetes Namespace zones draw
-   dashed** (`dashed: true` in `zones.js`) — a namespace is a logical grouping, not a
-   wall, and every namespace zone (the Guest Control Plane Namespace, …) must wear
-   the same dashed treatment. (MetalLB is the exception we draw at node level: both
+   **physical/virtual machine boundaries draw solid with the heavy physical rail;
+   Kubernetes Namespace zones use a quieter thin-solid field** (`boundaryKind` in
+   `zones.js`). Dashed card borders are protected for declarative/logical state only:
+   Kubernetes API records and OVN logical DB rows. (MetalLB is the exception we draw at node level: both
    its speaker *and* its controller sit on the node as cards, not inside a separate
    `metallb-system` namespace zone, since MetalLB is a per-node networking concern.)
 2. **The Active Enforcers (`systemd` Services)** — binary systems executing
@@ -380,7 +377,7 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    "Kill Main PID" control fires `SIGCHLD` up to the PID 1 engine, flips the DAG
    box to `UNIT_FAILED`, then animates the `fork()/execve()` restart, with the two
    dependency dimensions — **Requires** (structural, solid badge) vs **After**
-   (chronological, dashed badge) — drawn distinctly. It is also reachable via a
+   (chronological, hollow badge) — drawn distinctly. It is also reachable via a
    `systemd ↗` chip beside the `[UNIT]` tag in any systemd-service detail modal,
    which deep-links straight to the systemd page (the OVN/OVS components carry the
    same chip into the OVN topology page). Rendered by `DeepDiveTab.jsx` →
@@ -400,14 +397,13 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    line. A topic sets `reconciliation` *or* `topology`, never both (their canvas gap
    rules conflict); the static wiring hides under 640px where the stacked columns
    would make it criss-cross.
- * **Big view & Network mode (Overview, wide desktop ≥1280px):** a single
-   header **view-mode control** (`overviewMode` = `single` · `big` · `network`,
-   one segmented pill so exactly one mode is lit and it's always the one on
-   screen). **Big view** renders the **whole normal Overview three times in
-   parallel columns** — one per node pair (`#net-col-N`), reusing
-   `renderOverviewStack()` so every card still opens its true `AncestryModal`. The
-   trailing replica rows are suppressed (the three columns are the three pairs).
-   **Network** turns those columns into a **detailed networking topology**:
+ * **Architecture / Network lens + node scope (Overview):** `overviewMode` is
+   `architecture` or `network`; Architecture is the default and every runtime card
+   can expand in place to its Linux primitives. The separate node scope is `pair` or
+   `all`. Phones force one pair; tablets stack three pairs; wide desktop shows three
+   pair columns. All nodes materializes explicit replica zones instead of cloning the
+   whole overview, so singleton controllers/operators never appear on nodes where they
+   do not run. **Network** turns the same placement-aware columns into a detailed topology:
    - The columns are pruned to network-only by `filterNetworkZone()` —
      `isNetworkComponent` (`src/data/network-components.js`) keeps components whose
      `role` (components.json) is a network role, plus the network control-plane
@@ -489,7 +485,7 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
      live INSIDE the node-local Northbound DB box, tied to the one thing that really
      exists — the `br-int` OpenFlow flow — by the "realized as" edge. A new logical
      object is a row in that box, not a standalone card. *Visually* the logical
-     objects draw dashed/faint (the app's logical-zone language) and the realized
+     objects draw dashed/faint (the app's declarative-state language) and the realized
      datapath (`br-int`/`br-ex` + the OpenFlow flows, tagged `realized`) solid and
      lit — so the collapse from a multi-hop diagram to one real `br-int` reads at a
      glance.
@@ -508,8 +504,8 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
      serve the focus" and "omit what would mislead" coincide.)
    - **The network control plane reads as control plane, not data path.** The
      components that *program* the network stay on the map (amputating them would
-     leave a data plane that configures itself), but as a dashed **"control plane ·
-     configures"** card wired by a `configures` edge to what each programs — never a
+     leave a data plane that configures itself), but as a solid **"control plane ·
+     configures"** runtime card wired by a labeled `configures` edge to what each programs — never a
      drillable datapath box. The allow-list (`NETWORK_CONTROL_PLANE_IDS`): CNO →
      guest OVN-K control plane, Ingress → the in-VM router, DNS → CoreDNS, the
      kubevirt CCM → the app-ingress LoadBalancer fronting the guest router, MetalLB

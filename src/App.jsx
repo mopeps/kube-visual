@@ -109,14 +109,9 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem(VIEW_KEY, overviewMode) } catch { /* ignore */ }
   }, [overviewMode])
-  // "Big view" — the three parallel node-pair columns — only makes sense where
-  // there's room for them, so it stays a wide-desktop layout. "Network" mode
-  // (every component opened to its networking internals) works at any width: on
-  // wide it rides the three big-view columns; below that it renders a single
-  // pair-column that fits a phone screen (see OverviewTab's single-column path).
-  // Only "Big view" and "Network" use the three parallel columns. "Primitives"
-  // is a one-up overview (depth per component, not per node), so it must NOT be
-  // treated as big-view.
+  // Lens and physical scope are independent: Architecture opens runtime cards
+  // to primitives; Network opens networking internals. All nodes materializes
+  // three placement-aware node pairs at tablet/wide widths; phones force one.
   const [nodeScope, setNodeScope] = useState(() => {
     try {
       const saved = localStorage.getItem(SCOPE_KEY)
