@@ -69,6 +69,7 @@ export default function ObjectSelect({
           onClick={() => setOpen((o) => !o)}
         >
           <span className="obj-select-label">{label}</span>
+          {value?.icon && <span className="obj-select-icon" aria-hidden>{value.icon}</span>}
           <span className="obj-select-value">
             {value ? (
               <>
@@ -108,6 +109,7 @@ export default function ObjectSelect({
               onClick={() => pick(opt)}
             >
               <span className="obj-select-option-main">
+                {opt.icon && <span className="obj-select-icon" aria-hidden>{opt.icon}</span>}
                 <span className="obj-select-option-title">{opt.title}</span>
                 {opt.meta && <span className="obj-select-option-meta">{opt.meta}</span>}
               </span>

@@ -337,6 +337,7 @@ export default function App() {
       onSelectStep={selectStep}
       highlightId={highlightedId}
       onClearHighlight={clearHighlight}
+      onClearEvent={clearEvent}
       bigView={bigView}
       netOverlay={netOverlay}
       primOverlay={primOverlay}

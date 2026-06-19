@@ -131,6 +131,7 @@ export default function OverviewTab({
   onSelectStep,
   highlightId,
   onClearHighlight,
+  onClearEvent,
   // Wide-desktop only: "Big view" renders the whole overview three times in
   // parallel columns (one per node pair).
   bigView = false,
@@ -364,7 +365,7 @@ export default function OverviewTab({
             idPrefix="pr-c"
           hint={null}
           color={zone.color}
-          domIdOverride={!bigView && colIndex === 0 ? node.id : undefined}
+          domIdOverride={colIndex === 0 ? node.id : undefined}
             isOpen={primExpandedIds.has(node.id)}
             onToggle={() => togglePrimExpand(node.id)}
             onSelectComponent={onSelectComponent}
@@ -462,7 +463,7 @@ export default function OverviewTab({
         // the normal canvas keeps the raw componentId.
         id={netOverlay
           ? `nt-c${colIndex}-${canonicalId}`
-          : primOverlay && bigView
+          : primOverlay && bigView && colIndex > 0
             ? `pr-c${colIndex}-${node.id}`
             : node.id}
         title={node.title}
@@ -680,6 +681,11 @@ export default function OverviewTab({
             </span>
           )}
           {primOverlay && bigView && <span className="net-bar-hint">Modeled placement · three masters · three workers</span>}
+          {primOverlay && activeEvent && (
+            <button type="button" className="net-bar-btn net-bar-btn--clear" onClick={onClearEvent}>
+              × Clear flow
+            </button>
+          )}
           {netOverlay && (
             <button
               type="button"

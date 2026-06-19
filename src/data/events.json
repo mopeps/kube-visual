@@ -2,6 +2,7 @@
   {
     "eventId": "api-ingress-traffic",
     "category": "traffic",
+    "glyph": "api-ingress",
     "eventName": "Control-Plane / API Ingress",
     "description": "Tracing an 'oc'/'kubectl' request to the hosted cluster's API. It enters the management cluster through the Shared Ingress proxy's MetalLB VIP, is SNI-routed by hostname to this guest's kube-apiserver Service, and terminates at the Guest API Server Pod in the HCP namespace. This control-plane path stays entirely in the management cluster and never enters a guest worker VM. The OAuth, Konnectivity, and Ignition endpoints ride the same shared ingress.",
     "steps": [
@@ -28,6 +29,7 @@
   {
     "eventId": "app-ingress-traffic",
     "category": "traffic",
+    "glyph": "app-ingress",
     "eventName": "Application Ingress (Wildcard Route)",
     "description": "Tracing an inbound HTTPS request to a guest application on the *.apps wildcard domain. Unlike API traffic, this never touches the Shared Ingress Proxy: it enters through the Apps Ingress LoadBalancer (an infra-side LoadBalancer Service on the bare metal cluster whose VIP MetalLB advertises, which forwards to the guest router's NodePort), crosses into the KubeVirt VM, and is handled by the guest cluster's own OpenShift Ingress Router before reaching the front-end ClusterIP Service and Pod. There is no LoadBalancer inside the guest — its ingress is a NodePort fronted from the management cluster.",
     "steps": [
@@ -90,6 +92,7 @@
   {
     "eventId": "pod-spawning",
     "category": "lifecycle",
+    "glyph": "spawn",
     "eventName": "Guest Pod Lifecycle (Spawn)",
     "description": "Tracing how a new application Pod is scheduled and started in the guest cluster: from a kubectl apply hitting the Guest API Server through scheduling, kubelet notification, and CRI-O container creation inside the Guest VM.",
     "steps": [
@@ -134,6 +137,7 @@
   {
     "eventId": "east-west-service-traffic",
     "category": "traffic",
+    "glyph": "east-west",
     "eventName": "East-West Service Traffic (Front-End → Back-End)",
     "description": "Tracing an in-cluster call from the Front-End Application to the Back-End Application through the Back-End ClusterIP Service: name resolution to a virtual IP, OVN load-balancer DNAT on the guest OVS fabric, a NetworkPolicy ACL check, and delivery to a backing Pod — no ingress, no traffic leaving the VM.",
     "steps": [
@@ -166,6 +170,7 @@
   {
     "eventId": "hcp-provisioning",
     "category": "lifecycle",
+    "glyph": "provision",
     "eventName": "HCP Control Plane + NodePool Provisioning",
     "description": "Tracing how a new Hosted Control Plane and its first KubeVirt worker come up: the HyperShift Operator reconciles the HostedCluster, the per-HCP control-plane-operator brings up etcd and the Guest API Server, and the NodePool is turned into a VirtualMachineInstance via Cluster API and the KubeVirt provider.",
     "steps": [
@@ -222,6 +227,7 @@
   {
     "eventId": "nodepool-scale-up",
     "category": "lifecycle",
+    "glyph": "scale-up",
     "eventName": "NodePool Scale-Up (add a worker)",
     "description": "Tracing how raising a NodePool's replica count becomes a brand-new RHCOS worker VM: the HyperShift NodePool controller renders it into Cluster API, CAPK turns the desired Machine into a KubeVirt VirtualMachine, and virt-handler boots the VMI until it registers as a guest node.",
     "steps": [
@@ -284,6 +290,7 @@
   {
     "eventId": "nodepool-scale-down",
     "category": "lifecycle",
+    "glyph": "scale-down",
     "eventName": "NodePool Scale-Down (remove a worker)",
     "description": "Tracing the reverse path: lowering a NodePool's replicas walks back down the Cluster API chain so CAPK deletes a KubeVirt VirtualMachine and the worker VM is drained and shut down.",
     "steps": [
@@ -334,6 +341,7 @@
   {
     "eventId": "oc-exec-konnectivity",
     "category": "traffic",
+    "glyph": "exec",
     "eventName": "oc exec into a Pod (Konnectivity)",
     "description": "Tracing an 'oc exec' from a developer to a process inside a guest application Pod. Because the Guest API Server cannot route to the node network directly, the call rides the API-Server-initiated Konnectivity tunnel down to the node's kubelet and CRI-O.",
     "steps": [
@@ -378,6 +386,7 @@
   {
     "eventId": "in-cluster-dns",
     "category": "traffic",
+    "glyph": "dns",
     "eventName": "In-Cluster DNS Resolution",
     "description": "Tracing how a application Pod turns a Service name into a ClusterIP: the Pod's stub resolver queries the node-local CoreDNS, which answers from the guest cluster's Service records before the caller opens the real connection.",
     "steps": [
@@ -410,6 +419,7 @@
   {
     "eventId": "fail-worker-vm-crash",
     "category": "failure",
+    "glyph": "vm-failure",
     "eventName": "Failure: a worker VM crashes (reconcile)",
     "description": "A guest worker VM dies unexpectedly. virt-handler reports the loss and the NodePool → Cluster API → KubeVirt chain — the closer — detects that observed replicas no longer match desired and rebuilds the VM until the worker is healthy again.",
     "steps": [
@@ -472,6 +482,7 @@
   {
     "eventId": "fail-launcher-evicted",
     "category": "failure",
+    "glyph": "pod-evicted",
     "eventName": "Failure: launcher Pod evicted (reconcile)",
     "description": "Resource pressure on a bare metal worker evicts a virt-launcher Pod, killing its VM. The reconcile loop notices the VMI lost its Pod and reschedules a fresh launcher onto a node with capacity — closing the gap between desired and observed.",
     "steps": [
@@ -522,6 +533,7 @@
   {
     "eventId": "fail-control-plane-pod",
     "category": "failure",
+    "glyph": "control-failure",
     "eventName": "Failure: control-plane Pod crashes (reconcile)",
     "description": "A hosted control-plane Pod — the Guest API Server — crashes. Because it is a Deployment managed in the management cluster, the management control loops recreate it: the guest cluster's brain is self-healing without operator intervention.",
     "steps": [
@@ -578,6 +590,7 @@
   {
     "eventId": "configmap-update-rollout",
     "category": "state",
+    "glyph": "config",
     "eventName": "ConfigMap Update → Live in a Pod",
     "description": "Tracing what really happens after 'oc apply -f configmap.yaml'. There is NO bespoke operator that rolls a plain ConfigMap edit into a running Pod: the apply only rewrites the ConfigMap record in guest etcd. Volume-mounted ConfigMaps are refreshed in place by the guest kubelet (but the app must re-read the file), while env-var and subPath consumers see nothing until the Pod is recreated. To make the new config actually live you change the desired Pod state — 'oc rollout restart' (or a config-hash annotation) bumps the Deployment's pod template, and the Deployment controller inside the Guest Controller Manager then rolls a fresh Pod that reads the updated ConfigMap at startup. (A tool like Stakater Reloader can watch ConfigMaps/Secrets and fire that rollout restart automatically — the closest thing to an operator that does this for you.)",
     "steps": [
@@ -652,6 +665,7 @@
   {
     "eventId": "pvc-provision-mount",
     "category": "state",
+    "glyph": "storage",
     "eventName": "Storage: PVC → Provisioned PV → Mounted in a Pod",
     "description": "Tracing a guest PersistentVolumeClaim from 'oc apply' to a filesystem inside a Pod. The HCP-on-KubeVirt twist: the guest has no storage backend of its own — the KubeVirt CSI Controller provisions a backing PVC in the management cluster and hotplugs that volume into the worker VMI as a new disk, which the in-VM CSI Node Driver then formats and mounts. Day-0 setup happened earlier and stays out of the trace: the Storage Operator deployed the csi.kubevirt.io driver and its kubevirt-csi-infra-default StorageClass.",
     "steps": [

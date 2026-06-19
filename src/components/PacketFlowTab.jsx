@@ -9,6 +9,7 @@ import ExploreCommands from './ExploreCommands'
 import { TypeGlyph } from './TypeIcon'
 import HopIcon from './HopIcon'
 import CategorizedIndex from './CategorizedIndex'
+import FlowGlyph from './FlowGlyph'
 
 const hopCount = (n) => `${n} hop${n === 1 ? '' : 's'}`
 const FLOW_CATEGORIES = [
@@ -136,6 +137,7 @@ function EventGallery({ onSelectEvent }) {
     meta: hopCount(event.steps.length),
     category: event.category,
     accent: 'var(--packet)',
+    icon: <FlowGlyph name={event.glyph} />,
     event,
   }))
   return (
@@ -167,6 +169,7 @@ function FlowSwitcher({ activeEvent, onSelectEvent, onClearEvent }) {
     title: e.eventName,
     meta: hopCount(e.steps.length),
     accent: 'var(--packet)',
+    icon: <FlowGlyph name={e.glyph} />,
     event: e,
   }))
   return (
@@ -174,7 +177,7 @@ function FlowSwitcher({ activeEvent, onSelectEvent, onClearEvent }) {
       <ObjectSelect
         label="Trace flow"
         accent="var(--packet)"
-        value={activeEvent ? { title: activeEvent.eventName, meta: hopCount(activeEvent.steps.length) } : null}
+        value={activeEvent ? { title: activeEvent.eventName, meta: hopCount(activeEvent.steps.length), icon: <FlowGlyph name={activeEvent.glyph} /> } : null}
         placeholder="Choose a trace flow"
         options={options}
         activeId={activeEvent?.eventId}
@@ -234,7 +237,8 @@ export default function PacketFlowTab({
       />
       <div className="mb-3">
         <div className="flex items-baseline justify-between gap-3">
-          <div className="font-display text-[1.05rem] font-semibold leading-tight">
+          <div className="packet-flow-title font-display text-[1.05rem] font-semibold leading-tight">
+            <FlowGlyph name={activeEvent.glyph} />
             {activeEvent.eventName}
           </div>
           <span

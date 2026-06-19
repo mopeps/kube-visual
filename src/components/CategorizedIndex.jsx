@@ -16,6 +16,7 @@ export default function CategorizedIndex({ categories, options, onSelect }) {
                   style={{ '--catalogue-accent': option.accent }}
                   onClick={() => onSelect(option)}
                 >
+                  {option.icon && <span className="catalogue-row-icon" aria-hidden>{option.icon}</span>}
                   <span className="catalogue-row-title">{option.title}</span>
                   <span className="catalogue-row-meta">{option.meta}</span>
                   <span className="catalogue-row-go" aria-hidden>↗</span>
