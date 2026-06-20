@@ -25,8 +25,9 @@ export const PRIMITIVES_BY_TYPE = {
         label: 'Network Namespace',
         scope: 'pod',
         description:
-          'Gives the container its own private network stack — a dedicated IP address, routing table, and iptables chains — fully isolated from the host and other Pods. Created by the CNI plugin when the Pod sandbox initialises.',
+          'Gives the container its own private network stack — a dedicated IP address, routing table, and iptables chains — isolated from the host and other Pods.',
         interactions: [
+          'Created by the CNI plugin when the Pod sandbox initialises.',
           'Attached to a veth pair whose host-side peer lives in the root netns and plugs into the OVS br-int bridge.',
           'Traffic leaving the Pod crosses the veth boundary, where OVN-generated OpenFlow rules apply NAT, ACLs, and routing.',
           'oc exec / kubectl exec enters this namespace to run in-container commands.',
@@ -74,9 +75,9 @@ export const PRIMITIVES_BY_TYPE = {
         label: 'UTS Namespace',
         scope: 'pod',
         description:
-          "Isolates the hostname and NIS domain name, so the Pod reports its own hostname (its Pod name) rather than the node's — and every container in the Pod sees the same one. Held open by the pause (sandbox) container and shared across the Pod.",
+          "Isolates the hostname and NIS domain name, so the Pod reports its own hostname (its Pod name) rather than the node's.",
         interactions: [
-          'Created with the sandbox via clone(CLONE_NEWUTS); the kubelet sets the hostname to the Pod name (or spec.hostname).',
+          'Created with the sandbox via clone(CLONE_NEWUTS) and held open by the pause (sandbox) container; the kubelet sets the hostname to the Pod name (or spec.hostname).',
           'Shared by every container in the Pod, so `hostname` returns an identical value across them.',
           'Independent of the network namespace — changing the UTS hostname does not change DNS resolution or the Pod IP.',
         ],
@@ -121,7 +122,7 @@ export const PRIMITIVES_BY_TYPE = {
         label: 'PID Namespace',
         scope: 'container',
         description:
-          "Gives the container its own process-ID space, so its entrypoint runs as PID 1 and can only see and signal its own descendants — never the host's processes or those of other containers. Per-container by default; setting spec.shareProcessNamespace: true makes all containers in the Pod share one instead.",
+          "Gives the container its own process-ID space, so its entrypoint runs as PID 1 and can only see and signal its own descendants — never the host's processes or those of other containers.",
         interactions: [
           'Created per container by the runtime via clone(CLONE_NEWPID); the entrypoint becomes PID 1 inside it.',
           'PID 1 reaps zombies and receives termination signals — a process that ignores SIGTERM stalls Pod shutdown until the grace period expires.',
@@ -136,9 +137,9 @@ export const PRIMITIVES_BY_TYPE = {
         label: 'Container cgroup',
         scope: 'container',
         description:
-          "The per-container cgroups v2 the runtime (crun/runc) creates *beneath* the Pod slice — one for each container — enforcing that single container's own CPU, memory, and I/O requests and limits. Nested inside the Pod slice, so its usage rolls up into the Pod's aggregate budget.",
+          "The per-container cgroups v2 the runtime (crun/runc) creates beneath the Pod slice — one per container — enforcing that container's own CPU, memory, and I/O requests and limits.",
         interactions: [
-          'Hierarchy is created by CRI-O/crun at container start, nested under the Pod slice at /sys/fs/cgroup/<pod-slice>/crio-<id>.',
+          "Hierarchy is created by CRI-O/crun at container start, nested under the Pod slice at /sys/fs/cgroup/<pod-slice>/crio-<id>, so its usage rolls up into the Pod's aggregate budget.",
           'Kubelet polls cgroup stats and reports resource consumption back to the API server.',
           'If this container’s memory.max is breached the kernel OOM-killer terminates its process.',
         ],
@@ -153,10 +154,10 @@ export const PRIMITIVES_BY_TYPE = {
         label: 'SELinux MCS Label',
         scope: 'container',
         description:
-          "A unique SELinux Multi-Category Security label per container — e.g. system_u:system_r:container_t:s0:c14,c742 — tagged onto its process and files. The kernel's SELinux LSM only permits access between matching categories, so even a container escape can't read another Pod's files.",
+          "A unique SELinux Multi-Category Security (MCS) label per container — e.g. system_u:system_r:container_t:s0:c14,c742 — tagged onto its process and files.",
         interactions: [
           'CRI-O assigns each container a unique pair of MCS categories (c<NN>,c<MM>) at start.',
-          "The kernel denies any access whose label categories don't match and logs an AVC denial.",
+          "The kernel denies any access whose label categories don't match — so even a container escape can't read another Pod's files — and logs an AVC denial.",
           "Mounted volumes are relabelled to the container's context so the process can read them.",
         ],
         commands: [
@@ -170,11 +171,11 @@ export const PRIMITIVES_BY_TYPE = {
         label: 'seccomp Profile',
         scope: 'container',
         description:
-          "A seccomp-BPF syscall filter the kernel attaches to the container's processes, restricting which of the ~350 Linux system calls they may make. OpenShift applies the RuntimeDefault profile by default, blocking dangerous calls (mount, ptrace, kexec, …) so a compromised process has a far smaller kernel attack surface.",
+          "A seccomp-BPF syscall filter the kernel attaches to the container's processes, restricting which of the ~350 Linux system calls they may make.",
         interactions: [
           'CRI-O loads the profile’s BPF program and attaches it at container exec (no_new_privs + SECCOMP_SET_MODE_FILTER).',
           "A blocked syscall returns EPERM or kills the process, per the profile's default action.",
-          'Set per workload via spec.securityContext.seccompProfile; RuntimeDefault is the cluster default under the restricted-v2 SCC.',
+          "Set per workload via spec.securityContext.seccompProfile; OpenShift's RuntimeDefault (the restricted-v2 SCC default) blocks dangerous calls like mount, ptrace, and kexec.",
         ],
         commands: [
           "# Check the seccomp mode of the container's process (2 = filtered)\nPID=$(crictl inspect <container_id> | jq .info.pid)\ngrep Seccomp /proc/$PID/status",
@@ -186,8 +187,9 @@ export const PRIMITIVES_BY_TYPE = {
         label: 'Linux Capabilities',
         scope: 'container',
         description:
-          "The kernel splits root's power into ~40 distinct capabilities (CAP_NET_ADMIN, CAP_SYS_ADMIN, …); the runtime sets the container's bounding and effective sets from the Pod spec. OpenShift's restricted-v2 SCC drops ALL capabilities by default, so even a process running as uid 0 inside the container holds almost none of root's real privileges.",
+          "The kernel splits root's power into ~40 distinct capabilities (CAP_NET_ADMIN, CAP_SYS_ADMIN, …) that the runtime grants or drops per container from the Pod spec.",
         interactions: [
+          "OpenShift's restricted-v2 SCC drops ALL capabilities by default, so even a process running as uid 0 inside the container holds almost none of root's real privileges.",
           'crun applies the cap sets from config.json after creating the namespaces and before exec — the drop happens at container start.',
           'A dropped capability makes its guarded syscall fail with EPERM regardless of the process UID.',
           "Workloads request extras via securityContext.capabilities.add, gated by the namespace's SCC / Pod Security admission.",
@@ -313,7 +315,7 @@ export const PRIMITIVES_BY_TYPE = {
         id: 'vhost-net',
         label: 'vhost-net',
         description:
-          'A kernel-mode acceleration path for virtio-net that moves the network data plane entirely into the kernel, bypassing QEMU for packet forwarding. The guest virtio driver writes packets to a shared ring buffer processed by a dedicated vhost kernel thread.',
+          'A kernel-mode acceleration path for virtio-net that moves the network data plane into the kernel, bypassing QEMU for packet forwarding.',
         interactions: [
           'Activated when QEMU opens /dev/vhost-net and passes the tap file descriptor to the kernel.',
           'The kernel vhost thread moves packets between the virtio ring and the tap0 device without QEMU involvement.',
