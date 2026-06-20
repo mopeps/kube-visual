@@ -599,7 +599,14 @@ Adding a component touches several places — keep them in sync:
    e.g. `Deployment · hypershift`), `linuxPrimitive` (the per-instance Linux realisation,
    e.g. `Go binary + controller-runtime` — name the realisation only; do **not** prefix it
    with the supervisor (`Pod →`, `systemd →`, …), which the band structure already conveys),
-   `problemSolved` (one concise "why it exists" sentence), `interactions[]`,
+   `problemSolved` (one self-contained sentence that states **what the component
+   does** in plain terms, then why it matters — the `[tag]`/`typePrefix` already
+   conveys the runtime form, so don't restate it (no "this Pod is…"), but don't
+   lead with jargon the reader may not know either; define the term inline.
+   Pattern: "*\<plain function\>, so \<problem solved\>*" — e.g. netns:
+   "Gives each Pod its own private network — IP, routes, and firewall — isolated
+   from every other Pod." The `[tag]` says it's a Pod; this sentence says which
+   Pod and why), `interactions[]`,
    `explorationCommands[]`, and `docLinks[]` (official-docs links — see the
    metadata schema above). Add `logicalContext`
    (`openShiftProject` + `associatedObject`) for application pods and VMIs. `runtimeForm` and
@@ -607,6 +614,16 @@ Adding a component touches several places — keep them in sync:
    `pipeline-model.js`. For Pods and systemd services `linuxPrimitive` is folded into the
    process row of the kernel band (`PID 1 · Process` → `PID 1 · <realisation>`); other types
    show it as the kernel band's lead row.
+
+   > **Kernel primitives are the exception.** The expandable Linux-primitive
+   > entries in `src/data/primitives.js` (`IPC Namespace`, `Network Namespace`,
+   > UTS, cgroup slice…) carry **no `[tag]` of their own** — they nest inside a
+   > parent `[Pod]`, whose tag does not define them — and they have **no
+   > `problemSolved` field**. Their **`description` must therefore stand alone**:
+   > lead with a plain "what it is" (define the term before scoping it), *then*
+   > the isolation/why. Do not write a jargon-first sentence that assumes the
+   > reader already knows the term (the original IPC entry opened with "System V
+   > IPC and POSIX message-queue space" and never said what IPC was).
 2. **`src/data/zones.js`** — add a node (with `id`, `title`, `typePrefix`, `badges`) to
    the correct zone in the recursive `ZONES` tree. `COMPONENT_COLOR` / `COMPONENT_ZONE`
    derive automatically from the tree. To nest a component inside an expandable parent
