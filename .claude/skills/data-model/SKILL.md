@@ -71,7 +71,7 @@ Covers the two JSON data files that drive all dynamic content in the app. Both l
     "componentId": "pod-netns",             // Must match the HTML id on the canvas ComponentBox
     "displayName": "Linux Network Namespace (netns)",  // H2 in the inspector panel
     "layer": "Linux Kernel Primitives",     // Controls color badge in InspectorPanel
-    "problemSolved": "...",                 // ONE self-contained sentence: what it does (plain, no jargon) then why it matters. The [tag]/typePrefix already conveys the runtime form — don't restate it. See ARCHITECTURE.md "Adding a New Component".
+    "problemSolved": "...",                 // ONE sentence: what it does (plain, no jargon) then why. The [tag] conveys the form — don't restate it. See ARCHITECTURE.md.
     "interactions": [                       // Bulleted list items
       "Attaches to a host-side veth pair...",
       "Provisioned by OVN-Kubernetes CNI..."
