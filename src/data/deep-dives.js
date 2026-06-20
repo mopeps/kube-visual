@@ -903,8 +903,13 @@ const LINUX_BOOT = {
           detail: {
             role: 'KERNEL',
             summary:
-              'The kernel decompresses, brings up core subsystems, the scheduler and the device model (udev), then mounts the initramfs as a temporary in-RAM root. It cannot yet read the real disk root — the logic to do so lives inside the initramfs.',
+              'The kernel decompresses, brings up core subsystems, the scheduler and the device model (udev), then mounts the initramfs as a temporary in-RAM root.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Starts core subsystems, the scheduler, and the udev device model.',
+                'Mounts the initramfs as a throwaway in-RAM root.',
+                'Requires the initramfs to reach the real disk root — it cannot read it yet.',
+              ] },
               { heading: 'Explore', commands: [
                 '# Earliest boot messages\ndmesg | head -n 40',
                 '# Time the kernel phase\nsystemd-analyze',
@@ -920,8 +925,13 @@ const LINUX_BOOT = {
           detail: {
             role: 'EARLY USERSPACE',
             summary:
-              'A small self-contained userspace built by dracut. It runs just enough to locate the real root device — loading storage drivers, assembling LVM/RAID, unlocking LUKS, or bringing up networking for a remote root — and mounts it at /sysroot. On RHCOS, Ignition runs here on first boot.',
+              'A small self-contained userspace built by dracut whose one job is to find the real root device and mount it at /sysroot.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Loads storage drivers, assembles LVM/RAID, and unlocks LUKS to reach the root device.',
+                'Mounts the real root at /sysroot — bringing up networking first for a remote root.',
+                'Runs Ignition here on first boot on RHCOS.',
+              ] },
               { heading: 'Explore', commands: [
                 '# Modules baked into the current initramfs\nlsinitrd | head -n 40',
               ] },
@@ -936,8 +946,12 @@ const LINUX_BOOT = {
           detail: {
             role: 'PIVOT',
             summary:
-              'With /sysroot mounted, the initramfs performs switch_root: it makes the real root the new /, frees the in-RAM initramfs, and execs the real /usr/lib/systemd/systemd as PID 1. The boot crosses from throwaway early userspace into the installed OS.',
+              'With /sysroot mounted, the initramfs performs switch_root and crosses from throwaway early userspace into the installed OS.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Makes the real root the new / and frees the in-RAM initramfs.',
+                'Executes /usr/lib/systemd/systemd as PID 1 on the real filesystem.',
+              ] },
               { heading: 'Next', body: 'From here the systemd deep dive takes over — PID 1 begins resolving the unit graph.' },
             ],
           },
@@ -957,8 +971,13 @@ const LINUX_BOOT = {
           detail: {
             role: 'USERSPACE',
             summary:
-              'PID 1 resolves the dependency graph up to default.target (multi-user.target on a server). Reaching it means networking, logging, and all enabled services — including the cluster’s kubelet/CRI-O/OVS units — are up.',
+              'PID 1 resolves the dependency graph up to default.target (multi-user.target on a server) — the “booted” milestone.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Resolves the unit graph up to default.target, walking every required dependency.',
+                'Starts networking, logging, and all enabled services in dependency order.',
+                'Brings up the cluster’s kubelet, CRI-O, and OVS units as part of that goal.',
+              ] },
               {
                 heading: 'What “reaching the target” pulls in',
                 body: 'A target runs nothing itself — it is the milestone the units below it order against. PID 1 walks this tree until every required unit is active.',
@@ -1017,8 +1036,12 @@ const HCP_BOOT = {
           detail: {
             role: 'DESIRED STATE',
             summary:
-              'You do not provision a node directly; you declare a NodePool against the HostedCluster (RHCOS version, size, count). Cluster API + the KubeVirt provider (CAPK) reconcile it into the VM objects that become workers.',
+              'You do not provision a node directly; you declare a NodePool against the HostedCluster (RHCOS version, size, count).',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Declares the desired worker pool — RHCOS version, size, and replica count.',
+                'Reconciled by Cluster API and the KubeVirt provider (CAPK) into VM objects.',
+              ] },
               { heading: 'Explore', commands: ['# Worker pools for a hosted cluster\noc get nodepool -n clusters'] },
             ],
           },
@@ -1067,8 +1090,13 @@ const HCP_BOOT = {
           detail: {
             role: 'THE MACHINE',
             summary:
-              'The “worker” is a KubeVirt VirtualMachineInstance: a QEMU/KVM guest on a bare-metal worker, wrapped by a virt-launcher Pod. Inside it, RHCOS runs the exact firmware → switch_root sequence from the Linux boot deep dive — a real OS booting on virtual hardware.',
+              'The “worker” is a KubeVirt VirtualMachineInstance: a QEMU/KVM guest on a bare-metal worker, wrapped by a virt-launcher Pod.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Runs RHCOS through the exact firmware → switch_root sequence of the Linux boot deep dive.',
+                'Hosted as a QEMU/KVM guest wrapped by a virt-launcher Pod on a bare-metal worker.',
+                'Boots from a CDI-imported, DataVolume-backed PVC in the management cluster’s HCP namespace.',
+              ] },
               { heading: 'Where its disk lives', body: 'The root disk isn’t *in* the VM. KubeVirt’s Containerized Data Importer (CDI) imports the RHCOS image into a DataVolume-backed PersistentVolumeClaim in the management cluster’s HCP namespace, and the VMI boots from that bare-metal-backed volume — the same PVC machinery the guest later borrows. Application PVCs are hot-plugged in afterwards as *additional* disks.' },
               { heading: 'See also', body: 'The “Linux boot process” deep dive details every stage this reuses.' },
               { heading: 'Explore', commands: [
@@ -1104,8 +1132,13 @@ const HCP_BOOT = {
           detail: {
             role: 'JOIN',
             summary:
-              'systemd reaches multi-user.target and starts kubelet.service (After=crio.service). The kubelet sends a CSR to the hosted cluster’s API server; once approved it registers the Node, the CNI wires pod networking, and the node flips to Ready — a real worker of the hosted cluster.',
+              'systemd reaches multi-user.target and starts kubelet.service, which earns its identity and joins the hosted cluster.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Starts kubelet.service after multi-user.target (After=crio.service).',
+                'Sends a CSR to the hosted cluster’s API server and registers the Node once approved.',
+                'Wires pod networking through the CNI, then flips the node to Ready.',
+              ] },
               { heading: 'Who signs the cert', body: 'machine-approver only *approves* the CSR — it never signs. The guest cluster’s kube-controller-manager signer mints the kubelet’s client cert from the guest CA, itself generated by the Control Plane Operator and stored as a Secret in the HCP namespace, a cluster up. The bootstrap credential Ignition delivered just bought the right to ask.' },
               { heading: 'Explore', commands: [
                 '# Watch the new node reach Ready (against the hosted cluster)\noc get nodes -w',
@@ -1571,8 +1604,13 @@ const HCP_INSTALL = {
           detail: {
             role: 'PREREQUISITE · CONTROL-PLANE ENGINE',
             summary:
-              'Enabling MCE’s hypershift component installs the HyperShift Operator (the hypershift-addon on local-cluster). It runs in the `hypershift` namespace as a cluster-wide singleton and watches every HostedCluster / NodePool: when you create one, it stamps out the hosted control-plane Pods and wires up Cluster API. Nothing about hosted clusters works until it is Running.',
+              'Enabling MCE’s hypershift component installs the HyperShift Operator — the cluster-wide singleton behind every hosted cluster.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Runs in the `hypershift` namespace as a cluster-wide singleton.',
+                'Watches every HostedCluster and NodePool for changes.',
+                'Creates the hosted control-plane Pods and wires up Cluster API when you declare one.',
+              ] },
               {
                 heading: 'Role',
                 tags: ['singleton', 'namespace: hypershift', 'watches HostedCluster + NodePool', 'creates HostedControlPlane'],
@@ -3306,8 +3344,13 @@ const API_REQUEST_PATH = {
           detail: {
             role: 'THE WRITE',
             summary:
-              'The object is serialized to protobuf and written to etcd under /registry/<resource>/<namespace>/<name>, committed through Raft consensus across the etcd members. The resourceVersion every Kubernetes object carries is the etcd modification revision of that write — the cluster’s single logical clock. The “etcd — Raft, quorum” deep dive walks what commit means; in HCP this is the Guest Etcd StatefulSet in the management cluster, not the management masters’ static-pod etcd.',
+              'The surviving object is serialized to protobuf and written to etcd, committed through Raft consensus across the members.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Writes the protobuf object under /registry/<resource>/<namespace>/<name>.',
+                'Persists it through Raft consensus across the etcd members.',
+                'Generates the resourceVersion — the etcd modification revision — as the cluster’s logical clock.',
+              ] },
               { heading: 'Explore', commands: [
                 '# The revision the object was last written at\noc get deployment my-app -o jsonpath=\'{.metadata.resourceVersion}\'',
               ] },
@@ -3345,8 +3388,13 @@ const API_REQUEST_PATH = {
           detail: {
             role: 'THE AUDIENCE',
             summary:
-              'Everything event-driven on the Overview hangs off this stream: controller informers (Deployment, ReplicaSet, the CSI external-provisioner from the storage trace), the scheduler watching for unbound Pods, and each kubelet watching for Pods bound to its node. Every connection is OUTBOUND into the API server — nothing is pushed to nodes, which is why pod-spawning needs no Konnectivity tunnel: the kubelet was already listening.',
+              'Everything event-driven on the Overview hangs off this stream — informers, the scheduler, and every kubelet.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Watches the matching event stream — controller informers, the scheduler, each kubelet.',
+                'Connects OUTBOUND into the API server; nothing is ever pushed to nodes.',
+                'Keeps the kubelet already listening, which is why pod-spawning needs no Konnectivity tunnel.',
+              ] },
               { heading: 'Explore', commands: [
                 '# Watch the stream yourself\noc get pods -w -n e-commerce-prod',
               ] },
@@ -3477,8 +3525,13 @@ const ETCD_RAFT = {
           detail: {
             role: 'DURABILITY',
             summary:
-              'Every entry hits the WAL and is fsynced before the member acknowledges anything. The log is the protocol’s source of truth — entries are identified by (term, index), and a member’s vote or ack is a promise backed by what its log durably contains. This is why etcd documentation is obsessed with disk latency: every write in the cluster waits for at least two fsyncs (leader + one follower).',
+              'Every entry hits the WAL and is fsynced before the member acknowledges anything — the log is the protocol’s source of truth.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Persists every entry to disk and fsyncs before the member acks.',
+                'Holds entries identified by (term, index) — the ground truth behind each vote or ack.',
+                'Caps cluster write speed: every write waits on at least two fsyncs (leader + one follower).',
+              ] },
               { heading: 'Explore', commands: [
                 '# etcd’s own fsync latency histogram\ncurl -s localhost:2381/metrics | grep wal_fsync_duration',
               ] },
@@ -3509,8 +3562,13 @@ const ETCD_RAFT = {
           detail: {
             role: 'THE DATABASE',
             summary:
-              'Committed entries are applied, in log order, to a multi-version keyspace in boltdb: every apply creates a new revision rather than overwriting in place. That revision is exactly what the API server surfaces as resourceVersion, and it is what a Kubernetes watch resumes from — the watch fan-out in the API-server deep dive starts at this number.',
+              'Committed entries are applied, in log order, to a multi-version keyspace in boltdb — each apply minting a new revision.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Applies committed entries in log order to the boltdb keyspace.',
+                'Generates a fresh revision per apply instead of overwriting in place.',
+                'Serves that revision as the resourceVersion a Kubernetes watch resumes from.',
+              ] },
               { heading: 'Explore', commands: [
                 '# Read a key at the current revision\netcdctl get /registry/deployments/e-commerce-prod/my-app -w json | jq .header.revision',
               ] },
@@ -3533,8 +3591,13 @@ const ETCD_RAFT = {
           detail: {
             role: 'HOSTED',
             summary:
-              'The hosted cluster’s etcd is the Guest Etcd card on the Overview: a 3-replica StatefulSet in the management cluster’s HCP namespace, each member with its own management-cluster PVC for the WAL and keyspace. The radical part is what that buys: a dead etcd member is healed by ordinary StatefulSet machinery — the management cluster reschedules the Pod and it rejoins the quorum from its PVC. Guest etcd is a workload, not infrastructure.',
+              'The hosted cluster’s etcd is a 3-replica StatefulSet in the management cluster’s HCP namespace — a workload, not infrastructure.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Runs etcd-0/1/2 as a StatefulSet, each member binding its own management-cluster PVC.',
+                'Persists the WAL and keyspace to those PVCs, surviving Pod reschedules.',
+                'Healed by ordinary StatefulSet machinery — a rescheduled Pod rejoins quorum from its PVC.',
+              ] },
               { heading: 'Explore', commands: [
                 '# The guest etcd members, as plain Pods\noc get pods -n <hcp-namespace> -l app=etcd',
               ] },
@@ -3629,8 +3692,13 @@ const CLUSTER_PKI = {
           detail: {
             role: 'GENERATOR',
             summary:
-              'A standalone cluster bootstraps its PKI on the install node. A hosted cluster has no install node — its control plane is just Pods — so when the CPO reconciles the HostedControlPlane it mints the entire certificate tree itself: a root CA, the scoped signer CAs, and the leaf certs every component needs. Nothing inside a guest VM ever generates a CA.',
+              'A hosted cluster has no install node, so when the CPO reconciles the HostedControlPlane it mints the entire certificate tree itself.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Generates the root CA, scoped signer CAs, and every leaf cert on first reconcile.',
+                'Triggered by reconciling the HostedControlPlane — no guest machine is involved.',
+                'Keeps CA generation out of the guest: nothing inside a guest VM ever mints one.',
+              ] },
               { heading: 'Why here', body: 'The chicken-and-egg of trust: certs must exist before any component can serve TLS, but in HCP the components are workloads with no machine to bootstrap on. So the operator a cluster up does it for them.' },
               { heading: 'Explore', commands: [
                 '# The cert Secrets the CPO has minted for this hosted cluster\noc get secret -n <hcp-namespace> | grep -Ei "ca|cert|kubeconfig|signer"',
@@ -3670,8 +3738,13 @@ const CLUSTER_PKI = {
           detail: {
             role: 'THE STORE',
             summary:
-              'Every CA, leaf cert, and kubeconfig is a Kubernetes Secret in the hosted cluster’s HCP namespace, in the management cluster — not on any guest node, not in the guest etcd. They’re mounted into the control-plane Pods as projected volumes, and (for nodes) folded into Ignition. etcd-at-rest encryption protects them like any Secret.',
+              'Every CA, leaf cert, and kubeconfig is a Kubernetes Secret in the hosted cluster’s HCP namespace, in the management cluster.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Stores each CA, leaf cert, and kubeconfig as a Secret — never on a guest node or in guest etcd.',
+                'Mounts them into the control-plane Pods as projected volumes, and folds node certs into Ignition.',
+                'Protected at rest by etcd-at-rest encryption, like any Secret.',
+              ] },
               { heading: 'Explore', commands: [
                 '# Decode a CA and read its subject + validity window\noc get secret -n <hcp-namespace> root-ca -o jsonpath="{.data.ca\\.crt}" | base64 -d | openssl x509 -noout -subject -dates',
               ] },
@@ -3694,8 +3767,13 @@ const CLUSTER_PKI = {
           detail: {
             role: 'IDENTITY + TRUST',
             summary:
-              'Mounts two things from the Secrets above: its serving cert (so oc/kubectl trust the endpoint) and the client-auth CA bundle (so it can verify X.509 clients — an admin or kubelet presents a cert with CN=username, O=groups, signed by one of these CAs). It also carries the aggregator client cert to call extension API servers.',
+              'Mounts its serving cert and the client-auth CA bundle from the Secrets above to prove its identity and verify clients.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Mounts its serving cert so oc/kubectl trust the endpoint.',
+                'Verifies X.509 clients (CN=username, O=groups) against the client-auth CA bundle.',
+                'Carries the aggregator client cert to call extension API servers.',
+              ] },
               { heading: 'See also', body: 'The API-request deep dive’s Authentication box: X.509 client certs are verified against exactly this client CA.' },
             ],
           },
@@ -3709,7 +3787,14 @@ const CLUSTER_PKI = {
           detail: {
             role: 'MUTUAL TLS',
             summary:
-              'Every etcd connection is mutually authenticated — member-to-member (peer) and API-server-to-etcd (client) — using the etcd CA’s certs. A StatefulSet member that reschedules re-mounts the same Secret and rejoins the quorum with the same identity.',
+              'Every etcd connection is mutually authenticated — member-to-member and API-server-to-etcd — using the etcd CA’s certs.',
+            sections: [
+              { heading: 'Interactions', bullets: [
+                'Authenticates member-to-member (peer) and API-server-to-etcd (client) connections with mTLS.',
+                'Mounts its peer + server certs from the etcd CA’s Secrets.',
+                'Re-mounts the same Secret on reschedule and rejoins the quorum with the same identity.',
+              ] },
+            ],
           },
         },
         {
@@ -3721,7 +3806,14 @@ const CLUSTER_PKI = {
           detail: {
             role: 'TOKEN SIGNING',
             summary:
-              'On `oc login` the OAuth server validates the user against the configured identity provider and issues a bearer token signed with a key from these Secrets. The oauth-apiserver validates that signature on later requests. Rotate the key and every outstanding token is invalidated at once.',
+              'On `oc login` the OAuth server validates the user against the identity provider and issues a bearer token signed with a key from these Secrets.',
+            sections: [
+              { heading: 'Interactions', bullets: [
+                'Validates the user against the configured identity provider on `oc login`.',
+                'Issues a bearer token signed with a key from these Secrets.',
+                'Invalidates every outstanding token at once when the signing key is rotated.',
+              ] },
+            ],
           },
         },
         {
@@ -3733,7 +3825,13 @@ const CLUSTER_PKI = {
           detail: {
             role: 'TUNNEL TRUST',
             summary:
-              'The reverse tunnel is mutually authenticated: the agent presents a client cert and the server a serving cert, both from the konnectivity CA. So a node can’t impersonate the server, and the server only proxies traffic to authenticated agents.',
+              'The reverse tunnel is mutually authenticated, with the agent and server presenting certs from the konnectivity CA.',
+            sections: [
+              { heading: 'Interactions', bullets: [
+                'Presents a server serving cert and verifies the agent’s client cert, both from the konnectivity CA.',
+                'Proxies traffic only to authenticated agents — a node can’t impersonate the server.',
+              ] },
+            ],
           },
         },
       ],
@@ -3768,8 +3866,13 @@ const CLUSTER_PKI = {
           detail: {
             role: 'THE ASK',
             summary:
-              'Using the bootstrap kubeconfig, the kubelet submits a CertificateSigningRequest for its own client (and serving) cert. This is the graduation: the throwaway bootstrap credential is spent to obtain a long-lived, node-specific identity. Until the CSR is both approved AND signed, the node can’t join.',
+              'Using the bootstrap kubeconfig, the kubelet submits a CertificateSigningRequest for its own long-lived, node-specific identity.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Submits a CSR for the kubelet’s own client (and serving) cert using the bootstrap kubeconfig.',
+                'Spends the throwaway bootstrap credential for a long-lived, node-specific identity.',
+                'Requires the CSR to be both approved AND signed before the node can join.',
+              ] },
               { heading: 'Explore', commands: [
                 '# Pending CSRs from joining nodes (against the hosted cluster)\noc get csr | grep -i pending',
               ] },
@@ -3785,7 +3888,13 @@ const CLUSTER_PKI = {
           detail: {
             role: 'THE GATE',
             summary:
-              'machine-approver cross-checks each pending CSR against the machines the NodePool expects and auto-approves the legitimate ones. It is purely a gate: it sets the Approved condition and stops. Approval is permission, not a certificate.',
+              'machine-approver cross-checks each pending CSR against the machines the NodePool expects and auto-approves the legitimate ones.',
+            sections: [
+              { heading: 'Interactions', bullets: [
+                'Cross-checks each pending CSR against the machines the NodePool expects.',
+                'Sets the Approved condition and stops — it permits, it never signs.',
+              ] },
+            ],
           },
         },
         {
@@ -3796,8 +3905,13 @@ const CLUSTER_PKI = {
           detail: {
             role: 'THE SIGNER',
             summary:
-              'The guest cluster’s kube-controller-manager runs the CSR signing controllers. Once a CSR is Approved, the signer issues the certificate from the kubelet signer CA — one of the CAs the CPO minted at the very top of this page. The kubelet installs the signed cert, drops the bootstrap credential, and the chain is complete.',
+              'The guest cluster’s kube-controller-manager runs the CSR signing controllers that close the trust loop.',
             sections: [
+              { heading: 'Interactions', bullets: [
+                'Watches for Approved CSRs picked up by the KCM signing controllers.',
+                'Issues the certificate from the kubelet signer CA — one the CPO minted at the top of this page.',
+                'Hands the kubelet a signed cert, after which it drops the bootstrap credential.',
+              ] },
               { heading: 'The chain', body: 'CPO mints the CA → Ignition hands the node the bootstrap credential → kubelet asks (CSR) → approver permits → KCM signer issues from that same CA. Every node cert traces back to the mint a cluster up.' },
             ],
           },
