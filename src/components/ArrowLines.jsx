@@ -43,7 +43,22 @@ export function buildPath(srcEl, tgtEl, canvasEl, edge = false, bow = 0) {
     if (tCx >= sCx) { sx = sr.right - canvasRect.left; sy = sCy; tx = tr.left - canvasRect.left;  ty = tCy }
     else            { sx = sr.left - canvasRect.left;  sy = sCy; tx = tr.right - canvasRect.left; ty = tCy }
   } else {
-    sx = sCx; sy = sCy; tx = tCx; ty = tCy
+    // Centre-anchored hops (the Overview): aim along the centre-to-centre line,
+    // but start and END on the box boundary facing the other endpoint — so the
+    // arrowhead lands on the target card's edge instead of being buried in its
+    // middle. A small standoff (`gap`) parks the head just clear of the border.
+    // The point where the ray from a box centre toward the other box crosses
+    // that box's own rectangle, pushed out by `gap` along the same direction.
+    const edgePoint = (cx, cy, hw, hh, towardX, towardY, gap) => {
+      const ddx = towardX - cx
+      const ddy = towardY - cy
+      const len = Math.hypot(ddx, ddy)
+      if (!len) return [cx, cy]
+      const scale = 1 / Math.max(Math.abs(ddx) / hw, Math.abs(ddy) / hh)
+      return [cx + ddx * scale + (ddx / len) * gap, cy + ddy * scale + (ddy / len) * gap]
+    }
+    ;[sx, sy] = edgePoint(sCx, sCy, sr.width / 2, sr.height / 2, tCx, tCy, 2)
+    ;[tx, ty] = edgePoint(tCx, tCy, tr.width / 2, tr.height / 2, sCx, sCy, 5)
   }
 
   // S-curve cubic bezier whose control points follow the flow's dominant axis.
