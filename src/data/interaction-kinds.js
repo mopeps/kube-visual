@@ -216,6 +216,23 @@ const VERB_KIND = {
   mounts: 'create', mount: 'create', mounted: 'create',
   reserves: 'create', reserve: 'create', reserved: 'create',
   merges: 'create', merge: 'create', merged: 'create',
+
+  // more network / data-plane / control-plane verbs that lead the Network-mode and
+  // Deep-Dive popup bullets. Programming flows / translating intent brings the
+  // realized pipeline into existence (create); wrapping (encapsulating) and demuxing
+  // move or steer traffic (outbound / inbound); splicing / dropping / queueing are
+  // upkeep of an existing datapath (manage); tracking is read-only (observe).
+  programs: 'create', program: 'create', programmed: 'create',
+  translates: 'create', translate: 'create', translated: 'create',
+  realises: 'create', realise: 'create',
+  wraps: 'outbound', wrap: 'outbound', wrapped: 'outbound',
+  ships: 'outbound', ship: 'outbound', shipped: 'outbound',
+  demuxes: 'inbound', demux: 'inbound', demuxed: 'inbound',
+  splices: 'manage', splice: 'manage', spliced: 'manage',
+  drops: 'manage', drop: 'manage', dropped: 'manage',
+  queues: 'manage', queue: 'manage', queued: 'manage',
+  tracks: 'observe', track: 'observe', tracked: 'observe',
+  elects: 'manage', elect: 'manage', elected: 'manage',
 }
 
 // Pull the leading verb token off a sentence: first run of letters/hyphens.
