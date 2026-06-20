@@ -196,7 +196,7 @@
         "step": 2,
         "sourceComponentId": "mgmt-kube-apiserver",
         "targetComponentId": "hostedcluster-cr",
-        "description": "The Management API Server persists the HostedCluster desired-state record in Management Etcd. The record declares the hosted control plane; it is not itself a running component."
+        "description": "The Management API Server persists the HostedCluster desired-state record in Management Etcd, alongside the NodePool record from the same apply (the NodePool branch picks that up in parallel at step 7). These records declare the hosted control plane; they are not themselves running components."
       },
       {
         "step": 3,
