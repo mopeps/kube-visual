@@ -29,6 +29,13 @@ export default function PrimitiveBoxCard({
   // Architecture's primary pair keeps canonical outer ids so packet-flow
   // arrows can anchor to the same objects as the compact overview did.
   domIdOverride,
+  // Packet-flow figure/ground state. The opened card is still the component's
+  // trace endpoint, so it must carry the same state classes as a NodeCard.
+  stepNum,
+  isActive = false,
+  isOnPath = false,
+  isDimmed = false,
+  isHighlighted = false,
 }) {
   const domId = domIdOverride || `${idPrefix}${colIndex}-${node.id}`
   const subId = (id) => `${idPrefix}${colIndex}-${id}`
@@ -317,10 +324,18 @@ export default function PrimitiveBoxCard({
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onToggle() }
         }}
-        className="node intent-store"
-        style={{ '--node-accent': color }}
+        className={`node intent-store ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''}`}
+        style={{
+          '--node-accent': color,
+          background: isActive
+            ? `linear-gradient(180deg, color-mix(in srgb, ${color} 8%, transparent) 0%, rgba(0,0,0,0.35) 100%)`
+            : undefined,
+        }}
         title={hint ? `Show ${hint}` : 'Open'}
       >
+        {stepNum != null && (
+          <span className="node-step-badge" title={`Step ${stepNum}`}>{stepNum}</span>
+        )}
         {node.typePrefix !== 'Pod' && (
           <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>[{node.typePrefix}]</span>
         )}
@@ -338,10 +353,13 @@ export default function PrimitiveBoxCard({
   return (
     <div
       id={domId}
-      className="intent-store-expanded primitive-box"
+      className={`intent-store-expanded primitive-box ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''}`}
       style={{ '--node-accent': color, '--store-accent': color }}
       onClick={(e) => e.stopPropagation()}
     >
+      {stepNum != null && (
+        <span className="node-step-badge" title={`Step ${stepNum}`}>{stepNum}</span>
+      )}
       <div className="intent-store-header">
         <button
           type="button"

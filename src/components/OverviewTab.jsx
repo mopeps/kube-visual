@@ -363,6 +363,11 @@ export default function OverviewTab({
           onToggle={() => toggleNetCollapse(canonicalId)}
           onSelectComponent={onSelectComponent}
           onSelectBox={selectNetBox}
+          stepNum={stepNums.get(node.id)}
+          isActive={isActive}
+          isOnPath={isOnPath}
+          isDimmed={isDimmed}
+          isHighlighted={node.id === highlightId}
         />
       )
     }
@@ -386,6 +391,11 @@ export default function OverviewTab({
             onToggle={() => togglePrimExpand(node.id)}
             onSelectComponent={onSelectComponent}
             onSelectBox={selectNetBox}
+            stepNum={stepNums.get(node.id)}
+            isActive={isActive}
+            isOnPath={isOnPath}
+            isDimmed={isDimmed}
+            isHighlighted={node.id === highlightId}
           />
         )
       }

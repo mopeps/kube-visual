@@ -421,6 +421,7 @@ body::after {
   box-shadow: 0 0 0 2px var(--packet), 0 0 24px rgba(255, 77, 109, 0.35);
 }
 .node.is-dimmed { opacity: 0.35; }
+.intent-store-expanded.is-dimmed { opacity: 0.35; }
 /* On the active trace path but not the focused hop — keeps the rest of the
    route readable (full opacity, faint packet tint) so it can't be confused
    with unrelated .is-dimmed nodes while one hop wears the full red glow. */
