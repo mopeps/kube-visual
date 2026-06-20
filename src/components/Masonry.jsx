@@ -45,6 +45,13 @@ export default function Masonry({ minColWidth = 120, gap = 8, className = '', ch
     const W = el.clientWidth
     if (!W) return // hidden / not laid out yet — skip, a later pass will run
 
+    // The zone chrome around the masonry — its border + `.zone-content` padding.
+    // We measure card columns against the inner width `W`, but shrink the *outer*
+    // zone (border-box) below, so this must be added back or the zone ends up a
+    // padding's-worth too narrow and clips its card (most visibly the lone-card
+    // Client zone). Constant regardless of width, so measured at full width here.
+    const chrome = zone ? Math.max(0, zone.offsetWidth - W) : 0
+
     const items = Array.from(el.children)
     if (items.length === 0) { el.style.height = '0px'; return }
 
@@ -83,7 +90,7 @@ export default function Masonry({ minColWidth = 120, gap = 8, className = '', ch
       const usedW = usedCols * colW + (usedCols - 1) * gap
       if (usedW < W - 1) {
         zone.style.flex = '0 0 auto'
-        zone.style.width = `${Math.ceil(usedW)}px`
+        zone.style.width = `${Math.ceil(usedW + chrome)}px`
       }
     }
   }, [gap, minColWidth])
