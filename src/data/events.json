@@ -99,47 +99,65 @@
       {
         "step": 1,
         "sourceComponentId": "external-client",
-        "targetComponentId": "guest-api-server",
-        "description": "A developer runs 'oc apply -f deployment.yaml'. The Guest API Server validates the request and persists the Deployment desired state in Guest Etcd. No Pod exists yet."
+        "targetComponentId": "svc-ingress-lb-shared",
+        "description": "A developer runs 'oc apply -f deployment.yaml'. The guest API hostname resolves to the Shared Ingress LoadBalancer VIP, which MetalLB advertises on the management cluster."
       },
       {
         "step": 2,
+        "sourceComponentId": "svc-ingress-lb-shared",
+        "targetComponentId": "shared-ingress-proxy",
+        "description": "The LoadBalancer Service sends the TLS connection to a Shared Ingress Proxy endpoint. HAProxy reads the SNI hostname and selects this hosted cluster's kube-apiserver backend."
+      },
+      {
+        "step": 3,
+        "sourceComponentId": "shared-ingress-proxy",
+        "targetComponentId": "guest-api-server",
+        "description": "The proxy forwards the request to the Guest API Server in the HCP namespace. The API Server authenticates and validates the Deployment."
+      },
+      {
+        "step": 4,
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "guest-etcd",
+        "description": "The Guest API Server persists the Deployment desired state in Guest Etcd. No Pod exists yet."
+      },
+      {
+        "step": 5,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "guest-controller-manager",
         "description": "The Deployment controller inside the Guest Controller Manager observes the new Deployment, creates a ReplicaSet, and the ReplicaSet controller creates the requested Pod object through the API Server. These are control loops inside one controller-manager process, not separate Pods."
       },
       {
-        "step": 3,
+        "step": 6,
         "sourceComponentId": "guest-controller-manager",
         "targetComponentId": "guest-api-server",
         "description": "The Guest Controller Manager writes the ReplicaSet and unscheduled Pod records to the Guest API Server. The Pod now exists as desired state, but it has no nodeName and no container is running."
       },
       {
-        "step": 4,
+        "step": 7,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "guest-kube-scheduler",
         "description": "The Guest Scheduler watches for Pods with no node assignment. It evaluates guest worker capacity, taints, affinity, and topology constraints, then selects a Guest Worker Node VM."
       },
       {
-        "step": 5,
+        "step": 8,
         "sourceComponentId": "guest-kube-scheduler",
         "targetComponentId": "guest-api-server",
         "description": "The Scheduler writes the binding through the Guest API Server, setting the Pod's nodeName to the selected guest worker."
       },
       {
-        "step": 6,
-        "sourceComponentId": "guest-api-server",
-        "targetComponentId": "kubelet-guest",
-        "description": "The guest kubelet observes the newly bound Pod through its own outbound watch of the Guest API Server. The API Server does not push the PodSpec through Konnectivity; that tunnel is reserved for API-Server-initiated traffic such as exec, logs, and port-forward."
+        "step": 9,
+        "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "guest-api-server",
+        "description": "The guest kubelet's existing outbound watch of the Guest API Server returns the newly bound Pod. The API Server does not initiate a connection to the node or push the PodSpec through Konnectivity."
       },
       {
-        "step": 7,
+        "step": 10,
         "sourceComponentId": "kubelet-guest",
         "targetComponentId": "crio-guest",
         "description": "Kubelet issues RunPodSandbox and CreateContainer CRI calls. Guest CRI-O pulls the image, creates the cgroup and namespaces, and invokes the CNI path to attach the Pod to guest OVN-Kubernetes."
       },
       {
-        "step": 8,
+        "step": 11,
         "sourceComponentId": "crio-guest",
         "targetComponentId": "frontend-application-pod",
         "description": "Guest CRI-O starts the container via runc. The application process becomes PID 1 inside its namespaces, registers with the guest network, and the Pod transitions to Running status."
@@ -250,37 +268,79 @@
         "step": 11,
         "sourceComponentId": "kubevirt-vm-cr",
         "targetComponentId": "kubevirt-launcher",
-        "description": "KubeVirt's virt-controller observes the VirtualMachine/VMI and creates its virt-launcher Pod. The management scheduler places that Pod on a bare metal worker."
+        "description": "KubeVirt's virt-controller observes the VirtualMachine/VMI and creates its virt-launcher Pod. The Pod exists but is not yet assigned to a bare metal worker."
       },
       {
         "step": 12,
+        "sourceComponentId": "mgmt-scheduler",
+        "targetComponentId": "kubevirt-launcher",
+        "description": "The Management Scheduler binds the virt-launcher Pod to a bare metal worker with capacity and the required virtualization resources."
+      },
+      {
+        "step": 13,
         "sourceComponentId": "virt-handler",
         "targetComponentId": "kubevirt-launcher",
         "description": "virt-handler on the selected bare metal node signals the launcher's libvirt process to start the qemu-kvm domain. virt-handler drives node-local VM boot; it does not create the launcher Pod."
       },
       {
-        "step": 13,
+        "step": 14,
         "sourceComponentId": "kubevirt-launcher",
         "targetComponentId": "guest-worker-node-vm",
         "description": "The launcher starts the RHCOS VirtualMachineInstance, creating the guest CPU, memory, disks, and virtio network device inside the qemu-kvm process."
       },
       {
-        "step": 14,
-        "sourceComponentId": "guest-worker-node-vm",
-        "targetComponentId": "ignition-server",
-        "description": "During first boot, RHCOS requests its Ignition payload over TLS. The response provides the bootstrap credentials and machine configuration needed to join this hosted cluster."
-      },
-      {
         "step": 15,
-        "sourceComponentId": "konnectivity-agent",
-        "targetComponentId": "konnectivity-server",
-        "description": "The Konnectivity Agent inside the VM establishes its persistent outbound tunnel to the hosted Konnectivity Server. The tunnel is now available for later API-Server-initiated exec, logs, port-forward, webhook, and metrics traffic."
+        "sourceComponentId": "guest-worker-node-vm",
+        "targetComponentId": "svc-ingress-lb-shared",
+        "description": "During first boot, RHCOS requests its hosted-cluster Ignition URL over TLS. That hostname resolves to the Shared Ingress LoadBalancer VIP."
       },
       {
         "step": 16,
+        "sourceComponentId": "svc-ingress-lb-shared",
+        "targetComponentId": "shared-ingress-proxy",
+        "description": "The LoadBalancer sends the connection to the Shared Ingress Proxy, which selects the hosted cluster's Ignition backend by SNI."
+      },
+      {
+        "step": 17,
+        "sourceComponentId": "shared-ingress-proxy",
+        "targetComponentId": "ignition-server",
+        "description": "The proxy forwards the request to the Ignition Server. Its response provides the bootstrap credentials and machine configuration needed to join this hosted cluster."
+      },
+      {
+        "step": 18,
+        "sourceComponentId": "konnectivity-agent",
+        "targetComponentId": "svc-ingress-lb-shared",
+        "description": "The Konnectivity Agent inside the VM opens its persistent outbound tunnel to the hosted Konnectivity endpoint, which resolves to the Shared Ingress LoadBalancer VIP."
+      },
+      {
+        "step": 19,
+        "sourceComponentId": "svc-ingress-lb-shared",
+        "targetComponentId": "shared-ingress-proxy",
+        "description": "The LoadBalancer sends the tunnel connection to the Shared Ingress Proxy; SNI selects this hosted cluster's Konnectivity backend."
+      },
+      {
+        "step": 20,
+        "sourceComponentId": "shared-ingress-proxy",
+        "targetComponentId": "konnectivity-server",
+        "description": "The proxy forwards the long-lived connection to the Konnectivity Server. The tunnel is now available for later API-Server-initiated exec, logs, port-forward, webhook, and metrics traffic."
+      },
+      {
+        "step": 21,
         "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "svc-ingress-lb-shared",
+        "description": "Separately, the guest kubelet opens its outbound API connection to the hosted cluster's API hostname at the Shared Ingress LoadBalancer VIP. This connection does not use Konnectivity."
+      },
+      {
+        "step": 22,
+        "sourceComponentId": "svc-ingress-lb-shared",
+        "targetComponentId": "shared-ingress-proxy",
+        "description": "The LoadBalancer sends the kubelet's TLS connection to the Shared Ingress Proxy, which selects this hosted cluster's API backend by SNI."
+      },
+      {
+        "step": 23,
+        "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "guest-api-server",
-        "description": "Separately, the guest kubelet connects outbound to the Guest API Server, registers its Node, and posts status until it becomes Ready. Pod watches use this direct outbound API connection, not Konnectivity."
+        "description": "The proxy forwards the connection to the Guest API Server. The kubelet registers its Node, posts status until it becomes Ready, and keeps its Pod watch on this same outbound API path."
       }
     ]
   },
@@ -325,31 +385,61 @@
         "step": 6,
         "sourceComponentId": "kubevirt-vm-cr",
         "targetComponentId": "kubevirt-launcher",
-        "description": "KubeVirt's virt-controller creates the VMI and its virt-launcher Pod; the management scheduler places the launcher on a bare metal worker."
+        "description": "KubeVirt's virt-controller creates the VMI and its virt-launcher Pod. The launcher exists but is not yet assigned to a bare metal worker."
       },
       {
         "step": 7,
+        "sourceComponentId": "mgmt-scheduler",
+        "targetComponentId": "kubevirt-launcher",
+        "description": "The Management Scheduler binds the new launcher Pod to a bare metal worker with capacity and the required virtualization resources."
+      },
+      {
+        "step": 8,
         "sourceComponentId": "virt-handler",
         "targetComponentId": "kubevirt-launcher",
         "description": "virt-handler on that bare metal node signals the launcher Pod's libvirt to boot the qemu-kvm domain (it drives the boot on the node; it does not create the Pod)."
       },
       {
-        "step": 8,
+        "step": 9,
         "sourceComponentId": "kubevirt-launcher",
         "targetComponentId": "guest-worker-node-vm",
         "description": "The launcher starts the RHCOS VirtualMachineInstance for the new worker."
       },
       {
-        "step": 9,
-        "sourceComponentId": "guest-worker-node-vm",
-        "targetComponentId": "ignition-server",
-        "description": "As it boots, the VM fetches its Ignition config over TLS, receiving the kubelet bootstrap credentials and machine config needed to join the guest cluster."
-      },
-      {
         "step": 10,
         "sourceComponentId": "guest-worker-node-vm",
+        "targetComponentId": "svc-ingress-lb-shared",
+        "description": "As it boots, the VM fetches its hosted-cluster Ignition URL over TLS. The hostname resolves to the Shared Ingress LoadBalancer VIP."
+      },
+      {
+        "step": 11,
+        "sourceComponentId": "svc-ingress-lb-shared",
+        "targetComponentId": "shared-ingress-proxy",
+        "description": "The LoadBalancer sends the TLS connection to the Shared Ingress Proxy, which selects this hosted cluster's Ignition backend by SNI."
+      },
+      {
+        "step": 12,
+        "sourceComponentId": "shared-ingress-proxy",
+        "targetComponentId": "ignition-server",
+        "description": "The proxy forwards the request to the Ignition Server, which returns the kubelet bootstrap credentials and machine configuration needed to join the guest cluster."
+      },
+      {
+        "step": 13,
+        "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "svc-ingress-lb-shared",
+        "description": "The new node's kubelet opens an outbound TLS connection to the hosted API hostname at the Shared Ingress LoadBalancer VIP."
+      },
+      {
+        "step": 14,
+        "sourceComponentId": "svc-ingress-lb-shared",
+        "targetComponentId": "shared-ingress-proxy",
+        "description": "The LoadBalancer sends the kubelet connection to the Shared Ingress Proxy, which selects this hosted cluster's kube-apiserver backend by SNI."
+      },
+      {
+        "step": 15,
+        "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "guest-api-server",
-        "description": "The new node's kubelet registers with the Guest API Server and goes Ready; the NodePool's desired replica count is now satisfied."
+        "description": "The proxy forwards the connection to the Guest API Server. The kubelet registers its Node and posts status until it becomes Ready; the NodePool's desired replica count is now satisfied."
       }
     ]
   },
@@ -432,35 +522,47 @@
       {
         "step": 1,
         "sourceComponentId": "external-client",
-        "targetComponentId": "guest-api-server",
-        "description": "A developer runs 'oc exec -it <pod> -- sh'. The request authenticates against the Guest API Server, which must reach the kubelet on the node hosting the Pod."
+        "targetComponentId": "svc-ingress-lb-shared",
+        "description": "A developer runs 'oc exec -it <pod> -- sh'. The guest API hostname resolves to the Shared Ingress LoadBalancer VIP, which MetalLB advertises on the management cluster."
       },
       {
         "step": 2,
+        "sourceComponentId": "svc-ingress-lb-shared",
+        "targetComponentId": "shared-ingress-proxy",
+        "description": "The LoadBalancer Service sends the upgraded TLS stream to a Shared Ingress Proxy endpoint. HAProxy uses SNI to select this hosted cluster's kube-apiserver backend."
+      },
+      {
+        "step": 3,
+        "sourceComponentId": "shared-ingress-proxy",
+        "targetComponentId": "guest-api-server",
+        "description": "The proxy forwards the exec request to the Guest API Server. After authenticating it and locating the target Pod's node, the API Server must reach that node's kubelet."
+      },
+      {
+        "step": 4,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "konnectivity-server",
         "description": "The Guest API Server cannot dial the guest node network directly, so it hands the exec stream to the Konnectivity Server — the one direction the tunnel carries (API-Server-initiated traffic)."
       },
       {
-        "step": 3,
+        "step": 5,
         "sourceComponentId": "konnectivity-server",
         "targetComponentId": "konnectivity-agent",
         "description": "The server proxies the call through the persistent tunnel to the Konnectivity Agent running inside the target worker VM."
       },
       {
-        "step": 4,
+        "step": 6,
         "sourceComponentId": "konnectivity-agent",
         "targetComponentId": "kubelet-guest",
         "description": "The agent forwards the request to the guest kubelet on that node."
       },
       {
-        "step": 5,
+        "step": 7,
         "sourceComponentId": "kubelet-guest",
         "targetComponentId": "crio-guest",
         "description": "The kubelet issues an Exec CRI call to guest CRI-O for the target container."
       },
       {
-        "step": 6,
+        "step": 8,
         "sourceComponentId": "crio-guest",
         "targetComponentId": "frontend-application-pod",
         "description": "CRI-O enters the container's namespaces and runs the command; stdout/stderr stream back up the same tunnel to the developer's terminal."
@@ -472,19 +574,19 @@
     "category": "traffic",
     "glyph": "dns",
     "eventName": "In-Cluster DNS Resolution",
-    "description": "Tracing how an application Pod turns a Service name into a ClusterIP: the Pod's stub resolver queries the cluster DNS Service, a CoreDNS Pod answers from records synchronized from the guest API, and the caller then opens the real connection.",
+    "description": "Tracing how an application Pod turns a Service name into a ClusterIP: the Pod sends a DNS packet to the cluster DNS Service, guest OVN load-balances it to a CoreDNS Pod, and CoreDNS answers from records populated by its standing watch of the guest API. That watch is control-plane synchronization, not a hop made for each DNS query.",
     "steps": [
       {
         "step": 1,
         "sourceComponentId": "frontend-application-pod",
-        "targetComponentId": "coredns-node",
-        "description": "The Front-End looks up 'backend.e-commerce-prod.svc.cluster.local'. Its /etc/resolv.conf points at the cluster DNS Service, whose endpoint is a CoreDNS Pod running on a guest worker; CoreDNS is not assumed to be node-local to the caller."
+        "targetComponentId": "ovs-guest",
+        "description": "The Front-End looks up 'backend.e-commerce-prod.svc.cluster.local'. Its /etc/resolv.conf sends the UDP or TCP query to the cluster DNS Service IP; the packet enters guest br-int, where OVN's Service load-balancer flow selects a ready CoreDNS endpoint."
       },
       {
         "step": 2,
-        "sourceComponentId": "coredns-node",
-        "targetComponentId": "guest-api-server",
-        "description": "CoreDNS resolves cluster-local names from the Service and EndpointSlice records it syncs from the Guest API Server (external names would instead be forwarded to the upstream resolvers)."
+        "sourceComponentId": "ovs-guest",
+        "targetComponentId": "coredns-node",
+        "description": "OVN DNATs the cluster DNS Service IP to the selected CoreDNS Pod and delivers the query. CoreDNS answers cluster-local names from its local cache, maintained asynchronously from Service and EndpointSlice watches on the Guest API Server; it does not query the API Server for this request."
       },
       {
         "step": 3,
@@ -547,7 +649,25 @@
         "step": 7,
         "sourceComponentId": "kubevirt-launcher",
         "targetComponentId": "guest-worker-node-vm",
-        "description": "The replacement VMI boots the same RHCOS worker identity. Its kubelet reconnects to the Guest API Server and the existing Node returns Ready; desired state is restored without replacing the CAPI Machine."
+        "description": "The replacement VMI boots the same RHCOS worker identity from its existing disk."
+      },
+      {
+        "step": 8,
+        "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "svc-ingress-lb-shared",
+        "description": "The restarted kubelet reconnects outbound to the hosted API endpoint at the Shared Ingress LoadBalancer VIP."
+      },
+      {
+        "step": 9,
+        "sourceComponentId": "svc-ingress-lb-shared",
+        "targetComponentId": "shared-ingress-proxy",
+        "description": "The LoadBalancer sends the kubelet connection to the Shared Ingress Proxy, which selects the guest API backend by SNI."
+      },
+      {
+        "step": 10,
+        "sourceComponentId": "shared-ingress-proxy",
+        "targetComponentId": "guest-api-server",
+        "description": "The proxy forwards the connection to the Guest API Server. The existing Node returns Ready; desired state is restored without replacing the CAPI Machine."
       }
     ]
   },
@@ -598,7 +718,25 @@
         "step": 7,
         "sourceComponentId": "kubevirt-launcher",
         "targetComponentId": "guest-worker-node-vm",
-        "description": "The VMI boots again and its guest kubelet reconnects to the Guest API Server, returning the worker Node to Ready."
+        "description": "The VMI boots again from its existing worker disk."
+      },
+      {
+        "step": 8,
+        "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "svc-ingress-lb-shared",
+        "description": "The guest kubelet reconnects outbound to the hosted API endpoint at the Shared Ingress LoadBalancer VIP."
+      },
+      {
+        "step": 9,
+        "sourceComponentId": "svc-ingress-lb-shared",
+        "targetComponentId": "shared-ingress-proxy",
+        "description": "The LoadBalancer sends the kubelet connection to the Shared Ingress Proxy, which selects the guest API backend by SNI."
+      },
+      {
+        "step": 10,
+        "sourceComponentId": "shared-ingress-proxy",
+        "targetComponentId": "guest-api-server",
+        "description": "The proxy forwards the connection to the Guest API Server, returning the existing worker Node to Ready."
       }
     ]
   },
@@ -612,17 +750,23 @@
       {
         "step": 1,
         "sourceComponentId": "guest-api-server",
-        "targetComponentId": "kubelet-host",
-        "description": "The kube-apiserver process exits. CRI-O reports the terminated container to the bare metal host's kubelet, but the Pod object and its sandbox still exist."
+        "targetComponentId": "crio-host",
+        "description": "The kube-apiserver process exits inside its container. Host CRI-O records the terminated container, while the Pod object and its sandbox continue to exist."
       },
       {
         "step": 2,
-        "sourceComponentId": "kubelet-host",
-        "targetComponentId": "crio-host",
-        "description": "Because the Pod's restartPolicy is Always, kubelet applies backoff if needed and asks host CRI-O to restart the failed container in place. No scheduler or ReplicaSet action is required."
+        "sourceComponentId": "crio-host",
+        "targetComponentId": "kubelet-host",
+        "description": "The host kubelet observes the terminated container through CRI status. Because the Pod's restartPolicy is Always, it applies restart backoff if needed; no scheduler or ReplicaSet action is required."
       },
       {
         "step": 3,
+        "sourceComponentId": "kubelet-host",
+        "targetComponentId": "crio-host",
+        "description": "The kubelet asks host CRI-O to create and start a replacement container in the existing Pod sandbox."
+      },
+      {
+        "step": 4,
         "sourceComponentId": "crio-host",
         "targetComponentId": "guest-api-server",
         "description": "CRI-O starts a new kube-apiserver container in the existing Pod sandbox. Readiness succeeds, the Service endpoint becomes available again, and the hosted API resumes serving."
@@ -639,65 +783,89 @@
       {
         "step": 1,
         "sourceComponentId": "external-client",
-        "targetComponentId": "guest-api-server",
-        "description": "A developer edits the ConfigMap and runs 'oc apply -f configmap.yaml' against the hosted cluster. The Guest API Server validates the object and increments its resourceVersion — but updating a ConfigMap does not, by itself, touch any Pod or Deployment."
+        "targetComponentId": "svc-ingress-lb-shared",
+        "description": "A developer edits the ConfigMap and runs 'oc apply -f configmap.yaml'. The guest API hostname resolves to the Shared Ingress LoadBalancer VIP."
       },
       {
         "step": 2,
+        "sourceComponentId": "svc-ingress-lb-shared",
+        "targetComponentId": "shared-ingress-proxy",
+        "description": "The LoadBalancer Service sends the TLS request to the Shared Ingress Proxy, which selects this hosted cluster from the SNI hostname."
+      },
+      {
+        "step": 3,
+        "sourceComponentId": "shared-ingress-proxy",
+        "targetComponentId": "guest-api-server",
+        "description": "The proxy forwards the request to the Guest API Server. It validates the ConfigMap and increments its resourceVersion — but updating a ConfigMap does not, by itself, touch any Pod or Deployment."
+      },
+      {
+        "step": 4,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "guest-etcd",
         "description": "The API Server persists the new ConfigMap revision to guest etcd. This is the ONLY change a bare ConfigMap update makes: the Guest Controller Manager runs no loop that restarts workloads on a plain ConfigMap edit, so this write by itself leaves every running Pod untouched."
       },
       {
-        "step": 3,
-        "sourceComponentId": "guest-api-server",
-        "targetComponentId": "kubelet-guest",
-        "description": "For Pods that mount the ConfigMap as a VOLUME, the guest kubelet's configmap-and-secret manager notices the changed object on a later sync and atomically swaps the projected files. With default sync and cache settings, propagation can take roughly two minutes. The container then sees new file contents, but the application must re-read them itself (for example via a file watcher or SIGHUP). Environment-variable and subPath consumers do not receive this update and require Pod recreation."
-      },
-      {
-        "step": 4,
-        "sourceComponentId": "external-client",
-        "targetComponentId": "guest-api-server",
-        "description": "To force the new config live (the only option for env-var / subPath consumers, and the clean option for everyone else), the developer mutates the workload's DESIRED state: 'oc rollout restart deployment/<app>' — or bumping a checksum/config-hash annotation on the pod template. This patch to the Deployment is the actual desired-state change the question is about. A rollout is often preferred even when hot-reload would work: it converges every replica atomically (instead of each kubelet's independent ~1-min timer), it is gated by readiness probes so a bad config halts the rollout with old Pods still serving, and it leaves a revision you can 'rollout undo'."
-      },
-      {
         "step": 5,
+        "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "guest-api-server",
+        "description": "For Pods that mount the ConfigMap as a VOLUME, the guest kubelet's configmap-and-secret manager observes or fetches the changed object over its own outbound API connection, then atomically swaps the projected files. With default sync and cache settings, propagation can take roughly two minutes. The application must re-read the file; environment-variable and subPath consumers require Pod recreation."
+      },
+      {
+        "step": 6,
+        "sourceComponentId": "external-client",
+        "targetComponentId": "svc-ingress-lb-shared",
+        "description": "To force the new config live, the developer runs 'oc rollout restart deployment/<app>' (or changes a config-hash annotation). This is a second API request and enters through the same Shared Ingress LoadBalancer VIP."
+      },
+      {
+        "step": 7,
+        "sourceComponentId": "svc-ingress-lb-shared",
+        "targetComponentId": "shared-ingress-proxy",
+        "description": "The LoadBalancer sends the rollout request to the Shared Ingress Proxy, which again selects the guest API backend by SNI."
+      },
+      {
+        "step": 8,
+        "sourceComponentId": "shared-ingress-proxy",
+        "targetComponentId": "guest-api-server",
+        "description": "The proxy forwards the Deployment patch to the Guest API Server. This pod-template mutation — not the ConfigMap edit alone — creates rollout intent for env-var and subPath consumers."
+      },
+      {
+        "step": 9,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "guest-controller-manager",
         "description": "The Deployment controller (a reconcile loop inside the Guest Controller Manager — not a standalone operator) sees the pod-template hash changed and creates a new ReplicaSet; the ReplicaSet controller then rolls that new ReplicaSet out, bringing its replicas up while retiring the old ones per the rollout strategy."
       },
       {
-        "step": 6,
+        "step": 10,
         "sourceComponentId": "guest-controller-manager",
         "targetComponentId": "guest-api-server",
         "description": "The controllers write the new ReplicaSet and its Pod objects back to the API Server. The freshly desired Pods reference the updated pod template, so when they start they will pull the current ConfigMap revision from step 2."
       },
       {
-        "step": 7,
+        "step": 11,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "guest-kube-scheduler",
         "description": "The new Pod has no node assignment, so the Guest Scheduler evaluates guest worker capacity and affinity and selects a Guest Worker Node VM for it."
       },
       {
-        "step": 8,
+        "step": 12,
         "sourceComponentId": "guest-kube-scheduler",
         "targetComponentId": "guest-api-server",
         "description": "The Scheduler writes a Binding back to the Guest API Server, assigning the replacement Pod to the chosen guest worker node."
       },
       {
-        "step": 9,
-        "sourceComponentId": "guest-api-server",
-        "targetComponentId": "kubelet-guest",
-        "description": "The guest kubelet observes the newly bound Pod on its own outbound watch of the Guest API Server (not via the Konnectivity tunnel, which only carries API-Server-initiated traffic such as exec/logs)."
+        "step": 13,
+        "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "guest-api-server",
+        "description": "The guest kubelet's existing outbound watch of the Guest API Server returns the newly bound Pod. The API Server does not initiate a node connection or send this through Konnectivity."
       },
       {
-        "step": 10,
+        "step": 14,
         "sourceComponentId": "kubelet-guest",
         "targetComponentId": "crio-guest",
         "description": "Kubelet issues RunPodSandbox / CreateContainer calls to guest CRI-O. CRI-O mounts the ConfigMap volume and injects any ConfigMap-sourced env vars from the CURRENT revision, so the new container is built around the updated config."
       },
       {
-        "step": 11,
+        "step": 15,
         "sourceComponentId": "crio-guest",
         "targetComponentId": "frontend-application-pod",
         "description": "CRI-O starts the container via runc; the application reads the updated ConfigMap at startup and goes Running with the new config live. Once it is Ready the old Pod is terminated and the rollout is complete."
@@ -714,62 +882,86 @@
       {
         "step": 1,
         "sourceComponentId": "external-client",
-        "targetComponentId": "guest-api-server",
-        "description": "A developer declares a PersistentVolumeClaim with 'oc apply' — 10Gi, storageClassName kubevirt-csi-infra-default. The Guest API Server authenticates the request, runs admission, and accepts the claim."
+        "targetComponentId": "svc-ingress-lb-shared",
+        "description": "A developer declares a PersistentVolumeClaim with 'oc apply'. The guest API hostname resolves to the Shared Ingress LoadBalancer VIP."
       },
       {
         "step": 2,
+        "sourceComponentId": "svc-ingress-lb-shared",
+        "targetComponentId": "shared-ingress-proxy",
+        "description": "The LoadBalancer Service sends the TLS request to the Shared Ingress Proxy, which selects this hosted cluster's kube-apiserver backend by SNI."
+      },
+      {
+        "step": 3,
+        "sourceComponentId": "shared-ingress-proxy",
+        "targetComponentId": "guest-api-server",
+        "description": "The proxy forwards the request to the Guest API Server. It authenticates the caller, runs admission, and accepts the 10Gi claim using storageClassName kubevirt-csi-infra-default."
+      },
+      {
+        "step": 4,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "guest-etcd",
         "description": "The Guest API Server persists the PersistentVolumeClaim in Guest Etcd. The claim sits at phase Pending — pure intent, no volume exists anywhere yet."
       },
       {
-        "step": 3,
+        "step": 5,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "kubevirt-csi-controller",
         "description": "The KubeVirt CSI Controller's external-provisioner sidecar — running in the HCP namespace but watching the guest API — sees the Pending claim names its StorageClass and issues a CSI CreateVolume gRPC call to the csi.kubevirt.io driver."
       },
       {
-        "step": 4,
+        "step": 6,
         "sourceComponentId": "kubevirt-csi-controller",
         "targetComponentId": "mgmt-kube-apiserver",
         "description": "The driver creates a backing PersistentVolumeClaim in the management cluster's HCP namespace via the Management Kube API Server. The guest's 'cloud volume' is literally an infra PVC, bound by whatever StorageClass the management cluster runs on its bare metal."
       },
       {
-        "step": 5,
+        "step": 7,
         "sourceComponentId": "kubevirt-csi-controller",
         "targetComponentId": "guest-api-server",
         "description": "With the infra PVC bound, the external-provisioner creates the guest PersistentVolume: driver csi.kubevirt.io, volumeHandle pointing at the infra PVC's name. The guest now has a PV record describing storage that physically lives a cluster below it."
       },
       {
-        "step": 6,
+        "step": 8,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "guest-controller-manager",
         "description": "The Guest Controller Manager's PersistentVolume controller loop binds claim to volume — it stamps each with a reference to the other and both flip to phase Bound. The claim is now usable; nothing is attached to any node yet."
       },
       {
-        "step": 7,
+        "step": 9,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "kubevirt-csi-controller",
         "description": "A Pod consuming the claim gets scheduled onto the worker node, so a VolumeAttachment object appears. The controller's external-attacher sidecar sees it and calls ControllerPublishVolume: attach this volume to that node."
       },
       {
-        "step": 8,
+        "step": 10,
         "sourceComponentId": "kubevirt-csi-controller",
-        "targetComponentId": "kubevirt-launcher",
-        "description": "Attach means hotplug here: KubeVirt surfaces the bound infra PVC into the running VMI through the KubeVirt Launcher Pod (a transient hotplug attachment pod hands the volume to virt-launcher). Inside the VM the guest kernel discovers a brand-new SCSI disk."
+        "targetComponentId": "mgmt-kube-apiserver",
+        "description": "ControllerPublishVolume requests the management-side KubeVirt hotplug operation through the Management Kube API Server, identifying the worker VMI and the bound infra PVC."
       },
       {
-        "step": 9,
+        "step": 11,
+        "sourceComponentId": "mgmt-kube-apiserver",
+        "targetComponentId": "kubevirt-launcher",
+        "description": "KubeVirt reconciles the hotplug request and surfaces the infra PVC into the running VMI through the KubeVirt Launcher Pod; a transient attachment pod hands the volume to virt-launcher. The guest kernel discovers a new SCSI disk."
+      },
+      {
+        "step": 12,
         "sourceComponentId": "kubelet-guest",
         "targetComponentId": "csi-node-guest",
         "description": "The in-VM Kubelet sees the attached volume and calls the CSI Node Driver over its node socket. NodeStageVolume finds the hotplugged disk by serial ID, formats it on first use, and mounts it at the staging path; NodePublishVolume then bind-mounts the staged filesystem into the Pod's volume directory under /var/lib/kubelet/pods/<uid>/volumes/."
       },
       {
-        "step": 10,
+        "step": 13,
         "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "crio-guest",
+        "description": "After the CSI Node Driver publishes the filesystem into the Pod's volume directory, kubelet asks guest CRI-O to create the container with that host path bind-mounted into its mount namespace."
+      },
+      {
+        "step": 14,
+        "sourceComponentId": "crio-guest",
         "targetComponentId": "frontend-application-pod",
-        "description": "Kubelet has CRI-O start the container with the volume bind-mounted into its mount namespace. The application writes to a plain directory — beneath it: a bind mount, an ext4 filesystem on a hotplugged virtio-scsi disk, a management-cluster PVC, and finally a real block device on bare metal."
+        "description": "Guest CRI-O starts the container with the volume mounted. The application writes to a plain directory — beneath it: a bind mount, an ext4 filesystem on a hotplugged virtio-scsi disk, a management-cluster PVC, and finally a real block device on bare metal."
       }
     ]
   }
