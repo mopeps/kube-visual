@@ -583,17 +583,17 @@ const cniGhostDetail = (w) => ({
 const CTLPLANE_GHOST_DETAIL = {
   role: 'OPENSHIFT · CONTROL PLANE',
   summary:
-    'The machinery that owns the logical space itself. Every switch and router in this diagram is a row in the OVN Northbound database — written by ovnkube, translated by northd, consumed by every node\'s ovn-controller.',
+    'The cluster-wide machinery — but NOT a central database. Since OpenShift moved to OVN interconnect (≥ 4.14) there is no cluster NB/SB DB: every node is its own OVN zone with its own node-local NB DB, SB DB and northd (run by that node\'s ovnkube-node pod). The switches and routers in this shared core are the per-node logical topology — replicated in every node\'s own NB DB and stitched across nodes by a transit switch (the IC remote ports). The diagram folds those identical per-node copies into one box for legibility.',
   sections: [
-    { heading: 'At a glance', tags: ['NB DB = the logical space', 'cluster-scoped', 'CNO-deployed'] },
-    { heading: 'Facts', facts: [
-      { k: 'NB DB', v: 'the desired logical network — what ovn-nbctl lists' },
-      { k: 'ovnkube-control-plane', v: 'allocates node subnets (10.244.0.0/24 → ovn-worker …)' },
+    { heading: 'At a glance', tags: ['interconnect — no central DB', 'rows live per node', 'transit switch stitches the zones', 'CNO-deployed'] },
+    { heading: 'What ovnkube-control-plane actually does', facts: [
+      { k: 'cluster manager', v: 'allocates each node its pod subnet (10.244.0.0/24 → ovn-worker …) — it does NOT hold the NB DB or run northd' },
+      { k: 'node-local NB DB', v: 'where these rows really live — one per node, inside the ovnkube-node pod' },
       { k: 'CNO', v: 'rolls the stack out from Network.operator "cluster"' },
     ] },
     { heading: 'Explore', commands: [
-      'oc get pods -n openshift-ovn-kubernetes | grep control-plane',
-      'oc get network.operator cluster -o yaml | head -20',
+      '# The cluster manager (subnet allocation) — lightweight under interconnect\noc get pods -n openshift-ovn-kubernetes | grep control-plane',
+      '# The real NB DB rows live in each node\'s pod, not here\noc rsh -n openshift-ovn-kubernetes -c nbdb <ovnkube-node-pod> ovn-nbctl show',
     ] },
   ],
 }
@@ -653,7 +653,7 @@ export const OVN_TOPOLOGY_BIG = {
   topicId: 'ovn-topology-big',
   title: 'OVN-Kubernetes in OpenShift — where the topology lives',
   tagline:
-    'The exact same diagram, zoomed out one level: every box of the OVN topology, unchanged, now drawn inside the greyed OpenShift component that contains it — Open vSwitch on the metal, the ovnkube-node pod whose ovn-controller realizes the logical objects, the CNI that wires the pods, and the Northbound database the whole logical space is rows in. Grey is machinery; colour is the topology it carries. The trace flows are the same three packets as the plain view.',
+    'The exact same diagram, zoomed out one level: every box of the OVN topology, unchanged, now drawn inside the greyed OpenShift component that contains it — Open vSwitch on the metal, the ovnkube-node pod whose ovn-controller realizes the logical objects, the CNI that wires the pods, and the Northbound database the logical space is rows in — which under interconnect is node-local (one NB DB per node), not a single cluster database. Grey is machinery; colour is the topology it carries. The trace flows are the same three packets as the plain view.',
   colorVar: 'k-teal',
   canvasClass: 'recon-stack--ovnbig',
   topology: { edges: EDGES },
@@ -672,9 +672,9 @@ export const OVN_TOPOLOGY_BIG = {
           layout: 'stack',
           colorVar: 'k-purple',
           zones: [
-            ghostZone('ovnb-core-db', 'OVN Northbound DB · rows, not devices', [
+            ghostZone('ovnb-core-db', 'OVN logical topology · rows in every node’s NB DB (interconnect)', [
               JOIN_BOX, ROUTER_BOX,
-              ghostChip('ovn-ctlplane', 'ovnkube-control-plane', 'Deployment', 'allocates the node subnets', CTLPLANE_GHOST_DETAIL),
+              ghostChip('ovn-ctlplane', 'ovnkube-control-plane', 'Deployment', 'cluster manager · allocates subnets (no central DB)', CTLPLANE_GHOST_DETAIL),
             ]),
           ],
         },
@@ -710,8 +710,10 @@ const G2 = {
 }
 
 const GUEST_NB_NOTE =
-  '# The guest’s NB DB lives in the HCP namespace on the *management* cluster:\n' +
-  '#   oc -n clusters-<guest> exec <ovnkube-control-plane-…> -c nbdb -- ovn-nbctl …'
+  '# Under interconnect the guest NB DB is node-local — one per guest VM, in that\n' +
+  '# node’s ovnkube-node pod (NOT central in the HCP namespace; the control-plane\n' +
+  '# pod there is only the cluster manager that allocates subnets):\n' +
+  '#   oc --kubeconfig <guest> rsh -n openshift-ovn-kubernetes -c nbdb <ovnkube-node-pod> ovn-nbctl …'
 const GUEST_VM_NOTE =
   '# Data-plane commands run *inside* the VM:\n' +
   '#   virtctl ssh core@<guest-node> -n clusters-<guest> -- sudo …'
@@ -827,9 +829,9 @@ const gGrDetail = (w) => ({
 export const GUEST_JOIN_DETAIL = {
   role: 'LOGICAL SWITCH · ROUTER INTERCONNECT (GUEST)',
   summary:
-    'The guest cluster’s own join switch — same construct, same job, even the same 100.64.0.0/16 default as the management one. They never collide: each SDN is its own address universe, and a row in its own northbound database. This one’s rows are served from the HCP namespace on the management cluster.',
+    'The guest cluster’s own join switch — same construct, same job, even the same 100.64.0.0/16 default as the management one. They never collide: each SDN is its own address universe. Like the mgmt SDN it runs interconnect, so this row lives in each guest VM’s node-local NB DB (inside the VM); the guest’s cluster manager — ovnkube-control-plane in the HCP namespace on the management cluster — only allocates the subnets.',
   sections: [
-    { heading: 'At a glance', tags: ['same subnet as mgmt — never collides', 'rows in the guest NB DB', 'router ports only'] },
+    { heading: 'At a glance', tags: ['same subnet as mgmt — never collides', 'rows in each VM’s node-local NB DB', 'router ports only'] },
     { heading: 'Job', bullets: [
       'Connects the guest’s distributed cluster router to each VM-pinned gateway router — routers still cannot peer directly, one turtle up or down.',
     ] },
@@ -850,9 +852,9 @@ export const GUEST_JOIN_DETAIL = {
 export const GUEST_ROUTER_DETAIL = {
   role: 'DISTRIBUTED LOGICAL ROUTER (GUEST)',
   summary:
-    'ovn_cluster_router, guest edition. "Distributed" means the same thing one level up: it runs nowhere — declared as rows in the HCP namespace’s NB DB, compiled by each VM’s ovn-controller into the in-VM br-int. Routing between guest pod subnets happens on the source VM, and the packet crosses the "underlay" — the mgmt pod network — already addressed to its destination.',
+    'ovn_cluster_router, guest edition. "Distributed" means the same thing one level up: it runs nowhere — under interconnect its rows live in each guest VM’s own node-local NB DB and are compiled by that VM’s northd + ovn-controller into the in-VM br-int (the HCP-namespace control-plane pod only allocates the subnets). Routing between guest pod subnets happens on the source VM, and the packet crosses the "underlay" — the mgmt pod network — already addressed to its destination.',
   sections: [
-    { heading: 'At a glance', tags: ['runs nowhere', 'declared in the HCP namespace', 'routed at the source VM'] },
+    { heading: 'At a glance', tags: ['runs nowhere', 'rows in each VM’s node-local NB DB', 'routed at the source VM'] },
     { heading: 'What it does', bullets: [
       'Routes between the guest pod subnets — one rtos port per guest node switch.',
       'Compiled into every VM’s br-int by the ovn-controller inside that VM.',
@@ -959,7 +961,7 @@ const GUEST_JOIN_BOX = {
 }
 const GUEST_ROUTER_BOX = {
   id: 'ovng-cluster-router', title: 'ovn_cluster_router', typePrefix: 'OVN Cluster Router', colorVar: 'k-green',
-  variant: 'ellipse', caption: 'distributed · rows in the HCP namespace’s NB DB', detail: GUEST_ROUTER_DETAIL,
+  variant: 'ellipse', caption: 'distributed · rows in each VM’s node-local NB DB', detail: GUEST_ROUTER_DETAIL,
 }
 
 // One guest node column — the plain view's chain, run inside a VMI (zone label
@@ -1058,7 +1060,7 @@ export const OVN_TOPOLOGY_GUEST = {
   topicId: 'ovn-topology-guest',
   title: 'OVN-Kubernetes in the guest cluster — the same wiring, one turtle down',
   tagline:
-    'The hosted cluster runs the exact same OVN topology as the plain view — gateway routers, join switch, distributed cluster router, a logical switch per node carrying the pods — with every piece one level up: each "node" is a KubeVirt VMI, the underlay is the management cluster’s pod network, the node NIC is a virt-launcher pod’s port, and the NB DB rows live in the HCP namespace on the management cluster. Cross-node guest traffic is Geneve wrapped in Geneve; guest egress is SNATed twice. Same constructs, same commands — different turtle.',
+    'The hosted cluster runs the exact same OVN topology as the plain view — gateway routers, join switch, distributed cluster router, a logical switch per node carrying the pods — with every piece one level up: each "node" is a KubeVirt VMI, the underlay is the management cluster’s pod network, the node NIC is a virt-launcher pod’s port. Like the mgmt SDN it runs interconnect, so the NB DB rows live in each guest VM’s node-local NB DB; the guest’s cluster manager in the HCP namespace only allocates the subnets. Cross-node guest traffic is Geneve wrapped in Geneve; guest egress is SNATed twice. Same constructs, same commands — different turtle.',
   colorVar: 'k-purple',
   topology: { edges: GUEST_EDGES },
   flows: GUEST_FLOWS,
@@ -1227,11 +1229,11 @@ const FULL_MROUTER_DETAIL = {
 const FULL_MNB_GHOST_DETAIL = {
   role: 'OPENSHIFT · MGMT NETWORK CONTROL PLANE',
   summary:
-    'The mgmt SDN’s logical space: rows in the OVN Northbound database, owned by the openshift-ovn-kubernetes namespace on the management cluster. ovnkube-control-plane allocates each bare-metal node its /23; every node’s ovn-controller realizes its slice.',
+    'The mgmt SDN’s logical topology. Under interconnect there is no central database: these rows live in each bare-metal node’s own node-local NB DB (in its ovnkube-node pod), replicated per zone and stitched by a transit switch. The ovnkube-control-plane Deployment in openshift-ovn-kubernetes is only the cluster manager — it allocates each node its /23; every node’s northd + ovn-controller then realize that node’s slice.',
   sections: [
-    { heading: 'At a glance', tags: ['mgmt NB DB', 'openshift-ovn-kubernetes', 'CNO-deployed'] },
+    { heading: 'At a glance', tags: ['interconnect — per-node NB DBs', 'cluster manager only', 'openshift-ovn-kubernetes', 'CNO-deployed'] },
     { heading: 'Facts', facts: [
-      { k: 'ovnkube-control-plane', v: 'allocates node subnets (10.128.2.0/23 → worker-1 …)' },
+      { k: 'ovnkube-control-plane', v: 'cluster manager — allocates node subnets (10.128.2.0/23 → worker-1 …); holds no DB' },
       { k: 'scope', v: 'the bare-metal cluster only — it knows nothing of the guest SDN' },
     ] },
     { heading: 'Explore', commands: [
@@ -1396,7 +1398,7 @@ const FULL_FLOWS = [
       { step: 1, sourceBoxId: 'fg1-pod-fe', targetBoxId: 'fg1-ls',
         description: 'frontend sends to 10.128.2.9 — another guest subnet, so it targets its gateway 10.128.0.1, the guest cluster router’s rtos port.' },
       { step: 2, sourceBoxId: 'fg1-ls', targetBoxId: 'ovnf-grouter',
-        description: 'Routed by the guest’s distributed router *on the source VM* — its table is compiled into the in-VM br-int, from rows in the HCP namespace’s NB DB.' },
+        description: 'Routed by the guest’s distributed router *on the source VM* — its table is compiled into the in-VM br-int from that VM’s own node-local NB DB (the HCP-namespace control plane only allocated the subnets).' },
       { step: 3, sourceBoxId: 'ovnf-grouter', targetBoxId: 'fg1-eth0',
         description: 'The route says 10.128.2.0/23 lives on guest-worker-2, so the VM encapsulates in guest Geneve between VM addresses (10.128.2.15 → 10.128.4.21) and the frame leaves the virtio NIC.' },
       { step: 4, sourceBoxId: 'fg1-eth0', targetBoxId: 'fm1-launcher',
@@ -1455,7 +1457,7 @@ export const OVN_TOPOLOGY_FULL = {
   topicId: 'ovn-topology-full',
   title: 'OVN-Kubernetes — the full HCP picture: both SDNs in their OpenShift objects',
   tagline:
-    'Everything at once: the management cluster’s OVN topology on the bare-metal workers, the guest cluster’s identical topology nested inside each worker’s VMI, and the grey OpenShift container around every group of boxes — Open vSwitch units on the metal and in each VM, the ovnkube-node pods that realize each layer, the CNIs that wire the pods, the two northbound databases (one in openshift-ovn-kubernetes, one in the HCP namespace), and the virt-launcher pod where the layers meet: its tap device and the VM’s eth0 are one NIC. Grey is machinery; colour is topology. The two trace flows walk a packet down through both SDNs and back up.',
+    'Everything at once: the management cluster’s OVN topology on the bare-metal workers, the guest cluster’s identical topology nested inside each worker’s VMI, and the grey OpenShift container around every group of boxes — Open vSwitch units on the metal and in each VM, the ovnkube-node pods that realize each layer, the CNIs that wire the pods, the two SDNs’ logical topologies (each interconnect — node-local NB DBs per node/VM, with only the cluster managers in openshift-ovn-kubernetes and the HCP namespace), and the virt-launcher pod where the layers meet: its tap device and the VM’s eth0 are one NIC. Grey is machinery; colour is topology. The two trace flows walk a packet down through both SDNs and back up.',
   colorVar: 'k-orange',
   canvasClass: 'recon-stack--ovnfull',
   topology: { edges: FULL_EDGES },
@@ -1481,14 +1483,14 @@ export const OVN_TOPOLOGY_FULL = {
             // Top spacer drops the mgmt core toward the metal GRs' height; the
             // mid spacer holds the guest core down at the nested VMIs' band.
             { id: 'ovnf-core-top', spacer: true },
-            ghostZone('ovnf-core-m', 'mgmt NB DB · openshift-ovn-kubernetes', [
+            ghostZone('ovnf-core-m', 'mgmt logical topology · per-node NB DBs (cluster manager: openshift-ovn-kubernetes)', [
               FULL_MJOIN_BOX, FULL_MROUTER_BOX,
-              ghostChip('ovnf-mnb', 'ovnkube-control-plane', 'Deployment', 'the mgmt SDN’s rows', FULL_MNB_GHOST_DETAIL),
+              ghostChip('ovnf-mnb', 'ovnkube-control-plane', 'Deployment', 'cluster manager · no central DB', FULL_MNB_GHOST_DETAIL),
             ]),
             { id: 'ovnf-core-gap', spacer: true },
-            ghostZone('ovnf-core-g', 'guest NB DB · HCP namespace', [
+            ghostZone('ovnf-core-g', 'guest logical topology · per-VM NB DBs (cluster manager in the HCP namespace)', [
               FULL_GJOIN_BOX, FULL_GROUTER_BOX,
-              ghostChipFor('ovnf-gnb', 'ovn-master-control', 'the guest SDN’s rows — on the mgmt cluster'),
+              ghostChipFor('ovnf-gnb', 'ovn-master-control', 'guest cluster manager — on the mgmt cluster'),
             ]),
           ],
         },

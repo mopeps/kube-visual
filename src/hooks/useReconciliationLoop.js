@@ -10,10 +10,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 // Four scenarios the user picks from the Deep Dive "Scenario" dropdown (the kill
 // ones can also be triggered by clicking a PID in the cgroup box):
 //
-//   • Kill the MAIN PID → the unit can't survive, so systemd recovers it:
+//   • Kill the MONITOR (main PID) → the unit can't survive, so systemd recovers it:
 //       steady → killed → SIGCHLD → UNIT_FAILED → sweep → fork/execve → ACTIVE
-//   • Kill a CHILD PID → systemd just reaps it; the main process lives on:
-//       steady → child killed → reaped (still UNIT_ACTIVE, no restart)
+//   • Kill the WORKER → OVS's own monitor respawns it one level below systemd,
+//     which never sees a unit failure:
+//       steady → worker killed → monitor respawns (still UNIT_ACTIVE, no restart)
 //   • Edit unit + daemon-reload → recompile the DAG without touching the process:
 //       steady → file edited → daemon-reload → DAG updated (still UNIT_ACTIVE)
 //   • systemctl stop → desired flips to inactive, so the same SIGCHLD ends in
@@ -39,9 +40,9 @@ const MAIN_STEPS = [
       'systemd holds the unit at UNIT_ACTIVE. Desired state (the DAG) and actual state (the cgroup) agree — the main PID and its children all run, pinned by the kernel.',
   },
   {
-    phase: 'killed', procs: 'mainDead', title: 'Main PID killed', tag: 'process dies',
+    phase: 'killed', procs: 'mainDead', title: 'Monitor (main PID) killed', tag: 'process dies',
     narration:
-      'You killed the main PID; it dies on the CPU. Its children are now orphaned — but the kernel does NOT kill them. It only keeps them trapped in the unit’s cgroup so they can’t escape. Left alone they would keep running; whether they live or die is systemd’s decision, taken later — never the kernel’s.',
+      'You killed the monitor — the PID systemd tracks. The worker it forked is now orphaned, but the kernel does NOT kill it. It only keeps it trapped in the unit’s cgroup so it can’t escape. Left alone the orphan would keep running; whether it lives or dies is systemd’s decision, taken later — never the kernel’s.',
   },
   {
     phase: 'sigchld', procs: 'mainDead', title: 'Kernel fires SIGCHLD', tag: 'feedback',
@@ -78,18 +79,17 @@ const CHILD_STEPS = [
   {
     phase: 'idle', procs: 'initial', title: 'Steady state', tag: 'UNIT_ACTIVE',
     narration:
-      'systemd holds the unit at UNIT_ACTIVE. The main PID and its helper children all run inside the cgroup.',
+      'systemd holds the unit at UNIT_ACTIVE. The monitor (main PID) and the worker it forked both run inside the cgroup.',
   },
   {
-    phase: 'child-killed', procs: 'childDead', title: 'Child PID killed', tag: 'process dies',
-    edge: 'notify', signal: '⚡ SIGCHLD',
+    phase: 'child-killed', procs: 'childDead', title: 'Worker killed', tag: 'process dies',
     narration:
-      'You killed a child (helper) PID. It dies and the kernel fires a SIGCHLD for it too — the same feedback edge wakes systemd.',
+      'You killed the worker. Its parent is the monitor, not PID 1 — so the kernel delivers the SIGCHLD to ovs-vswitchd’s monitor, and systemd’s signalfd never fires. This death stays one level below the supervisor.',
   },
   {
-    phase: 'child-reaped', procs: 'childReaped', title: 'Child reaped · no restart', tag: 'UNIT_ACTIVE',
+    phase: 'child-reaped', procs: 'childReaped', title: 'Monitor respawns it · no restart', tag: 'UNIT_ACTIVE',
     narration:
-      'systemd reaps the child, but the main PID is still alive — so desired still equals actual. The unit stays UNIT_ACTIVE: a dead helper does not trigger a restart.',
+      'The monitor reaps the worker and immediately forks a fresh one. The main PID (the monitor) never died, so desired still equals actual: the unit stays UNIT_ACTIVE and systemd does nothing — a dead worker is the daemon’s business, not the supervisor’s.',
   },
 ]
 
@@ -104,7 +104,7 @@ const RELOAD_STEPS = [
   {
     phase: 'edited', procs: 'initial', title: 'Unit file edited', tag: 'disk changed',
     narration:
-      'You edit ovnkube-node.service on disk (say, bump RestartSec=). Nothing happens yet — systemd acts on the in-memory DAG, not the file, so the running unit is still on the old config.',
+      'You edit ovs-vswitchd.service on disk (say, bump RestartSec=). Nothing happens yet — systemd acts on the in-memory DAG, not the file, so the running unit is still on the old config.',
   },
   {
     phase: 'reload', procs: 'initial', title: 'systemctl daemon-reload', tag: 'recompiling',
@@ -160,8 +160,8 @@ const STOP_STEPS = [
 const SCENARIOS = [
   { id: 'main',   name: 'Kill the main PID',      meta: 'restart',  steps: MAIN_STEPS,   start: 1,
     lede: 'The main PID is what systemd tracks — its death is drift, so the unit restarts. Watch cgroup.procs empty out and repopulate with fresh PIDs.' },
-  { id: 'child',  name: 'Kill a child PID',       meta: 'reaped',   steps: CHILD_STEPS,  start: 1,
-    lede: 'A helper’s death is not drift — the main PID still matches desired state, so systemd only reaps the child. No restart.' },
+  { id: 'child',  name: 'Kill the worker',        meta: 'respawned', steps: CHILD_STEPS, start: 1,
+    lede: 'A worker’s death is not drift — its parent is OVS’s own monitor, not systemd, so the monitor respawns it and the main PID still matches desired state. No unit restart.' },
   { id: 'reload', name: 'Edit unit + daemon-reload', meta: 'recompile', steps: RELOAD_STEPS, start: 1,
     lede: 'Editing a unit file changes nothing by itself — daemon-reload recompiles desired state (the DAG) without touching the running process.' },
   { id: 'stop',   name: 'systemctl stop',         meta: 'inactive', steps: STOP_STEPS,   start: 1,
@@ -316,14 +316,14 @@ export default function useReconciliationLoop(recon) {
         : phase === 'stop-sigchld' ? 'woken by signalfd — SIGCHLD (stop)'
         : phase === 'stop-sweep' ? 'sweeping cgroup — clean stop'
         : phase === 'reload' ? 'daemon-reload — recompiling the DAG'
-        : childPath ? `reaped child ${target} — unit stays UNIT_ACTIVE`
+        : childPath ? 'idle — a worker death never reaches systemd'
         : 'blocked on signalfd…',
       highlight:
-        phase === 'sigchld' || phase === 'restart' || phase === 'failed' || phase === 'child-killed'
+        phase === 'sigchld' || phase === 'restart' || phase === 'failed'
         || phase === 'reload' || stopping,
     },
     [recon.cgroupBoxId]: {
-      subtitle: 'system.slice/ovnkube-node.service',
+      subtitle: `system.slice/${recon.unit}`,
       accent: armed && (phase === 'restart' || phase === 'active') ? GREEN : undefined,
       highlight: phase === 'sweep' || phase === 'restart' || phase === 'stop-sweep',
     },
@@ -335,7 +335,7 @@ export default function useReconciliationLoop(recon) {
         : phase === 'stop-sweep' ? 'swept — cgroup emptying'
         : inactive ? 'no processes — unit inactive'
         : mainDead ? 'main dead — children trapped in cgroup'
-        : childPath ? `child ${target} died — reaped, main alive`
+        : childPath ? `worker ${target} died — monitor respawned it, main alive`
         : `PID ${liveMainPid} running`,
       accent: armed && (phase === 'killed' || phase === 'child-killed' || phase === 'stopping') ? RED : undefined,
       highlight:

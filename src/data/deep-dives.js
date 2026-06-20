@@ -70,16 +70,19 @@
 
 import { OVN_TOPOLOGY, OVN_TOPOLOGY_BIG, OVN_TOPOLOGY_GUEST, OVN_TOPOLOGY_FULL } from './ovn-topology'
 
-// Example unit for the headline service (ovn-kubernetes node daemon). Mirrors
-// the real ordering: structural Requires= on Open vSwitch, chronological After=
-// the network-pre target.
-const OVNKUBE_UNIT = `[Unit]
-Description=OVN Kubernetes Node Daemon (ovnkube-node)
-After=network-pre.target ovs-vswitchd.service
-Requires=ovs-vswitchd.service
+// Example unit for the headline service (the Open vSwitch forwarding daemon —
+// a genuine host systemd unit on RHCOS, unlike ovnkube-node which is a
+// DaemonSet pod supervised by the kubelet, not systemd). Mirrors the real
+// ordering: structural Requires= on the OVS database, chronological After= it.
+// (RHCOS launches it through /usr/share/openvswitch/scripts/ovs-ctl; the bare
+// ExecStart here keeps the fork()/execve() story to a single binary.)
+const OVS_VSWITCHD_UNIT = `[Unit]
+Description=Open vSwitch Forwarding Daemon (ovs-vswitchd)
+After=ovsdb-server.service
+Requires=ovsdb-server.service
 
 [Service]
-ExecStart=/usr/bin/ovnkube --init-node ${'${HOSTNAME}'} --config-file=/etc/ovn/ovnkube.conf
+ExecStart=/usr/sbin/ovs-vswitchd unix:/run/openvswitch/db.sock --mlockall
 Restart=always
 RestartSec=5
 Slice=system.slice
@@ -202,7 +205,7 @@ AllowIsolate=yes`,
   },
   {
     id: 'u-kubelet', name: 'kubelet.service', kind: '.service', tag: 'kubernetes',
-    summary: 'The Kubernetes node agent — the cluster-side counterpart of ovnkube-node. After=crio.service guarantees the container runtime is up before the kubelet starts pods.',
+    summary: 'The Kubernetes node agent. After=crio.service guarantees the container runtime is up before the kubelet starts pods — and it is the kubelet, not systemd, that then supervises pod containers like ovnkube-node.',
     directives: ['After=crio.service', 'Restart=always', 'RestartSec=10'],
     body: `[Unit]
 Description=Kubernetes Kubelet
@@ -238,11 +241,10 @@ const CGROUP_TREE = {
           label: 'system.slice', kind: 'slice', sub: 'OS daemons',
           children: [
             {
-              label: 'ovnkube-node.service', kind: 'service', sub: 'the headline unit',
+              label: 'ovs-vswitchd.service', kind: 'service', sub: 'the headline unit',
               children: [
-                { label: '10243 · ovnkube-node', kind: 'proc', sub: 'main PID' },
-                { label: '10255 · ovn-nbctl', kind: 'proc' },
-                { label: '10256 · ovn-controller mon', kind: 'proc' },
+                { label: '10243 · ovs-vswitchd (monitor)', kind: 'proc', sub: 'main PID — systemd supervises this' },
+                { label: '10244 · ovs-vswitchd (worker)', kind: 'proc', sub: 'forked + respawned by the monitor' },
               ],
             },
             { label: 'crio.service', kind: 'service', children: [{ label: '3120 · crio', kind: 'proc' }] },
@@ -319,7 +321,7 @@ const TARGET_TREE = {
               children: [{ label: 'NetworkManager.service', kind: 'service' }],
             },
             { label: 'crio.service', kind: 'service', sub: 'container runtime' },
-            { label: 'ovnkube-node.service', kind: 'service', sub: 'After=network-pre.target · Requires=ovs-vswitchd' },
+            { label: 'ovs-vswitchd.service', kind: 'service', sub: 'After=ovsdb-server.service · Requires=ovsdb-server.service' },
             { label: 'kubelet.service', kind: 'service', sub: 'After=crio.service' },
           ],
         },
@@ -338,30 +340,31 @@ const SYSTEMD = {
   topicId: 'systemd',
   title: 'systemd — the state reconciliation loop',
   tagline:
-    'On every RHCOS node systemd is PID 1: a state-enforcing supervisor that continuously reconciles an in-memory desired state with kernel reality. Followed here through a real, mission-critical unit — ovn-kubernetes (ovnkube-node.service).',
+    'On every RHCOS node systemd is PID 1: a state-enforcing supervisor that continuously reconciles an in-memory desired state with kernel reality. Followed here through a real host systemd unit — Open vSwitch (ovs-vswitchd.service), the daemon ovnkube-node programs. (ovnkube-node itself is a DaemonSet pod the kubelet supervises, not a systemd unit — so OVS, not it, is the honest subject here.)',
   colorVar: 'k-amber',
   reconciliation: {
-    unit: 'ovnkube-node.service',
+    unit: 'ovs-vswitchd.service',
     // Why the cgroup box invites you to kill PIDs: shown under cgroup.procs
     // while no walkthrough is armed, so the interaction explains itself.
-    hint: 'Click a PID to fire the loop for real — kill the main PID and systemd restarts the unit (watch cgroup.procs repopulate); kill a child and it is only reaped.',
+    hint: 'Click a PID to fire the loop for real — kill the monitor (the PID systemd tracks) and systemd restarts the whole unit (watch cgroup.procs repopulate); kill the worker and OVS’s own monitor respawns it, without systemd ever seeing a unit failure.',
     dagBoxId: 'sd-dag',
     engineBoxId: 'sd-engine',
     cgroupBoxId: 'sd-cgroup',
     realityBoxId: 'sd-reality',
-    // The processes the kernel pins inside the unit's cgroup. The main process
-    // death triggers a unit restart; a child death is merely reaped.
-    main: { pid: 10243, label: 'ovnkube-node' },
+    // The processes the kernel pins inside the unit's cgroup. OVS daemons run by
+    // default under a small monitor process (ovs-ctl's `--monitor`): systemd
+    // supervises the long-lived monitor (the unit's main PID); the monitor forks
+    // the worker that does the forwarding. Killing the monitor is drift systemd
+    // recovers; killing the worker is handled one level down, by the monitor.
+    main: { pid: 10243, label: 'ovs-vswitchd (monitor)' },
     children: [
-      { pid: 10255, label: 'ovn-nbctl' },
-      { pid: 10256, label: 'ovn-controller mon' },
+      { pid: 10244, label: 'ovs-vswitchd (worker)' },
     ],
-    // Fresh PIDs systemd forks on restart.
+    // Fresh PIDs systemd forks on restart (a new monitor, which forks a new worker).
     restart: {
-      main: { pid: 10310, label: 'ovnkube-node' },
+      main: { pid: 10310, label: 'ovs-vswitchd (monitor)' },
       children: [
-        { pid: 10322, label: 'ovn-nbctl' },
-        { pid: 10323, label: 'ovn-controller mon' },
+        { pid: 10311, label: 'ovs-vswitchd (worker)' },
       ],
     },
     // The reconciliation loop drawn directly on the canvas (this replaces the
@@ -403,7 +406,7 @@ const SYSTEMD = {
               heading: 'Explore',
               commands: [
                 '# Re-parse unit files after editing one\nsystemctl daemon-reload',
-                '# Show the merged unit systemd actually compiled (file + drop-ins)\nsystemctl cat ovnkube-node.service',
+                '# Show the merged unit systemd actually compiled (file + drop-ins)\nsystemctl cat ovs-vswitchd.service',
               ],
             },
           ],
@@ -438,8 +441,8 @@ const SYSTEMD = {
             {
               heading: 'Explore',
               commands: [
-                '# The current active/sub state the engine is tracking\nsystemctl show ovnkube-node.service -p ActiveState,SubState,Result',
-                '# Watch the failure + recovery decision in the journal\njournalctl -u ovnkube-node -f',
+                '# The current active/sub state the engine is tracking\nsystemctl show ovs-vswitchd.service -p ActiveState,SubState,Result',
+                '# Watch the failure + recovery decision in the journal\njournalctl -u ovs-vswitchd -f',
               ],
             },
           ],
@@ -466,15 +469,15 @@ const SYSTEMD = {
               heading: 'fork() then execve()',
               facts: [
                 { k: 'fork()', v: 'PID 1 clones itself, creating an empty child process' },
-                { k: 'execve()', v: 'the child overlays itself with /usr/bin/ovnkube — same PID, new program' },
+                { k: 'execve()', v: 'the child overlays itself with /usr/sbin/ovs-vswitchd — same PID, new program' },
                 { k: 'setup', v: 'between the two, systemd applies the cgroup, namespaces and limits' },
               ],
             },
             {
               heading: 'Explore',
               commands: [
-                '# The ExecStart the engine runs on this edge\nsystemctl show ovnkube-node.service -p ExecStart',
-                '# Trace the actual fork/execve as a unit starts\nstrace -f -e trace=fork,execve systemctl restart ovnkube-node.service',
+                '# The ExecStart the engine runs on this edge\nsystemctl show ovs-vswitchd.service -p ExecStart',
+                '# Trace the actual fork/execve as a unit starts\nstrace -f -e trace=fork,execve systemctl restart ovs-vswitchd.service',
               ],
             },
           ],
@@ -497,7 +500,7 @@ const SYSTEMD = {
               heading: 'What this records',
               facts: [
                 { k: 'Ground truth', v: 'Kernel Reality — the running PIDs (task structs) on the CPU' },
-                { k: 'Index', v: 'cgroup Tree — /sys/fs/cgroup/system.slice/ovnkube-node.service/' },
+                { k: 'Index', v: 'cgroup Tree — /sys/fs/cgroup/system.slice/ovs-vswitchd.service/' },
                 { k: 'Mechanism', v: 'the kernel records each PID in cgroup.procs; children inherit it' },
               ],
               tags: ['cgroups v2', 'kernel-enforced', 'no escape', 'exact membership'],
@@ -509,8 +512,8 @@ const SYSTEMD = {
             {
               heading: 'Explore',
               commands: [
-                '# The exact PIDs the kernel has pinned under this unit\ncat /sys/fs/cgroup/system.slice/ovnkube-node.service/cgroup.procs',
-                '# The same, rendered as a tree\nsystemd-cgls /system.slice/ovnkube-node.service',
+                '# The exact PIDs the kernel has pinned under this unit\ncat /sys/fs/cgroup/system.slice/ovs-vswitchd.service/cgroup.procs',
+                '# The same, rendered as a tree\nsystemd-cgls /system.slice/ovs-vswitchd.service',
               ],
             },
           ],
@@ -541,7 +544,7 @@ const SYSTEMD = {
               heading: 'Explore',
               commands: [
                 '# The signalfd/epoll descriptors PID 1 is blocked on\nls -l /proc/1/fd',
-                '# Fire the loop yourself and watch the wake-up\nsystemctl kill -s SIGKILL ovnkube-node.service ; journalctl -u ovnkube-node -f',
+                '# Fire the loop yourself and watch the wake-up\nsystemctl kill -s SIGKILL ovs-vswitchd.service ; journalctl -u ovs-vswitchd -f',
               ],
             },
           ],
@@ -576,7 +579,7 @@ const SYSTEMD = {
             {
               heading: 'Explore',
               commands: [
-                '# Kill an entire cgroup at once (cgroup v2)\necho 1 > /sys/fs/cgroup/system.slice/ovnkube-node.service/cgroup.kill',
+                '# Kill an entire cgroup at once (cgroup v2)\necho 1 > /sys/fs/cgroup/system.slice/ovs-vswitchd.service/cgroup.kill',
                 '# Watch PID 1 issue the kill syscalls as a unit is swept\nstrace -f -e trace=kill,write -p 1',
               ],
             },
@@ -616,14 +619,14 @@ const SYSTEMD = {
                 units: UNIT_EXAMPLES,
               },
               {
-                heading: 'The headline unit · ovnkube-node.service',
+                heading: 'The headline unit · ovs-vswitchd.service',
                 tags: ['Requires= → structural', 'After= → ordering'],
-                manifest: { kind: 'UNIT', body: OVNKUBE_UNIT },
+                manifest: { kind: 'UNIT', body: OVS_VSWITCHD_UNIT },
               },
               {
                 heading: 'Explore',
                 commands: [
-                  '# Where systemd found this unit and its drop-ins\nsystemctl cat ovnkube-node.service',
+                  '# Where systemd found this unit and its drop-ins\nsystemctl cat ovs-vswitchd.service',
                   '# Re-parse unit files after an edit\nsystemctl daemon-reload',
                 ],
               },
@@ -641,10 +644,10 @@ const SYSTEMD = {
           id: 'sd-dag',
           title: 'Desired State · Compiled DAG',
           typePrefix: 'HEAP',
-          subtitle: 'ovnkube-node.service — UNIT_ACTIVE',
+          subtitle: 'ovs-vswitchd.service — UNIT_ACTIVE',
           badges: [
-            { label: 'Requires → ovs-vswitchd', kind: 'requires' },
-            { label: 'After → network-pre.target', kind: 'after' },
+            { label: 'Requires → ovsdb-server', kind: 'requires' },
+            { label: 'After → ovsdb-server', kind: 'after' },
           ],
           detail: {
             role: 'PILLAR 1 · DESIRED STATE',
@@ -683,7 +686,7 @@ const SYSTEMD = {
               {
                 heading: 'Two distinct dependency dimensions',
                 facts: [
-                  { k: 'Requires=', v: 'structural — if ovs-vswitchd dies, ovnkube-node is stopped with it' },
+                  { k: 'Requires=', v: 'structural — if ovsdb-server dies, ovs-vswitchd is stopped with it' },
                   { k: 'After=', v: 'ordering only — “start me after this”, nothing about presence' },
                 ],
               },
@@ -699,8 +702,8 @@ const SYSTEMD = {
               {
                 heading: 'Explore',
                 commands: [
-                  '# Forward dependency graph (what pulled this in)\nsystemctl list-dependencies ovnkube-node.service',
-                  '# Reverse (what would fall if ovs-vswitchd dies)\nsystemctl list-dependencies --reverse ovs-vswitchd.service',
+                  '# Forward dependency graph (what pulled this in)\nsystemctl list-dependencies ovs-vswitchd.service',
+                  '# Reverse (what would fall if ovsdb-server dies)\nsystemctl list-dependencies --reverse ovsdb-server.service',
                 ],
               },
             ],
@@ -745,7 +748,7 @@ const SYSTEMD = {
           id: 'sd-cgroup',
           title: 'Actual State · cgroup Tree',
           typePrefix: 'cgroupfs',
-          subtitle: 'system.slice/ovnkube-node.service · click a PID to kill it',
+          subtitle: 'system.slice/ovs-vswitchd.service · click a PID to kill it',
           detail: {
             role: 'PILLAR 3 · ACTUAL STATE',
             summary:
@@ -753,10 +756,10 @@ const SYSTEMD = {
             sections: [
               {
                 heading: 'The containment anchor',
-                body: 'Under cgroups v2 the kernel won’t let a process escape its cgroup tree — every helper ovnkube-node forks is chained into the same directory, so tracking is exact.',
+                body: 'Under cgroups v2 the kernel won’t let a process escape its cgroup tree — every worker ovs-vswitchd forks is chained into the same directory, so tracking is exact.',
                 tags: ['cgroups v2', 'kernel-enforced', 'no escape', 'children inherit the slice'],
                 facts: [
-                  { k: 'Path', v: '/sys/fs/cgroup/system.slice/ovnkube-node.service/' },
+                  { k: 'Path', v: '/sys/fs/cgroup/system.slice/ovs-vswitchd.service/' },
                   { k: 'system.slice', v: 'the cgroup branch grouping OS daemons (user apps live under user.slice)' },
                   { k: 'cgroup.procs', v: 'holds the main PID; every child inherits the slice' },
                 ],
@@ -768,13 +771,13 @@ const SYSTEMD = {
               },
               {
                 heading: 'Try it on the canvas',
-                tags: ['kill main → restart', 'kill child → reaped, no restart', 'children stay trapped'],
-                body: 'Click a PID in this box to arm the walkthrough, then step through what the kernel and systemd do.',
+                tags: ['kill monitor → systemd restarts the unit', 'kill worker → monitor respawns it', 'orphaned worker stays trapped'],
+                body: 'Click a PID in this box to arm the walkthrough, then step through what the kernel and systemd do. (OVS runs the daemon under a monitor process by default, so the unit holds two PIDs in this cgroup: kill the worker and the monitor respawns it one level below systemd; kill the monitor — the PID systemd tracks — and the worker is orphaned, trapped in the cgroup, then swept before systemd re-forks the unit.)',
               },
               {
                 heading: 'Explore',
                 commands: [
-                  '# The process tree the kernel pins under this unit\nsystemd-cgls /system.slice/ovnkube-node.service',
+                  '# The process tree the kernel pins under this unit\nsystemd-cgls /system.slice/ovs-vswitchd.service',
                   '# Live per-service resource accounting\nsystemd-cgtop -d 1',
                 ],
               },
@@ -785,7 +788,7 @@ const SYSTEMD = {
           id: 'sd-reality',
           title: 'Kernel Reality · Running PIDs',
           typePrefix: 'CPU',
-          subtitle: 'ovnkube-node + ovs bridges br-int / br-ex',
+          subtitle: 'ovs-vswitchd wiring br-int / br-ex',
           detail: {
             role: 'PILLAR 4 · DRIFT DETECTION',
             summary:
@@ -804,7 +807,7 @@ const SYSTEMD = {
                 heading: 'Try the loop',
                 body: 'Use the step-through walkthrough on the canvas to watch SIGCHLD → UNIT_FAILED → fork()/execve() play out one event at a time.',
                 commands: [
-                  '# Watch the unit recover after a kill\nsystemctl kill -s SIGKILL ovnkube-node.service ; journalctl -u ovnkube-node -f',
+                  '# Watch the unit recover after a kill\nsystemctl kill -s SIGKILL ovs-vswitchd.service ; journalctl -u ovs-vswitchd -f',
                 ],
               },
             ],
