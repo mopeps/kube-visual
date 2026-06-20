@@ -172,7 +172,7 @@ export const JOIN_SWITCH_DETAIL = {
       'Connects the distributed ovn_cluster_router to every per-node gateway router — OVN routers cannot peer directly.',
     ] },
     { heading: 'Facts', facts: [
-      { k: 'subnet', v: '100.64.0.0/16 (RFC 6598 shared space — never routed)' },
+      { k: 'subnet', v: '100.64.0.0/16 (carved from RFC 6598 shared space, 100.64.0.0/10 — not globally routable)' },
       { k: 'ovn_cluster_router', v: '100.64.0.1' },
       { k: `GR_${W1.node}`, v: W1.joinIp },
       { k: `GR_${W2.node}`, v: W2.joinIp },
