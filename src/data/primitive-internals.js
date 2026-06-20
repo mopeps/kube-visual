@@ -40,30 +40,32 @@ const typeOf = (node) => node?.typePrefix || findComponent(node?.id)?.typePrefix
 export const isRuntimeInstance = (node) => RUNTIME_TYPES.has(typeOf(node))
 
 // Per-primitive presentation: a short execution-primitive tag (what runs here —
-// never a desired-state kind), an accent, and a terse caption. `fold` marks the
-// process box that carries the component's per-instance `linuxPrimitive`:
-// 'title' rewrites the row to `PID 1 · <realisation>` (Pod / systemd, matching
-// pipeline-model), 'caption' shows it as the subtitle (VMI, no PID-1 row).
+// never a desired-state kind) and an accent. `fold` marks the process box that
+// carries the component's per-instance `linuxPrimitive` (the realisation, which
+// the resting box would otherwise not show): 'title' rewrites the row to
+// `PID 1 · <realisation>` (Pod / systemd, matching pipeline-model); 'caption'
+// surfaces it as the box subtitle (VMI, no PID-1 row). The static descriptive
+// subtitles are intentionally absent — that scope text lives in each box's popup.
 const META = {
-  'pod-netns':         { tag: 'netns',   colorVar: 'k-purple', caption: 'shared network stack' },
-  'pod-veth':          { tag: 'netdev',  colorVar: 'k-teal',   caption: 'veth → br-int' },
-  'pod-ipcns':         { tag: 'ipcns',   colorVar: 'k-purple', caption: 'shared shm / sem' },
-  'pod-utsns':         { tag: 'utsns',   colorVar: 'k-purple', caption: 'shared hostname' },
-  'pod-cgroup-slice':  { tag: 'cgroup',  colorVar: 'k-purple', caption: 'pod QoS resource ceiling' },
-  'pod-mountns':       { tag: 'mountns', colorVar: 'k-purple', caption: 'private filesystem view' },
-  'pod-pidns':         { tag: 'pidns',   colorVar: 'k-purple', caption: 'own PID 1' },
-  'pod-cgroups':       { tag: 'cgroup',  colorVar: 'k-orange', caption: 'per-container limits' },
-  'pod-selinux':       { tag: 'LSM',     colorVar: 'k-orange', caption: 'MCS isolation' },
-  'pod-seccomp':       { tag: 'seccomp', colorVar: 'k-orange', caption: 'BPF syscall filter' },
-  'pod-capabilities':  { tag: 'caps',    colorVar: 'k-orange', caption: 'dropped capabilities' },
-  'container-process': { tag: 'process', colorVar: 'k-green',  caption: 'application binary', fold: 'title' },
-  'systemd-unit':      { tag: 'unit',    colorVar: 'k-amber',  caption: '.service file' },
-  'cgroup-slice':      { tag: 'cgroup',  colorVar: 'k-purple', caption: 'per-service accounting' },
-  'service-process':   { tag: 'process', colorVar: 'k-green',  caption: 'host process', fold: 'title' },
-  'kvm-vcpu':          { tag: 'KVM',     colorVar: 'k-purple', caption: '/dev/kvm vCPU thread' },
-  'qemu-process':      { tag: 'process', colorVar: 'k-green',  caption: 'machine emulator', fold: 'caption' },
-  'vhost-net':         { tag: 'vhost',   colorVar: 'k-purple', caption: 'in-kernel virtio' },
-  'vmi-tap':           { tag: 'netdev',  colorVar: 'k-teal',   caption: 'tap0 ↔ k6t-eth0' },
+  'pod-netns':         { tag: 'netns',   colorVar: 'k-purple' },
+  'pod-veth':          { tag: 'netdev',  colorVar: 'k-teal'   },
+  'pod-ipcns':         { tag: 'ipcns',   colorVar: 'k-purple' },
+  'pod-utsns':         { tag: 'utsns',   colorVar: 'k-purple' },
+  'pod-cgroup-slice':  { tag: 'cgroup',  colorVar: 'k-purple' },
+  'pod-mountns':       { tag: 'mountns', colorVar: 'k-purple' },
+  'pod-pidns':         { tag: 'pidns',   colorVar: 'k-purple' },
+  'pod-cgroups':       { tag: 'cgroup',  colorVar: 'k-orange' },
+  'pod-selinux':       { tag: 'LSM',     colorVar: 'k-orange' },
+  'pod-seccomp':       { tag: 'seccomp', colorVar: 'k-orange' },
+  'pod-capabilities':  { tag: 'caps',    colorVar: 'k-orange' },
+  'container-process': { tag: 'process', colorVar: 'k-green',  fold: 'title' },
+  'systemd-unit':      { tag: 'unit',    colorVar: 'k-amber'  },
+  'cgroup-slice':      { tag: 'cgroup',  colorVar: 'k-purple' },
+  'service-process':   { tag: 'process', colorVar: 'k-green',  fold: 'title' },
+  'kvm-vcpu':          { tag: 'KVM',     colorVar: 'k-purple' },
+  'qemu-process':      { tag: 'process', colorVar: 'k-green',  fold: 'caption' },
+  'vhost-net':         { tag: 'vhost',   colorVar: 'k-purple' },
+  'vmi-tap':           { tag: 'netdev',  colorVar: 'k-teal'   },
 }
 
 // Synthetic boxes with no PRIMITIVES_BY_TYPE item — defined here so the change
@@ -77,7 +79,6 @@ const META = {
 // per-container cgroup explore commands.
 const CONTAINER_BOX = {
   id: 'container', title: 'container cgroup', tag: 'cgroup', colorVar: 'k-teal',
-  caption: 'under the Pod slice · its own mount + PID ns',
   detail: {
     role: 'CONTAINER CGROUP',
     summary:
@@ -206,7 +207,6 @@ const mountSyn = (desc, i) => {
 }
 const LOOPBACK_BOX = {
   id: 'lo', title: 'lo', tag: 'netdev', colorVar: 'k-sky',
-  caption: '127.0.0.1 · loopback',
   detail: {
     role: 'LOOPBACK INTERFACE',
     summary:
@@ -225,7 +225,6 @@ const LOOPBACK_BOX = {
 // fd-ownership) and is held by the process as a file descriptor.
 const listenSocketBox = (listen) => ({
   id: 'listen-sock', title: `listen :${listen.port}`, tag: 'socket', colorVar: 'k-orange',
-  caption: 'TCP · bound on the Pod IP',
   links: ['pod-veth', 'lo', 'container-process'],
   detail: {
     role: `TCP LISTEN SOCKET · :${listen.port}`,
