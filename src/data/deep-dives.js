@@ -270,9 +270,9 @@ const CGROUP_TREE = {
           ],
         },
         {
-          label: 'machine.slice', kind: 'slice', sub: 'VMs & containers',
+          label: 'machine.slice', kind: 'slice', sub: 'standalone libvirt / systemd-machined VMs',
           children: [
-            { label: 'machine-qemu\\x2d1.scope', kind: 'scope', sub: 'a KubeVirt/libvirt guest' },
+            { label: 'machine-qemu\\x2d1.scope', kind: 'scope', sub: 'a libvirt/machinectl VM — NB: a KubeVirt VM is NOT here; it runs under kubepods, inside its virt-launcher pod' },
           ],
         },
       ],
