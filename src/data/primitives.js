@@ -57,11 +57,12 @@ export const PRIMITIVES_BY_TYPE = {
         label: 'IPC Namespace',
         scope: 'pod',
         description:
-          "The Pod's private channel for inter-process communication (IPC): the shared-memory segments, semaphores, and message queues Linux lets processes on the same machine use to talk directly, without a network socket. This namespace scopes those objects to the Pod — every container in it can share them (e.g. two sidecars passing data through /dev/shm), while processes in other Pods or on the host can't see or attach to them. Held open by the pause (sandbox) container.",
+          "The Pod's private inter-process communication (IPC) space — the shared-memory segments, semaphores, and message queues Linux processes use to talk on one host without a network socket.",
         interactions: [
-          'Created with the sandbox via clone(CLONE_NEWIPC) and joined by every container in the Pod.',
+          'Held open by the pause (sandbox) container and joined by every container in the Pod, so sidecars can share data through /dev/shm.',
+          'Created with the Pod sandbox via clone(CLONE_NEWIPC).',
           'Backs the /dev/shm tmpfs mount; its size is governed by the Pod’s shared-memory settings.',
-          "Containers in other Pods cannot see this Pod's semaphores, message queues, or shared-memory segments.",
+          "Isolates this Pod's semaphores, message queues, and shared-memory segments from other Pods and the host.",
         ],
         commands: [
           "# List the Pod's System V IPC objects from inside its IPC namespace\nPID=$(crictl inspect <container_id> | jq .info.pid)\nnsenter -t $PID -i ipcs",
