@@ -39,13 +39,13 @@ function PrimitiveInline({ primitive, color, onSelectComponent, selfId }) {
         {primitive.description}
       </p>
       {primitive.interactions?.length > 0 && (
-        <ul style={{ margin: '0 0 8px', paddingLeft: 16 }}>
-          {primitive.interactions.map((line, i) => (
-            <li key={i} style={{ fontSize: '0.7rem', color: 'var(--tx-muted)', marginBottom: 2 }}>
-              <ObjectText text={line} onSelectComponent={onSelectComponent} selfId={selfId} />
-            </li>
-          ))}
-        </ul>
+        <div style={{ marginBottom: 8 }}>
+          <InteractionList
+            interactions={primitive.interactions}
+            onSelectComponent={onSelectComponent}
+            selfId={selfId}
+          />
+        </div>
       )}
       {primitive.commands?.length > 0 && (
         <ExploreCommands commands={primitive.commands} color={color} />
