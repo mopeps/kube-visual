@@ -57,7 +57,7 @@ export const PRIMITIVES_BY_TYPE = {
         label: 'IPC Namespace',
         scope: 'pod',
         description:
-          "Gives the Pod its own System V IPC and POSIX message-queue / shared-memory space — isolated from the host and other Pods, but shared by every container in this Pod, so sidecars can talk over /dev/shm while staying invisible to the rest of the node. Held open by the pause (sandbox) container.",
+          "The Pod's private channel for inter-process communication (IPC): the shared-memory segments, semaphores, and message queues Linux lets processes on the same machine use to talk directly, without a network socket. This namespace scopes those objects to the Pod — every container in it can share them (e.g. two sidecars passing data through /dev/shm), while processes in other Pods or on the host can't see or attach to them. Held open by the pause (sandbox) container.",
         interactions: [
           'Created with the sandbox via clone(CLONE_NEWIPC) and joined by every container in the Pod.',
           'Backs the /dev/shm tmpfs mount; its size is governed by the Pod’s shared-memory settings.',
