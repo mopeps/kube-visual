@@ -41,11 +41,11 @@ export const PRIMITIVES_BY_TYPE = {
         label: 'veth Pair (eth0)',
         scope: 'pod',
         description:
-          "A virtual Ethernet (veth) pair connecting the Pod to the node network — the Pod's eth0 is one end; its peer lives in the host root netns and is enslaved to the OVS integration bridge br-int, stitching the Pod's private network namespace into the node's OVN datapath. Created by the CNI plugin (OVN-Kubernetes) when the Pod sandbox is set up.",
+          "A virtual Ethernet (veth) pair — a kernel cable with two ends — that plugs the Pod's eth0 into the node network.",
         interactions: [
-          'The in-namespace end is eth0 inside the Pod; the host-side peer (ovn-…) is a port on br-int.',
+          'The in-namespace end is eth0 inside the Pod; the host-side peer (ovn-…) is enslaved to the OVS bridge br-int, stitching the Pod’s network namespace into the node’s OVN datapath.',
           'A packet sent on eth0 emerges on the host peer, where OVN OpenFlow rules apply routing, NAT, and ACLs.',
-          'Created once for the Pod sandbox (the pause container) and shared by every container in the Pod.',
+          'Created by the CNI plugin (OVN-Kubernetes) once for the Pod sandbox (the pause container) and shared by every container in the Pod.',
         ],
         commands: [
           "# Find the Pod's eth0 and its peer ifindex\nPID=$(crictl inspect <container_id> | jq .info.pid)\nnsenter -t $PID -n ip -d link show eth0",
@@ -89,9 +89,9 @@ export const PRIMITIVES_BY_TYPE = {
         label: 'Pod cgroup Slice',
         scope: 'pod',
         description:
-          "The pod-level cgroups v2 slice the kubelet creates for the whole Pod — kubepods.slice/<qos>/pod<uid>.slice, under the Pod's QoS class (Guaranteed / Burstable / BestEffort). It caps the Pod's *aggregate* CPU, memory, and I/O and is the parent of every per-container cgroup nested beneath it, so the containers can never collectively exceed the Pod's budget.",
+          "The pod-level cgroups v2 slice (kubepods.slice/<qos>/pod<uid>.slice) that caps the Pod's *aggregate* CPU, memory, and I/O.",
         interactions: [
-          "Created by the kubelet (not the runtime) when the sandbox is set up, under the slice matching the Pod's QoS class.",
+          "Created by the kubelet (not the runtime) when the sandbox is set up, under the slice matching the Pod's QoS class (Guaranteed / Burstable / BestEffort).",
           "Each container's own cgroup is nested inside this slice, so per-container limits roll up into the Pod total.",
           'memory.max here caps the whole Pod; breaching it lets the kernel OOM-killer terminate a container in the Pod.',
         ],
@@ -105,7 +105,7 @@ export const PRIMITIVES_BY_TYPE = {
         label: 'Mount Namespace',
         scope: 'container',
         description:
-          "Gives the container its own view of the filesystem — an overlayfs root built from the image layers, with each volume bind-mounted in: Secrets and ConfigMaps as in-memory tmpfs files, PersistentVolumeClaims as real block-device mounts. Isolated from the host and from other Pods.",
+          "Gives the container its own private view of the filesystem — an overlayfs root built from the image layers, with each volume bind-mounted in — isolated from the host and other Pods.",
         interactions: [
           'CRI-O assembles the overlay rootfs and bind-mounts every projected volume before the container starts.',
           'Secret / ConfigMap volumes are tmpfs (RAM) so they never touch disk; PVCs are kernel block mounts.',
@@ -329,11 +329,11 @@ export const PRIMITIVES_BY_TYPE = {
         id: 'vmi-tap',
         label: 'tap0 / k6t-eth0 Bridge',
         description:
-          "The guest's virtual NIC at the kernel level: QEMU's tap0 device sits on a Pod-local Linux bridge (k6t-eth0) inside the virt-launcher Pod. With KubeVirt's default masquerade binding the guest gets a private link to that bridge, NATed onto the launcher Pod's own eth0 — the veth that plugs into the host OVS br-int — so the VM rides the same OVN overlay as ordinary Pods without exposing its MAC to the node network.",
+          "The guest's virtual NIC at the kernel level — QEMU's tap0 device sitting on a Pod-local Linux bridge (k6t-eth0) inside the virt-launcher Pod.",
         interactions: [
           'virt-launcher creates the k6t-eth0 bridge and the tap0 device, then hands tap0’s file descriptor to QEMU.',
-          'vhost-net moves packets between the virtio ring and tap0; masquerade NAT rules bridge tap0 ↔ the Pod’s eth0.',
-          "From the host OVS view the VM is just the launcher Pod's veth port on br-int — the guest IP is hidden behind the Pod IP.",
+          "vhost-net moves packets between the virtio ring and tap0; masquerade NAT bridges tap0 ↔ the launcher Pod’s eth0, so the VM rides the same OVN overlay as ordinary Pods.",
+          "From the host OVS view the VM is just the launcher Pod's veth port on br-int — the guest IP and MAC stay hidden behind the Pod IP.",
         ],
         commands: [
           '# Show the tap device and pod-local bridge (inside the launcher pod)\noc exec -n <hcp-namespace> <launcher-pod> -- ip link show tap0\noc exec -n <hcp-namespace> <launcher-pod> -- bridge link',
