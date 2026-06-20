@@ -32,10 +32,10 @@ function PrimitiveInline({ primitive, color, onSelectComponent, selfId }) {
         background: `${color}0d`,
       }}
     >
-      <div style={{ fontWeight: 600, fontSize: '0.72rem', color, marginBottom: 4 }}>
+      <div style={{ fontWeight: 600, fontSize: '0.75rem', color, marginBottom: 4 }}>
         {primitive.label}
       </div>
-      <p style={{ fontSize: '0.72rem', color: 'var(--tx)', margin: '0 0 8px' }}>
+      <p style={{ fontSize: '0.75rem', color: 'var(--tx)', margin: '0 0 8px' }}>
         {primitive.description}
       </p>
       {primitive.interactions?.length > 0 && (
@@ -163,7 +163,7 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
                     color: isOpen ? 'var(--bg)' : b.color,
                     borderColor: isOpen ? b.color : `${b.color}66`,
                     background: isOpen ? b.color : `${b.color}1a`,
-                    fontSize: '0.62rem',
+                    fontSize: '0.75rem',
                     padding: '4px 10px',
                     cursor: 'pointer',
                     fontFamily: 'inherit',
@@ -202,7 +202,7 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
                   color,
                   borderColor: `${color}66`,
                   background: `${color}1a`,
-                  fontSize: '0.62rem',
+                  fontSize: '0.75rem',
                   padding: '4px 10px',
                   cursor: 'pointer',
                   fontFamily: 'inherit',
@@ -226,7 +226,7 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
                 borderRadius: 8,
                 border: `1px solid ${(badges.find(b => b.label === expandedBadge)?.color) || color}40`,
                 background: 'rgba(0,0,0,0.35)',
-                fontSize: '0.74rem',
+                fontSize: '0.75rem',
                 lineHeight: 1.7,
                 color: 'var(--tx)',
               }}
@@ -273,7 +273,7 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
                     color: isExpanded ? 'var(--bg)' : primitiveSet.color,
                     borderColor: primitiveSet.color,
                     background: isExpanded ? primitiveSet.color : `${primitiveSet.color}1a`,
-                    fontSize: '0.62rem',
+                    fontSize: '0.75rem',
                     padding: '3px 8px',
                     cursor: 'pointer',
                     fontFamily: 'inherit',

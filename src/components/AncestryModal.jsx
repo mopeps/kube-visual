@@ -350,7 +350,7 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
           />
 
           <div
-            className="text-[0.6rem] mt-6 pt-4 border-t"
+            className="text-[0.75rem] mt-6 pt-4 border-t"
             style={{ color: 'var(--tx-dim)', borderColor: 'var(--border-d)' }}
           >
             Press <span style={{ color: 'var(--tx-muted)' }}>Esc</span> or tap outside to close · id:&nbsp;
