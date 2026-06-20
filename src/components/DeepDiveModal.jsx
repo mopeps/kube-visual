@@ -223,7 +223,7 @@ export default function DeepDiveModal({ content, onClose, onSelectComponent }) {
                 color: accent,
                 borderColor: `${accent}66`,
                 background: `${accent}1a`,
-                fontSize: '0.66rem',
+                fontSize: '0.75rem',
                 padding: '4px 10px',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
@@ -348,7 +348,7 @@ export default function DeepDiveModal({ content, onClose, onSelectComponent }) {
           ))}
 
           <div
-            className="text-[0.6rem] mt-6 pt-4 border-t"
+            className="text-[0.75rem] mt-6 pt-4 border-t"
             style={{ color: 'var(--tx-dim)', borderColor: 'var(--border-d)' }}
           >
             Press <span style={{ color: 'var(--tx-muted)' }}>Esc</span> or tap outside to close

@@ -28,7 +28,7 @@ function TopicIndex({ onSelectTopic }) {
     <div>
       <div className="mb-3">
         <div className="font-display text-[1.1rem] font-semibold mb-0.5">Deep dives</div>
-        <p className="text-[0.72rem]" style={{ color: 'var(--tx-muted)' }}>
+        <p className="text-[0.75rem]" style={{ color: 'var(--tx-muted)' }}>
           Ground-up explainers one level below the topology — laid out like the
           overview: labelled zones of clickable boxes, each opening a detail popup.
           Pick one to open it.

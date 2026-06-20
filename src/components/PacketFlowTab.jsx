@@ -146,7 +146,7 @@ function EventGallery({ onSelectEvent }) {
         <div className="font-display text-[1.1rem] font-semibold mb-0.5">
           Choose a trace flow
         </div>
-        <p className="text-[0.72rem]" style={{ color: 'var(--tx-muted)' }}>
+        <p className="text-[0.75rem]" style={{ color: 'var(--tx-muted)' }}>
           Pick a flow to step through every hop from external client to PID&nbsp;1.
         </p>
       </div>
@@ -242,13 +242,13 @@ export default function PacketFlowTab({
             {activeEvent.eventName}
           </div>
           <span
-            className="text-[0.66rem] whitespace-nowrap"
+            className="text-[0.75rem] whitespace-nowrap"
             style={{ color: 'var(--tx-muted)' }}
           >
             {activeEvent.steps.length} hop{activeEvent.steps.length === 1 ? '' : 's'}
           </span>
         </div>
-        <p className="text-[0.74rem] mt-0.5 leading-snug" style={{ color: 'var(--tx-muted)' }}>
+        <p className="text-[0.75rem] mt-0.5 leading-snug" style={{ color: 'var(--tx-muted)' }}>
           {activeEvent.description}
         </p>
       </div>

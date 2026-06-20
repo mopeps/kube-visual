@@ -19,7 +19,7 @@ export function ManifestChip({ open, onToggle, kind = 'MANIFEST', color }) {
         color: open ? 'var(--bg)' : color,
         borderColor: open ? color : `${color}66`,
         background: open ? color : `${color}1a`,
-        fontSize: '0.62rem',
+        fontSize: '0.75rem',
         padding: '4px 10px',
         cursor: 'pointer',
         fontFamily: 'inherit',

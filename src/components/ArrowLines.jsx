@@ -261,7 +261,7 @@ export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep,
                 y={by}
                 textAnchor="middle"
                 dominantBaseline="central"
-                fontSize={p.denied ? 11 : 9}
+                fontSize={12}
                 fontWeight="700"
                 fill={p.color}
                 style={{ fontFamily: 'var(--font-mono, monospace)' }}
@@ -277,10 +277,10 @@ export default function ArrowLines({ steps, canvasRef, activeStep, onSelectStep,
                 <text
                   key={i}
                   x={bx + 16}
-                  y={by + (i - (lines.length - 1) / 2) * 12}
+                  y={by + (i - (lines.length - 1) / 2) * 16}
                   textAnchor="start"
                   dominantBaseline="central"
-                  fontSize="8.5"
+                  fontSize="12"
                   fontWeight="600"
                   fill={p.color}
                   style={{

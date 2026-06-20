@@ -36,7 +36,7 @@ export default function DocLinks({ links, color }) {
               color,
               borderColor: `${color}66`,
               background: `${color}1a`,
-              fontSize: '0.62rem',
+              fontSize: '0.75rem',
               padding: '4px 10px',
               textDecoration: 'none',
               fontFamily: 'inherit',
