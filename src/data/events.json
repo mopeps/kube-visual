@@ -160,6 +160,7 @@
         "step": 10,
         "sourceComponentId": "kubelet-guest",
         "targetComponentId": "crio-guest",
+        "auth": "registry-auth",
         "description": "Kubelet issues RunPodSandbox and CreateContainer CRI calls. Guest CRI-O pulls the image, creates the cgroup and namespaces, and invokes the CNI path to attach the Pod to guest OVN-Kubernetes."
       },
       {
@@ -1006,6 +1007,95 @@
         "sourceComponentId": "crio-guest",
         "targetComponentId": "frontend-application-pod",
         "description": "Guest CRI-O starts the container with the volume mounted. The application writes to a plain directory — beneath it: a bind mount, an ext4 filesystem on a hotplugged virtio-scsi disk, a management-cluster PVC, and finally a real block device on bare metal."
+      }
+    ]
+  },
+  {
+    "eventId": "health-probes",
+    "category": "observability",
+    "glyph": "health",
+    "eventName": "Health Probes → Endpoint Readiness",
+    "description": "How the kubelet’s readiness / liveness / startup probes decide whether a Pod runs and whether it receives traffic. A passing readiness probe puts the Pod in its Service’s EndpointSlice, which OVN realizes as the br-int load-balancer flow — so a ClusterIP only ever lands on Ready Pods. (A failing liveness probe instead restarts the container, the local-restart path of the API-server-crash flow.) The probe itself is a local kubelet→container call; only the resulting status update crosses the network.",
+    "steps": [
+      {
+        "step": 1,
+        "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "frontend-application-pod",
+        "description": "Each period the guest kubelet runs the container’s probes — an HTTP GET, a TCP dial, or an exec — directly against the Pod on the node. No API call and no authentication: it is a local request on the node."
+      },
+      {
+        "step": 2,
+        "sourceComponentId": "frontend-application-pod",
+        "targetComponentId": "kubelet-guest",
+        "description": "The container answers. A passing readiness probe marks the Pod Ready; a failing liveness probe would instead have the kubelet kill and restart the container via CRI-O."
+      },
+      {
+        "step": 3,
+        "sourceComponentId": "kubelet-guest",
+        "targetComponentId": "guest-api-server",
+        "auth": "kubelet-cert",
+        "description": "The kubelet patches the Pod’s status conditions (Ready=true) on the Guest API Server over its own outbound connection."
+      },
+      {
+        "step": 4,
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "guest-controller-manager",
+        "description": "The EndpointSlice controller, watching the API, observes the Pod’s readiness change."
+      },
+      {
+        "step": 5,
+        "sourceComponentId": "guest-controller-manager",
+        "targetComponentId": "guest-api-server",
+        "auth": "client-cert",
+        "description": "It adds the now-Ready Pod’s IP to the Service’s EndpointSlice (and removes any Pod that just went NotReady) — only Ready endpoints are ever listed."
+      },
+      {
+        "step": 6,
+        "sourceComponentId": "guest-api-server",
+        "targetComponentId": "ovn-node-guest",
+        "description": "ovnkube-controller in the in-VM OVN-K8s Node pod watches the EndpointSlice and updates the Service’s Load_Balancer rows in its node-local Northbound DB."
+      },
+      {
+        "step": 7,
+        "sourceComponentId": "ovn-node-guest",
+        "targetComponentId": "ovs-guest",
+        "description": "ovn-controller recompiles those rows into the Service’s br-int load-balancer flow, so the ClusterIP now DNATs only to Ready Pod endpoints. Readiness has become a data-plane fact."
+      }
+    ]
+  },
+  {
+    "eventId": "metrics-scrape",
+    "category": "observability",
+    "glyph": "metrics",
+    "eventName": "Metrics Scrape (Prometheus)",
+    "description": "How cluster monitoring turns running components into time series. It is a PULL model: Prometheus discovers targets from the API, then on each interval reaches out to every target’s /metrics endpoint over HTTPS with a bearer token, and appends the samples to its local TSDB.",
+    "steps": [
+      {
+        "step": 1,
+        "sourceComponentId": "cluster-monitoring",
+        "targetComponentId": "guest-api-server",
+        "auth": "sa-token",
+        "description": "Prometheus discovers its scrape targets from the Guest API Server — the Endpoints and Pods named by each ServiceMonitor / PodMonitor — refreshing the list as workloads come and go."
+      },
+      {
+        "step": 2,
+        "sourceComponentId": "cluster-monitoring",
+        "targetComponentId": "kubelet-guest",
+        "auth": "sa-token",
+        "description": "On each scrape interval Prometheus opens an HTTPS GET to the kubelet’s /metrics and /metrics/cadvisor, presenting its ServiceAccount bearer token; the kubelet authorizes it before answering."
+      },
+      {
+        "step": 3,
+        "sourceComponentId": "cluster-monitoring",
+        "targetComponentId": "frontend-application-pod",
+        "auth": "sa-token",
+        "description": "It likewise scrapes the application’s /metrics endpoint — typically through a kube-rbac-proxy sidecar that TokenReviews the bearer token and SubjectAccessReviews the caller before exposing the numbers."
+      },
+      {
+        "step": 4,
+        "sourceComponentId": "frontend-application-pod",
+        "targetComponentId": "cluster-monitoring",
+        "description": "The target returns its current samples in the Prometheus text exposition format; Prometheus appends them to its local TSDB and evaluates its recording and alerting rules."
       }
     ]
   }

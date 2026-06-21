@@ -13,6 +13,8 @@ const GLYPHS = {
   'control-failure': <><circle cx="12" cy="12" r="8"/><path d="M12 7v6M12 17h.01"/><path d="M4 4l16 16"/></>,
   config: <><path d="M6 3h9l3 3v15H6zM15 3v4h4"/><path d="M9 12h6M9 16h4"/><path d="m4 9 2 2-2 2"/></>,
   storage: <><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></>,
+  health: <><path d="M3 12h4l2-6 3.5 12 2.5-9 1.5 3H21"/></>,
+  metrics: <><path d="M3 21h18"/><path d="M6 21v-6M11 21V8M16 21v-9M21 21V4" transform="translate(-1 0)"/></>,
 }
 
 export default function FlowGlyph({ name, className = '' }) {
