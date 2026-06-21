@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { SEARCH_RECORDS, KIND_ORDER, KIND_LABEL } from '../data/search-index'
 import { scoreRecord } from '../lib/fuzzy'
+import { expandQuery } from '../lib/aliases'
 import useDialogFocus from '../hooks/useDialogFocus'
 
 // How many results to surface at once — enough to span a few kinds, capped so
@@ -10,9 +11,40 @@ const MAX_RESULTS = 24
 
 const KIND_ACCENT = {
   component: 'var(--k-cyan)',
+  primitive: 'var(--k-orange)',
   topic: 'var(--k-purple)',
   box: 'var(--k-amber)',
   event: 'var(--k-green)',
+}
+
+// Render `text` with the character indices in `positions` (a subsequence match)
+// wrapped in <mark>, coalescing adjacent indices into single runs.
+function HighlightChars({ text, positions }) {
+  if (!positions || positions.length === 0) return text
+  const set = new Set(positions)
+  const out = []
+  let i = 0
+  while (i < text.length) {
+    const hit = set.has(i)
+    let j = i
+    while (j < text.length && set.has(j) === hit) j++
+    const chunk = text.slice(i, j)
+    out.push(hit ? <mark key={i} className="search-hl">{chunk}</mark> : chunk)
+    i = j
+  }
+  return out
+}
+
+// Render a deep-match snippet: a context window with one highlighted run.
+function HighlightSpan({ snippet }) {
+  const { text, hlStart, hlLen } = snippet
+  return (
+    <>
+      {text.slice(0, hlStart)}
+      <mark className="search-hl">{text.slice(hlStart, hlStart + hlLen)}</mark>
+      {text.slice(hlStart + hlLen)}
+    </>
+  )
 }
 
 // A global "search the whole site" command palette (⌘K / Ctrl+K, or `/`). It
@@ -36,28 +68,37 @@ export default function SearchPalette({ open, onClose, onSelect }) {
   }, [open])
 
   // Score → sort → cap → group. The flat `ordered` list mirrors render order so
-  // arrow-key navigation and Enter resolve to the same row the user sees.
-  const { groups, ordered } = useMemo(() => {
+  // arrow-key navigation and Enter resolve to the same row the user sees. Each
+  // result carries its match descriptor (tier + highlight info) for rendering.
+  const { groups, ordered, total } = useMemo(() => {
     const q = query.trim()
-    if (!q) return { groups: [], ordered: [] }
+    if (!q) return { groups: [], ordered: [], total: 0 }
+    // Score each record against the query AND its alias expansions, keeping the
+    // single best match per record (the original query ranks first on ties).
+    const queries = expandQuery(q)
     const scored = []
     for (const rec of SEARCH_RECORDS) {
-      const score = scoreRecord(q, rec.title, rec.hay)
-      if (score >= 0) scored.push({ rec, score })
+      let best = null
+      for (const qq of queries) {
+        const m = scoreRecord(qq, rec)
+        if (m && (!best || m.score > best.score)) best = m
+      }
+      if (best) scored.push({ rec, ...best })
     }
     scored.sort((a, b) => b.score - a.score)
+    const total = scored.length
     const top = scored.slice(0, MAX_RESULTS)
 
     const byKind = new Map()
-    for (const { rec } of top) {
-      if (!byKind.has(rec.kind)) byKind.set(rec.kind, [])
-      byKind.get(rec.kind).push(rec)
+    for (const hit of top) {
+      if (!byKind.has(hit.rec.kind)) byKind.set(hit.rec.kind, [])
+      byKind.get(hit.rec.kind).push(hit)
     }
     const groups = KIND_ORDER
       .filter((k) => byKind.has(k))
       .map((k) => ({ kind: k, label: KIND_LABEL[k], items: byKind.get(k) }))
     const ordered = groups.flatMap((g) => g.items)
-    return { groups, ordered }
+    return { groups, ordered, total }
   }, [query])
 
   // Keep the active index in range as the result set changes under the query.
@@ -74,8 +115,8 @@ export default function SearchPalette({ open, onClose, onSelect }) {
       setActive((i) => Math.max(i - 1, 0))
     } else if (e.key === 'Enter') {
       e.preventDefault()
-      const rec = ordered[active]
-      if (rec) onSelect(rec)
+      const hit = ordered[active]
+      if (hit) onSelect(hit.rec)
     }
   }
 
@@ -118,7 +159,7 @@ export default function SearchPalette({ open, onClose, onSelect }) {
         <div className="search-results" id="search-results" ref={listRef} role="listbox" aria-label="Search results">
           {!q && (
             <p className="search-hint">
-              Type to fuzzy-search components, deep dives, sections, and trace flows.
+              Type to fuzzy-search components, primitives, deep dives, sections, and trace flows.
               <br />
               <span className="search-hint-keys">↑↓ to navigate · ↵ to open · Esc to close</span>
             </p>
@@ -129,8 +170,9 @@ export default function SearchPalette({ open, onClose, onSelect }) {
           {groups.map((group) => (
             <div key={group.kind} className="search-group">
               <div className="search-group-label">{group.label}</div>
-              {group.items.map((rec) => {
-                const idx = ordered.indexOf(rec)
+              {group.items.map((hit) => {
+                const { rec } = hit
+                const idx = ordered.indexOf(hit)
                 return (
                   <button
                     type="button"
@@ -145,9 +187,18 @@ export default function SearchPalette({ open, onClose, onSelect }) {
                     onClick={() => onSelect(rec)}
                   >
                     <span className="search-option-main">
-                      <span className="search-option-title">{rec.title}</span>
+                      <span className="search-option-title">
+                        {hit.tier === 'title'
+                          ? <HighlightChars text={rec.title} positions={hit.positions} />
+                          : rec.title}
+                      </span>
                       {rec.subtitle && (
                         <span className="search-option-sub">{rec.subtitle}</span>
+                      )}
+                      {hit.tier === 'deep' && hit.snippet && (
+                        <span className="search-option-snippet">
+                          <HighlightSpan snippet={hit.snippet} />
+                        </span>
                       )}
                     </span>
                   </button>
@@ -155,6 +206,11 @@ export default function SearchPalette({ open, onClose, onSelect }) {
               })}
             </div>
           ))}
+          {q && total > ordered.length && (
+            <p className="search-more">
+              Showing top {ordered.length} of {total} — keep typing to narrow.
+            </p>
+          )}
         </div>
       </div>
     </div>,
