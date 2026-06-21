@@ -837,10 +837,11 @@ export const ZONES = [
                 ],
               },
               // APPLICATION (*.apps wildcard) ingress entry point on the bare
-              // metal side: the infra-side LoadBalancer the kubevirt cloud
-              // provider (CCM) mirrors from the guest's router-default LB. This
-              // is the guest app-traffic path — it does NOT go through the
-              // Shared Ingress Proxy above.
+              // metal side: an infra-side LoadBalancer Service on the management
+              // cluster that forwards to the guest router's NodePort on the
+              // worker VMs. The guest itself has NO LoadBalancer — its ingress is
+              // a NodePort. This is the guest app-traffic path — it does NOT go
+              // through the Shared Ingress Proxy above.
               {
                 id: 'svc-apps-lb-infra',
                 title: 'Apps Ingress LoadBalancer',
@@ -849,14 +850,14 @@ export const ZONES = [
                 badges: [
                   { label: 'LoadBalancer', color: 'var(--k-sky)' },
                   { label: 'MetalLB L2', color: 'var(--k-sky)' },
-                  { label: 'kubevirt CCM mirror', color: 'var(--k-sky)' },
+                  { label: '→ guest router NodePort', color: 'var(--k-sky)' },
                 ],
               },
               {
                 id: 'ovn-master-control',
                 title: 'OVN-K8s Master',
                 typePrefix: 'Pod',
-                badges: [{ label: 'Northbound DB', color: 'var(--k-sky)' }],
+                badges: [{ label: 'cluster manager', color: 'var(--k-sky)' }],
               },
               {
                 id: 'cloud-controller-manager',

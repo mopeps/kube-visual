@@ -181,19 +181,19 @@
         "step": 2,
         "sourceComponentId": "svc-backend",
         "targetComponentId": "ovs-guest",
-        "description": "The connection to the ClusterIP enters the in-VM OVS br-int bridge, where the OVN-Kubernetes load-balancer flow installed for this Service matches the virtual IP and selects a healthy backend endpoint."
+        "description": "The connection to the ClusterIP enters the in-VM OVS br-int bridge, where the OVN-Kubernetes load-balancer flow installed for this Service matches the virtual IP and DNATs it to a healthy backend Pod endpoint. In OVN this selection-and-DNAT is one stage of the ingress pipeline, applied before the policy stage below."
       },
       {
         "step": 3,
         "sourceComponentId": "ovs-guest",
         "targetComponentId": "netpol-ecommerce",
-        "description": "Before the packet is delivered, the OVN logical pipeline on br-int evaluates the NetworkPolicy ACLs compiled for the backend port group. The policy admits the Front-End Pods' address set as an allowed ingress source, so the connection passes the ACL gate (traffic from any other source would be dropped here)."
+        "description": "Before the packet is delivered, the OVN logical pipeline on br-int evaluates the NetworkPolicy ACLs compiled for the backend port group. The destination is already the backend Pod (DNAT happened at the load-balancer stage above), so the ACL matches on the backend's port group: it admits the Front-End Pods' address set as an allowed ingress source, so the connection passes the ACL gate (traffic from any other source would be dropped here)."
       },
       {
         "step": 4,
         "sourceComponentId": "netpol-ecommerce",
         "targetComponentId": "backend-application-pod",
-        "description": "With the policy allowing the flow, OVS DNATs the destination from the ClusterIP to the chosen Back-End Application Pod IP and delivers the packet over its veth pair. The backend process accepts the connection and returns its response."
+        "description": "With the policy allowing the flow, OVS delivers the packet to the chosen Back-End Application Pod (already DNATed at the load-balancer stage) over its veth pair. The backend process accepts the connection and returns its response."
       }
     ]
   },
@@ -808,7 +808,7 @@
         "step": 5,
         "sourceComponentId": "kubelet-guest",
         "targetComponentId": "guest-api-server",
-        "description": "For Pods that mount the ConfigMap as a VOLUME, the guest kubelet's configmap-and-secret manager observes or fetches the changed object over its own outbound API connection, then atomically swaps the projected files. With default sync and cache settings, propagation can take roughly two minutes. The application must re-read the file; environment-variable and subPath consumers require Pod recreation."
+        "description": "For Pods that mount the ConfigMap as a VOLUME, the guest kubelet's configmap-and-secret manager observes or fetches the changed object over its own outbound API connection, then atomically swaps the projected files. With the kubelet's default watch-based detection this is near-instant; older TTL-cache settings can stretch it to roughly a minute or two. The application must re-read the file; environment-variable and subPath consumers require Pod recreation."
       },
       {
         "step": 6,
