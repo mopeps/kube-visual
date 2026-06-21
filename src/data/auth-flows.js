@@ -72,6 +72,16 @@ export const AUTH_FLOWS = {
       { k: 'Scope', v: 'The token buys exactly one thing — fetching Ignition — not API access; the kubelet still earns its own node cert via CSR afterward.' },
     ],
   },
+  'registry-auth': {
+    label: 'pull secret · registry',
+    summary: 'How the kubelet / CRI-O authenticates to an image registry to pull a container image — and, where policy requires, verifies it.',
+    steps: [
+      { k: 'Credentials', v: 'CRI-O resolves the pull secret referenced by the Pod (or its ServiceAccount’s imagePullSecrets) — a docker config JSON of registry credentials.' },
+      { k: 'Registry auth', v: 'It authenticates to the registry — a bearer token from the registry’s token endpoint, or basic auth — scoped to pull the requested repository.' },
+      { k: 'Verify', v: 'If a ClusterImagePolicy / sigstore policy is configured, the image’s signature and digest are checked before it is allowed to run.' },
+      { k: 'Cache', v: 'Layers already on the node are reused; only the missing blobs are fetched. No API server or RBAC is involved — this is node ↔ registry.' },
+    ],
+  },
 }
 
 export const findAuth = (id) => AUTH_FLOWS[id] || null

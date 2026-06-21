@@ -18,6 +18,7 @@ const FLOW_CATEGORIES = [
   { id: 'lifecycle', label: 'Provisioning & scale' },
   { id: 'failure', label: 'Failure & reconciliation' },
   { id: 'state', label: 'Configuration & storage' },
+  { id: 'observability', label: 'Health & observability' },
 ]
 
 // One route endpoint — its type glyph in a bordered chip (matching the bullet
