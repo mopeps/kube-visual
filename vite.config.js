@@ -7,6 +7,19 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     base: './',
+    build: {
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            minSize: 20_000,
+            maxSize: 400_000,
+            groups: [
+              { name: 'vendor', test: /node_modules/ },
+            ],
+          },
+        },
+      },
+    },
     server: {
       host: true,
       port: 5173,

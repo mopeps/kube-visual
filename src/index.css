@@ -4430,6 +4430,15 @@ button.object-tag:hover {
   outline-offset: 2px;
 }
 
+.lazy-panel-status {
+  padding: 28px 12px;
+  color: var(--tx-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 /* ── Global search ─────────────────────────────────────────────────────────
    A "search the whole site" command palette (⌘K / Ctrl+K / `/`). The trigger
    lives in the tabs row; the palette is a top-anchored portal over <body>. */

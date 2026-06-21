@@ -1,20 +1,20 @@
-import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { lazy, Suspense, useState, useEffect, useLayoutEffect, useRef } from 'react'
 import useEventState from './hooks/useEventState'
 import useFlowState from './hooks/useFlowState'
 import useMediaQuery from './hooks/useMediaQuery'
 import Tabs from './components/Tabs'
 import OverviewTab from './components/OverviewTab'
 import PacketFlowTab from './components/PacketFlowTab'
-import DeepDiveTab from './components/DeepDiveTab'
 import AncestryModal from './components/AncestryModal'
-import SearchPalette from './components/SearchPalette'
 import HopInspector from './components/HopInspector'
 import DeepDiveHopInspector from './components/DeepDiveHopInspector'
 import ReconControls from './components/ReconControls'
 import SwipeViews from './components/SwipeViews'
 import useReconciliationLoop from './hooks/useReconciliationLoop'
-import { findDeepDive, indexTopicBoxes } from './data/deep-dives'
 import { scrollIntoUpperThird } from './lib/scroll'
+
+const DeepDiveTab = lazy(() => import('./components/DeepDiveTab'))
+const SearchPalette = lazy(() => import('./components/SearchPalette'))
 
 const TABS = [
   { id: 'deepdive',   label: 'Deep Dive' },
@@ -271,8 +271,23 @@ export default function App() {
   // Resolve the open topic + its box index once, for the deep-dive hop inspector
   // that mounts at App root (so its fixed panel anchors to the viewport, not a
   // transformed swipe pane — same reason the Overview's HopInspector lives here).
-  const deepTopicObj = useMemo(() => (deepTopic ? findDeepDive(deepTopic) : null), [deepTopic])
-  const deepBoxIndex = useMemo(() => (deepTopicObj ? indexTopicBoxes(deepTopicObj) : {}), [deepTopicObj])
+  const [deepTopicObj, setDeepTopicObj] = useState(null)
+  const [deepBoxIndex, setDeepBoxIndex] = useState({})
+  useEffect(() => {
+    if (!deepTopic) {
+      setDeepTopicObj(null)
+      setDeepBoxIndex({})
+      return
+    }
+    let cancelled = false
+    import('./data/deep-dives.js').then(({ findDeepDive, indexTopicBoxes }) => {
+      if (cancelled) return
+      const topic = findDeepDive(deepTopic)
+      setDeepTopicObj(topic)
+      setDeepBoxIndex(topic ? indexTopicBoxes(topic) : {})
+    })
+    return () => { cancelled = true }
+  }, [deepTopic])
 
   // The systemd reconciliation walkthrough state lives here (not inside the
   // canvas) so its step controls can dock to the bottom of the viewport as a
@@ -349,26 +364,29 @@ export default function App() {
       onSelectComponent={selectComponent}
     />
   )
+  const loadingPanel = <div className="lazy-panel-status" role="status">Loading view…</div>
   const deepDivePanel = (
-    <DeepDiveTab
-      activeTopic={deepTopic}
-      onSelectTopic={selectTopic}
-      onClearTopic={clearTopic}
-      activeFlow={activeFlow}
-      activeFlowStep={activeFlowStep}
-      activeBoxIds={activeBoxIds}
-      onSelectFlow={selectFlow}
-      onClearFlow={clearFlow}
-      onSelectFlowStep={selectFlowStep}
-      loop={reconLoop}
-      targetBoxId={deepTarget}
-      onConsumeTarget={() => setDeepTarget(null)}
-      onSelectComponent={selectComponent}
-    />
+    <Suspense fallback={loadingPanel}>
+      <DeepDiveTab
+        activeTopic={deepTopic}
+        onSelectTopic={selectTopic}
+        onClearTopic={clearTopic}
+        activeFlow={activeFlow}
+        activeFlowStep={activeFlowStep}
+        activeBoxIds={activeBoxIds}
+        onSelectFlow={selectFlow}
+        onClearFlow={clearFlow}
+        onSelectFlowStep={selectFlowStep}
+        loop={reconLoop}
+        targetBoxId={deepTarget}
+        onConsumeTarget={() => setDeepTarget(null)}
+        onSelectComponent={selectComponent}
+      />
+    </Suspense>
   )
   const panelFor = (id) => {
     if (id === 'packetflow') return packetPanel
-    if (id === 'deepdive') return deepDivePanel
+    if (id === 'deepdive') return tab === 'deepdive' || deepTopic ? deepDivePanel : null
     return overviewPanel
   }
 
@@ -527,11 +545,15 @@ export default function App() {
         )}
       </div>
 
-      <SearchPalette
-        open={searchOpen}
-        onClose={() => setSearchOpen(false)}
-        onSelect={onSearchSelect}
-      />
+      {searchOpen && (
+        <Suspense fallback={null}>
+          <SearchPalette
+            open
+            onClose={() => setSearchOpen(false)}
+            onSelect={onSearchSelect}
+          />
+        </Suspense>
+      )}
 
       <AncestryModal
         componentId={activeComponentId}
