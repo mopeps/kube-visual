@@ -120,7 +120,7 @@ The workspace viewport canvas must render this exact structural hierarchy:
   │           │   //  · Apps Ingress LB = guest *.apps wildcard app traffic
   │           ├── [Pod] Shared Ingress Proxy Instance              // API/OAuth/Konnectivity/Ignition
   │           ├── [Service · LoadBalancer] Shared Ingress VIP (MetalLB L2 · control-plane / API)
-  │           ├── [Service · LoadBalancer] Apps Ingress VIP (MetalLB L2 · kubevirt CCM mirror of guest router-default)
+  │           ├── [Service · LoadBalancer] Apps Ingress VIP (MetalLB L2 · infra LB → guest router NodePort)
   │           ├── [Pod] OVN-Kubernetes Master Control Instance
   │           ├── [Pod] Cloud Controller Manager (CCM) Instance
   │           ├── [Pod] Konnectivity Server Instance
@@ -280,13 +280,14 @@ These are the easy-to-get-wrong facts the topology and flows must respect:
    Konnectivity, and Ignition endpoints and terminate at the control-plane Pods
    in the HCP namespace — this traffic never enters a guest VM. **Application
    (`*.apps` wildcard Route) traffic** takes a different path: the guest
-   cluster's own `router-default` LoadBalancer, which on the KubeVirt platform
-   the **Cloud Controller Manager (kubevirt cloud provider)** mirrors to the
-   infra-side **Apps Ingress LoadBalancer** Service (advertised by MetalLB);
-   that traffic crosses into the VM and is served by the guest OpenShift Ingress
-   Router. The `api-ingress-traffic` and `app-ingress-traffic` flows model these
-   two paths respectively. Never route app traffic through the Shared Ingress
-   Proxy.
+   cluster's `router-default` is published as a **NodePort** on the worker VMs
+   (there is **no** in-guest LoadBalancer — no MetalLB or cloud LB inside the
+   guest). The infra-side **Apps Ingress LoadBalancer** Service on the management
+   cluster (a `LoadBalancer` Service whose VIP MetalLB advertises) forwards to
+   that router NodePort; that traffic crosses into the VM and is served by the
+   guest OpenShift Ingress Router. The `api-ingress-traffic` and
+   `app-ingress-traffic` flows model these two paths respectively. Never route
+   app traffic through the Shared Ingress Proxy.
 
 ## 2. Dynamic Interactivity & Progressive Disclosure
  * **Default State:** All topology components are visible but set to a dimmed idle opacity state. Do not render raw Linux kernel primitives (netns, cgroups, host PIDs) or Project/Namespace boundaries on the main view.
