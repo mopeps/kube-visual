@@ -33,7 +33,7 @@ jobs:
         run: npm ci
 
       - name: Build Static Assets
-        run: npm run build
+        run: npm run check
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

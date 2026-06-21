@@ -68,7 +68,7 @@
 //     },
 //   }
 
-import { OVN_TOPOLOGY, OVN_TOPOLOGY_BIG, OVN_TOPOLOGY_GUEST, OVN_TOPOLOGY_FULL } from './ovn-topology'
+import { OVN_TOPOLOGY, OVN_TOPOLOGY_BIG, OVN_TOPOLOGY_GUEST, OVN_TOPOLOGY_FULL } from './ovn-topology.js'
 
 // Example unit for the headline service (the Open vSwitch forwarding daemon —
 // a genuine host systemd unit on RHCOS, unlike ovnkube-node which is a

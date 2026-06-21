@@ -1,4 +1,4 @@
-import componentsData from './components.json'
+import componentsData from './components.json' with { type: 'json' }
 
 // O(1) componentId → entry lookup, built once at module load. Replaces the
 // linear `componentsData.find(c => c.componentId === id)` that was copy-pasted

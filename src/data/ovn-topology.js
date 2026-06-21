@@ -29,7 +29,7 @@
 // with a `detail` (the pods, the launcher) the popup keeps its OVN teaching
 // and adds an "object card ↗" chip to the same sheet — one object everywhere.
 
-import { findComponent } from './components-index'
+import { findComponent } from './components-index.js'
 
 // The two worker nodes of the reference topology. (ovn-kubernetes numbers the
 // join-switch ports rtoj-: the distributed router takes 100.64.0.1, the
