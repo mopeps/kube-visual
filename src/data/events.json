@@ -169,28 +169,40 @@
     "category": "traffic",
     "glyph": "east-west",
     "eventName": "East-West Service Traffic (Front-End → Back-End)",
-    "description": "Tracing an in-cluster call from the Front-End Application to the Back-End Application through the Back-End ClusterIP Service: name resolution to a virtual IP, OVN load-balancer DNAT on the guest OVS fabric, a NetworkPolicy ACL check, and delivery to a backing Pod — no ingress, no traffic leaving the VM.",
+    "description": "Tracing an in-cluster call from the Front-End Application to the Back-End Application: first the Front-End resolves the Service name through cluster DNS (CoreDNS), then it connects to the Back-End ClusterIP — OVN load-balancer DNAT on the guest OVS fabric, a NetworkPolicy ACL check, and delivery to a backing Pod. No ingress, no traffic leaving the VM. (The In-Cluster DNS flow zooms in on the resolver path this one recaps.)",
     "steps": [
       {
         "step": 1,
         "sourceComponentId": "frontend-application-pod",
-        "targetComponentId": "svc-backend",
-        "description": "The Front-End resolves backend.e-commerce-prod.svc.cluster.local to the Back-End Service's ClusterIP and opens a connection to that stable virtual IP rather than to a specific backend Pod."
+        "targetComponentId": "coredns-node",
+        "description": "First the name must be resolved. The Front-End looks up backend.e-commerce-prod.svc.cluster.local; its /etc/resolv.conf sends the query to the cluster DNS Service IP, and OVN's Service load-balancer flow on guest br-int selects a ready CoreDNS endpoint and delivers it."
       },
       {
         "step": 2,
+        "sourceComponentId": "coredns-node",
+        "targetComponentId": "frontend-application-pod",
+        "description": "CoreDNS answers from its EndpointSlice-backed cache and returns the Back-End Service's ClusterIP to the Front-End. Only now does the caller have an address to connect to."
+      },
+      {
+        "step": 3,
+        "sourceComponentId": "frontend-application-pod",
+        "targetComponentId": "svc-backend",
+        "description": "With the name resolved, the Front-End opens a connection to the Back-End Service's ClusterIP — a stable virtual IP, not a specific backend Pod."
+      },
+      {
+        "step": 4,
         "sourceComponentId": "svc-backend",
         "targetComponentId": "ovs-guest",
         "description": "The connection to the ClusterIP enters the in-VM OVS br-int bridge, where the OVN-Kubernetes load-balancer flow installed for this Service matches the virtual IP and DNATs it to a healthy backend Pod endpoint. In OVN this selection-and-DNAT is one stage of the ingress pipeline, applied before the policy stage below."
       },
       {
-        "step": 3,
+        "step": 5,
         "sourceComponentId": "ovs-guest",
         "targetComponentId": "netpol-ecommerce",
         "description": "Before the packet is delivered, the OVN logical pipeline on br-int evaluates the NetworkPolicy ACLs compiled for the backend port group. The destination is already the backend Pod (DNAT happened at the load-balancer stage above), so the ACL matches on the backend's port group: it admits the Front-End Pods' address set as an allowed ingress source, so the connection passes the ACL gate (traffic from any other source would be dropped here)."
       },
       {
-        "step": 4,
+        "step": 6,
         "sourceComponentId": "netpol-ecommerce",
         "targetComponentId": "backend-application-pod",
         "description": "With the policy allowing the flow, OVS delivers the packet to the chosen Back-End Application Pod (already DNATed at the load-balancer stage) over its veth pair. The backend process accepts the connection and returns its response."
