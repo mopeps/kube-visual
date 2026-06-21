@@ -6,7 +6,7 @@ import { hopPoints } from '../data/hop-kinds'
 import ObjectSelect from './ObjectSelect'
 import ObjectText from './ObjectText'
 import ExploreCommands from './ExploreCommands'
-import { TypeGlyph } from './TypeIcon'
+import { TypeGlyph, hasTypeGlyph } from './TypeIcon'
 import HopIcon from './HopIcon'
 import AuthChip from './AuthChip'
 import CategorizedIndex from './CategorizedIndex'
@@ -27,7 +27,7 @@ const FLOW_CATEGORIES = [
 function RouteNode({ component, fallbackId }) {
   return (
     <span className="hop-route-node">
-      {component?.typePrefix && (
+      {hasTypeGlyph(component?.typePrefix) && (
         <span className="hop-route-ic" aria-hidden>
           <TypeGlyph typePrefix={component.typePrefix} />
         </span>

@@ -15,6 +15,7 @@ export default function DeepDiveHopInspector({ boxIndex, activeFlow, activeStep,
 
   const source = boxIndex[step.sourceBoxId]
   const target = boxIndex[step.targetBoxId]
+  const sourceColor = source?.accent || 'var(--k-cyan)'
   const color = target?.accent || 'var(--k-cyan)'
 
   const goto = (dir) => {
@@ -30,6 +31,7 @@ export default function DeepDiveHopInspector({ boxIndex, activeFlow, activeStep,
       total={steps.length}
       source={{ typePrefix: source?.box.typePrefix, name: source?.box.title || step.sourceBoxId }}
       target={{ typePrefix: target?.box.typePrefix, name: target?.box.title || step.targetBoxId }}
+      sourceColor={sourceColor}
       description={step.description}
       onPrev={() => goto(-1)}
       onNext={() => goto(1)}

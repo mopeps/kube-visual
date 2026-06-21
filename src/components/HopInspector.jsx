@@ -18,6 +18,7 @@ export default function HopInspector({ activeEvent, activeStep, onSelectStep, on
 
   const source = findComponent(step.sourceComponentId)
   const target = findComponent(step.targetComponentId)
+  const sourceColor = COMPONENT_COLOR[step.sourceComponentId] || 'var(--k-cyan)'
   const color = COMPONENT_COLOR[step.targetComponentId] || 'var(--k-cyan)'
 
   const goto = (dir) => {
@@ -33,6 +34,7 @@ export default function HopInspector({ activeEvent, activeStep, onSelectStep, on
       total={steps.length}
       source={{ typePrefix: source?.typePrefix, name: source?.displayName || step.sourceComponentId }}
       target={{ typePrefix: target?.typePrefix, name: target?.displayName || step.targetComponentId }}
+      sourceColor={sourceColor}
       description={step.description}
       auth={step.auth}
       onPrev={() => goto(-1)}

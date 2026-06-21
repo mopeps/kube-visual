@@ -9,11 +9,11 @@
 // zones.js (see TYPE_GLYPH_KEY for the prefix → glyph-id mapping).
 
 // typePrefix → glyph id. An unknown prefix renders nothing (graceful no-op).
-// (systemd deliberately has NO glyph: the bracketed [systemd] text stands
-// alone — the gear/power symbols it wore earlier are retired.)
 const TYPE_GLYPH_KEY = {
   'Pod': 'pod',
   'Static Pod': 'static-pod',
+  'systemd': 'systemd',
+  'Controller': 'controller',
   'Service': 'service',
   'API Object': 'api-object',
   'Custom Resource': 'custom-resource',
@@ -34,6 +34,23 @@ const TYPE_GLYPHS = {
       <rect x="4.5" y="8" width="15" height="11" rx="1.5" />
       <path d="M12 8V4.5" />
       <circle cx="12" cy="3.6" r="1.3" />
+    </>
+  ),
+  // systemd unit — a host service record with a running process/status marker.
+  systemd: (
+    <>
+      <rect x="3.5" y="5" width="17" height="14" rx="2" />
+      <circle cx="8.5" cy="12" r="2.2" />
+      <path d="M13 9.5h4M13 12h4M13 14.5h3" />
+    </>
+  ),
+  // Controller — a reconciliation loop continually driving observed state.
+  controller: (
+    <>
+      <path d="M18.5 8A7 7 0 0 0 6.2 6.2L4.5 8" />
+      <path d="M4.5 4.5V8h3.5" />
+      <path d="M5.5 16A7 7 0 0 0 17.8 17.8l1.7-1.8" />
+      <path d="M19.5 19.5V16H16" />
     </>
   ),
   // Service — a virtual front-end fanning traffic to endpoints: a hub + spokes.
@@ -78,8 +95,7 @@ const TYPE_GLYPHS = {
 // The glyph drawn next to a node's bracketed [typePrefix] label. Each runtime
 // form gets a distinct mark (Pod hexagon, VMI monitor…) so the form is
 // recognisable at a glance; the Overview legend explains the vocabulary.
-// Renders nothing for a prefix with no glyph (graceful no-op — systemd among
-// them, by design).
+// Renders nothing for a prefix with no glyph (graceful no-op).
 export default function TypeIcon({ typePrefix, className }) {
   const glyph = TYPE_GLYPHS[TYPE_GLYPH_KEY[typePrefix]]
   if (!glyph) return null

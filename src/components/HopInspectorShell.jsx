@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useDockPanel } from '../hooks/useDockPanel'
 import { hopPoints } from '../data/hop-kinds'
-import { TypeGlyph } from './TypeIcon'
+import { TypeGlyph, hasTypeGlyph } from './TypeIcon'
 import HopIcon from './HopIcon'
 import ObjectText from './ObjectText'
 import AuthChip from './AuthChip'
@@ -12,7 +12,7 @@ import AuthChip from './AuthChip'
 function RouteEnd({ typePrefix, name, color }) {
   return (
     <span className="hop-route-node" style={color ? { color } : undefined}>
-      {typePrefix && (
+      {hasTypeGlyph(typePrefix) && (
         <span className="hop-route-ic" aria-hidden>
           <TypeGlyph typePrefix={typePrefix} />
         </span>
@@ -38,6 +38,7 @@ export default function HopInspectorShell({
   total,
   source,
   target,
+  sourceColor,
   description,
   auth,
   onPrev,
@@ -104,7 +105,7 @@ export default function HopInspectorShell({
       </div>
 
       <div className="hop-inspector-route">
-        <RouteEnd typePrefix={source?.typePrefix} name={source?.name} />
+        <RouteEnd typePrefix={source?.typePrefix} name={source?.name} color={sourceColor} />
         <span className="hop-inspector-arrow" aria-hidden>→</span>
         <RouteEnd typePrefix={target?.typePrefix} name={target?.name} color={color} />
       </div>
