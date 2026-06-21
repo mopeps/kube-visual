@@ -4,6 +4,7 @@ import { hopPoints } from '../data/hop-kinds'
 import { TypeGlyph } from './TypeIcon'
 import HopIcon from './HopIcon'
 import ObjectText from './ObjectText'
+import AuthChip from './AuthChip'
 
 // One route endpoint — its type glyph in a bordered chip (matching the bullet
 // glyph chips below) followed by the node's name. Mirrors the Packet Flow tab's
@@ -40,6 +41,7 @@ export default function HopInspectorShell({
   sourceLayer,
   targetLayer,
   description,
+  auth,
   onPrev,
   onNext,
   onClose,
@@ -134,6 +136,8 @@ export default function HopInspectorShell({
           </li>
         ))}
       </ul>
+
+      {auth && <AuthChip authId={auth} color={color} />}
     </div>
   )
 }

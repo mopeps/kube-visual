@@ -22,6 +22,7 @@
         "step": 3,
         "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "guest-api-server",
+        "auth": "bearer-oauth",
         "description": "The proxy forwards the connection to this guest's kube-apiserver Service in the HCP namespace. The Guest API Server Pod terminates the request, authenticates it, and serves it from etcd — the traffic never leaves the management control plane."
       }
     ]
@@ -112,12 +113,14 @@
         "step": 3,
         "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "guest-api-server",
+        "auth": "bearer-oauth",
         "description": "The proxy forwards the request to the Guest API Server in the HCP namespace. The API Server authenticates and validates the Deployment."
       },
       {
         "step": 4,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "guest-etcd",
+        "auth": "mtls",
         "description": "The Guest API Server persists the Deployment desired state in Guest Etcd. No Pod exists yet."
       },
       {
@@ -130,6 +133,7 @@
         "step": 6,
         "sourceComponentId": "guest-controller-manager",
         "targetComponentId": "guest-api-server",
+        "auth": "client-cert",
         "description": "The Guest Controller Manager writes the ReplicaSet and unscheduled Pod records to the Guest API Server. The Pod now exists as desired state, but it has no nodeName and no container is running."
       },
       {
@@ -142,12 +146,14 @@
         "step": 8,
         "sourceComponentId": "guest-kube-scheduler",
         "targetComponentId": "guest-api-server",
+        "auth": "client-cert",
         "description": "The Scheduler writes the binding through the Guest API Server, setting the Pod's nodeName to the selected guest worker."
       },
       {
         "step": 9,
         "sourceComponentId": "kubelet-guest",
         "targetComponentId": "guest-api-server",
+        "auth": "kubelet-cert",
         "description": "The guest kubelet's existing outbound watch of the Guest API Server returns the newly bound Pod. The API Server does not initiate a connection to the node or push the PodSpec through Konnectivity."
       },
       {
@@ -169,7 +175,7 @@
     "category": "traffic",
     "glyph": "east-west",
     "eventName": "East-West Service Traffic (Front-End → Back-End)",
-    "description": "Tracing an in-cluster call from the Front-End Application to the Back-End Application: first the Front-End resolves the Service name through cluster DNS (CoreDNS), then it connects to the Back-End ClusterIP — OVN load-balancer DNAT on the guest OVS fabric, a NetworkPolicy ACL check, and delivery to a backing Pod. No ingress, no traffic leaving the VM. (The In-Cluster DNS flow zooms in on the resolver path this one recaps.)",
+    "description": "Tracing an in-cluster call from the Front-End Application to the Back-End Application: first the Front-End resolves the Service name through cluster DNS (CoreDNS), then it connects to the Back-End ClusterIP — OVN load-balancer DNAT on the guest OVS fabric, a NetworkPolicy ACL check, and delivery to a backing Pod. No ingress, no traffic leaving the VM. (The In-Cluster DNS flow zooms in on the resolver path this one recaps.) No hop on this path is platform-authenticated: the data plane is gated by NetworkPolicy, and any mutual TLS is the application’s own.",
     "steps": [
       {
         "step": 1,
@@ -220,6 +226,7 @@
         "step": 1,
         "sourceComponentId": "external-client",
         "targetComponentId": "mgmt-kube-apiserver",
+        "auth": "bearer-oauth",
         "description": "A platform admin applies HostedCluster and NodePool manifests. Resolves api.<mgmt-hub> to the management API VIP. These are management-cluster CRs, so the request goes to the Management Kube API Server — not to the guest API, which does not exist yet."
       },
       {
@@ -316,6 +323,7 @@
         "step": 17,
         "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "ignition-server",
+        "auth": "machine-token",
         "description": "The proxy forwards the request to the Ignition Server. Its response provides the bootstrap credentials and machine configuration needed to join this hosted cluster."
       },
       {
@@ -334,6 +342,7 @@
         "step": 20,
         "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "konnectivity-server",
+        "auth": "mtls",
         "description": "The proxy forwards the long-lived connection to the Konnectivity Server. The tunnel is now available for later API-Server-initiated exec, logs, port-forward, webhook, and metrics traffic."
       },
       {
@@ -352,6 +361,7 @@
         "step": 23,
         "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "guest-api-server",
+        "auth": "kubelet-cert",
         "description": "The proxy forwards the connection to the Guest API Server. The kubelet registers its Node, posts status until it becomes Ready, and keeps its Pod watch on this same outbound API path."
       }
     ]
@@ -367,6 +377,7 @@
         "step": 1,
         "sourceComponentId": "external-client",
         "targetComponentId": "mgmt-kube-apiserver",
+        "auth": "bearer-oauth",
         "description": "A platform admin runs 'oc scale nodepool <name> --replicas=N+1'. Resolves api.<mgmt-hub> to the management API VIP. The NodePool lives in the management cluster, so the Management Kube API Server persists the higher desired replica count."
       },
       {
@@ -433,6 +444,7 @@
         "step": 12,
         "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "ignition-server",
+        "auth": "machine-token",
         "description": "The proxy forwards the request to the Ignition Server, which returns the kubelet bootstrap credentials and machine configuration needed to join the guest cluster."
       },
       {
@@ -451,6 +463,7 @@
         "step": 15,
         "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "guest-api-server",
+        "auth": "kubelet-cert",
         "description": "The proxy forwards the connection to the Guest API Server. The kubelet registers its Node and posts status until it becomes Ready; the NodePool's desired replica count is now satisfied."
       }
     ]
@@ -466,6 +479,7 @@
         "step": 1,
         "sourceComponentId": "external-client",
         "targetComponentId": "mgmt-kube-apiserver",
+        "auth": "bearer-oauth",
         "description": "The admin scales the NodePool down. Resolves api.<mgmt-hub> to the management API VIP. The Management Kube API Server records the lower desired replica count."
       },
       {
@@ -484,6 +498,7 @@
         "step": 4,
         "sourceComponentId": "capi-manager",
         "targetComponentId": "guest-api-server",
+        "auth": "client-cert",
         "description": "Before deleting infrastructure, the Cluster API Machine controller uses the guest API to cordon the selected Node and evict drainable workloads. It waits for the drain and attached-volume cleanup to finish; shutdown does not happen first."
       },
       {
@@ -547,6 +562,7 @@
         "step": 3,
         "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "guest-api-server",
+        "auth": "bearer-oauth",
         "description": "The proxy forwards the exec request to the Guest API Server. After authenticating it and locating the target Pod's node, the API Server must reach that node's kubelet."
       },
       {
@@ -559,6 +575,7 @@
         "step": 5,
         "sourceComponentId": "konnectivity-server",
         "targetComponentId": "konnectivity-agent",
+        "auth": "mtls",
         "description": "The server proxies the call through the persistent tunnel to the Konnectivity Agent running inside the target worker VM."
       },
       {
@@ -586,7 +603,7 @@
     "category": "traffic",
     "glyph": "dns",
     "eventName": "In-Cluster DNS Resolution",
-    "description": "Tracing how an application Pod turns a Service name into a ClusterIP: the Pod sends a DNS packet to the cluster DNS Service, guest OVN load-balances it to a CoreDNS Pod, and CoreDNS answers from records populated by its standing watch of the guest API. That watch is control-plane synchronization, not a hop made for each DNS query.",
+    "description": "Tracing how an application Pod turns a Service name into a ClusterIP: the Pod sends a DNS packet to the cluster DNS Service, guest OVN load-balances it to a CoreDNS Pod, and CoreDNS answers from records populated by its standing watch of the guest API. That watch is control-plane synchronization, not a hop made for each DNS query. The DNS query itself is unauthenticated — cluster DNS answers any Pod that can reach the Service IP.",
     "steps": [
       {
         "step": 1,
@@ -631,6 +648,7 @@
         "step": 2,
         "sourceComponentId": "virt-handler",
         "targetComponentId": "mgmt-kube-apiserver",
+        "auth": "sa-token",
         "description": "virt-handler updates the VirtualMachineInstance's status to Failed on the Management Kube API Server."
       },
       {
@@ -679,6 +697,7 @@
         "step": 10,
         "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "guest-api-server",
+        "auth": "kubelet-cert",
         "description": "The proxy forwards the connection to the Guest API Server. The existing Node returns Ready; desired state is restored without replacing the CAPI Machine."
       }
     ]
@@ -700,6 +719,7 @@
         "step": 2,
         "sourceComponentId": "kubelet-host",
         "targetComponentId": "mgmt-kube-apiserver",
+        "auth": "kubelet-cert",
         "description": "The kubelet reports the launcher Pod as Evicted/Failed to the Management Kube API Server."
       },
       {
@@ -748,6 +768,7 @@
         "step": 10,
         "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "guest-api-server",
+        "auth": "kubelet-cert",
         "description": "The proxy forwards the connection to the Guest API Server, returning the existing worker Node to Ready."
       }
     ]
@@ -808,12 +829,14 @@
         "step": 3,
         "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "guest-api-server",
+        "auth": "bearer-oauth",
         "description": "The proxy forwards the request to the Guest API Server. It validates the ConfigMap and increments its resourceVersion — but updating a ConfigMap does not, by itself, touch any Pod or Deployment."
       },
       {
         "step": 4,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "guest-etcd",
+        "auth": "mtls",
         "description": "The API Server persists the new ConfigMap revision to guest etcd. This is the ONLY change a bare ConfigMap update makes: the Guest Controller Manager runs no loop that restarts workloads on a plain ConfigMap edit, so this write by itself leaves every running Pod untouched."
       },
       {
@@ -838,12 +861,14 @@
         "step": 8,
         "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "guest-api-server",
+        "auth": "bearer-oauth",
         "description": "The proxy forwards the Deployment patch to the Guest API Server. This pod-template mutation — not the ConfigMap edit alone — creates rollout intent for env-var and subPath consumers."
       },
       {
         "step": 9,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "guest-controller-manager",
+        "auth": "client-cert",
         "description": "The Deployment controller (a reconcile loop inside the Guest Controller Manager — not a standalone operator) sees the pod-template hash changed and creates a new ReplicaSet; the ReplicaSet controller then rolls that new ReplicaSet out, bringing its replicas up while retiring the old ones per the rollout strategy."
       },
       {
@@ -862,12 +887,14 @@
         "step": 12,
         "sourceComponentId": "guest-kube-scheduler",
         "targetComponentId": "guest-api-server",
+        "auth": "client-cert",
         "description": "The Scheduler writes a Binding back to the Guest API Server, assigning the replacement Pod to the chosen guest worker node."
       },
       {
         "step": 13,
         "sourceComponentId": "kubelet-guest",
         "targetComponentId": "guest-api-server",
+        "auth": "kubelet-cert",
         "description": "The guest kubelet's existing outbound watch of the Guest API Server returns the newly bound Pod. The API Server does not initiate a node connection or send this through Konnectivity."
       },
       {
@@ -907,12 +934,14 @@
         "step": 3,
         "sourceComponentId": "shared-ingress-proxy",
         "targetComponentId": "guest-api-server",
+        "auth": "bearer-oauth",
         "description": "The proxy forwards the request to the Guest API Server. It authenticates the caller, runs admission, and accepts the 10Gi claim using storageClassName kubevirt-csi-infra-default."
       },
       {
         "step": 4,
         "sourceComponentId": "guest-api-server",
         "targetComponentId": "guest-etcd",
+        "auth": "mtls",
         "description": "The Guest API Server persists the PersistentVolumeClaim in Guest Etcd. The claim sits at phase Pending — pure intent, no volume exists anywhere yet."
       },
       {
@@ -925,12 +954,14 @@
         "step": 6,
         "sourceComponentId": "kubevirt-csi-controller",
         "targetComponentId": "mgmt-kube-apiserver",
+        "auth": "sa-token",
         "description": "The driver creates a backing PersistentVolumeClaim in the management cluster's HCP namespace via the Management Kube API Server. The guest's 'cloud volume' is literally an infra PVC, bound by whatever StorageClass the management cluster runs on its bare metal."
       },
       {
         "step": 7,
         "sourceComponentId": "kubevirt-csi-controller",
         "targetComponentId": "guest-api-server",
+        "auth": "sa-token",
         "description": "With the infra PVC bound, the external-provisioner creates the guest PersistentVolume: driver csi.kubevirt.io, volumeHandle pointing at the infra PVC's name. The guest now has a PV record describing storage that physically lives a cluster below it."
       },
       {
@@ -949,6 +980,7 @@
         "step": 10,
         "sourceComponentId": "kubevirt-csi-controller",
         "targetComponentId": "mgmt-kube-apiserver",
+        "auth": "sa-token",
         "description": "ControllerPublishVolume requests the management-side KubeVirt hotplug operation through the Management Kube API Server, identifying the worker VMI and the bound infra PVC."
       },
       {

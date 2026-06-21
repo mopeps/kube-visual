@@ -36,6 +36,7 @@ export default function HopInspector({ activeEvent, activeStep, onSelectStep, on
       sourceLayer={source?.layer}
       targetLayer={target?.layer}
       description={step.description}
+      auth={step.auth}
       onPrev={() => goto(-1)}
       onNext={() => goto(1)}
       onClose={onClose}
