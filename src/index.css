@@ -233,7 +233,7 @@ body::after {
     justify-content: center;
   }
 
-  .node-title    { font-size: 0.92rem; }
+  .node-title    { font-size: 0.95rem; }
   .node-subtitle { font-size: 0.75rem; }
   .zone-label    { font-size: 0.75rem; }
 }
@@ -490,7 +490,7 @@ body::after {
 
 .node-title {
   font-family: 'Syne', sans-serif;
-  font-size: 0.86rem;
+  font-size: 0.95rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   margin-bottom: 4px;
@@ -534,9 +534,11 @@ body::after {
 .node-type-prefix {
   display: block;
   font-size: 0.75rem;
+  color: var(--tx-muted);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  font-weight: 700;
+  font-weight: 600;
+  opacity: 0.75;
   margin-bottom: 3px;
   font-family: 'JetBrains Mono', monospace;
 }

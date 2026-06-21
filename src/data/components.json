@@ -24,7 +24,7 @@
     "role": "OPERATOR",
     "runtimeForm": "Deployment · hypershift",
     "linuxPrimitive": "Go binary + controller-runtime",
-    "problemSolved": "The single control-plane factory: it turns every HostedCluster request into a running, hosted control plane.",
+    "problemSolved": "Reconciles HostedCluster and NodePool resources into a dedicated hosted-control-plane namespace, its operators, and the worker-machine resources for each hosted cluster.",
     "interactions": [
       "Runs as one cluster-wide singleton Deployment in the management cluster's 'hypershift' namespace — it manages every HostedCluster, not one instance per guest.",
       "Watches HostedCluster and NodePool custom resources in the management API Server.",
@@ -55,7 +55,7 @@
     "role": "INTENT RECORD",
     "runtimeForm": "CustomResource · clusters",
     "linuxPrimitive": "etcd record (mgmt API Server)",
-    "problemSolved": "The one object an admin writes to ask OpenShift for a whole guest control plane.",
+    "problemSolved": "Declares a hosted cluster's control-plane release, networking, platform, and endpoint publishing configuration.",
     "interactions": [
       "Authored by the platform admin and stored in the management API Server.",
       "Reconciled by the HyperShift Operator, which derives the HCP namespace and a HostedControlPlane CR from it.",
@@ -85,7 +85,7 @@
     "role": "INTENT RECORD",
     "runtimeForm": "CustomResource · clusters",
     "linuxPrimitive": "etcd record (mgmt API Server)",
-    "problemSolved": "The only knob for guest workers — declaring one scales the hosted cluster's worker nodes up or down.",
+    "problemSolved": "Declares the guest worker pool's replica count, machine template, release, and upgrade strategy.",
     "interactions": [
       "Authored by the platform admin alongside the HostedCluster, stored in the management API Server.",
       "Reconciled by the HyperShift Operator's NodePool controller into Cluster API objects (Cluster, MachineDeployment).",
@@ -292,7 +292,7 @@
     "role": "OPERATOR",
     "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "HCCO binary + controller-runtime",
-    "problemSolved": "The bridge between the hosted control plane and the guest cluster — it pushes config into the guest and reports the guest's health back up to the HostedControlPlane.",
+    "problemSolved": "Writes OpenShift configuration to the guest API and reports guest ClusterVersion and ClusterOperator status on the HostedControlPlane resource.",
     "interactions": [
       "Reconciles guest-cluster config (config.openshift.io objects, default RBAC, registry and ingress settings) by writing through the Guest API Server.",
       "Aggregates guest ClusterOperator/version status and surfaces it on the HostedControlPlane so the HyperShift Operator can report HostedCluster availability.",
@@ -322,7 +322,7 @@
     "role": "OPERATOR",
     "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "CNO binary + controller-runtime",
-    "problemSolved": "Renders and deploys the guest cluster's entire network stack — OVN-Kubernetes, Multus, and DNS plumbing — from the Network config object.",
+    "problemSolved": "Renders and deploys the guest cluster's OVN-Kubernetes and Multus components from the Network operator configuration.",
     "interactions": [
       "Reads the Network CR and renders the OVN-Kubernetes control-plane Deployment and node DaemonSet manifests for the guest.",
       "Deploys the Multus CNI and its admission controller so Pods can request secondary networks.",
@@ -820,7 +820,7 @@
     "role": "CONTROLLER",
     "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "capk controller-manager",
-    "problemSolved": "Bridges generic Cluster API machines to real KubeVirt VMs that become guest worker nodes.",
+    "problemSolved": "Reconciles KubevirtMachine resources into KubeVirt VirtualMachines and reports VM readiness and addresses back to Cluster API.",
     "interactions": [
       "Watches KubevirtMachine objects produced by the CAPI manager.",
       "Creates and manages KubeVirt VirtualMachine / VirtualMachineInstance objects in the HCP namespace.",
@@ -850,7 +850,7 @@
     "role": "API SERVER",
     "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "kube-apiserver binary",
-    "problemSolved": "The front door to the guest cluster — every kubectl/oc command and controller talks to it.",
+    "problemSolved": "Serves the guest Kubernetes API, applying authentication, authorization, admission, and persistence for API requests.",
     "interactions": [
       "Exposes the guest cluster's API on a dedicated Service port.",
       "Persists objects to the guest Etcd StatefulSet Pod in the same namespace — a regular Pod, not a static pod.",
@@ -959,7 +959,7 @@
     "role": "KEY-VALUE STORE",
     "runtimeForm": "StatefulSet · hcp-namespace",
     "linuxPrimitive": "etcd binary + Raft log",
-    "problemSolved": "The guest cluster's source of truth — it persists every object the guest API server serves.",
+    "problemSolved": "Stores the guest API server's Kubernetes and OpenShift API objects and replicates them across etcd members with Raft.",
     "interactions": [
       "Receives reads and writes exclusively from the Guest API Server.",
       "Replicates data across the StatefulSet's etcd members via the Raft consensus protocol.",
@@ -990,9 +990,9 @@
     "role": "INGRESS PROXY",
     "runtimeForm": "Deployment · hypershift-sharedingress",
     "linuxPrimitive": "HAProxy process (SNI routing)",
-    "problemSolved": "The single TLS front door that SNI-routes inbound API traffic to the right guest's control plane.",
+    "problemSolved": "Accepts TLS connections from the shared control-plane VIP and selects the hosted cluster's API, OAuth, Konnectivity, or Ignition backend from the ClientHello SNI without terminating TLS.",
     "interactions": [
-      "Fronts the guest control-plane endpoints (kube-apiserver :6443, oauth-openshift, konnectivity, ignition-server) and routes inbound TLS to them by SNI / hostname.",
+      "Routes TLS connections to guest control-plane endpoints (kube-apiserver :6443, oauth-openshift, konnectivity, ignition-server) by SNI / hostname.",
       "Selected by the Shared Ingress LoadBalancer Service, which gives it a single external VIP shared across hosted clusters.",
       "Forwards to the per-guest control-plane Services in the HCP namespace — traffic terminates in the management control plane and never enters a guest worker VM.",
       "Carries control-plane / API ingress only — never the guest's *.apps application traffic, which uses the guest cluster's own ingress router."
@@ -1056,12 +1056,12 @@
     "role": "LOAD BALANCER",
     "runtimeForm": "Service (LoadBalancer) · hcp-namespace",
     "linuxPrimitive": "MetalLB L2 VIP (ARP/NDP) → router NodePort on worker VMs",
-    "problemSolved": "The bare-metal entry point that carries the guest's *.apps application traffic into the worker VMs.",
+    "problemSolved": "Publishes the guest's *.apps wildcard endpoint on a MetalLB-advertised VIP and forwards connections to the router NodePort on guest worker VMIs.",
     "interactions": [
-      "A LoadBalancer Service in the guest's HCP namespace on the management (bare metal) cluster — the bare-metal entry point for the guest's *.apps traffic. It is NOT a mirror of a guest LoadBalancer: the guest ingress is a NodePort, and there is no LoadBalancer (or MetalLB) inside the guest.",
+      "Runs as a LoadBalancer Service in the guest's HCP namespace on the management cluster. It is not a mirror of a guest LoadBalancer: guest ingress is published as a NodePort, and MetalLB runs only in the management cluster.",
       "Selects the virt-launcher Pods that host the guest worker VMIs and forwards to the router-nodeport-default NodePort where the in-VM OpenShift Ingress Router listens.",
       "Its external VIP is allocated by the MetalLB controller from an IPAddressPool and advertised in L2 mode (ARP/NDP) by a MetalLB speaker; the hosted cluster's *.apps wildcard DNS resolves here.",
-      "Does NOT serve the guest API / OAuth / Konnectivity / Ignition endpoints — those ride the Shared Ingress Proxy."
+      "Does NOT serve the guest API / OAuth / Konnectivity / Ignition endpoints — those use the Shared Ingress Proxy and its control-plane VIP."
     ],
     "explorationCommands": [
       "# List the LoadBalancer Services in the guest's HCP namespace (apps + control plane)\noc get svc -n <hcp-namespace> --field-selector spec.type=LoadBalancer -o wide",
@@ -1144,7 +1144,7 @@
     "role": "CONTROLLER",
     "runtimeForm": "Deployment · hcp-namespace",
     "linuxPrimitive": "CCM binary + cloud API calls",
-    "problemSolved": "The guest cluster's bridge to infrastructure — it realises LoadBalancers and node addresses that have no cloud behind them.",
+    "problemSolved": "Runs the KubeVirt cloud-provider controllers that populate guest Node addresses and reconcile supported infrastructure-backed Service behavior.",
     "interactions": [
       "Watches Node objects in the guest cluster for ProviderID fields.",
       "Calls cloud provider APIs to provision or update load balancers for LoadBalancer-type Services.",
@@ -1959,10 +1959,10 @@
     "role": "INGRESS ROUTER",
     "runtimeForm": "Deployment · openshift-ingress (in VM)",
     "linuxPrimitive": "HAProxy (in VM)",
-    "problemSolved": "The guest cluster's own front door for application (*.apps) traffic — separate from the control-plane proxy.",
+    "problemSolved": "Runs HAProxy for guest Route hostnames, applying each Route's TLS mode and forwarding traffic to the selected guest Service endpoints.",
     "interactions": [
       "Watches Route objects in the guest cluster via the Guest API Server.",
-      "Receives *.apps application traffic via the guest's router-nodeport-default NodePort, after it enters the VM from the infra-side Apps Ingress LoadBalancer on the management cluster — NOT through the Shared Ingress Proxy, which fronts the control-plane API only.",
+      "Receives *.apps application traffic through the guest's router-nodeport-default NodePort after the management-cluster Apps Ingress LoadBalancer forwards the connection into a worker VMI. The Shared Ingress Proxy is used only for hosted control-plane endpoints.",
       "Terminates TLS and forwards each request to the matching Service (e.g. the Front-End Service) inside the guest cluster."
     ],
     "explorationCommands": [
@@ -1989,10 +1989,10 @@
     "role": "NODEPORT",
     "runtimeForm": "Service (NodePort) · openshift-ingress (in VM)",
     "linuxPrimitive": "NodePort → OVN LB flows → router Pod",
-    "problemSolved": "The guest's external ingress handle for *.apps traffic — a NodePort, NOT a LoadBalancer, because the guest has no cloud LB or MetalLB of its own.",
+    "problemSolved": "Publishes the guest Ingress Router on a port of every guest worker; the management-cluster Apps Ingress LoadBalancer forwards *.apps traffic to that port.",
     "interactions": [
       "Selects the guest Ingress Router Pods and publishes them on a NodePort across the guest worker VMs.",
-      "The infra-side Apps Ingress LoadBalancer on the management cluster (where MetalLB owns the VIP) forwards inbound *.apps traffic to this NodePort — that LoadBalancer is the external front door, this NodePort is the in-guest target.",
+      "The Apps Ingress LoadBalancer on the management cluster, whose VIP is advertised by MetalLB, forwards inbound *.apps connections to this NodePort.",
       "Traffic arriving at the NodePort is DNATed by guest OVN load-balancer flows to a healthy router Pod endpoint."
     ],
     "explorationCommands": [
@@ -2023,7 +2023,7 @@
     "interactions": [
       "Selects the guest Ingress Router Pods and exposes them on a stable cluster-internal virtual IP.",
       "Has no external exposure and no datapath of its own — OVN-Kubernetes compiles it into a load-balancer flow on the in-VM Open vSwitch br-int bridge.",
-      "Distinct from the NodePort: this one is for in-guest traffic, the NodePort is the external ingress handle."
+      "This ClusterIP is used by in-guest clients and probes; the separate NodePort publishes the router on every guest worker for traffic forwarded from the management-cluster LoadBalancer."
     ],
     "explorationCommands": [
       "# View the router's internal ClusterIP Service\noc get svc router-internal-default -n openshift-ingress -o wide --kubeconfig <guest-kubeconfig>"
