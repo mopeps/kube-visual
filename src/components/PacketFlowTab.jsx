@@ -8,6 +8,7 @@ import ObjectText from './ObjectText'
 import ExploreCommands from './ExploreCommands'
 import { TypeGlyph } from './TypeIcon'
 import HopIcon from './HopIcon'
+import AuthChip from './AuthChip'
 import CategorizedIndex from './CategorizedIndex'
 import FlowGlyph from './FlowGlyph'
 
@@ -114,6 +115,8 @@ function Hop({ step, isOpen, isSelected, onToggle, onJump, onSelectComponent }) 
           </li>
         ))}
       </ul>
+
+      {step.auth && <AuthChip authId={step.auth} color={color} />}
 
       {hasCommands && (
         <div className={`hop-card-detail ${isOpen ? 'is-open' : ''}`}>
