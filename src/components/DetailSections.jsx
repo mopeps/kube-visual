@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { COMPONENT_BADGES } from '../data/zones'
 import { BADGE_GLOSSARY, isApiGroupStamp } from '../data/badge-glossary'
 import { PRIMITIVES_BY_TYPE, SELF_PRIMITIVE_IDS } from '../data/primitives'
@@ -81,7 +81,7 @@ function deepDiveLinks(component) {
   return links
 }
 
-export default function DetailSections({ component, color, suppressLegacyPrimitives = false, onSelectComponent, pipelineSection = null, manifest = null, onOpenDeepDive = null }) {
+export default function DetailSections({ component, color, suppressLegacyPrimitives = false, initialPrimitiveId = null, onSelectComponent, pipelineSection = null, manifest = null, onOpenDeepDive = null }) {
   const [expandedPrimitive, setExpandedPrimitive] = useState(null)
   const [expandedBadge, setExpandedBadge] = useState(null)
   const [manifestOpen, setManifestOpen] = useState(false)
@@ -89,8 +89,21 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
   // the Manifest → Kernel Pipeline section), so the modal opens quiet and the
   // copy-paste shell block is summoned on demand.
   const [exploreOpen, setExploreOpen] = useState(false)
+  const primitiveSectionRef = useRef(null)
 
   const componentId = component.componentId
+
+  // A search result for a primitive opens its host component's sheet and asks
+  // for that primitive's chip to be expanded — auto-open it and scroll the
+  // section into view so the user lands on exactly what they searched for.
+  useEffect(() => {
+    if (!initialPrimitiveId) return
+    setExpandedPrimitive(initialPrimitiveId)
+    const raf = requestAnimationFrame(() => {
+      primitiveSectionRef.current?.scrollIntoView({ block: 'nearest' })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [initialPrimitiveId, componentId])
   const allBadges = COMPONENT_BADGES[componentId] || []
   // Split the badge row into its three real jobs:
   //   • apiGroup/version stamps  → a quiet metadata line (provenance, not a chip)
@@ -101,10 +114,15 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
   const badges = allBadges.filter((b) => !isApiGroupStamp(b.label))
   const explanation = expandedBadge ? BADGE_GLOSSARY[expandedBadge] : null
 
-  const primitiveSet =
-    suppressLegacyPrimitives ||
-    SELF_PRIMITIVE_IDS.has(componentId) ||
-    component.layer === 'External'
+  // Normally the type-keyed primitives section is hidden when the same info is
+  // already in the pipeline tree (suppressLegacyPrimitives). But when a search
+  // routed here to spotlight a specific primitive, force the section on so the
+  // requested chip is actually present to expand.
+  const primitiveSet = initialPrimitiveId
+    ? PRIMITIVES_BY_TYPE[component.typePrefix] || null
+    : suppressLegacyPrimitives ||
+        SELF_PRIMITIVE_IDS.has(componentId) ||
+        component.layer === 'External'
       ? null
       : PRIMITIVES_BY_TYPE[component.typePrefix] || null
 
@@ -259,7 +277,7 @@ export default function DetailSections({ component, color, suppressLegacyPrimiti
       )}
 
       {primitiveSet && (
-        <div className="detail-section">
+        <div className="detail-section" ref={primitiveSectionRef}>
           <h4>{primitiveSet.sectionTitle}</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {primitiveSet.items.map(p => {

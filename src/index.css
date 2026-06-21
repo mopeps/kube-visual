@@ -4640,6 +4640,34 @@ button.object-tag:hover {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* The matched fragment, highlighted in title and deep-match snippets. */
+.search-hl {
+  background: color-mix(in srgb, var(--opt-accent, var(--k-cyan)) 26%, transparent);
+  color: var(--tx-bright);
+  border-radius: 3px;
+  padding: 0 1px;
+}
+/* Deep-match context line — shown only when a result matched on long prose
+   (interactions / commands / step text), so the hit reads as intentional. */
+.search-option-snippet {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--tx-dim);
+  margin-top: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.search-option-snippet .search-hl { color: var(--tx-muted); }
+.search-more {
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--tx-dim);
+  text-align: center;
+  padding: 10px 8px 4px;
+  margin: 0;
+}
 @media (max-width: 1023px) {
   .search-overlay { padding-top: 8vh; }
 }

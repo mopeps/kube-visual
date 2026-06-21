@@ -46,6 +46,10 @@ export default function App() {
   const [deepTarget, setDeepTarget] = useState(null)
   // The global fuzzy-search command palette.
   const [searchOpen, setSearchOpen] = useState(false)
+  // A primitive a search result wants auto-expanded inside its host component's
+  // detail sheet: { hostId, primitiveId }. Guarded by hostId so it only applies
+  // to that one sheet (clicking a different component never inherits it).
+  const [primitiveTarget, setPrimitiveTarget] = useState(null)
   const {
     activeEvent,
     activeComponentId,
@@ -256,7 +260,12 @@ export default function App() {
   const onSearchSelect = (rec) => {
     setSearchOpen(false)
     if (rec.kind === 'component') {
+      setPrimitiveTarget(null)
       focusComponent(rec.id)
+    } else if (rec.kind === 'primitive') {
+      // Open the host component's sheet and auto-expand the primitive chip there.
+      setPrimitiveTarget({ hostId: rec.hostId, primitiveId: rec.primitiveId })
+      focusComponent(rec.hostId)
     } else if (rec.kind === 'event') {
       clearEvent()
       selectEvent(rec.event)
@@ -557,7 +566,10 @@ export default function App() {
 
       <AncestryModal
         componentId={activeComponentId}
-        onClose={clearComponent}
+        initialPrimitiveId={
+          primitiveTarget?.hostId === activeComponentId ? primitiveTarget.primitiveId : null
+        }
+        onClose={() => { clearComponent(); setPrimitiveTarget(null) }}
         onSelectComponent={selectComponent}
         onRevealInOverview={revealInOverview}
         onOpenDeepDive={openDeepDive}
