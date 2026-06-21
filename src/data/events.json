@@ -220,7 +220,7 @@
         "step": 1,
         "sourceComponentId": "external-client",
         "targetComponentId": "mgmt-kube-apiserver",
-        "description": "A platform admin applies HostedCluster and NodePool manifests. These are management-cluster CRs, so the request goes to the Management Kube API Server — not to the guest API, which does not exist yet."
+        "description": "A platform admin applies HostedCluster and NodePool manifests. Resolves api.<mgmt-hub> to the management API VIP. These are management-cluster CRs, so the request goes to the Management Kube API Server — not to the guest API, which does not exist yet."
       },
       {
         "step": 2,
@@ -367,7 +367,7 @@
         "step": 1,
         "sourceComponentId": "external-client",
         "targetComponentId": "mgmt-kube-apiserver",
-        "description": "A platform admin runs 'oc scale nodepool <name> --replicas=N+1'. The NodePool lives in the management cluster, so the Management Kube API Server persists the higher desired replica count."
+        "description": "A platform admin runs 'oc scale nodepool <name> --replicas=N+1'. Resolves api.<mgmt-hub> to the management API VIP. The NodePool lives in the management cluster, so the Management Kube API Server persists the higher desired replica count."
       },
       {
         "step": 2,
@@ -466,7 +466,7 @@
         "step": 1,
         "sourceComponentId": "external-client",
         "targetComponentId": "mgmt-kube-apiserver",
-        "description": "The admin scales the NodePool down. The Management Kube API Server records the lower desired replica count."
+        "description": "The admin scales the NodePool down. Resolves api.<mgmt-hub> to the management API VIP. The Management Kube API Server records the lower desired replica count."
       },
       {
         "step": 2,
