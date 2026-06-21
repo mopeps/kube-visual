@@ -432,6 +432,16 @@ body::after {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--packet) 30%, transparent);
 }
 
+/* Expanding one node-scoped Network card leaves its replica state independent,
+   but lights the same component on the other modeled nodes so the repeated
+   runtime is easy to compare across the three physical placements. */
+.node.is-replica-linked,
+.intent-store-expanded.is-replica-linked {
+  border-color: var(--k-cyan);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--k-cyan) 55%, transparent),
+              0 0 24px color-mix(in srgb, var(--k-cyan) 22%, transparent);
+}
+
 /* Reveal spotlight — a transient pulse in the object's own zone accent, fired
    when the canvas is asked to "find" a component (e.g. via a detail popup's
    location badge). Distinct from .is-active's packet-red so it never reads as

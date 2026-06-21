@@ -167,15 +167,31 @@ export default function OverviewTab({
   // edge (shares the deep-dive sheet with the replica popup).
   const [netSheet, setNetSheet] = useState(null)
   // Which drillable network components the user has collapsed. Default expanded:
-  // an id is in the set only once collapsed; each toggles independently.
+  // an instance-scoped DOM id is in the set only once collapsed, so matching
+  // components on replica nodes still toggle independently.
   const [netCollapsedIds, setNetCollapsedIds] = useState(() => new Set())
-  const toggleNetCollapse = (id) => setNetCollapsedIds((prev) => {
-    const next = new Set(prev)
-    next.has(id) ? next.delete(id) : next.add(id)
-    return next
-  })
-  const allNetCollapsed = DRILLABLE_IDS.every((id) => netCollapsedIds.has(id))
-  const toggleAllNet = () => setNetCollapsedIds(allNetCollapsed ? new Set() : new Set(DRILLABLE_IDS))
+  // Expanding one replica also points out the matching component on the other
+  // modeled nodes. This is a visual relationship only; their open/closed state
+  // remains independent.
+  const [netLinkedExpansion, setNetLinkedExpansion] = useState(null)
+  const toggleNetCollapse = (instanceId, canonicalId) => {
+    const willExpand = netCollapsedIds.has(instanceId)
+    setNetCollapsedIds((prev) => {
+      const next = new Set(prev)
+      next.has(instanceId) ? next.delete(instanceId) : next.add(instanceId)
+      return next
+    })
+    setNetLinkedExpansion(willExpand ? { canonicalId, sourceId: instanceId } : null)
+  }
+  const netColumns = bigView ? NET_PAIRS.map((_, index) => index) : [0]
+  const netInstanceIds = netColumns.flatMap((colIndex) =>
+    DRILLABLE_IDS.map((id) => `nt-c${colIndex}-${id}`)
+  )
+  const allNetCollapsed = netInstanceIds.every((id) => netCollapsedIds.has(id))
+  const toggleAllNet = () => {
+    setNetCollapsedIds(allNetCollapsed ? new Set() : new Set(netInstanceIds))
+    setNetLinkedExpansion(null)
+  }
   // Primitives-mode state: which runtime instances the user has opened. Default
   // COLLAPSED (the inverse of network mode) so the canvas stays quiet and the
   // word "internals" never sits on every card — an id is in the set only once
@@ -347,6 +363,7 @@ export default function OverviewTab({
   function renderNode(node, zone, colIndex = 0) {
     const { isActive, isOnPath, isDimmed } = traceStates(node.id)
     const canonicalId = node.mirror || node.id
+    const netInstanceId = `nt-c${colIndex}-${canonicalId}`
     // Network mode: a drillable component opens in place to show its own internal
     // primitives + integrations inside its own box (never a zone). Takes
     // precedence over the other expand cards (e.g. ovs-guest's realized flows).
@@ -358,9 +375,9 @@ export default function OverviewTab({
           internal={INTERNAL_TOPOLOGY[canonicalId]}
           colIndex={colIndex}
           color={zone.color}
-          domIdOverride={`nt-c${colIndex}-${canonicalId}`}
-          isOpen={!netCollapsedIds.has(canonicalId)}
-          onToggle={() => toggleNetCollapse(canonicalId)}
+          domIdOverride={netInstanceId}
+          isOpen={!netCollapsedIds.has(netInstanceId)}
+          onToggle={() => toggleNetCollapse(netInstanceId, canonicalId)}
           onSelectComponent={onSelectComponent}
           onSelectBox={selectNetBox}
           stepNum={stepNums.get(node.id)}
@@ -368,6 +385,7 @@ export default function OverviewTab({
           isOnPath={isOnPath}
           isDimmed={isDimmed}
           isHighlighted={node.id === highlightId}
+          isReplicaLinked={bigView && netLinkedExpansion?.canonicalId === canonicalId && netLinkedExpansion.sourceId !== netInstanceId}
         />
       )
     }

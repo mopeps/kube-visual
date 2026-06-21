@@ -36,6 +36,7 @@ export default function PrimitiveBoxCard({
   isOnPath = false,
   isDimmed = false,
   isHighlighted = false,
+  isReplicaLinked = false,
 }) {
   const domId = domIdOverride || `${idPrefix}${colIndex}-${node.id}`
   const subId = (id) => `${idPrefix}${colIndex}-${id}`
@@ -324,7 +325,7 @@ export default function PrimitiveBoxCard({
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onToggle() }
         }}
-        className={`node intent-store ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''}`}
+        className={`node intent-store ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''} ${isReplicaLinked ? 'is-replica-linked' : ''}`}
         style={{
           '--node-accent': color,
           background: isActive
@@ -353,7 +354,7 @@ export default function PrimitiveBoxCard({
   return (
     <div
       id={domId}
-      className={`intent-store-expanded primitive-box ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''}`}
+      className={`intent-store-expanded primitive-box ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''} ${isReplicaLinked ? 'is-replica-linked' : ''}`}
       style={{ '--node-accent': color, '--store-accent': color }}
       onClick={(e) => e.stopPropagation()}
     >
