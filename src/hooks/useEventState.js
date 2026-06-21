@@ -11,9 +11,14 @@ export default function useEventState() {
   const [highlightedId, setHighlightedId] = useState(null)
 
   const selectEvent = useCallback((event) => {
-    // Switching/clearing the trace always drops any inspected hop.
-    setActiveStep(null)
-    setActiveEvent(prev => prev?.eventId === event.eventId ? null : event)
+    setActiveEvent(prev => {
+      // Re-selecting the active event clears it (and its hop); selecting a new
+      // one opens the flow navigator on the first hop by default, so the trace
+      // lands engaged rather than waiting for a hop click.
+      const next = prev?.eventId === event.eventId ? null : event
+      setActiveStep(next ? (next.steps[0]?.step ?? null) : null)
+      return next
+    })
   }, [])
 
   const clearEvent = useCallback(() => {

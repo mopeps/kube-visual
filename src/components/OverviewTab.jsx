@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ZONES, INTENT_OBJECT_STORE, CONTROLLER_PARENT, OPERATOR_PARENT, FLOW_PARENT } from '../data/zones'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
@@ -35,6 +35,12 @@ const NETWORK_EDGES_SINGLE = buildNetworkEdges([0])
 // The components that open to an internal topology in Network mode — used by the
 // "collapse all / expand all" control.
 const DRILLABLE_IDS = Object.keys(INTERNAL_TOPOLOGY)
+
+// Resolve the expand-in-place store that holds a nested object — an etcd intent
+// CR, a controller-manager loop, an operator-set Pod, or an Open vSwitch realized
+// flow — or null when the id is an ordinary top-level card.
+const parentStoreOf = (id) =>
+  INTENT_OBJECT_STORE[id] || CONTROLLER_PARENT[id] || OPERATOR_PARENT[id] || FLOW_PARENT[id] || null
 
 // Map componentId → step number it first appears in the active event.
 function buildStepNumMap(activeEvent) {
@@ -261,6 +267,26 @@ export default function OverviewTab({
   const stepNums = buildStepNumMap(activeEvent)
   const hasActive = activeComponentIds && activeComponentIds.size > 0
 
+  // Stores that MUST stay expanded because the active trace references an object
+  // nested inside them (an intent CR, a controller loop, an operator Pod, or a
+  // realized flow) — otherwise that hop's arrow endpoint has no DOM node and
+  // ArrowLines silently drops the step. Derived, not state, so it covers EVERY
+  // referenced store at once (the single `expandedStoreId` could force only one
+  // open) and resolves in the same render the trace changes, so ArrowLines
+  // measures the freshly revealed nodes. A store is open if the user opened it
+  // (expandedStoreId) OR the active trace needs it (here).
+  const forcedStoreIds = useMemo(() => {
+    const set = new Set()
+    if (activeComponentIds) {
+      for (const id of activeComponentIds) {
+        const store = parentStoreOf(id)
+        if (store) set.add(store)
+      }
+    }
+    return set
+  }, [activeComponentIds])
+  const isStoreExpanded = (id) => expandedStoreId === id || forcedStoreIds.has(id)
+
   // Toggle an expand-in-place store (etcd / controller set / operator set /
   // realized flows). On expand, gently scroll the card into the upper third so
   // its freshly revealed objects are in view — a store can be tall (etcd holds
@@ -323,23 +349,9 @@ export default function OverviewTab({
     }
   }, [highlightId, onClearHighlight])
 
-  // When an active trace references an object nested inside an expand-in-place
-  // store (an intent CR, a controller loop, an operator Pod, or a realized
-  // flow), expand that store so the hop's arrow endpoint has a DOM node to
-  // anchor to — otherwise ArrowLines silently drops the step. Keyed on the
-  // memoized id set, so it fires only when the active event changes, never
-  // re-expanding after a manual collapse mid-trace.
-  useEffect(() => {
-    if (!activeComponentIds || activeComponentIds.size === 0) return
-    for (const id of activeComponentIds) {
-      const storeId =
-        INTENT_OBJECT_STORE[id] ||
-        CONTROLLER_PARENT[id] ||
-        OPERATOR_PARENT[id] ||
-        FLOW_PARENT[id]
-      if (storeId) { setExpandedStoreId(storeId); break }
-    }
-  }, [activeComponentIds])
+  // (Stores referenced by the active trace are forced open via `forcedStoreIds`
+  // above — derived in render so every referenced store opens at once and the
+  // arrow endpoints resolve in the same pass.)
 
   // Trace-only zones (e.g. the external Client) stay hidden until an active
   // trace flow actually references a node inside them.
@@ -432,7 +444,7 @@ export default function OverviewTab({
           isDimmed={isDimmed}
           isHighlighted={node.id === highlightId}
           highlightId={highlightId}
-          isExpanded={expandedStoreId === node.id}
+          isExpanded={isStoreExpanded(node.id)}
           onToggle={() => toggleStore(node.id)}
           onSelectComponent={onSelectComponent}
         />
@@ -452,7 +464,7 @@ export default function OverviewTab({
           isDimmed={isDimmed}
           isHighlighted={node.id === highlightId}
           highlightId={highlightId}
-          isExpanded={expandedStoreId === node.id}
+          isExpanded={isStoreExpanded(node.id)}
           onToggle={() => toggleStore(node.id)}
           onSelectComponent={onSelectComponent}
         />
@@ -473,7 +485,7 @@ export default function OverviewTab({
           isDimmed={isDimmed}
           isHighlighted={node.id === highlightId}
           highlightId={highlightId}
-          isExpanded={expandedStoreId === node.id}
+          isExpanded={isStoreExpanded(node.id)}
           onToggle={() => toggleStore(node.id)}
           onSelectComponent={onSelectComponent}
         />
@@ -493,7 +505,7 @@ export default function OverviewTab({
           isDimmed={isDimmed}
           isHighlighted={node.id === highlightId}
           highlightId={highlightId}
-          isExpanded={expandedStoreId === node.id}
+          isExpanded={isStoreExpanded(node.id)}
           onToggle={() => toggleStore(node.id)}
           onSelectComponent={onSelectComponent}
         />
