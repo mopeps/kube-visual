@@ -26,9 +26,9 @@ manifest-to-kernel pipeline, and copy-paste exploration commands.
 - **Event-driven tracing** — pick a flow from the trace selector to highlight the
   involved nodes, stamp them with `01`/`02` step badges, and draw numbered SVG
   connectors that auto-recompute on resize.
-- **Three views** — *Architecture Overview* (the zoned diagram), *Step-by-Step Packet
-  Flow* (the active trace as an expandable hop list), and *K8s Object Map* (a flat
-  table mapping every component to its K8s kind and backing Linux primitive).
+- **Three views** — *Deep Dive* (ground-up Linux, HCP, and OVN explainers),
+  *Architecture Overview* (Architecture and Network lenses with one-pair/all-node
+  scope), and *Packet Flow* (the active trace as an expandable hop list).
 - **Etcd intent stores** — the Management and Guest etcd nodes expand in place to
   reveal the desired-state records they persist (Custom Resources / API objects),
   which deliberately have no card of their own on the canvas.
@@ -39,13 +39,15 @@ manifest-to-kernel pipeline, and copy-paste exploration commands.
 
 ## Quick Start
 
-**Requirements:** Node.js 18+
+**Requirements:** Node.js 20.19+ or 22.12+
 
 ```bash
 git clone https://github.com/mopeps/kube-visual.git
 cd kube-visual
 npm install
 npm run dev      # → http://localhost:5173
+npm test         # validate component, topology, event, and deep-dive references
+npm run check    # validation + production build
 ```
 
 ## Adding Events
@@ -77,7 +79,7 @@ unknown or duplicate id silently drops that connector.
 
 Inspector data lives in `src/data/components.json`. See **"Adding a New Component"** in
 `ARCHITECTURE.md` for the full checklist (it touches `components.json`, `zones.js`,
-`ObjectMapTab.jsx`, and optionally `events.json`).
+and optionally `events.json`, manifests, primitives, and network internals).
 
 ```json
 {
@@ -95,37 +97,28 @@ Inspector data lives in `src/data/components.json`. See **"Adding a New Componen
 
 ```
 src/
-├── App.jsx                  # shell: header, legend, trace selector, tabs, modals
-├── index.css                # design tokens + component styles
+├── App.jsx                    # shell, tabs, lenses, modals, docked readers
+├── index.css                  # design tokens and component/layout styles
 ├── data/
-│   ├── components.json       # per-component metadata (the inspector source)
-│   ├── events.json           # ordered trace-flow step lists
-│   ├── zones.js              # recursive ZONES tree + derived COMPONENT_* maps
-│   ├── primitives.js         # kernel/OS/virt primitives keyed by typePrefix
-│   ├── pipeline-layers.js    # the Manifest → Kernel band definitions
-│   ├── pipeline-model.js     # builds a component's pipeline-tree band model
-│   ├── interaction-kinds.js  # classifies interaction sentences for the inspector
-│   ├── object-tags.js        # turns object names in prose into clickable chips
-│   └── badge-glossary.js     # explanations shown when a badge chip is clicked
+│   ├── components.json        # component metadata and detail content
+│   ├── events.json            # ordered trace-flow hops
+│   ├── zones.js               # recursive Overview topology and replica placement
+│   ├── deep-dives.js          # Deep Dive topic trees
+│   ├── ovn-topology.js        # shared OVN teaching topology
+│   └── network-internals.js   # Network-lens primitives and connector edges
 ├── components/
-│   ├── Tabs.jsx              # tab navigation
-│   ├── EventSelector.jsx     # trace-flow dropdown
-│   ├── OverviewTab.jsx       # renders the ZONES tree + ArrowOverlay
-│   ├── Zone.jsx              # one labeled zone (recurses into child zones)
-│   ├── NodeCard.jsx          # one box inside a zone
-│   ├── IntentStoreCard.jsx   # an etcd node that expands to show its records
-│   ├── ArrowOverlay.jsx      # SVG layer: numbered bezier connectors for a trace
-│   ├── PacketFlowTab.jsx     # the active trace as an expandable hop list
-│   ├── HopInspector.jsx      # bottom-docked single-hop reader (Overview tab)
-│   ├── ObjectMapTab.jsx      # component → kind → Linux primitive table
-│   ├── AncestryModal.jsx     # node detail sheet (portal)
-│   ├── DetailSections.jsx    # tags, context, primitives, interactions, commands
-│   ├── PipelineTree.jsx      # the Manifest → Kernel ASCII-style tree
-│   ├── InteractionList.jsx   # classified interaction rows
-│   ├── ObjectText.jsx        # prose with inline object-reference chips
-│   └── ExploreCommands.jsx   # copyable shell-command blocks
+│   ├── OverviewTab.jsx        # Architecture/Network canvas
+│   ├── PacketFlowTab.jsx      # trace gallery and hop list
+│   ├── DeepDiveTab.jsx        # topic picker and deep-dive canvas
+│   ├── ArrowLines.jsx         # shared measured SVG connector core
+│   ├── PrimitiveBoxCard.jsx   # in-place runtime/network internals
+│   └── AncestryModal.jsx      # component detail sheet
 └── hooks/
-    └── useEventState.js      # active event / selected component / inspected hop
+    ├── useEventState.js       # Overview trace/component state
+    ├── useFlowState.js        # Deep Dive trace state
+    └── useDialogFocus.js      # shared modal keyboard/focus contract
+scripts/
+└── validate-data.mjs          # graph/schema integrity checks used by CI
 ```
 
 ## Tech Stack
@@ -143,6 +136,7 @@ SVG that measures node bounding rects), **not** by a library.
 
 ```bash
 npm run build    # → ./dist
+npm run check    # validate data, then build
 npm run preview  # serve the production build locally
 ```
 
