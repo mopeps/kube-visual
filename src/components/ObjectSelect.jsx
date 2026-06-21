@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 // A compact picker styled in the app's "open an object" idiom (cf. the etcd
 // IntentStoreCard): a clickable trigger card that opens a FLOATING popover list
@@ -30,6 +30,24 @@ export default function ObjectSelect({
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const ref = useRef(null)
+  const triggerRef = useRef(null)
+  const optionRefs = useRef([])
+  const focusOnOpen = useRef(false)
+  const [focusIndex, setFocusIndex] = useState(0)
+  const listId = useId()
+
+  const focusOption = (index) => {
+    const bounded = Math.max(0, Math.min(index, options.length - 1))
+    setFocusIndex(bounded)
+    requestAnimationFrame(() => optionRefs.current[bounded]?.focus())
+  }
+
+  useEffect(() => {
+    if (!open || !focusOnOpen.current) return
+    focusOnOpen.current = false
+    const selected = options.findIndex((option) => option.id === activeId)
+    focusOption(selected >= 0 ? selected : 0)
+  }, [open, activeId, options])
 
   // While open, close on Escape or on a pointer-down anywhere outside the card.
   useEffect(() => {
@@ -52,7 +70,38 @@ export default function ObjectSelect({
     }
   }, [open])
 
-  const pick = (opt) => { onSelect(opt); setOpen(false) }
+  const closeAndFocus = () => {
+    setOpen(false)
+    requestAnimationFrame(() => triggerRef.current?.focus())
+  }
+  const pick = (opt) => { onSelect(opt); closeAndFocus() }
+
+  const onTriggerKeyDown = (event) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+    event.preventDefault()
+    focusOnOpen.current = true
+    setFocusIndex(event.key === 'ArrowUp' ? options.length - 1 : 0)
+    setOpen(true)
+  }
+
+  const onOptionKeyDown = (event, index) => {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeAndFocus()
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      focusOption((index + 1) % options.length)
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      focusOption((index - 1 + options.length) % options.length)
+    } else if (event.key === 'Home') {
+      event.preventDefault()
+      focusOption(0)
+    } else if (event.key === 'End') {
+      event.preventDefault()
+      focusOption(options.length - 1)
+    }
+  }
 
   // Strip the leading glyph (× / ←) from the clear label for the icon button's
   // accessible name, since the × itself already reads as the clear glyph.
@@ -62,11 +111,14 @@ export default function ObjectSelect({
     <div className="obj-select" ref={ref} style={{ '--obj-accent': accent }}>
       <div className="obj-select-control">
         <button
+          ref={triggerRef}
           type="button"
           className={`obj-select-trigger ${open ? 'is-open' : ''}`}
           aria-haspopup="listbox"
           aria-expanded={open}
+          aria-controls={listId}
           onClick={() => setOpen((o) => !o)}
+          onKeyDown={onTriggerKeyDown}
         >
           <span className="obj-select-label">{label}</span>
           {value?.icon && <span className="obj-select-icon" aria-hidden>{value.icon}</span>}
@@ -97,16 +149,19 @@ export default function ObjectSelect({
       </div>
 
       {open && (
-        <div className="obj-select-pop" role="listbox">
-          {options.map((opt) => (
+        <div className="obj-select-pop" id={listId} role="listbox" aria-label={label}>
+          {options.map((opt, index) => (
             <button
+              ref={(element) => { optionRefs.current[index] = element }}
               type="button"
               key={opt.id}
               role="option"
               aria-selected={opt.id === activeId}
+              tabIndex={index === focusIndex ? 0 : -1}
               className={`obj-select-option ${opt.id === activeId ? 'is-active' : ''}`}
               style={{ '--opt-accent': opt.accent || accent }}
               onClick={() => pick(opt)}
+              onKeyDown={(event) => onOptionKeyDown(event, index)}
             >
               <span className="obj-select-option-main">
                 {opt.icon && <span className="obj-select-icon" aria-hidden>{opt.icon}</span>}

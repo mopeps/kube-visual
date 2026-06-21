@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { SEARCH_RECORDS, KIND_ORDER, KIND_LABEL } from '../data/search-index'
 import { scoreRecord } from '../lib/fuzzy'
+import useDialogFocus from '../hooks/useDialogFocus'
 
 // How many results to surface at once — enough to span a few kinds, capped so
 // the list stays a quick scan rather than a wall.
@@ -23,15 +24,15 @@ export default function SearchPalette({ open, onClose, onSelect }) {
   const [active, setActive] = useState(0)
   const inputRef = useRef(null)
   const listRef = useRef(null)
+  const dialogRef = useRef(null)
 
-  // Reset the query each time the palette opens, and move focus into the input.
+  useDialogFocus(open, dialogRef, onClose, { initialFocusRef: inputRef })
+
+  // Reset the query each time the palette opens.
   useEffect(() => {
     if (!open) return
     setQuery('')
     setActive(0)
-    // Focus after paint so the autoFocus race with the portal mount is avoided.
-    const raf = requestAnimationFrame(() => inputRef.current?.focus())
-    return () => cancelAnimationFrame(raf)
   }, [open])
 
   // Score → sort → cap → group. The flat `ordered` list mirrors render order so
@@ -93,7 +94,7 @@ export default function SearchPalette({ open, onClose, onSelect }) {
       className="search-overlay animate-fade-in"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="search-palette" role="dialog" aria-modal="true" aria-label="Search">
+      <div ref={dialogRef} className="search-palette" role="dialog" aria-modal="true" aria-label="Search" tabIndex={-1}>
         <div className="search-input-row">
           <span className="search-input-icon" aria-hidden>⌕</span>
           <input
@@ -114,7 +115,7 @@ export default function SearchPalette({ open, onClose, onSelect }) {
           <button className="search-close" onClick={onClose} aria-label="Close (Esc)">✕</button>
         </div>
 
-        <div className="search-results" id="search-results" ref={listRef}>
+        <div className="search-results" id="search-results" ref={listRef} role="listbox" aria-label="Search results">
           {!q && (
             <p className="search-hint">
               Type to fuzzy-search components, deep dives, sections, and trace flows.
@@ -133,7 +134,7 @@ export default function SearchPalette({ open, onClose, onSelect }) {
                 return (
                   <button
                     type="button"
-                    key={`${rec.kind}-${rec.id}`}
+                    key={`${rec.kind}-${rec.topicId || 'root'}-${rec.id}`}
                     id={`search-opt-${idx}`}
                     data-idx={idx}
                     role="option"

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import useDialogFocus from '../hooks/useDialogFocus'
 import { findComponent } from '../data/components-index'
 import { COMPONENT_COLOR, COMPONENT_ZONE } from '../data/zones'
 import { buildPipeline } from '../data/pipeline-model'
@@ -50,26 +51,17 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
   // architecture overview behind it stays both visible and scrollable.
   const peek = sheetHeight != null
 
-  // Esc to close + reset transient gesture state whenever a new component opens.
+  useDialogFocus(!!componentId, modalRef, onClose, { modal: !peek })
+
+  // Reset transient gesture state whenever a new component opens.
   // Sheet height is intentionally NOT reset — the size the user picked sticks.
-  // Also manage focus: move it into the dialog on open and return it to whatever
-  // was focused (the card that opened the sheet) on close, so keyboard / screen-
-  // reader users aren't stranded behind the modal.
   useEffect(() => {
     if (!componentId) return
     setOffset(0)
     setSnapping(false)
     setTreeOpen(true)
     drag.current = { startY: 0, atTop: false, mode: 'scroll' }
-    const opener = document.activeElement
-    modalRef.current?.focus()
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      if (opener instanceof HTMLElement) opener.focus()
-    }
-  }, [componentId, onClose])
+  }, [componentId])
 
   // Lock the page behind the modal so it can't scroll while open. Pins <body>
   // at its current scroll position and restores it on close so the page doesn't
@@ -274,7 +266,7 @@ export default function AncestryModal({ componentId, onClose, onSelectComponent,
         ref={modalRef}
         className="ancestry-modal"
         role="dialog"
-        aria-modal="true"
+        aria-modal={peek ? undefined : 'true'}
         aria-label={component.displayName}
         tabIndex={-1}
         style={{

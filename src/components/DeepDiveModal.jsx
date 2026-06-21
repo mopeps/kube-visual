@@ -7,6 +7,7 @@ import DeepTree from './DeepTree'
 import { KindIcon } from './InteractionRow'
 import { classifyInteraction } from '../data/interaction-kinds'
 import { findComponent } from '../data/components-index'
+import useDialogFocus from '../hooks/useDialogFocus'
 
 // A detail popup for a deep-dive box. Shares AncestryModal's look, gestures and
 // CSS classes (.ancestry-overlay / .ancestry-modal / grip-resize / swipe-dismiss
@@ -35,15 +36,14 @@ export default function DeepDiveModal({ content, onClose, onSelectComponent }) {
   const peek = sheetHeight != null
   const key = content?.id
 
+  useDialogFocus(!!key, modalRef, onClose, { modal: !peek })
+
   useEffect(() => {
     if (!key) return
     setOffset(0)
     setSnapping(false)
     drag.current = { startY: 0, atTop: false, mode: 'scroll' }
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [key, onClose])
+  }, [key])
 
   // Lock the page behind the modal (skipped in peek mode). Mirrors AncestryModal.
   useEffect(() => {
@@ -174,8 +174,9 @@ export default function DeepDiveModal({ content, onClose, onSelectComponent }) {
         ref={modalRef}
         className="ancestry-modal"
         role="dialog"
-        aria-modal="true"
+        aria-modal={peek ? undefined : 'true'}
         aria-label={title}
+        tabIndex={-1}
         style={{
           height: sheetHeight != null ? `${sheetHeight}px` : undefined,
           transform: offset > 0 ? `translateY(${offset}px)` : undefined,

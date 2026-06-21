@@ -16,7 +16,7 @@ import useMediaQuery from '../hooks/useMediaQuery'
 const THRESHOLD = 0.22 // fraction of width that commits to the next panel
 const LOCK = 8 // px of travel before we decide the gesture's axis
 
-export default function SwipeViews({ index, count, onIndexChange, onActiveScroll, children }) {
+export default function SwipeViews({ index, count, tabs, onIndexChange, onActiveScroll, children }) {
   const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const viewportRef = useRef(null)
   const paneRefs = useRef([])
@@ -108,6 +108,9 @@ export default function SwipeViews({ index, count, onIndexChange, onActiveScroll
           <div
             className="swipe-pane"
             key={i}
+            id={`panel-${tabs[i].id}`}
+            role="tabpanel"
+            aria-labelledby={`tab-${tabs[i].id}`}
             ref={(el) => { paneRefs.current[i] = el }}
             onScroll={(e) => { if (i === index) onActiveScroll?.(e.currentTarget.scrollTop) }}
             aria-hidden={i !== index}

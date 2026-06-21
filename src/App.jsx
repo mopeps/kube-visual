@@ -467,6 +467,7 @@ export default function App() {
               <SwipeViews
                 index={activeIndex}
                 count={visibleTabs.length}
+                tabs={visibleTabs}
                 onIndexChange={(i) => changeTab(visibleTabs[i].id)}
                 onActiveScroll={handleActiveScroll}
               >
@@ -480,7 +481,12 @@ export default function App() {
             {docked ? (
           // Wide desktop with the flow docked: overview + flow, side by side.
           <div className="pt-6 dock-layout">
-            <div className="dock-main min-w-0">{panelFor(tab)}</div>
+            <div
+              className="dock-main min-w-0"
+              id={`panel-${tab}`}
+              role="tabpanel"
+              aria-labelledby={`tab-${tab}`}
+            >{panelFor(tab)}</div>
             <aside className="dock-panel">
               <div className="dock-panel-head">
                 <span className="dock-panel-title">Packet Flow</span>
@@ -507,7 +513,13 @@ export default function App() {
           </div>
             ) : (
               // Mid-width desktop: classic single-column tabs.
-              <div className="pt-6 animate-fade-in" key={tab}>
+              <div
+                className="pt-6 animate-fade-in"
+                key={tab}
+                id={`panel-${tab}`}
+                role="tabpanel"
+                aria-labelledby={`tab-${tab}`}
+              >
                 {panelFor(tab)}
               </div>
             )}
