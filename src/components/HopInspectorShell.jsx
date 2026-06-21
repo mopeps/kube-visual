@@ -38,8 +38,6 @@ export default function HopInspectorShell({
   total,
   source,
   target,
-  sourceLayer,
-  targetLayer,
   description,
   auth,
   onPrev,
@@ -110,14 +108,6 @@ export default function HopInspectorShell({
         <span className="hop-inspector-arrow" aria-hidden>→</span>
         <RouteEnd typePrefix={target?.typePrefix} name={target?.name} color={color} />
       </div>
-
-      {(sourceLayer || targetLayer) && (
-        <div className="hop-inspector-layers">
-          <span>{sourceLayer || ''}</span>
-          <span className="hop-inspector-arrow">→</span>
-          <span style={{ color }}>{targetLayer || ''}</span>
-        </div>
-      )}
 
       <ul className="hop-points hop-inspector-points">
         {points.map((p, i) => (

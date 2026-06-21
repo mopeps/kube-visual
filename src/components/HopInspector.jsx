@@ -33,8 +33,6 @@ export default function HopInspector({ activeEvent, activeStep, onSelectStep, on
       total={steps.length}
       source={{ typePrefix: source?.typePrefix, name: source?.displayName || step.sourceComponentId }}
       target={{ typePrefix: target?.typePrefix, name: target?.displayName || step.targetComponentId }}
-      sourceLayer={source?.layer}
-      targetLayer={target?.layer}
       description={step.description}
       auth={step.auth}
       onPrev={() => goto(-1)}

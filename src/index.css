@@ -3940,8 +3940,8 @@ button.object-tag:hover {
   width: calc(100% - 24px);
   max-width: 680px;
   /* Height is grip-resizable (set inline by useDockPanel, default ≈ a third of
-     the viewport). It's a flex column: the grip, bar, route and layers stay
-     pinned and the glyph-bullet detail scrolls within when a hop runs long. */
+     the viewport). It's a flex column: the grip, bar and route stay pinned and
+     the glyph-bullet detail scrolls within when a hop runs long. */
   min-height: 150px;
   max-height: 92vh;
   display: flex;
@@ -4078,19 +4078,6 @@ button.object-tag:hover {
   }
   .hop-inspector-close { margin-left: 16px; }
   .recon-nav-controls { gap: 8px; }
-}
-.hop-inspector-layers {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  flex: 0 0 auto;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--tx-muted);
 }
 /* The step detail, as the same glyph + keyword bullets the Packet Flow cards use
    (one per sentence) rather than a wall of prose. Takes the panel's slack and

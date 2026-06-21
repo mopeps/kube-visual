@@ -30,8 +30,6 @@ export default function DeepDiveHopInspector({ boxIndex, activeFlow, activeStep,
       total={steps.length}
       source={{ typePrefix: source?.box.typePrefix, name: source?.box.title || step.sourceBoxId }}
       target={{ typePrefix: target?.box.typePrefix, name: target?.box.title || step.targetBoxId }}
-      sourceLayer={source?.zone.label}
-      targetLayer={target?.zone.label}
       description={step.description}
       onPrev={() => goto(-1)}
       onNext={() => goto(1)}
