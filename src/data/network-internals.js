@@ -436,19 +436,22 @@ const ovnNodeEdges = (nodeId) => [
 ]
 
 // Cross-card links between an ovnkube-node and its OVS — these would thread
-// through other boxes, so they route down the side rail (card-level anchors).
+// through other boxes, so they route down the side rail (interface-level anchors:
+// each link leaves the actual interface/daemon it flows through, not the card —
+// ovn-controller's db.sock, the CNI's veth, the NB DB rows realized on br-int).
 const ovnNodeToOvsEdges = (nodeId, ovsId) => [
-  railEdge(nodeId, ovsId, 'db.sock', 'k-teal',
+  railEdge(`${nodeId}__controller`, `${ovsId}__vswitchd`, 'db.sock', 'k-teal',
     'ovn-controller → ovs-vswitchd', 'ovn-controller compiles SB flows into OpenFlow and pushes them into ovs-vswitchd over /var/run/openvswitch/db.sock.'),
-  railEdge(nodeId, ovsId, 'veth', 'k-blue',
+  railEdge(`${nodeId}__cni`, `${ovsId}__veth`, 'veth', 'k-blue',
     'CNI → br-int', 'The CNI plugin plugs each pod’s host-side veth into br-int as its logical switch port.'),
-  railEdge(nodeId, ovsId, 'realized as', 'k-green',
+  railEdge(`${nodeId}__nbdb`, `${ovsId}__brint`, 'realized as', 'k-green',
     'NB-DB rows → br-int flows', 'This node’s own Load_Balancer / ACL rows are realized as DNAT / allow-drop OpenFlow on its br-int — declaration and datapath on the same node.'),
 ]
 
-// The lightweight control plane hands each ovnkube-node its pod subnet.
+// The lightweight control plane hands each ovnkube-node its pod subnet — written
+// into the node's own Northbound DB.
 const subnetEdge = (cpId, nodeId) =>
-  railEdge(cpId, nodeId, 'pod subnet', 'k-sky',
+  railEdge(`${cpId}__clustermgr`, `${nodeId}__nbdb`, 'pod subnet', 'k-sky',
     'ovnkube-control-plane → node', 'The cluster manager assigns this node its /23 pod subnet and interconnect config; the node’s own nbdb does the rest.')
 
 const BASE_EDGES = [
@@ -468,16 +471,17 @@ const BASE_EDGES = [
   subnetEdge('ovn-control-mgmt', 'ovn-node-master'),
   subnetEdge('ovn-control-mgmt', 'ovn-node-host'),
   subnetEdge('ovn-master-control', 'ovn-node-guest'),
-  // MetalLB L2: the elected speaker injects the VIP's GARP out br-ex.
-  railEdge('metallb-speaker-master', 'ovs-master', 'GARP', 'k-orange',
+  // MetalLB L2: the elected speaker injects the VIP's GARP out br-ex — from the
+  // raw AF_PACKET socket onto the provider bridge.
+  railEdge('metallb-speaker-master__rawsock', 'ovs-master__brex', 'GARP', 'k-orange',
     'MetalLB Speaker → br-ex', 'A Gratuitous ARP for the VIP, injected onto br-ex via a raw AF_PACKET socket, claiming the VIP for this node’s MAC.'),
-  railEdge('metallb-speaker-worker', 'ovs-host', 'GARP', 'k-orange',
+  railEdge('metallb-speaker-worker__rawsock', 'ovs-host__brex', 'GARP', 'k-orange',
     'MetalLB Speaker → br-ex', 'The elected worker injects the VIP’s Gratuitous ARP onto br-ex.'),
-  // The VM's tap0 is plugged into the guest br-int as an OVS port.
-  railEdge('multus-guest', 'ovs-guest', 'tap0 → br-int', 'k-purple',
+  // The VM's tap0 is plugged into the guest br-int as an OVS port (tap0 → tap0).
+  railEdge('multus-guest__tap0', 'ovs-guest__tap0', 'tap0 → br-int', 'k-purple',
     'Multus → br-int', 'Multus delegates to ovn-k8s-cni, which plugs the VM’s tap0 into br-int — the VM joins the OVN logical network like any pod.'),
   // ── Long cross-column link — also down the side rail ─────────────────────
-  railEdge('konnectivity-server', 'konnectivity-agent', 'control tunnel', 'k-sky',
+  railEdge('konnectivity-server__tunnel', 'konnectivity-agent', 'control tunnel', 'k-sky',
     'Konnectivity Server → Agent', 'A persistent encrypted HTTP/2 tunnel opened by the agent up to the server; control traffic for the node rides back down it.'),
   // ── Control plane → data plane: the operators that PROGRAM the SDN ─────────
   // These operators don't move packets and don't drill to a kernel datapath —
