@@ -386,6 +386,9 @@ export default function OverviewTab({
           node={node}
           internal={INTERNAL_TOPOLOGY[canonicalId]}
           colIndex={colIndex}
+          // No "internals" label beside the chevron — the drill chevron alone
+          // signals the box opens.
+          hint={null}
           color={zone.color}
           domIdOverride={netInstanceId}
           isOpen={!netCollapsedIds.has(netInstanceId)}
@@ -534,10 +537,9 @@ export default function OverviewTab({
         // In network mode the surfaced control-plane components (CNO / Ingress /
         // DNS operators, the kubevirt CCM, the MetalLB Controller) don't drill to a
         // datapath — they read as control plane that configures the components
-        // below them (wired by a "configures" edge). `net-control-plane` re-shows
-        // the subtitle (hidden for other net cards) and draws the card dashed =
-        // not the realized datapath.
-        subtitle={netOverlay && NETWORK_CONTROL_PLANE_IDS.has(canonicalId) ? 'control plane · configures' : undefined}
+        // below them (wired by a "configures" edge). `net-control-plane` draws the
+        // card dashed = not the realized datapath (no descriptive subtitle — that
+        // role reads from the dashed style + the "configures" edge).
         className={netOverlay && NETWORK_CONTROL_PLANE_IDS.has(canonicalId) ? 'net-control-plane' : undefined}
         replicaBadge={node.replicaBadge}
         // Open the canonical component's modal regardless of the (possibly
