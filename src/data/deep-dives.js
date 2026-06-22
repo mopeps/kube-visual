@@ -3679,6 +3679,22 @@ const CLUSTER_PKI = {
           description: 'The kubelet installs its signed, node-specific cert and discards the bootstrap credential. The trust chain now reaches from the mint a cluster up all the way down to this node.' },
       ],
     },
+    {
+      flowId: 'pki-rotate',
+      flowName: 'Rotation & renewal',
+      description:
+        'Certs are not minted once and forgotten — every one has an expiry, so the platform re-issues them on a schedule. Leaf certs are re-minted in place and their consumers rolled; nodes renew their own certs with a fresh CSR; and rotating a CA is the careful case, needing a trust-bundle overlap so nothing rejects a still-valid peer mid-rotation.',
+      steps: [
+        { step: 1, sourceBoxId: 'pki-rotation', targetBoxId: 'pki-secrets',
+          description: 'Before a leaf cert reaches its expiry the rotation controllers re-issue it and overwrite its Secret in place — new key and validity window, same Secret name, so every mount of it stays valid.' },
+        { step: 2, sourceBoxId: 'pki-secrets', targetBoxId: 'pki-roll',
+          description: 'A new Secret does nothing until the process loads it: consumers either watch the file and reload, or are rolled (a Deployment restart) — gated by readiness so a bad cert halts the rollout with old Pods still serving.' },
+        { step: 3, sourceBoxId: 'pki-kubelet-rotate', targetBoxId: 'pki-signer',
+          description: 'Out at the nodes, each kubelet renews its own cert before expiry with a fresh CSR the KCM signer re-issues — node identity rotates with no bootstrap credential and no re-run of Ignition.' },
+        { step: 4, sourceBoxId: 'pki-rotation', targetBoxId: 'pki-ca-overlap', bow: 52,
+          description: 'Rotating a CA is heavier: the new CA is published into every trust bundle first (an overlap window where both are trusted) before any cert it signs is served and before the old CA is retired — so no peer rejects a still-valid certificate mid-rotation.' },
+      ],
+    },
   ],
   zones: [
     {
@@ -3730,6 +3746,25 @@ const CLUSTER_PKI = {
               { heading: 'Note', bullets: [
                 'HyperShift rotates these on a schedule: rotation re-writes the Secret and rolls the consumers that mount it.',
               ] },
+            ],
+          },
+        },
+        {
+          id: 'pki-sa-signer',
+          title: 'SA token-signing key',
+          typePrefix: 'KEYPAIR',
+          subtitle: 'signs every ServiceAccount token — not a CA',
+          detail: {
+            role: 'TOKEN SIGNING',
+            summary:
+              'Distinct from the X.509 CAs: a plain signing keypair the API server uses to sign and verify projected ServiceAccount tokens (JWTs). The CPO mints it into a Secret alongside the rest of the PKI, but it issues no certificates.',
+            sections: [
+              { heading: 'Interactions', bullets: [
+                'The API server signs each projected SA token with the private key and verifies presented tokens with the public key.',
+                'Minted by the CPO as a Secret in the HCP namespace, like the CAs — but it signs JWTs, not certs.',
+                'Rotating it invalidates outstanding tokens; bound tokens are short-lived, so the churn is small.',
+              ] },
+              { heading: 'See also', body: 'The “SA token” authentication chip on the packet flows — this is the key behind that TokenReview.' },
             ],
           },
         },
@@ -3916,6 +3951,152 @@ const CLUSTER_PKI = {
                 'Hands the kubelet a signed cert, after which it drops the bootstrap credential.',
               ] },
               { heading: 'The chain', body: 'CPO mints the CA → Ignition hands the node the bootstrap credential → kubelet asks (CSR) → approver permits → KCM signer issues from that same CA. Every node cert traces back to the mint a cluster up.' },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'pki-serving-zone',
+      label: 'In-cluster serving certs · service-ca',
+      colorVar: 'k-sky',
+      boxes: [
+        {
+          id: 'pki-service-ca',
+          title: 'service-ca operator',
+          typePrefix: 'SIGNER',
+          subtitle: 'a second CA, inside the guest, for Service TLS',
+          detail: {
+            role: 'IN-CLUSTER CA',
+            summary:
+              'Separate from the control-plane PKI above: a CA run inside the guest cluster that issues serving certs for Services, so in-cluster TLS (webhooks, metrics endpoints, operands) works without anyone hand-managing certificates.',
+            sections: [
+              { heading: 'Interactions', bullets: [
+                'Watches Services annotated service.beta.openshift.io/serving-cert-secret-name=<name>.',
+                'Issues a serving cert valid for <service>.<namespace>.svc and writes it into that Secret.',
+                'Rotates the serving certs — and its own CA — automatically before expiry.',
+              ] },
+              { heading: 'Explore', commands: [
+                '# Ask service-ca for a serving cert for a Service\noc annotate service <svc> service.beta.openshift.io/serving-cert-secret-name=<svc>-tls',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'pki-serving-secret',
+          title: 'serving-cert Secret',
+          typePrefix: 'Secret',
+          subtitle: 'tls.crt / tls.key for <svc>.<ns>.svc',
+          detail: {
+            role: 'GENERATED CERT',
+            summary:
+              'The serving cert the service-ca signed, mounted by the workload behind the Service to terminate TLS on its ClusterIP — no CSR, no manual signing.',
+            sections: [
+              { heading: 'Interactions', bullets: [
+                'Holds the cert + key valid for the Service’s in-cluster DNS name.',
+                'Re-generated automatically as it nears expiry or the Service changes.',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'pki-trust-bundle',
+          title: 'service-ca.crt · kube-root-ca.crt',
+          typePrefix: 'ConfigMap',
+          subtitle: 'trust anchors auto-injected into every namespace',
+          detail: {
+            role: 'TRUST DISTRIBUTION',
+            summary:
+              'How a pod knows whom to trust without shipping a CA: OpenShift injects two ConfigMaps into every namespace — kube-root-ca.crt (the API server’s CA) and service-ca.crt (the service-ca’s CA) — and pods mount them as their trust bundle.',
+            sections: [
+              { heading: 'The two bundles', facts: [
+                { k: 'kube-root-ca.crt', v: 'verify the kube-apiserver' },
+                { k: 'service-ca.crt', v: 'verify any service-ca-signed serving cert' },
+              ] },
+              { heading: 'Note', bullets: [
+                'Mounted as a projected volume; refreshed in place when the CA rotates, so trust follows rotation automatically.',
+              ] },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'pki-rotation-zone',
+      label: 'Rotation & renewal',
+      colorVar: 'k-green',
+      boxes: [
+        {
+          id: 'pki-rotation',
+          title: 'Cert rotation controllers',
+          typePrefix: 'CONTROLLER',
+          subtitle: 're-mint before expiry, in place',
+          detail: {
+            role: 'RENEWAL',
+            summary:
+              'HyperShift / library-go rotation controllers watch each cert’s validity window and re-issue it well before expiry — overwriting the Secret in place so the name, and every mount of it, stays stable.',
+            sections: [
+              { heading: 'Interactions', bullets: [
+                'Re-issue each leaf cert ahead of expiry and overwrite its Secret in place.',
+                'Keep the Secret name stable so consumers’ volume mounts never change.',
+                'Stagger renewals so the whole control plane doesn’t rotate at once.',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'pki-roll',
+          title: 'Roll the consumers',
+          typePrefix: 'ROLLOUT',
+          subtitle: 'remount + reload, or restart',
+          detail: {
+            role: 'PICK-UP',
+            summary:
+              'A re-minted Secret does nothing until the process using it loads the new material. Some components watch the file and reload; others are rolled — a Deployment restart — so the new cert takes effect.',
+            sections: [
+              { heading: 'Interactions', bullets: [
+                'Projected-volume mounts update in place; the process must re-read the file or be sent a reload.',
+                'Where hot-reload isn’t supported, the operator rolls the Deployment.',
+                'Readiness gates the rollout, so a bad cert halts it with the old Pods still serving.',
+              ] },
+            ],
+          },
+        },
+        {
+          id: 'pki-kubelet-rotate',
+          title: 'Kubelet cert renewal',
+          typePrefix: 'CSR',
+          subtitle: 'a renewal CSR — no re-bootstrap',
+          detail: {
+            role: 'NODE RENEWAL',
+            summary:
+              'A node renews its cert the same way it first earned it: before the client cert expires the kubelet submits a fresh CSR and the KCM signer re-issues it — so node identity rotates without re-running Ignition.',
+            sections: [
+              { heading: 'Interactions', bullets: [
+                'The kubelet auto-submits a renewal CSR ahead of its cert’s expiry.',
+                'machine-approver approves it and the KCM signer re-issues from the kubelet CA.',
+                'No bootstrap credential is needed — the still-valid current cert authorizes the renewal.',
+              ] },
+              { heading: 'See also', body: 'The “A node earns its cert” flow above: renewal walks the same CSR → approve → sign path, minus the bootstrap step.' },
+            ],
+          },
+        },
+        {
+          id: 'pki-ca-overlap',
+          title: 'CA rotation = overlap',
+          typePrefix: 'CA',
+          subtitle: 'trust the new before retiring the old',
+          detail: {
+            role: 'THE HARD CASE',
+            summary:
+              'Rotating a CA is heavier than a leaf: the new CA must be present in every trust bundle — an overlap window where both old and new are trusted — before any cert it signs is served and before the old CA is removed.',
+            sections: [
+              { heading: 'The order', bullets: [
+                'Publish the new CA into the trust bundles first, so both CAs are trusted.',
+                'Then issue leaf certs from the new CA and roll the consumers.',
+                'Only once everything trusts the new CA is the old one retired.',
+              ] },
+              { heading: 'Why', body: 'Skip the overlap and a peer still holding the old bundle rejects a cert signed by the new CA — a self-inflicted outage. The overlap is what makes rotation safe.' },
             ],
           },
         },
