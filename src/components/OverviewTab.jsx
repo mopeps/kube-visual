@@ -7,6 +7,7 @@ import ReconLoopOverlay from './ReconLoopOverlay'
 import { NET_PAIRS } from '../data/network-zones'
 import { isNetworkComponent, NETWORK_CONTROL_PLANE_IDS } from '../data/network-components'
 import { INTERNAL_TOPOLOGY, buildNetworkEdges } from '../data/network-internals'
+import { findComponent } from '../data/components-index'
 import { buildPrimitiveInternals, isRuntimeInstance } from '../data/primitive-internals'
 import PrimitiveBoxCard from './PrimitiveBoxCard'
 import { serviceAlias } from '../data/service-alias'
@@ -411,6 +412,8 @@ export default function OverviewTab({
           onToggle={() => toggleNetCollapse(netInstanceId, canonicalId)}
           onSelectComponent={onSelectComponent}
           onSelectBox={selectNetBox}
+          connections={connectionsFor(netInstanceId)}
+          onSelectConnection={onSelectConnection}
           stepNum={stepNums.get(node.id)}
           isActive={isActive}
           isOnPath={isOnPath}
@@ -685,6 +688,57 @@ export default function OverviewTab({
       detail: edge.detail,
       peekDefault: 0.34,
     })
+  }
+  // A box DOM id (`nt-c{n}-{component}` or a sub-box `…__{child}`) → the canonical
+  // componentId it belongs to, and that component's display name.
+  const canonicalOf = (domId) => domId.replace(/^nt-c\d+-/, '').replace(/__.*$/, '')
+  const componentTitleOf = (domId) => {
+    const canonical = canonicalOf(domId)
+    return findComponent(canonical)?.displayName || canonical
+  }
+  // Every CROSS-component network edge that touches a box → a "connection chip"
+  // descriptor: the mechanism word (db.sock / veth / GARP …) it travels by, the
+  // peer object it reaches, and the direction. Intra-box links (the realization
+  // chain inside a node, the OVS daemons patching their own bridges) are NOT
+  // chips — they're already drawn inside the box. These are docked ON the opened
+  // box (always visible) so the wiring is legible without hovering a faint SVG
+  // line — the primary affordance on touch. The full edge rides along to open its
+  // popup; duplicate mechanism→peer pairs collapse to one chip.
+  const connectionsFor = (boxDomId) => {
+    const self = canonicalOf(boxDomId)
+    const seen = new Set()
+    const out = []
+    for (const e of netEdges) {
+      if (!netRelated(e, boxDomId)) continue
+      const outgoing = e.from === boxDomId || e.from.startsWith(`${boxDomId}__`)
+      const peerId = outgoing ? e.to : e.from
+      if (canonicalOf(peerId) === self) continue // intra-box: drawn inside, not a chip
+      const mechanism = e.kindLabel || (e.label ? e.label.split('\n')[0] : 'link')
+      const key = `${mechanism}__${canonicalOf(peerId)}__${outgoing ? 'o' : 'i'}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push({
+        id: e.id,
+        mechanism,
+        peerTitle: componentTitleOf(peerId),
+        outgoing,
+        accentVar: e.accent || 'k-teal',
+        peerId,
+        edge: e,
+      })
+    }
+    return out
+  }
+  // Tapping a connection chip opens the link's detail popup AND points out its
+  // peer — scroll it into view and pulse it — so "where does this go" is answered
+  // both in words (the popup) and in place (the highlighted peer box).
+  const onSelectConnection = (edge, peerId) => {
+    selectNetEdge(edge)
+    const el = document.getElementById(peerId)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.classList.add('net-peer-pulse')
+    setTimeout(() => el.classList.remove('net-peer-pulse'), 1500)
   }
   // Click on a component's internal primitive sub-box → its teaching popup.
   const selectNetBox = (box) => {

@@ -18,6 +18,11 @@ export default function PrimitiveBoxCard({
   onToggle,
   onSelectComponent,
   onSelectBox,
+  // Network mode: the links touching this box, docked on its rim as named,
+  // tappable chips (mechanism → peer) so the wiring reads without hovering a
+  // faint SVG line. Each chip opens the link's popup and points out its peer.
+  connections = [],
+  onSelectConnection,
   // DOM-id namespace prefix — Network mode uses the default `nt-c` (its three
   // columns + edge overlay anchor to it); Primitives mode passes `pr-c` so its
   // cards never collide with another mode's raw / `nt-c` ids.
@@ -402,6 +407,26 @@ export default function PrimitiveBoxCard({
           </div>
         </div>
       ))}
+
+      {connections.length > 0 && (
+        <div className="box-connections">
+          <span className="box-connections-lead">connects</span>
+          {connections.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className="box-conn-chip"
+              style={{ '--edge-color': `var(--${c.accentVar})` }}
+              onClick={(e) => { e.stopPropagation(); onSelectConnection?.(c.edge, c.peerId) }}
+              title={`${c.outgoing ? 'to' : 'from'} ${c.peerTitle} — over ${c.mechanism}`}
+            >
+              <span className="box-conn-mech">{c.mechanism}</span>
+              <span className="box-conn-dir" aria-hidden>{c.outgoing ? '→' : '←'}</span>
+              <span className="box-conn-peer">{c.peerTitle}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
