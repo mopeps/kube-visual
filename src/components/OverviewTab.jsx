@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { ZONES, INTENT_OBJECT_STORE, CONTROLLER_PARENT, OPERATOR_PARENT, FLOW_PARENT } from '../data/zones'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
@@ -19,6 +19,11 @@ import ServicePair from './ServicePair'
 import Masonry from './Masonry'
 import ArrowOverlay from './ArrowOverlay'
 import { scrollIntoUpperThird } from '../lib/scroll'
+
+// The Map altitude pulls in the deep-dive topic data (deep-dives.js +
+// ovn-topology.js); lazy-load it so it stays out of the initial bundle for the
+// default Architecture lens.
+const LogicalLens = lazy(() => import('./LogicalLens'))
 
 // How long the reveal spotlight stays lit before it auto-clears. Kept in sync
 // with the `.is-highlighted` pulse in index.css (reveal-pulse-* runs 1.3s × 2),
@@ -182,6 +187,20 @@ export default function OverviewTab({
   bigView = false,
   // Network lens opens and wires each rendered node's networking internals.
   netOverlay = false,
+  // Network lens altitude: 'map' (the OVN logical topology, the default) or
+  // 'detail' (the datapath component view — today's network rendering). Only
+  // meaningful when netOverlay is on.
+  networkAltitude = 'map',
+  onSetNetworkAltitude,
+  // Map-altitude (LogicalLens) state, owned by App so the bottom hop inspector
+  // can mount at the app root: which OVN topology is shown + its trace flow.
+  lensScope,
+  onSetLensScope,
+  lensActiveFlow,
+  lensActiveFlowStep,
+  onLensSelectFlow,
+  onLensClearFlow,
+  onLensSelectFlowStep,
   // Architecture lens: each runtime instance opens in place to its Linux
   // kernel primitives. Collapsed by default.
   primOverlay = false,
@@ -870,6 +889,9 @@ export default function OverviewTab({
   // nodes renders the three placement-aware master/worker pairs.
   const columnsView = bigView || netOverlay || primOverlay
   const cols = bigView ? NET_PAIRS : [0]
+  // Network · Map altitude: the OVN logical topology replaces the datapath column
+  // canvas. The Map/Detail toggle stays in the bar across both so you can switch.
+  const mapMode = netOverlay && networkAltitude === 'map'
 
   return (
     <>
@@ -877,6 +899,25 @@ export default function OverviewTab({
         <div className="net-bar">
           <span className="net-bar-label">{netOverlay ? 'Network' : 'Architecture'}</span>
           {netOverlay && (
+            <div className="seg seg--altitude" role="group" aria-label="Network altitude">
+              {[
+                { id: 'map', label: 'Map', title: 'The OVN logical topology — switches, routers, the join switch, pod ports' },
+                { id: 'detail', label: 'Detail', title: 'The datapath internals — br-int flows, the NB DB, OVS daemons' },
+              ].map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  className={`seg-btn ${networkAltitude === a.id ? 'is-active' : ''}`}
+                  aria-pressed={networkAltitude === a.id}
+                  onClick={() => onSetNetworkAltitude?.(a.id)}
+                  title={a.title}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {netOverlay && !mapMode && (
             <button type="button" className="net-bar-btn" onClick={toggleAllNet}>
               {allNetCollapsed ? 'Expand all' : 'Collapse all'}
             </button>
@@ -897,7 +938,7 @@ export default function OverviewTab({
               × Clear flow
             </button>
           )}
-          {netOverlay && (
+          {netOverlay && !mapMode && (
             <button
               type="button"
               className={`net-bar-btn ${netWiresOnHover ? 'is-active' : ''}`}
@@ -909,6 +950,11 @@ export default function OverviewTab({
               {netWiresOnHover ? 'Wires: on focus' : 'Wires: all'}
             </button>
           )}
+          {mapMode && (
+            <span className="net-bar-hint">
+              The OVN logical topology. Click a box to open its OpenShift object and Linux primitives; switch to Detail for the datapath internals.
+            </span>
+          )}
           {!netOverlay && !primOverlay && (
             <span className="net-bar-hint">
               The whole Overview, three node pairs side by side. Switch to Network to open each component and trace the real networking topology.
@@ -916,7 +962,23 @@ export default function OverviewTab({
           )}
         </div>
       )}
-      {columnsView ? (
+      {mapMode ? (
+        // Network · Map: the OVN logical topology, rendered via the deep-dive
+        // topic pipeline (TopicCanvas) with idPrefix='lg'. Box clicks route
+        // through App's shared AncestryModal (onSelectComponent).
+        <Suspense fallback={<div className="lazy-panel-status" role="status">Loading map…</div>}>
+          <LogicalLens
+            scope={lensScope}
+            onSetScope={onSetLensScope}
+            activeFlow={lensActiveFlow}
+            activeFlowStep={lensActiveFlowStep}
+            onSelectFlow={onLensSelectFlow}
+            onClearFlow={onLensClearFlow}
+            onSelectFlowStep={onLensSelectFlowStep}
+            onSelectComponent={onSelectComponent}
+          />
+        </Suspense>
+      ) : columnsView ? (
         // Columns canvas: the normal canvas rendered once per node pair — three
         // three placement-aware pair columns/sections, or a single primary pair.
         // Network mode opens each drillable component

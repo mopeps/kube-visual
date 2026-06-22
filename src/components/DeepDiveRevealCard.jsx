@@ -13,8 +13,9 @@ import { Fragment, useEffect, useRef } from 'react'
 //   • click a sub-step                    → open that step's detail popup
 //   • click the ▴ chevron, outside, or Esc → collapse
 //
-// The DOM `id` (dd-<boxId>) stays on the outer element in both states so the
-// trace ArrowOverlay can keep anchoring connectors to it.
+// The DOM `id` (<idPrefix>-<boxId>) stays on the outer element in both states so
+// the trace ArrowOverlay can keep anchoring connectors to it. idPrefix is 'dd' for
+// the Deep Dive tab, 'lg' for the Network lens's Map altitude.
 export default function DeepDiveRevealCard({
   box,
   accent,
@@ -25,6 +26,7 @@ export default function DeepDiveRevealCard({
   highlightId,
   onToggle,
   onSelectBox,
+  idPrefix = 'dd',
 }) {
   const ref = useRef(null)
   const reveal = box.reveal
@@ -47,7 +49,7 @@ export default function DeepDiveRevealCard({
   if (!isExpanded) {
     return (
       <div
-        id={`dd-${box.id}`}
+        id={`${idPrefix}-${box.id}`}
         ref={ref}
         role="button"
         tabIndex={0}
@@ -90,7 +92,7 @@ export default function DeepDiveRevealCard({
 
   return (
     <div
-      id={`dd-${box.id}`}
+      id={`${idPrefix}-${box.id}`}
       ref={ref}
       // Take a full row so the revealed sequence doesn't crowd the sibling boxes.
       onClick={(e) => { e.stopPropagation(); onToggle() }}
@@ -135,7 +137,7 @@ export default function DeepDiveRevealCard({
             {i > 0 && <span className="dd-reveal-arrow" aria-hidden>→</span>}
             <button
               type="button"
-              id={`dd-${child.id}`}
+              id={`${idPrefix}-${child.id}`}
               className={`intent-object dd-reveal-step ${child.id === highlightId ? 'is-highlighted' : ''}`}
               style={{ '--node-accent': accent }}
               onClick={(e) => { e.stopPropagation(); onSelectBox(child.id) }}
