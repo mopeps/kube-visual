@@ -36,6 +36,14 @@ const NETWORK_EDGES_SINGLE = buildNetworkEdges([0])
 // "collapse all / expand all" control.
 const DRILLABLE_IDS = Object.keys(INTERNAL_TOPOLOGY)
 
+// Every drillable instance id across all modeled columns. Used to seed the
+// mobile default: on small screens the network boxes start collapsed (the
+// expanded internals are a tall wall on a phone), so we pre-fill the collapsed
+// set with every column's ids — collapsing an id that isn't rendered is a no-op.
+const ALL_NET_INSTANCE_IDS = NET_PAIRS.flatMap((_, colIndex) =>
+  DRILLABLE_IDS.map((id) => `nt-c${colIndex}-${id}`)
+)
+
 // Resolve the expand-in-place store that holds a nested object — an etcd intent
 // CR, a controller-manager loop, an operator-set Pod, or an Open vSwitch realized
 // flow — or null when the id is an ordinary top-level card.
@@ -163,6 +171,9 @@ export default function OverviewTab({
   // Architecture lens: each runtime instance opens in place to its Linux
   // kernel primitives. Collapsed by default.
   primOverlay = false,
+  // Small screens (phones / narrow tablets). Drives the network mode's
+  // start-collapsed default so the canvas isn't a tall wall of opened boxes.
+  isCompact = false,
 }) {
   const canvasRef = useRef(null)
   const [expandedStoreId, setExpandedStoreId] = useState(null)
@@ -172,10 +183,15 @@ export default function OverviewTab({
   // Network-mode state: the popup content of a clicked sub-box / integration
   // edge (shares the deep-dive sheet with the replica popup).
   const [netSheet, setNetSheet] = useState(null)
-  // Which drillable network components the user has collapsed. Default expanded:
-  // an instance-scoped DOM id is in the set only once collapsed, so matching
-  // components on replica nodes still toggle independently.
-  const [netCollapsedIds, setNetCollapsedIds] = useState(() => new Set())
+  // Which drillable network components the user has collapsed. Default expanded
+  // on desktop (the set is empty), but start COLLAPSED on mobile — the opened
+  // internals stack into a tall wall on a phone, so a small screen begins with
+  // every box closed and the user taps the ones they want. An instance-scoped
+  // DOM id is in the set only once collapsed, so matching components on replica
+  // nodes still toggle independently.
+  const [netCollapsedIds, setNetCollapsedIds] = useState(() =>
+    isCompact ? new Set(ALL_NET_INSTANCE_IDS) : new Set()
+  )
   // Expanding one replica also points out the matching component on the other
   // modeled nodes. This is a visual relationship only; their open/closed state
   // remains independent.

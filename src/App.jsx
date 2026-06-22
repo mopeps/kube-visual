@@ -360,6 +360,7 @@ export default function App() {
       bigView={bigView}
       netOverlay={netOverlay}
       primOverlay={primOverlay}
+      isCompact={isCompact}
     />
   )
   const packetPanel = (
