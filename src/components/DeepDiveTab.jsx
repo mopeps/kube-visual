@@ -1,9 +1,7 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { DEEP_DIVES, findDeepDive, indexTopicBoxes } from '../data/deep-dives'
-import DeepDiveCanvas from './DeepDiveCanvas'
-import DeepDiveModal from './DeepDiveModal'
+import { useState } from 'react'
+import { DEEP_DIVES, findDeepDive } from '../data/deep-dives'
+import TopicCanvas from './TopicCanvas'
 import ObjectSelect from './ObjectSelect'
-import { scrollIntoUpperThird } from '../lib/scroll'
 import CategorizedIndex from './CategorizedIndex'
 
 const accent = (colorVar) => `var(--${colorVar || 'k-cyan'})`
@@ -72,7 +70,8 @@ function TopicSelect({ activeTopic, topic, onSelectTopic, onClearTopic }) {
 // Flow picker — only for topics that declare `flows`. Picking a flow lights up
 // its hops on the canvas (arrows + step badges); the bottom hop reader opens
 // when a badge/hop is clicked. Clearing drops to the static (no-trace) view.
-function FlowSelect({ topic, activeFlow, onSelectFlow, onClearFlow }) {
+// Exported so the Network lens's Map altitude (LogicalLens) reuses the same control.
+export function FlowSelect({ topic, activeFlow, onSelectFlow, onClearFlow }) {
   if (!topic.flows?.length) return null
   const options = topic.flows.map((f) => ({
     id: f.flowId,
@@ -159,102 +158,11 @@ export default function DeepDiveTab({
   onConsumeTarget,    // clear that request once honored
   onSelectComponent,  // open a registered component's detail sheet (AncestryModal)
 }) {
-  const [selectedBoxId, setSelectedBoxId] = useState(null)
-  const [selectedEdgeId, setSelectedEdgeId] = useState(null)
-
   const topic = activeTopic ? findDeepDive(activeTopic) : null
-  const boxIndex = useMemo(() => (topic ? indexTopicBoxes(topic) : {}), [topic])
-  const colorOf = useCallback((boxId) => boxIndex[boxId]?.accent || 'var(--k-cyan)', [boxIndex])
-
-  // Connector edges carry their own clickable detail — the systemd loop's
-  // reconciliation edges and any topic's static topology edges (e.g. the OVN
-  // logical wiring) — index them so a clicked chip resolves to its popup.
-  const edgeIndex = useMemo(() => {
-    const out = {}
-    for (const e of topic?.reconciliation?.edges || []) out[e.id] = e
-    for (const e of topic?.topology?.edges || []) out[e.id] = e
-    return out
-  }, [topic])
-
-  // Switching topics drops any open popup.
-  useEffect(() => { setSelectedBoxId(null); setSelectedEdgeId(null) }, [activeTopic])
-
-  // A search result asked to open a specific box on this topic: honor it once
-  // the topic (and its box index) are resolved, then clear the request so a
-  // later manual close stays closed. Runs after the topic-change reset above,
-  // so the requested box wins. Also scrolls it into view on the canvas.
-  useEffect(() => {
-    if (!targetBoxId || !boxIndex[targetBoxId]) return
-    setSelectedEdgeId(null)
-    // Boxes that ARE a registered component (componentId, no own detail) open
-    // the real component sheet instead of a deep-dive popup.
-    const target = boxIndex[targetBoxId].box
-    if (target.componentId && !target.detail) onSelectComponent?.(target.componentId)
-    else setSelectedBoxId(targetBoxId)
-    const raf = requestAnimationFrame(() => {
-      scrollIntoUpperThird(document.getElementById(`dd-${targetBoxId}`))
-    })
-    onConsumeTarget?.()
-    return () => cancelAnimationFrame(raf)
-  }, [targetBoxId, boxIndex, onConsumeTarget, onSelectComponent])
-
-  // Follow the trace: when a hop is focused, bring its target box into the upper
-  // third of whatever scrolls the canvas (mirrors the Overview's trace-follow).
-  useEffect(() => {
-    if (activeFlowStep == null || !activeFlow) return
-    const step = activeFlow.steps.find(s => s.step === activeFlowStep)
-    if (!step) return
-    const raf = requestAnimationFrame(() => {
-      scrollIntoUpperThird(document.getElementById(`dd-${step.targetBoxId}`))
-    })
-    return () => cancelAnimationFrame(raf)
-  }, [activeFlowStep, activeFlow])
-
-  // Only one popup at a time — opening a box closes any open edge and vice versa.
-  // A box that IS a registered overview object (componentId, no own detail) —
-  // the OpenShift-machinery chips in the OVN views — opens the component's real
-  // detail sheet (AncestryModal) instead of a deep-dive popup, so the same
-  // object is one object everywhere.
-  const selectBox = useCallback((id) => {
-    setSelectedEdgeId(null)
-    const box = boxIndex[id]?.box
-    if (box?.componentId && !box.detail) {
-      setSelectedBoxId(null)
-      onSelectComponent?.(box.componentId)
-      return
-    }
-    setSelectedBoxId(id)
-  }, [boxIndex, onSelectComponent])
-  const selectEdge = useCallback((edge) => { setSelectedBoxId(null); setSelectedEdgeId(edge.id) }, [])
-  const closeBox = useCallback(() => { setSelectedBoxId(null); setSelectedEdgeId(null) }, [])
 
   if (!topic) {
     return <TopicIndex onSelectTopic={onSelectTopic} />
   }
-
-  const selected = selectedBoxId ? boxIndex[selectedBoxId] : null
-  const selectedEdge = selectedEdgeId ? edgeIndex[selectedEdgeId] : null
-  const content = selected
-    ? {
-        id: selected.box.id,
-        title: selected.box.title,
-        typePrefix: selected.box.typePrefix,
-        subtitle: selected.box.subtitle,
-        accent: selected.accent,
-        detail: selected.box.detail,
-        componentId: selected.box.componentId,
-      }
-    : selectedEdge
-      ? {
-          id: selectedEdge.id,
-          title: selectedEdge.title || selectedEdge.label?.replace(/\n/g, ' '),
-          accent: `var(--${selectedEdge.accent || 'k-cyan'})`,
-          detail: selectedEdge.detail,
-          // Arrow/edge popups open as a fixed ~1/3-height bottom sheet (the grip
-          // still resizes it) instead of a short content-hugging modal.
-          peekDefault: 0.34,
-        }
-      : null
 
   return (
     <div className="deep-dive">
@@ -276,26 +184,16 @@ export default function DeepDiveTab({
 
       <TopicAbout topic={topic} activeFlow={activeFlow} />
 
-      <DeepDiveCanvas
+      <TopicCanvas
         topic={topic}
         loop={loop}
-        onSelectBox={selectBox}
-        onSelectEdge={selectEdge}
-        selectedBoxId={selectedBoxId}
         activeFlow={activeFlow}
         activeFlowStep={activeFlowStep}
         onSelectFlowStep={onSelectFlowStep}
-        colorOf={colorOf}
-      />
-
-      {/* Tail spacer so the bottom box can scroll clear of the fixed hop
-          inspector when a flow hop is being inspected (--hop-inset). */}
-      <div aria-hidden style={{ height: 'calc(1rem + var(--hop-inset, 0px))' }} />
-
-      <DeepDiveModal
-        content={content}
-        onClose={closeBox}
-        onSelectComponent={onSelectComponent ? (id) => { closeBox(); onSelectComponent(id) } : null}
+        onSelectComponent={onSelectComponent}
+        targetBoxId={targetBoxId}
+        onConsumeTarget={onConsumeTarget}
+        idPrefix="dd"
       />
     </div>
   )

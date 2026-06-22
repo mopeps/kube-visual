@@ -323,17 +323,24 @@ export const rtosEdgeDetail = (w, note) => edgeDetail(
 // the "big view" that re-parents the very same boxes into the greyed
 // OpenShift components that contain them. (The guest-cluster twin further
 // down builds its own boxes — same shapes, different ids and content.)
-const nodeBoxes = (w, note = NBCTL_NOTE) => ({
-  eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'netdev', variant: 'iface', detail: ethDetail(w) },
-  brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', detail: brIntDetail(w, note) },
-  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', detail: extSwitchDetail(w, note) },
+// `comp` overrides the registered overview objects a column's boxes drill to —
+// the management columns realize onto ovs-host / ovn-node-host (the default); the
+// guest twin passes its own guest-side components. With a `detail` AND a
+// componentId, a box keeps its OVN teaching popup and adds an "object card ↗"
+// chip to that component's real sheet (the depth door: L1 logical box → L2
+// OpenShift object → L3 Linux primitives).
+const MGMT_COMP = { ovs: 'ovs-host', node: 'ovn-node-host' }
+const nodeBoxes = (w, note = NBCTL_NOTE, comp = MGMT_COMP) => ({
+  eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'netdev', variant: 'iface', componentId: comp.ovs, detail: ethDetail(w) },
+  brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', componentId: comp.ovs, detail: brIntDetail(w, note) },
+  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', componentId: comp.node, detail: extSwitchDetail(w, note) },
   gr: { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'Gateway Router', colorVar: 'k-green',
-    variant: 'ellipse', detail: gatewayRouterDetail(w, note) },
-  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', detail: nodeSwitchDetail(w, note) },
+    variant: 'ellipse', componentId: comp.node, detail: gatewayRouterDetail(w, note) },
+  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', componentId: comp.node, detail: nodeSwitchDetail(w, note) },
 })
 const podBox = (w, p) => ({
   id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod',
-  colorVar: 'k-amber', variant: 'pod', inline: true, detail: podDetail(p.name, p.ip, w),
+  colorVar: 'k-amber', variant: 'pod', inline: true, componentId: p.componentId, detail: podDetail(p.name, p.ip, w),
 })
 const UNDERLAY_BOX = {
   id: 'ovn-underlay', title: 'Underlay · 172.18.0.0/24', typePrefix: 'L2 segment', colorVar: 'k-blue',
@@ -341,11 +348,11 @@ const UNDERLAY_BOX = {
 }
 const JOIN_BOX = {
   id: 'ovn-join', title: 'join · 100.64.0.0/16', typePrefix: 'Logical Switch', colorVar: 'k-sky',
-  variant: 'switch', caption: 'one per cluster · joins every router', detail: JOIN_SWITCH_DETAIL,
+  variant: 'switch', caption: 'one per cluster · joins every router', componentId: 'ovn-node-host', detail: JOIN_SWITCH_DETAIL,
 }
 const ROUTER_BOX = {
   id: 'ovn-cluster-router', title: 'ovn_cluster_router', typePrefix: 'OVN Cluster Router', colorVar: 'k-green',
-  variant: 'ellipse', caption: 'distributed · runs on every node', detail: CLUSTER_ROUTER_DETAIL,
+  variant: 'ellipse', caption: 'distributed · runs on every node', componentId: 'ovn-node-host', detail: CLUSTER_ROUTER_DETAIL,
 }
 
 // One node column: the full per-node chain inside one dashed boundary.
@@ -409,11 +416,11 @@ const nodeEdges = (w, pods, core = MGMT_CORE) => [
 ]
 
 const W1_PODS = [
-  { id: 'pod-a', name: 'pod-a', ip: '10.244.0.3' },
-  { id: 'pod-b', name: 'pod-b', ip: '10.244.0.5' },
+  { id: 'pod-a', name: 'pod-a', ip: '10.244.0.3', componentId: 'backend-application-pod' },
+  { id: 'pod-b', name: 'pod-b', ip: '10.244.0.5', componentId: 'frontend-application-pod' },
 ]
 const W2_PODS = [
-  { id: 'pod-a', name: 'pod-c', ip: '10.244.2.3' },
+  { id: 'pod-a', name: 'pod-c', ip: '10.244.2.3', componentId: 'backend-application-pod' },
 ]
 
 // The wiring and the trace flows are shared verbatim by both topics — the box
@@ -938,13 +945,15 @@ const gPodDetail = (name, ip, w) => ({
 
 // Guest box definitions — same shapes and colour code as the plain view, so
 // the two diagrams read as the same picture at two depths.
+// The guest twin realizes onto the guest cluster's own OVS / node agent — the
+// same depth-door pattern as the management columns, one turtle down.
 const guestNodeBoxes = (w) => ({
-  eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'virtio-net', variant: 'iface', detail: gEthDetail(w) },
-  brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', detail: gBrIntDetail(w) },
-  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', detail: gExtDetail(w) },
+  eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'virtio-net', variant: 'iface', componentId: 'ovs-guest', detail: gEthDetail(w) },
+  brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', componentId: 'ovs-guest', detail: gBrIntDetail(w) },
+  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', componentId: 'ovn-node-guest', detail: gExtDetail(w) },
   gr: { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'Gateway Router', colorVar: 'k-green',
-    variant: 'ellipse', detail: gGrDetail(w) },
-  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', detail: gLsDetail(w) },
+    variant: 'ellipse', componentId: 'ovn-node-guest', detail: gGrDetail(w) },
+  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', componentId: 'ovn-node-guest', detail: gLsDetail(w) },
 })
 const guestPodBox = (w, p) => ({
   id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod',
@@ -957,11 +966,11 @@ const GUEST_UNDERLAY_BOX = {
 }
 const GUEST_JOIN_BOX = {
   id: 'ovng-join', title: 'join · 100.64.0.0/16', typePrefix: 'Logical Switch', colorVar: 'k-sky',
-  variant: 'switch', caption: 'the guest’s own — same subnet as mgmt’s, never collides', detail: GUEST_JOIN_DETAIL,
+  variant: 'switch', caption: 'the guest’s own — same subnet as mgmt’s, never collides', componentId: 'ovn-node-guest', detail: GUEST_JOIN_DETAIL,
 }
 const GUEST_ROUTER_BOX = {
   id: 'ovng-cluster-router', title: 'ovn_cluster_router', typePrefix: 'OVN Cluster Router', colorVar: 'k-green',
-  variant: 'ellipse', caption: 'distributed · rows in each VM’s node-local NB DB', detail: GUEST_ROUTER_DETAIL,
+  variant: 'ellipse', caption: 'distributed · rows in each VM’s node-local NB DB', componentId: 'ovn-node-guest', detail: GUEST_ROUTER_DETAIL,
 }
 
 // One guest node column — the plain view's chain, run inside a VMI (zone label

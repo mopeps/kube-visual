@@ -23,7 +23,7 @@ const accentOf = (zone, topic, box) =>
 // kernel pins inside the unit's cgroup. Clicking a PID kills it; clicking the
 // box background opens its detail popup. Children sit visibly trapped here until
 // systemd sweeps them.
-function CgroupBox({ box, accent, subtitle, highlight, hint, procs, locked, onKillMain, onKillChild, onOpen }) {
+function CgroupBox({ box, domId, accent, subtitle, highlight, hint, procs, locked, onKillMain, onKillChild, onOpen }) {
   const killProc = (e, p) => {
     e.stopPropagation()
     if (locked) return
@@ -32,7 +32,7 @@ function CgroupBox({ box, accent, subtitle, highlight, hint, procs, locked, onKi
   }
   return (
     <div
-      id={`dd-${box.id}`}
+      id={domId}
       role="button"
       tabIndex={0}
       className={`node deep-cgroup-box ${highlight ? 'is-highlighted' : ''}`}
@@ -90,10 +90,15 @@ export default function DeepDiveCanvas({
   activeFlowStep,
   onSelectFlowStep,
   colorOf,
+  // DOM-id namespace for every box on this canvas (and the overlays that anchor
+  // to them): 'dd' for the Deep Dive tab, 'lg' for the Network lens's Map
+  // altitude. Keeps the two from colliding when both render the same topic.
+  idPrefix = 'dd',
 }) {
   const overlays = loop.overlays
   const recon = topic.reconciliation
   const stackRef = useRef(null)
+  const did = (id) => `${idPrefix}-${id}`
 
   // Which reveal-in-place boxes are expanded (the tmux parser FSM, the sudo fd
   // inheritance). Independent toggles, mirroring the etcd intent store.
@@ -181,6 +186,7 @@ export default function DeepDiveCanvas({
         <CgroupBox
           key={box.id}
           box={box}
+          domId={did(box.id)}
           accent={accent}
           subtitle={subtitle}
           highlight={ov?.highlight}
@@ -210,6 +216,7 @@ export default function DeepDiveCanvas({
           highlightId={selectedBoxId}
           onToggle={() => toggleReveal(box.id)}
           onSelectBox={onSelectBox}
+          idPrefix={idPrefix}
         />
       )
     }
@@ -217,7 +224,7 @@ export default function DeepDiveCanvas({
     return (
       <NodeCard
         key={box.id}
-        id={`dd-${box.id}`}
+        id={did(box.id)}
         title={box.title}
         typePrefix={box.typePrefix}
         variant={box.variant}
@@ -296,6 +303,7 @@ export default function DeepDiveCanvas({
             activeEdgeId={loop.activeEdgeId}
             signal={loop.signal}
             onSelectEdge={onSelectEdge}
+            idPrefix={idPrefix}
           />
         )}
         {/* Static topology edges — the always-on structural links of a topic
@@ -308,6 +316,7 @@ export default function DeepDiveCanvas({
             activeEdgeId={null}
             signal={null}
             onSelectEdge={onSelectEdge}
+            idPrefix={idPrefix}
           />
         )}
         {topic.zones.map((zone) => renderZone(zone))}
@@ -321,6 +330,7 @@ export default function DeepDiveCanvas({
             onSelectStep={onSelectFlowStep}
             onSelectBox={onSelectBox}
             colorOf={colorOf}
+            idPrefix={idPrefix}
           />
         )}
       </div>

@@ -2,16 +2,18 @@ import { useMemo } from 'react'
 import ArrowLines from './ArrowLines'
 
 // Deep-dive trace arrows: the Overview's ArrowOverlay, pointed at deep-dive
-// boxes. Box DOM ids are `dd-<boxId>` (see DeepDiveCanvas), and the per-hop
+// boxes. Box DOM ids are `<idPrefix>-<boxId>` (see DeepDiveCanvas) — 'dd' for the
+// Deep Dive tab, 'lg' for the Network lens's Map altitude — so the two can render
+// the same topic at once (compact swipe pager) without colliding ids. The per-hop
 // colour comes from the target box's zone accent via `colorOf`.
-export default function DeepDiveArrowOverlay({ activeFlow, canvasRef, activeStep, onSelectStep, onSelectBox, colorOf }) {
+export default function DeepDiveArrowOverlay({ activeFlow, canvasRef, activeStep, onSelectStep, onSelectBox, colorOf, idPrefix = 'dd' }) {
   const steps = useMemo(
     () => {
       if (!activeFlow) return []
       const hops = activeFlow.steps.map(s => ({
         step: s.step,
-        sourceId: `dd-${s.sourceBoxId}`,
-        targetId: `dd-${s.targetBoxId}`,
+        sourceId: `${idPrefix}-${s.sourceBoxId}`,
+        targetId: `${idPrefix}-${s.targetBoxId}`,
         color: colorOf?.(s.targetBoxId) || 'var(--k-cyan)',
         // A reply hop retracing an earlier hop's edge (an ack, a granted vote)
         // can declare a bow so the two curves don't lie on top of each other.
@@ -22,8 +24,8 @@ export default function DeepDiveArrowOverlay({ activeFlow, canvasRef, activeStep
       // a string key and opens a box popup (openBoxId) rather than the hop reader.
       const rejected = (activeFlow.rejectedEdges || []).map((e, i) => ({
         step: `rej-${i}`,
-        sourceId: `dd-${e.sourceBoxId}`,
-        targetId: `dd-${e.targetBoxId}`,
+        sourceId: `${idPrefix}-${e.sourceBoxId}`,
+        targetId: `${idPrefix}-${e.targetBoxId}`,
         color: 'var(--packet)',
         denied: true,
         bow: 66,
@@ -32,7 +34,7 @@ export default function DeepDiveArrowOverlay({ activeFlow, canvasRef, activeStep
       }))
       return [...hops, ...rejected]
     },
-    [activeFlow, colorOf, onSelectBox],
+    [activeFlow, colorOf, onSelectBox, idPrefix],
   )
 
   return (
@@ -41,7 +43,7 @@ export default function DeepDiveArrowOverlay({ activeFlow, canvasRef, activeStep
       canvasRef={canvasRef}
       activeStep={activeStep}
       onSelectStep={onSelectStep}
-      idPrefix="dd"
+      idPrefix={idPrefix}
       edgeAnchor
     />
   )

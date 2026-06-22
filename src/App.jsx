@@ -26,6 +26,8 @@ const DOCK_KEY = 'kv-dock-open'
 const VIEW_KEY = 'kv-overview-mode'
 const REPLICAS_KEY = 'kv-replicas-open'
 const SCOPE_KEY = 'kv-node-scope'
+const ALT_KEY = 'kv-network-altitude'
+const LENS_SCOPE_KEY = 'kv-logical-scope'
 
 function Header() {
   return (
@@ -81,6 +83,20 @@ export default function App() {
     clearFlowStep,
   } = useFlowState()
 
+  // The Network lens's Map altitude (the OVN logical topology) runs the same
+  // trace-flow pipeline as the Deep Dive tab, but on its OWN hook so a flow
+  // engaged in the lens never clobbers the Deep Dive tab's (they can show
+  // different topics at once in the compact swipe pager).
+  const {
+    activeFlow: lensActiveFlow,
+    activeFlowStep: lensActiveFlowStep,
+    selectFlow: lensSelectFlow,
+    focusFlow: lensFocusFlow,
+    clearFlow: lensClearFlow,
+    selectFlowStep: lensSelectFlowStep,
+    clearFlowStep: lensClearFlowStep,
+  } = useFlowState()
+
   // Swipe paging is the navigation model on small/touch screens; the dockable
   // side panel is a wide-desktop affordance. The 1024–1279px band keeps the
   // classic single-column tabs.
@@ -113,6 +129,21 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem(VIEW_KEY, overviewMode) } catch { /* ignore */ }
   }, [overviewMode])
+  // Network lens altitude: 'map' (the OVN logical topology — the default) or
+  // 'detail' (today's datapath component view). Only consulted in network mode.
+  const [networkAltitude, setNetworkAltitude] = useState(() => {
+    try { return localStorage.getItem(ALT_KEY) === 'detail' ? 'detail' : 'map' } catch { return 'map' }
+  })
+  useEffect(() => {
+    try { localStorage.setItem(ALT_KEY, networkAltitude) } catch { /* ignore */ }
+  }, [networkAltitude])
+  // Which OVN topology the Map altitude shows (the four network deep-dive twins).
+  const [lensScope, setLensScope] = useState(() => {
+    try { return localStorage.getItem(LENS_SCOPE_KEY) || 'ovn-topology' } catch { return 'ovn-topology' }
+  })
+  useEffect(() => {
+    try { localStorage.setItem(LENS_SCOPE_KEY, lensScope) } catch { /* ignore */ }
+  }, [lensScope])
   // Lens and physical scope are independent: Architecture opens runtime cards
   // to primitives; Network opens networking internals. All nodes materializes
   // three placement-aware node pairs at tablet/wide widths; phones force one.
@@ -315,6 +346,38 @@ export default function App() {
     else clearFlow()
   }, [deepTopicObj, focusFlow, clearFlow])
 
+  // The Map altitude's topic + box index, resolved at the app root so its bottom
+  // hop inspector can mount here (like the Deep Dive tab's) and anchor to the
+  // viewport rather than a transformed swipe pane. Only resolved while the Map
+  // altitude is actually active, so the deep-dive data stays out of the bundle
+  // until the user opens Network → Map.
+  const lensActive = netOverlay && networkAltitude === 'map'
+  const [lensTopicObj, setLensTopicObj] = useState(null)
+  const [lensBoxIndex, setLensBoxIndex] = useState({})
+  useEffect(() => {
+    if (!lensActive) {
+      setLensTopicObj(null)
+      setLensBoxIndex({})
+      return
+    }
+    let cancelled = false
+    import('./data/deep-dives.js').then(({ findDeepDive, indexTopicBoxes }) => {
+      if (cancelled) return
+      const topic = findDeepDive(lensScope) || findDeepDive('ovn-topology')
+      setLensTopicObj(topic)
+      setLensBoxIndex(topic ? indexTopicBoxes(topic) : {})
+    })
+    return () => { cancelled = true }
+  }, [lensActive, lensScope])
+
+  // Auto-engage the lens's first trace flow when its topology resolves, exactly
+  // as the Deep Dive tab does — land with the arrows lit, the hop reader a click
+  // away (lensFocusFlow leaves the step null).
+  useEffect(() => {
+    if (lensTopicObj?.flows?.length) lensFocusFlow(lensTopicObj.flows[0])
+    else lensClearFlow()
+  }, [lensTopicObj, lensFocusFlow, lensClearFlow])
+
   // Follow the trace on the overview: whenever the inspected hop changes (or an
   // event is freshly selected) and the overview is showing, scroll the object
   // the packet is currently on into the upper third of the viewport — keeping
@@ -359,6 +422,15 @@ export default function App() {
       onClearEvent={clearEvent}
       bigView={bigView}
       netOverlay={netOverlay}
+      networkAltitude={networkAltitude}
+      onSetNetworkAltitude={setNetworkAltitude}
+      lensScope={lensScope}
+      onSetLensScope={setLensScope}
+      lensActiveFlow={lensActiveFlow}
+      lensActiveFlowStep={lensActiveFlowStep}
+      onLensSelectFlow={lensSelectFlow}
+      onLensClearFlow={lensClearFlow}
+      onLensSelectFlowStep={lensSelectFlowStep}
       primOverlay={primOverlay}
       isCompact={isCompact}
     />
@@ -596,6 +668,18 @@ export default function App() {
           activeStep={activeFlowStep}
           onSelectStep={selectFlowStep}
           onClose={clearFlowStep}
+        />
+      )}
+
+      {/* And again for the Network lens's Map altitude — its own flow + box
+          index, so a logical-topology trace reads at the bottom of the overview. */}
+      {tab === 'overview' && lensActive && (
+        <DeepDiveHopInspector
+          boxIndex={lensBoxIndex}
+          activeFlow={lensActiveFlow}
+          activeStep={lensActiveFlowStep}
+          onSelectStep={lensSelectFlowStep}
+          onClose={lensClearFlowStep}
         />
       )}
 
