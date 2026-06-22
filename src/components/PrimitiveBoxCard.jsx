@@ -42,6 +42,11 @@ export default function PrimitiveBoxCard({
   isDimmed = false,
   isHighlighted = false,
   isReplicaLinked = false,
+  // Network mode: a control-plane component (CNO / Ingress / DNS operator, the
+  // kubevirt CCM, the MetalLB controller) — it configures the datapath rather
+  // than moving packets, so its box reads dashed / accent-railed, not as a
+  // realized datapath box.
+  controlPlane = false,
 }) {
   const domId = domIdOverride || `${idPrefix}${colIndex}-${node.id}`
   const subId = (id) => `${idPrefix}${colIndex}-${id}`
@@ -330,7 +335,7 @@ export default function PrimitiveBoxCard({
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onToggle() }
         }}
-        className={`node intent-store ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''} ${isReplicaLinked ? 'is-replica-linked' : ''}`}
+        className={`node intent-store ${controlPlane ? 'is-control-plane' : ''} ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''} ${isReplicaLinked ? 'is-replica-linked' : ''}`}
         style={{
           '--node-accent': color,
           background: isActive
@@ -359,7 +364,7 @@ export default function PrimitiveBoxCard({
   return (
     <div
       id={domId}
-      className={`intent-store-expanded primitive-box ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''} ${isReplicaLinked ? 'is-replica-linked' : ''}`}
+      className={`intent-store-expanded primitive-box ${controlPlane ? 'is-control-plane' : ''} ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''} ${isReplicaLinked ? 'is-replica-linked' : ''}`}
       style={{ '--node-accent': color, '--store-accent': color }}
       onClick={(e) => e.stopPropagation()}
     >

@@ -2812,6 +2812,15 @@ body::after {
 .box-conn-mech { font-family: 'JetBrains Mono', monospace; color: var(--edge-color); }
 .box-conn-dir { color: var(--tx-dim); }
 .box-conn-peer { color: var(--tx-muted); }
+
+/* A network control-plane component (CNO / Ingress / DNS operator, the kubevirt
+   CCM, the MetalLB controller) drawn as a box: dashed + left accent rail = it
+   configures the datapath rather than being a realized datapath box itself. */
+.primitive-box.is-control-plane,
+.intent-store.is-control-plane {
+  border-style: dashed;
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--node-accent) 55%, transparent);
+}
 /* A peer pointed at by a tapped connection chip pulses briefly so the eye lands
    on it after the scroll. */
 .net-peer-pulse {

@@ -33,18 +33,6 @@ const SPOTLIGHT_MS = 1300 * 2
 const NETWORK_EDGES = buildNetworkEdges(NET_PAIRS)
 const NETWORK_EDGES_SINGLE = buildNetworkEdges([0])
 
-// The components that open to an internal topology in Network mode — used by the
-// "collapse all / expand all" control.
-const DRILLABLE_IDS = Object.keys(INTERNAL_TOPOLOGY)
-
-// Every drillable instance id across all modeled columns. Used to seed the
-// mobile default: on small screens the network boxes start collapsed (the
-// expanded internals are a tall wall on a phone), so we pre-fill the collapsed
-// set with every column's ids — collapsing an id that isn't rendered is a no-op.
-const ALL_NET_INSTANCE_IDS = NET_PAIRS.flatMap((_, colIndex) =>
-  DRILLABLE_IDS.map((id) => `nt-c${colIndex}-${id}`)
-)
-
 // Resolve the expand-in-place store that holds a nested object — an etcd intent
 // CR, a controller-manager loop, an operator-set Pod, or an Open vSwitch realized
 // flow — or null when the id is an ordinary top-level card.
@@ -155,6 +143,31 @@ function filterNetworkZone(zone) {
   if (!nodes.length && !zones.length) return null
   return { ...zone, nodes, zones }
 }
+
+// Recursively collect a (filtered) zone tree's canonical component ids.
+function collectNetworkIds(zone, ids = []) {
+  zone?.nodes?.forEach((n) => ids.push(n.mirror || n.id))
+  zone?.zones?.forEach((z) => collectNetworkIds(z, ids))
+  return ids
+}
+
+// Every component the Network lens surfaces — all of them open in place now:
+// datapath components to their internal topology, control-plane / leaf
+// components to just their connector section. Drives the expand-all /
+// collapse-all control and the mobile default-collapsed seed. (Datapath ids
+// always come first via INTERNAL_TOPOLOGY ordering, then any remaining leaves.)
+const DRILLABLE_IDS = [...new Set([
+  ...Object.keys(INTERNAL_TOPOLOGY),
+  ...ZONES.map(filterNetworkZone).filter(Boolean).flatMap((z) => collectNetworkIds(z)),
+])]
+
+// Every drillable instance id across all modeled columns. Used to seed the
+// mobile default: on small screens the network boxes start collapsed (the
+// expanded internals are a tall wall on a phone), so we pre-fill the collapsed
+// set with every column's ids — collapsing an id that isn't rendered is a no-op.
+const ALL_NET_INSTANCE_IDS = NET_PAIRS.flatMap((_, colIndex) =>
+  DRILLABLE_IDS.map((id) => `nt-c${colIndex}-${id}`)
+)
 
 export default function OverviewTab({
   activeEvent,
@@ -393,15 +406,21 @@ export default function OverviewTab({
     const { isActive, isOnPath, isDimmed } = traceStates(node.id)
     const canonicalId = node.mirror || node.id
     const netInstanceId = `nt-c${colIndex}-${canonicalId}`
-    // Network mode: a drillable component opens in place to show its own internal
-    // primitives + integrations inside its own box (never a zone). Takes
-    // precedence over the other expand cards (e.g. ovs-guest's realized flows).
-    if (netOverlay && INTERNAL_TOPOLOGY[canonicalId]) {
+    // Network mode: EVERY surfaced component opens in place inside its own box
+    // (never a zone). Datapath components reveal their internal topology; control
+    // plane / leaf components open to just their connector section (empty body +
+    // the "connects" chips). Takes precedence over the other expand cards (e.g.
+    // ovs-guest's realized flows). Special control-plane store cards (etcd /
+    // controller-manager / operator-set) keep their own card unless they happen to
+    // carry a network topology of their own.
+    if (netOverlay && (INTERNAL_TOPOLOGY[canonicalId] ||
+        (!node.intentObjects && !node.controllers && !node.operators))) {
       return (
         <PrimitiveBoxCard
           key={node.id}
           node={node}
-          internal={INTERNAL_TOPOLOGY[canonicalId]}
+          internal={INTERNAL_TOPOLOGY[canonicalId] || { bands: [] }}
+          controlPlane={NETWORK_CONTROL_PLANE_IDS.has(canonicalId)}
           colIndex={colIndex}
           // No "internals" label beside the chevron — the drill chevron alone
           // signals the box opens.
