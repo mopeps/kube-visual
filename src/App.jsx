@@ -28,6 +28,8 @@ const REPLICAS_KEY = 'kv-replicas-open'
 const SCOPE_KEY = 'kv-node-scope'
 const ALT_KEY = 'kv-network-altitude'
 const LENS_SCOPE_KEY = 'kv-logical-scope'
+const DEFAULT_LENS_SCOPE = 'ovn-topology-full'
+const PREVIOUS_DEFAULT_LENS_SCOPE = 'ovn-topology'
 
 function Header() {
   return (
@@ -91,7 +93,6 @@ export default function App() {
     activeFlow: lensActiveFlow,
     activeFlowStep: lensActiveFlowStep,
     selectFlow: lensSelectFlow,
-    focusFlow: lensFocusFlow,
     clearFlow: lensClearFlow,
     selectFlowStep: lensSelectFlowStep,
     clearFlowStep: lensClearFlowStep,
@@ -139,7 +140,11 @@ export default function App() {
   }, [networkAltitude])
   // Which OVN topology the Map altitude shows (the four network deep-dive twins).
   const [lensScope, setLensScope] = useState(() => {
-    try { return localStorage.getItem(LENS_SCOPE_KEY) || 'ovn-topology' } catch { return 'ovn-topology' }
+    try {
+      const saved = localStorage.getItem(LENS_SCOPE_KEY)
+      if (!saved || saved === PREVIOUS_DEFAULT_LENS_SCOPE) return DEFAULT_LENS_SCOPE
+      return saved
+    } catch { return DEFAULT_LENS_SCOPE }
   })
   useEffect(() => {
     try { localStorage.setItem(LENS_SCOPE_KEY, lensScope) } catch { /* ignore */ }
@@ -363,20 +368,19 @@ export default function App() {
     let cancelled = false
     import('./data/deep-dives.js').then(({ findDeepDive, indexTopicBoxes }) => {
       if (cancelled) return
-      const topic = findDeepDive(lensScope) || findDeepDive('ovn-topology')
+      const topic = findDeepDive(lensScope) || findDeepDive(DEFAULT_LENS_SCOPE)
       setLensTopicObj(topic)
       setLensBoxIndex(topic ? indexTopicBoxes(topic) : {})
     })
     return () => { cancelled = true }
   }, [lensActive, lensScope])
 
-  // Auto-engage the lens's first trace flow when its topology resolves, exactly
-  // as the Deep Dive tab does — land with the arrows lit, the hop reader a click
-  // away (lensFocusFlow leaves the step null).
+  // Network Map starts static. A trace here is an explicit user choice from the
+  // flow selector, unlike Deep Dive topics which intentionally auto-walk their
+  // canonical flow.
   useEffect(() => {
-    if (lensTopicObj?.flows?.length) lensFocusFlow(lensTopicObj.flows[0])
-    else lensClearFlow()
-  }, [lensTopicObj, lensFocusFlow, lensClearFlow])
+    lensClearFlow()
+  }, [lensTopicObj, lensClearFlow])
 
   // Follow the trace on the overview: whenever the inspected hop changes (or an
   // event is freshly selected) and the overview is showing, scroll the object

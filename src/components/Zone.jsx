@@ -1,5 +1,6 @@
 export default function Zone({
   label,
+  labelBadges = [],
   color,
   dashed = false,
   boundaryKind,
@@ -60,7 +61,7 @@ export default function Zone({
         id={componentId}
         role={isComponent ? 'button' : undefined}
         tabIndex={isComponent ? 0 : undefined}
-        aria-label={isComponent ? label : undefined}
+        aria-label={isComponent ? [label, ...labelBadges].join(' · ') : undefined}
         onClick={isComponent ? (e) => { e.stopPropagation(); onClick?.(componentId) } : undefined}
         onKeyDown={isComponent ? (e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -86,7 +87,14 @@ export default function Zone({
           }),
         }}
       >
-        {label}
+        <span className="zone-label-title">{label}</span>
+        {labelBadges.length > 0 && (
+          <span className="zone-label-badges" aria-hidden={!isComponent}>
+            {labelBadges.map((badge) => (
+              <span key={badge} className="zone-label-badge">{badge}</span>
+            ))}
+          </span>
+        )}
         {stepNum != null && (
           <span className="node-step-badge" title={`Step ${stepNum}`}>
             {stepNum}

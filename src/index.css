@@ -114,8 +114,34 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
   border-bottom: 1px solid;
   font-weight: 600;
+}
+
+.zone-label-title {
+  min-width: 0;
+}
+
+.zone-label-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  letter-spacing: 0.1em;
+}
+
+.zone-label-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  line-height: 1.25;
+  opacity: 0.82;
+  background: color-mix(in srgb, currentColor 9%, #0a0f1e);
 }
 
 .zone-content {
@@ -1854,7 +1880,10 @@ body::after {
 /* Stacked chains (eth0 → br-int → …) are joined by bare quiet lines — just
    enough gap for a short connector, so the chain reads as one tight unit
    like the source diagram (the old 44px was sized for pill chips). */
-.recon-stack--topology .zone--stack > .zone-content > .zone-content-inner { gap: 22px; }
+.recon-stack--topology .zone--stack > .zone-content > .zone-content-inner {
+  --topology-stack-gap: 22px;
+  gap: var(--topology-stack-gap);
+}
 /* Inside the diagram's column row, every stack fills the column height so the
    side-by-side node chains stay equal and a spacer box can push each pod
    group to the bottom (the shared core centres in the same height). */
@@ -1890,8 +1919,27 @@ body::after {
 .recon-stack--topology .node--bridge .node-type-prefix { display: none; }
 .recon-stack--topology .node--iface .node-title,
 .recon-stack--topology .node--bridge .node-title { font-size: 0.8rem; margin-bottom: 0; }
+.recon-stack--topology .node--iface {
+  padding: 0 5px;
+  border-radius: 3px;
+  background: #0a0f1e;
+  border-color: color-mix(in srgb, var(--node-accent) 50%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--node-accent) 15%, transparent);
+  z-index: 7;
+}
+.recon-stack--topology .node--iface .node-title {
+  color: var(--tx-muted) !important;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
 .recon-stack--topology .node--bridge {
   background: color-mix(in srgb, var(--node-accent) 30%, #0a0f1e);
+  z-index: 6;
+}
+.recon-stack--topology .node--iface + .node--bridge {
+  margin-top: calc(-1 * var(--topology-stack-gap, 22px));
 }
 /* Logical switches: roomy rounded rectangles. */
 .recon-stack--topology .node--switch {
@@ -1955,6 +2003,26 @@ body::after {
 .recon-stack--topology .node--ghost .node-type-prefix { font-size: 0.75rem; margin-bottom: 1px; }
 .recon-stack--topology .node--ghost .node-title { font-size: 0.75rem; margin-bottom: 0; }
 .recon-stack--topology .node--ghost .node-subtitle { font-size: 0.75rem; }
+.logical-lens .recon-stack--topology .node-subtitle {
+  display: none;
+}
+.logical-lens .recon-stack--topology .node--pod .node-subtitle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 4px;
+  padding: 1px 5px;
+  border: 1px solid color-mix(in srgb, var(--node-accent) 34%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--node-accent) 10%, #0a0f1e);
+  color: color-mix(in srgb, var(--node-accent) 58%, var(--tx-muted));
+  font-size: 0.66rem;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
 /* The full picture's middle band carries only the two NB-DB core groups. By
    default (the 640–880px band) it stays a lean reserved column beside the
    bare-metal ones — narrow enough to give the columns the width, wide enough
@@ -2009,6 +2077,12 @@ body::after {
   position: relative;
   z-index: 5;
 }
+.recon-stack--topology .node--bridge {
+  z-index: 6;
+}
+.recon-stack--topology .node--iface {
+  z-index: 7;
+}
 /* Zone labels float above the wiring SVG (z-index 4) on an opaque fill, so a
    line passing the zone's top edge tucks behind the chip instead of striking
    through its text (!important beats the chip's inline translucent bg). */
@@ -2023,7 +2097,10 @@ body::after {
      compact: tighter gaps, smaller type, shapes shrunk to fit a third of the
      screen each. */
   .recon-stack--topology { gap: 34px; }
-  .recon-stack--topology .zone--stack > .zone-content > .zone-content-inner { gap: 26px; }
+  .recon-stack--topology .zone--stack > .zone-content > .zone-content-inner {
+    --topology-stack-gap: 26px;
+    gap: var(--topology-stack-gap);
+  }
   .recon-stack--topology .zone--columns > .zone-content > .zone-content-inner { gap: 0; }
   .recon-stack--topology .zone--columns > .zone-content > .zone-content-inner > .zone {
     flex: 1 1 0;
@@ -2083,12 +2160,20 @@ body::after {
   .recon-stack--ovnfull .zone--columns > .zone-content > .zone-content-inner > .zone:not(.zone--bare) .dd-spacer {
     min-height: 374px;
   }
+  .recon-stack--ovnfull .ovnfull-core-zone--mgmt {
+    margin-top: 44px;
+    margin-bottom: 44px;
+  }
+  .recon-stack--ovnfull .ovnfull-core-zone--guest {
+    margin-top: 52px;
+    margin-bottom: 56px;
+  }
   /* Counterpart rows at the same height: the left VM's two pods wrap to a
      second line under ~478px while the right VM has one pod, which would sink
      everything below LS worker-2 by a row. Pin the in-VM pod rows (the only
      wrap-variable block) to the wrapped height on both sides. */
   .recon-stack--ovnfull .zone--columns > .zone-content > .zone-content-inner > .zone:not(.zone--bare) > .zone-content > .zone-content-inner > .zone > .zone-content > .zone-content-inner > .zone--ghost .dd-box-row {
-    min-height: 120px;
+    min-height: 132px;
   }
   .recon-stack--topology .zone--nested > .zone-content { padding: 10px 5px; }
   .recon-stack--topology .node {
@@ -2100,6 +2185,13 @@ body::after {
   .recon-stack--topology .node--ellipse { padding: 13px 12px 11px; }
   .recon-stack--topology .node-title { font-size: 0.75rem; overflow-wrap: anywhere; }
   .recon-stack--topology .node-type-prefix { font-size: 0.75rem; letter-spacing: 0.05em; }
+  .recon-stack--topology .node--ghost .node-type-prefix {
+    font-size: 0.58rem;
+    letter-spacing: 0;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
   .recon-stack--topology .node-subtitle { font-size: 0.75rem; }
   .recon-stack--topology .node--iface .node-title,
   .recon-stack--topology .node--bridge .node-title { font-size: 0.75rem; }
@@ -2110,7 +2202,17 @@ body::after {
   .recon-stack--topology .zone-label {
     font-size: 0.75rem;
     letter-spacing: 0.04em;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
     white-space: normal;
+  }
+  .recon-stack--topology .zone-label-badges {
+    gap: 3px;
+    letter-spacing: 0.04em;
+  }
+  .recon-stack--topology .zone-label-badge {
+    font-size: 0.56rem;
+    padding: 1px 4px;
   }
   .recon-stack--topology .recon-edge-chip.recon-edge-chip--quiet .recon-edge-chip-line { font-size: 0.75rem; }
   /* Edges flagged mobileHide drop their label chip here (the gap they ride is

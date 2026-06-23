@@ -270,6 +270,7 @@ export default function DeepDiveCanvas({
     <Zone
       key={zone.id}
       label={zone.label}
+      labelBadges={zone.labelBadges}
       color={accentOf(zone, topic)}
       dashed={zone.dashed}
       boundaryKind={zone.boundaryKind}
@@ -277,6 +278,7 @@ export default function DeepDiveCanvas({
       layout={zone.layout}
       bare={zone.bare}
       ghost={zone.ghost}
+      className={zone.className}
     >
       {renderZoneBoxes(zone)}
       {/* A child entry may be a spacer pseudo-zone — the flex-grow gap between
