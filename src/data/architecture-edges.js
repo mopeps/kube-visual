@@ -40,6 +40,43 @@ const endpointOf = (componentId) => {
 
 const nameOf = (id) => findComponent(id)?.displayName || id
 
+// A clean, single-word relationship verb for the most-visible edges — the ones
+// that surface as chips on the drillable app Pods / API server — where the
+// auto-scanned verb reads off (a buried participle, or the wrong clause's verb).
+// Keyed `${source}__${target}`; the verb always describes the SOURCE's action, so
+// it reads right whether the chip docks on the source ("verb → peer") or the
+// target ("verb ← peer", i.e. "peer verbs me").
+const CURATED = {
+  'frontend-application-pod__coredns-node': 'resolves',
+  'frontend-application-pod__svc-backend': 'connects',
+  'frontend-application-pod__cluster-monitoring': 'serves',
+  'frontend-application-pod__kubelet-guest': 'answers',
+  'frontend-application-pod__ovs-guest': 'sends',
+  'svc-frontend__frontend-application-pod': 'routes',
+  'crio-guest__frontend-application-pod': 'starts',
+  'kubelet-guest__frontend-application-pod': 'probes',
+  'cluster-monitoring__frontend-application-pod': 'scrapes',
+  'netpol-ecommerce__backend-application-pod': 'admits',
+  'guest-api-server__guest-etcd': 'persists',
+  'guest-api-server__guest-controller-manager': 'notifies',
+  'guest-api-server__guest-kube-scheduler': 'offers',
+  'guest-api-server__konnectivity-server': 'tunnels',
+}
+
+// Normalise a scanned participle to its present-tense form so chips read as a
+// live relationship ("resolves", not "resolved").
+const PRESENT = {
+  resolved: 'resolves', persisted: 'persists', configured: 'configures',
+  terminated: 'terminates', required: 'requires', deployed: 'deploys',
+  created: 'creates', bound: 'binds', mounted: 'mounts', evicted: 'evicts',
+  answered: 'answers', returned: 'returns', forwarded: 'forwards',
+  published: 'publishes', rendered: 'renders', realized: 'realizes',
+  tracked: 'tracks', captured: 'captures', attached: 'attaches',
+  allocated: 'allocates', assigned: 'assigns', merged: 'merges',
+  spawned: 'spawns', provisioned: 'provisions', delegated: 'delegates',
+}
+const present = (verb) => (verb ? PRESENT[verb] || verb : null)
+
 export function buildArchitectureEdges() {
   const seen = new Map()
   for (const ev of events) {
@@ -50,7 +87,7 @@ export function buildArchitectureEdges() {
       const key = `${from}__${to}`
       if (seen.has(key)) continue // first hop for a pair wins the label
       const v = firstKnownVerb(s.description)
-      const label = v ? v.verb : 'calls'
+      const label = CURATED[key] || present(v?.verb) || 'calls'
       seen.set(key, {
         id: `arch-${key}`,
         from: endpointOf(from),
