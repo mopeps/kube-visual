@@ -241,6 +241,19 @@ function leadingVerb(text) {
   return m ? m[1] : ''
 }
 
+// Scan a sentence for its first RECOGNISED verb anywhere (not just the lead) —
+// used to label a relationship edge from a packet-flow step whose sentence opens
+// with a subject ("An 'oc' client resolves…", "The LoadBalancer DNATs…") rather
+// than a verb. Returns { verb, kind, kindMeta } or null.
+export function firstKnownVerb(text) {
+  const tokens = String(text).toLowerCase().match(/[a-z][a-z-]*/g) || []
+  for (const t of tokens) {
+    const kind = VERB_KIND[t]
+    if (kind) return { verb: t, kind, kindMeta: INTERACTION_KINDS[kind] }
+  }
+  return null
+}
+
 // A sentence that opens with a past participle and names its agent with "by"
 // ("Authored by the admin…", "Created and reconciled by the CCM…", "Deployed …
 // by the Control Plane Operator") is passive: this component is the *object*
