@@ -98,6 +98,7 @@ const VERB_KIND = {
   persists: 'outbound', persist: 'outbound',
   stores: 'outbound', store: 'outbound',
   reports: 'outbound', report: 'outbound',
+  returns: 'outbound', return: 'outbound', returned: 'outbound',
   surfaces: 'outbound', surface: 'outbound',
   notifies: 'outbound', notify: 'outbound',
   proxies: 'outbound', proxy: 'outbound',
@@ -244,9 +245,17 @@ function leadingVerb(text) {
 // Scan a sentence for its first RECOGNISED verb anywhere (not just the lead) —
 // used to label a relationship edge from a packet-flow step whose sentence opens
 // with a subject ("An 'oc' client resolves…", "The LoadBalancer DNATs…") rather
-// than a verb. Returns { verb, kind, kindMeta } or null.
+// than a verb. A leading adverbial/subordinate clause ("With X resolved, …",
+// "Once Y, …", "On each interval, …") is dropped first so we land on the MAIN
+// clause's verb (the actor's action), not a participle buried in the lead-in.
+// Returns { verb, kind, kindMeta } or null.
+const LEAD_CLAUSE =
+  /^(with|once|after|before|when|while|during|as|if|unless|unlike|separately|still|because|since|now|having|although|though|whenever|then|on|in|to|for|under|each|first)\b[^,.;:]*,\s*/i
 export function firstKnownVerb(text) {
-  const tokens = String(text).toLowerCase().match(/[a-z][a-z-]*/g) || []
+  let s = String(text).trim()
+  const m = LEAD_CLAUSE.exec(s)
+  if (m) s = s.slice(m[0].length)
+  const tokens = s.toLowerCase().match(/[a-z][a-z-]*/g) || []
   for (const t of tokens) {
     const kind = VERB_KIND[t]
     if (kind) return { verb: t, kind, kindMeta: INTERACTION_KINDS[kind] }
