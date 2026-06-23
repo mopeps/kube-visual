@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import NodeCard from './NodeCard'
+import ConnectionChips from './ConnectionChips'
 
 // A network-mode component box that opens *in place* to show its own internal
 // Linux primitives + integrations — partitioned inside the component's OWN card
@@ -18,10 +19,14 @@ export default function PrimitiveBoxCard({
   onToggle,
   onSelectComponent,
   onSelectBox,
-  // Network mode: the links touching this box, docked on its rim as named,
-  // tappable chips (mechanism → peer) so the wiring reads without hovering a
-  // faint SVG line. Each chip opens the link's popup and points out its peer.
+  // Cross-component links anchored at the COMPONENT level (interface-less peers)
+  // — the fallback chip row docked at the bottom of the box. Interface-anchored
+  // links are resolved per sub-box via `connectionsForSub` below instead.
   connections = [],
+  // (sub-box DOM id) → the cross-component links terminating on THAT interface
+  // (a port / socket / daemon), so each interface advertises its own wiring
+  // where its wire lands — replacing the old single floating strip.
+  connectionsForSub,
   onSelectConnection,
   // DOM-id namespace prefix — Network mode uses the default `nt-c` (its three
   // columns + edge overlay anchor to it); Primitives mode passes `pr-c` so its
@@ -51,6 +56,24 @@ export default function PrimitiveBoxCard({
   const domId = domIdOverride || `${idPrefix}${colIndex}-${node.id}`
   const subId = (id) => `${idPrefix}${colIndex}-${id}`
 
+  // The interface-anchored connection chips for one sub-box, or null. Rendered
+  // right where that interface's wire lands (on the daemon / bridge / port /
+  // socket), so the link reads in place instead of in a detached bottom list.
+  const subChips = (localId) => {
+    const conns = connectionsForSub?.(subId(localId))
+    return conns?.length
+      ? <ConnectionChips connections={conns} onSelectConnection={onSelectConnection} className="box-connections--iface" />
+      : null
+  }
+  // Wrap a small sub-box element (a port pill / socket) with its chips so the
+  // pair stacks as one flex item; bigger boxes render their chips inline instead.
+  const wrapConns = (localId, el) => {
+    const chips = subChips(localId)
+    return chips
+      ? <div className="primitive-conn-wrap" key={`cw-${localId}`}>{el}{chips}</div>
+      : el
+  }
+
   // Cross-highlight: hovering/focusing a relationship chip — or the socket / an
   // interface — lights up the boxes it links to. The [mnt] chip lights the
   // mount-ns frame; the process's [fd] chip lights its socket; the socket lights
@@ -77,7 +100,7 @@ export default function PrimitiveBoxCard({
   // primitive cards). Keeps its per-column DOM id for edge wiring.
   const renderPort = (p) => {
     const accent = `var(--${p.colorVar || 'k-teal'})`
-    return (
+    return wrapConns(p.id, (
       <button
         key={p.id}
         id={subId(p.id)}
@@ -91,7 +114,7 @@ export default function PrimitiveBoxCard({
         <span className="primitive-port-dot" aria-hidden />
         <span className="primitive-port-label" style={{ color: accent }}>{p.title}</span>
       </button>
-    )
+    ))
   }
 
   // A socket endpoint (variant: 'socket' / 'tunnel' / 'listen') is not a NIC —
@@ -109,7 +132,7 @@ export default function PrimitiveBoxCard({
     const accent = `var(--${s.colorVar || 'k-orange'})`
     const tunnel = s.variant === 'tunnel'
     const listen = s.variant === 'listen'
-    return (
+    return wrapConns(s.id, (
       <button
         key={s.id}
         id={subId(s.id)}
@@ -134,7 +157,7 @@ export default function PrimitiveBoxCard({
           </span>
         )}
       </button>
-    )
+    ))
   }
 
   // A guard (variant:'guard') is a filter the runtime applies to the container —
@@ -238,6 +261,7 @@ export default function PrimitiveBoxCard({
             {b.holds.map((h) => renderLinkChip(h, ' — hover to find it'))}
           </div>
         )}
+        {subChips(b.id)}
       </div>
     )
   }
@@ -298,6 +322,7 @@ export default function PrimitiveBoxCard({
               {ports.map(renderPort)}
             </div>
           )}
+          {subChips(b.id)}
         </div>
       )
     }
@@ -307,7 +332,7 @@ export default function PrimitiveBoxCard({
     if (b.variant === 'socket' || b.variant === 'tunnel' || b.variant === 'listen') return renderSocket(b)
     if (b.variant === 'fsrow') return renderFsRow(b)
     if (b.variant === 'iface') return renderPort(b)
-    return (
+    return wrapConns(b.id, (
       <NodeCard
         key={b.id}
         id={subId(b.id)}
@@ -320,7 +345,7 @@ export default function PrimitiveBoxCard({
         hoverProps={b.linkIds ? linkHover(b.linkIds) : undefined}
         onClick={() => onSelectBox(b)}
       />
-    )
+    ))
   }
 
   if (!isOpen) {
@@ -413,25 +438,10 @@ export default function PrimitiveBoxCard({
         </div>
       ))}
 
-      {connections.length > 0 && (
-        <div className="box-connections">
-          <span className="box-connections-lead">connects</span>
-          {connections.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className="box-conn-chip"
-              style={{ '--edge-color': `var(--${c.accentVar})` }}
-              onClick={(e) => { e.stopPropagation(); onSelectConnection?.(c.edge, c.peerId) }}
-              title={`${c.outgoing ? 'to' : 'from'} ${c.peerTitle} — over ${c.mechanism}`}
-            >
-              <span className="box-conn-mech">{c.mechanism}</span>
-              <span className="box-conn-dir" aria-hidden>{c.outgoing ? '→' : '←'}</span>
-              <span className="box-conn-peer">{c.peerTitle}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Fallback: links whose endpoint is the whole component (an interface-less
+          peer — a Service, a CR, a systemd unit) have no interface to dock on, so
+          they keep a small chip row at the box rim. */}
+      <ConnectionChips connections={connections} onSelectConnection={onSelectConnection} lead="connects" />
     </div>
   )
 }
