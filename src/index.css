@@ -2813,6 +2813,28 @@ body::after {
 .box-conn-dir { color: var(--tx-dim); }
 .box-conn-peer { color: var(--tx-muted); }
 
+/* Interface-docked variant: the connection chips sit right at the port / socket /
+   daemon their wire lands on (not in the floating bottom strip), so they read as
+   part of that interface — no divider, tighter, slightly smaller. */
+.box-connections--iface {
+  margin-top: 5px;
+  padding-top: 0;
+  border-top: 0;
+  gap: 4px;
+}
+.box-connections--iface .box-conn-chip {
+  padding: 2px 7px;
+  font-size: 0.68rem;
+}
+/* Stacks a small interface (a port pill / socket) above its connection chips as a
+   single column item, so the pair travels together inside the bridge-rim flex. */
+.primitive-conn-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
 /* A network control-plane component (CNO / Ingress / DNS operator, the kubevirt
    CCM, the MetalLB controller) drawn as a box: dashed + left accent rail = it
    configures the datapath rather than being a realized datapath box itself. */

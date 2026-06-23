@@ -7,6 +7,7 @@ import ReconLoopOverlay from './ReconLoopOverlay'
 import { NET_PAIRS } from '../data/network-zones'
 import { isNetworkComponent, NETWORK_CONTROL_PLANE_IDS } from '../data/network-components'
 import { INTERNAL_TOPOLOGY, buildNetworkEdges } from '../data/network-internals'
+import { buildArchitectureEdges } from '../data/architecture-edges'
 import { findComponent } from '../data/components-index'
 import { buildPrimitiveInternals, isRuntimeInstance } from '../data/primitive-internals'
 import PrimitiveBoxCard from './PrimitiveBoxCard'
@@ -37,6 +38,15 @@ const SPOTLIGHT_MS = 1300 * 2
 // the single set wires the lone column used below wide (the mobile network view).
 const NETWORK_EDGES = buildNetworkEdges(NET_PAIRS)
 const NETWORK_EDGES_SINGLE = buildNetworkEdges([0])
+
+// Architecture lens relationship edges (events.json), namespaced to the primary
+// column's DOM ids: an interface endpoint `comp__iface` → the opened component's
+// `pr-c0-comp__iface` sub-box; a bare component endpoint → its raw outer-card id
+// (which Architecture col 0 renders un-prefixed via domIdOverride). Built once.
+const ARCHITECTURE_EDGES = buildArchitectureEdges().map((e) => {
+  const dom = (ep) => (ep.includes('__') ? `pr-c0-${ep}` : ep)
+  return { ...e, from: dom(e.from), to: dom(e.to) }
+})
 
 // Resolve the expand-in-place store that holds a nested object — an etcd intent
 // CR, a controller-manager loop, an operator-set Pod, or an Open vSwitch realized
@@ -302,6 +312,17 @@ export default function OverviewTab({
   }
   // One-pair scope wires column zero; All nodes wires all three modeled pairs.
   const netEdges = bigView ? NETWORK_EDGES : NETWORK_EDGES_SINGLE
+  // The active lens's relationship edge set — datapath integrations in Network,
+  // the control-plane relationship graph in Architecture. Drives the per-interface
+  // connection chips (connectionsAt) and the wire overlay.
+  const lensEdges = primOverlay ? ARCHITECTURE_EDGES : netEdges
+  // Architecture wires: only the interface↔interface relationships (both endpoints
+  // a drillable runtime). Their anchors exist in the DOM only while both components
+  // are opened, so nothing draws across the resting (collapsed) canvas. Faint, and
+  // with no wire-chip — the interface ConnectionChips carry the label.
+  const shownArchEdges = ARCHITECTURE_EDGES
+    .filter((e) => e.from.includes('__') && e.to.includes('__'))
+    .map((e) => ({ ...e, dim: true, showLabel: false }))
   const shownNetEdges = (
     !netWiresOnHover
       ? netEdges
@@ -450,7 +471,8 @@ export default function OverviewTab({
           onToggle={() => toggleNetCollapse(netInstanceId, canonicalId)}
           onSelectComponent={onSelectComponent}
           onSelectBox={selectNetBox}
-          connections={connectionsFor(netInstanceId)}
+          connections={connectionsAt(netInstanceId)}
+          connectionsForSub={connectionsAt}
           onSelectConnection={onSelectConnection}
           stepNum={stepNums.get(node.id)}
           isActive={isActive}
@@ -481,6 +503,11 @@ export default function OverviewTab({
             onToggle={() => togglePrimExpand(node.id)}
             onSelectComponent={onSelectComponent}
             onSelectBox={selectNetBox}
+            // Architecture's relationship layer: the same interface-anchored chips
+            // as Network, sourced from events.json (col 0 only).
+            connections={colIndex === 0 ? connectionsAt(node.id) : []}
+            connectionsForSub={colIndex === 0 ? connectionsAt : undefined}
+            onSelectConnection={onSelectConnection}
             stepNum={stepNums.get(node.id)}
             isActive={isActive}
             isOnPath={isOnPath}
@@ -729,7 +756,7 @@ export default function OverviewTab({
   }
   // A box DOM id (`nt-c{n}-{component}` or a sub-box `…__{child}`) → the canonical
   // componentId it belongs to, and that component's display name.
-  const canonicalOf = (domId) => domId.replace(/^nt-c\d+-/, '').replace(/__.*$/, '')
+  const canonicalOf = (domId) => domId.replace(/^(nt|pr)-c\d+-/, '').replace(/__.*$/, '')
   const componentTitleOf = (domId) => {
     const canonical = canonicalOf(domId)
     return findComponent(canonical)?.displayName || canonical
@@ -742,15 +769,15 @@ export default function OverviewTab({
   // box (always visible) so the wiring is legible without hovering a faint SVG
   // line — the primary affordance on touch. The full edge rides along to open its
   // popup; duplicate mechanism→peer pairs collapse to one chip.
-  const connectionsFor = (boxDomId) => {
-    const self = canonicalOf(boxDomId)
+  const connectionsAt = (domId) => {
+    const self = canonicalOf(domId)
     const seen = new Set()
     const out = []
-    for (const e of netEdges) {
-      if (!netRelated(e, boxDomId)) continue
-      const outgoing = e.from === boxDomId || e.from.startsWith(`${boxDomId}__`)
+    for (const e of lensEdges) {
+      const outgoing = e.from === domId
+      if (!outgoing && e.to !== domId) continue
       const peerId = outgoing ? e.to : e.from
-      if (canonicalOf(peerId) === self) continue // intra-box: drawn inside, not a chip
+      if (canonicalOf(peerId) === self) continue // intra-component: drawn inside, not a chip
       const mechanism = e.kindLabel || (e.label ? e.label.split('\n')[0] : 'link')
       const key = `${mechanism}__${canonicalOf(peerId)}__${outgoing ? 'o' : 'i'}`
       if (seen.has(key)) continue
@@ -1004,6 +1031,16 @@ export default function OverviewTab({
           {netOverlay && (
             <ReconLoopOverlay
               edges={shownNetEdges}
+              canvasRef={canvasRef}
+              activeEdgeId={null}
+              signal={null}
+              onSelectEdge={selectNetEdge}
+              idPrefix=""
+            />
+          )}
+          {primOverlay && (
+            <ReconLoopOverlay
+              edges={shownArchEdges}
               canvasRef={canvasRef}
               activeEdgeId={null}
               signal={null}
