@@ -103,6 +103,38 @@ export default function DeepDiveCanvas({
   const stackRef = useRef(null)
   const did = (id) => `${idPrefix}-${id}`
 
+  // ── Grid-row layout (the OVN topology) ───────────────────────────────────
+  // A node/box may carry grid placement that maps to the shared row tracks:
+  //   row        a single named row track (a box sits in it)
+  //   rowStart/rowEnd  a span of tracks (a zone wrapping several rows)
+  //   rowSpan:'all'    spans every row of the parent grid (a node column)
+  //   col / spanColumns  a column, or span all columns (the shared core row)
+  // Subgrids inherit the root's named lines, so the names work at every depth.
+  const gridRowOf = (n) =>
+    n.rowSpan === 'all' ? '1 / -1'
+      : n.rowStart ? `${n.rowStart} / ${n.rowEnd}`
+        : n.row || undefined
+  const gridColOf = (n) =>
+    n.spanColumns ? '1 / -1' : n.col != null ? String(n.col) : undefined
+  const gridStyleFor = (n) => {
+    const gridRow = gridRowOf(n)
+    const gridColumn = gridColOf(n)
+    if (!gridRow && !gridColumn) return undefined
+    return {
+      ...(gridRow && { gridRow }),
+      ...(gridColumn && { gridColumn }),
+      // A column-spanning item (the shared core) centres on the seam instead of
+      // stretching the full width.
+      ...(n.spanColumns && { justifySelf: 'center' }),
+    }
+  }
+  // The grid root (layout:'grid') publishes its column + named-row tracks as
+  // custom props the .zone--grid CSS reads (they inherit to .zone-content-inner).
+  const gridRootStyle = (zone) => zone.layout !== 'grid' ? undefined : {
+    '--grid-cols': `repeat(${zone.gridCols || 2}, minmax(0, 1fr))`,
+    '--grid-rows': (zone.rows || []).map((r) => `[${r}] auto`).join(' ') + ' [grid-end]',
+  }
+
   // Which reveal-in-place boxes are expanded (the tmux parser FSM, the sudo fd
   // inheritance). Independent toggles, mirroring the etcd intent store.
   const [expanded, setExpanded] = useState(() => new Set())
@@ -228,6 +260,7 @@ export default function DeepDiveCanvas({
       <NodeCard
         key={box.id}
         id={did(box.id)}
+        style={gridStyleFor(box)}
         title={box.title}
         hideTitle={box.hideTitleOnCanvas}
         typePrefix={box.typePrefix}
@@ -261,7 +294,7 @@ export default function DeepDiveCanvas({
     }
     return out.map((entry) =>
       Array.isArray(entry) ? (
-        <div key={`row-${entry[0].id}`} className="dd-box-row">
+        <div key={`row-${entry[0].id}`} className="dd-box-row" style={gridStyleFor(entry[0])}>
           {entry.map((box) => renderBox(box, zone))}
         </div>
       ) : (
@@ -283,6 +316,8 @@ export default function DeepDiveCanvas({
       bare={zone.bare}
       ghost={zone.ghost}
       className={zone.className}
+      subgrid={zone.subgrid}
+      gridStyle={{ ...gridRootStyle(zone), ...gridStyleFor(zone) }}
       componentId={zone.componentId}
       domId={zone.componentId ? did(zone.id) : undefined}
       onClick={zone.componentId ? onSelectComponent : undefined}

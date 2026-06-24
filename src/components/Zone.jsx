@@ -21,6 +21,13 @@ export default function Zone({
   // An extra class on the zone wrapper — lets a caller target a specific zone
   // for layout tweaks (the network-mode guest column row centres its columns).
   className = '',
+  // Grid layout (the OVN topology row-grid). `subgrid` makes this zone a CSS
+  // subgrid that inherits the root grid's named row tracks, so its boxes align
+  // to the shared rows across columns and a column-spanning core can never bleed
+  // into another row. `gridStyle` carries the placement / template (grid-row,
+  // grid-column, and the --grid-cols / --grid-rows custom props on the root).
+  subgrid = false,
+  gridStyle,
   children,
   // When a zone doubles as a component (e.g. the VM), these wire its label up
   // as an arrow anchor (id), a click target, and a trace step badge.
@@ -47,8 +54,9 @@ export default function Zone({
 
   return (
     <div
-      className={`zone zone--${boundary} ${depth > 0 && !bare ? 'zone--nested' : ''} ${layout === 'columns' ? 'zone--columns' : ''} ${layout === 'stack' ? 'zone--stack' : ''} ${bare ? 'zone--bare' : ''} ${ghost ? 'zone--ghost' : ''} ${className}`}
+      className={`zone zone--${boundary} ${depth > 0 && !bare ? 'zone--nested' : ''} ${layout === 'columns' ? 'zone--columns' : ''} ${layout === 'stack' ? 'zone--stack' : ''} ${layout === 'grid' ? 'zone--grid' : ''} ${subgrid ? 'zone--subgrid' : ''} ${bare ? 'zone--bare' : ''} ${ghost ? 'zone--ghost' : ''} ${className}`}
       style={{
+        ...gridStyle,
         ...(!bare && { background: fill }),
         '--zone-depth': depth,
         // nested zones pick this up via .zone--nested / .zone--dashed in index.css

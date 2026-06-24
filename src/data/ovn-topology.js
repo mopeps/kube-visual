@@ -330,21 +330,21 @@ export const rtosEdgeDetail = (w, note) => edgeDetail(
 // chip to that component's real sheet (the depth door: L1 logical box → L2
 // OpenShift object → L3 Linux primitives).
 const MGMT_COMP = { ovs: 'ovs-host', node: 'ovn-node-host' }
-const nodeBoxes = (w, note = NBCTL_NOTE, comp = MGMT_COMP) => ({
-  eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'netdev', variant: 'iface', componentId: comp.ovs, detail: ethDetail(w) },
-  brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', componentId: comp.ovs, detail: brIntDetail(w, note) },
+const nodeBoxes = (w, note = NBCTL_NOTE, comp = MGMT_COMP, prefix = '') => ({
+  eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'netdev', variant: 'iface', row: `${prefix}nic`, componentId: comp.ovs, detail: ethDetail(w) },
+  brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', row: `${prefix}bridge`, componentId: comp.ovs, detail: brIntDetail(w, note) },
   // The per-node logical objects carry their full OVN name as `title` (it heads
   // the detail popup and feeds search / aria), but `hideTitleOnCanvas` keeps
   // that name OFF the card face — there the type prefix names the role and a
   // node tag (mgmt-1 / guest-2) names the column, so two chains in one full-map
   // column stay tellable apart without the long GR_<node> string.
-  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, badges: [{ label: w.tag }], componentId: comp.node, detail: extSwitchDetail(w, note) },
+  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, badges: [{ label: w.tag }], row: `${prefix}ext`, componentId: comp.node, detail: extSwitchDetail(w, note) },
   gr: { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'Gateway Router', colorVar: 'k-green',
-    variant: 'ellipse', hideTitleOnCanvas: true, badges: [{ label: w.tag }], componentId: comp.node, detail: gatewayRouterDetail(w, note) },
-  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, badges: [{ label: w.tag }], componentId: comp.node, detail: nodeSwitchDetail(w, note) },
+    variant: 'ellipse', hideTitleOnCanvas: true, badges: [{ label: w.tag }], row: `${prefix}gateway`, componentId: comp.node, detail: gatewayRouterDetail(w, note) },
+  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, badges: [{ label: w.tag }], row: `${prefix}nodeswitch`, componentId: comp.node, detail: nodeSwitchDetail(w, note) },
 })
-const podBox = (w, p) => ({
-  id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod',
+const podBox = (w, p, prefix = '') => ({
+  id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod', row: `${prefix}pods`,
   colorVar: 'k-amber', variant: 'pod', inline: true, componentId: p.componentId, detail: podDetail(p.name, p.ip, w),
 })
 const UNDERLAY_BOX = {
@@ -364,19 +364,21 @@ const ROUTER_BOX = {
   variant: 'ellipse', hideTitleOnCanvas: true, caption: 'distributed', componentId: 'ovn-node-host', detail: CLUSTER_ROUTER_DETAIL,
 }
 
-// One node column: the full per-node chain inside one dashed boundary.
-const nodeZone = (w, pods) => {
+// One node column: the full per-node chain as a subgrid that inherits the row
+// grid's tracks (so its boxes line up with the other column's, and the shared
+// core's `core` row sits in the empty gap between gateway and nodeswitch).
+const nodeZone = (w, pods, col) => {
   const b = nodeBoxes(w)
   return {
     id: `ovn-${w.id}-node`,
     label: `${w.node} · ${w.hostIp}`,
     colorVar: 'k-teal',
     boundaryKind: 'machine',
-    layout: 'stack',
+    subgrid: true,
+    col,
+    rowSpan: 'all',
     boxes: [
       b.eth0, b.brint, b.ext, b.gr,
-      // The diagram's empty mid-section: the shared core's links cross here.
-      { id: `${w.id}-gap`, spacer: true },
       b.ls,
       ...pods.map((p) => podBox(w, p)),
     ],
@@ -515,22 +517,28 @@ export const OVN_TOPOLOGY = {
   flows: FLOWS,
   zones: [
     underlayZone(),
-    // Two node columns flanking the shared logical core, which floats between
-    // them at mid-height (a bare, vertically-centred column).
+    // The row-grid: two node columns (subgrids) sharing named row tracks, with
+    // the shared logical core spanning both columns on its own `core` row track
+    // — so it sits in the gap between the gateway and node-switch rows and can
+    // never bleed into another row (no pixel-matched floating).
     {
       id: 'ovn-nodes-zone',
       bare: true,
-      layout: 'columns',
+      layout: 'grid',
+      gridCols: 2,
+      rows: ['colhead', 'nic', 'bridge', 'ext', 'gateway', 'core', 'nodeswitch', 'pods'],
       zones: [
-        nodeZone(W1, W1_PODS),
+        nodeZone(W1, W1_PODS, 1),
         {
           id: 'ovn-core',
           bare: true,
           layout: 'stack',
           colorVar: 'k-purple',
+          spanColumns: true,
+          row: 'core',
           boxes: [JOIN_BOX, ROUTER_BOX],
         },
-        nodeZone(W2, W2_PODS),
+        nodeZone(W2, W2_PODS, 2),
       ],
     },
   ],
@@ -614,16 +622,31 @@ const CTLPLANE_GHOST_DETAIL = {
   ],
 }
 
+// Grid-placement passthrough (the row-grid): pulls row/col/span/subgrid out of a
+// builder's opts so the same helpers work in both the flex and grid topics.
+const gridProps = (o = {}) => ({
+  ...(o.subgrid && { subgrid: true }),
+  ...(o.row && { row: o.row }),
+  ...(o.rowStart && { rowStart: o.rowStart, rowEnd: o.rowEnd }),
+  ...(o.col != null && { col: o.col }),
+  ...(o.spanColumns && { spanColumns: true }),
+})
+
 // A grey container: a dashed slate zone holding topology boxes + a ghost chip
-// naming the OpenShift component (last, like a signature).
+// naming the OpenShift component (last, like a signature). In grid topics it is
+// a subgrid spanning its row range (opts.subgrid + rowStart/rowEnd).
 const ghostZone = (id, label, boxes, opts = {}) => ({
-  id, label, ghost: true, boundaryKind: 'group', layout: 'stack', colorVar: 'k-ghost', boxes,
+  id, label, ghost: true, boundaryKind: 'group',
+  ...(opts.subgrid ? {} : { layout: 'stack' }),
+  colorVar: 'k-ghost', boxes,
   className: opts.className,
   labelBadges: opts.labelBadges,
+  ...gridProps(opts),
 })
 const ghostChip = (id, title, typePrefix, caption, detail, opts = {}) => ({
   id, title, typePrefix, caption, variant: 'ghost', colorVar: 'k-ghost', detail,
   badges: opts.badges,
+  ...gridProps(opts),
 })
 // A ghost chip that IS a registered overview object: title and [typePrefix]
 // come straight from components.json (so the two views can never drift), and
@@ -636,6 +659,7 @@ const ghostChipFor = (id, componentId, caption, opts = {}) => {
     id, componentId, title: c.displayName, typePrefix: c.typePrefix,
     caption, variant: 'ghost', colorVar: 'k-ghost',
     badges: opts.badges,
+    ...gridProps(opts),
   }
 }
 // A grey container that IS the OpenShift component it groups: the zone's own
@@ -649,38 +673,42 @@ const componentZone = (id, componentId, boxes, opts = {}) => {
   const c = findComponent(componentId)
   return {
     id, componentId, label: opts.label ?? c.displayName,
-    ghost: true, boundaryKind: 'group', layout: 'stack', colorVar: 'k-ghost', boxes,
+    ghost: true, boundaryKind: 'group',
+    ...(opts.subgrid ? {} : { layout: 'stack' }),
+    colorVar: 'k-ghost', boxes,
     className: opts.className,
     labelBadges: opts.labelBadges ?? [c.typePrefix],
+    ...gridProps(opts),
   }
 }
 
 // The same node column, with its boxes re-parented into the three grey
 // containers: OVS on the metal, the logical objects realized by ovn-controller,
 // and the pod wiring done by the CNI.
-const nodeZoneBig = (w, pods) => {
+const nodeZoneBig = (w, pods, col) => {
   const b = nodeBoxes(w)
   return {
     id: `ovnb-${w.id}-node`,
     label: `${w.node} · ${w.hostIp}`,
     colorVar: 'k-teal',
     boundaryKind: 'machine',
-    layout: 'stack',
+    subgrid: true,
+    col,
+    rowSpan: 'all',
     zones: [
       ghostZone(`ovnb-${w.id}-ovs`, 'Open vSwitch · on the metal', [
         b.eth0, b.brint,
-        ghostChip(`${w.id}-ovs`, 'ovs-vswitchd.service', 'systemd', 'forwards every packet', ovsGhostDetail(w)),
-      ]),
+        ghostChip(`${w.id}-ovs`, 'ovs-vswitchd.service', 'systemd', 'forwards every packet', ovsGhostDetail(w), { row: 'ovschip' }),
+      ], { subgrid: true, rowStart: 'ovsband', rowEnd: 'nkband' }),
       ghostZone(`ovnb-${w.id}-ovnkube`, 'realized by ovn-controller', [
         b.ext, b.gr,
-        ghostChip(`${w.id}-ovnkube`, 'ovnkube-node', 'Pod', 'DB rows → OpenFlow', ovnkubeGhostDetail(w)),
-      ]),
-      { id: `ovnb-${w.id}-gap`, spacer: true },
+        ghostChip(`${w.id}-ovnkube`, 'ovnkube-node', 'Pod', 'DB rows → OpenFlow', ovnkubeGhostDetail(w), { row: 'nkchip' }),
+      ], { subgrid: true, rowStart: 'nkband', rowEnd: 'core' }),
       ghostZone(`ovnb-${w.id}-cni`, 'pod wiring · CNI', [
         b.ls,
         ...pods.map((p) => podBox(w, p)),
-        ghostChip(`${w.id}-cni`, 'ovn-k8s-cni-overlay', 'CNI', 'plugs veths into br-int', cniGhostDetail(w)),
-      ]),
+        ghostChip(`${w.id}-cni`, 'ovn-k8s-cni-overlay', 'CNI', 'plugs veths into br-int', cniGhostDetail(w), { row: 'cnichip' }),
+      ], { subgrid: true, rowStart: 'cniband', rowEnd: 'grid-end' }),
     ],
   }
 }
@@ -699,14 +727,18 @@ export const OVN_TOPOLOGY_BIG = {
     {
       id: 'ovnb-nodes-zone',
       bare: true,
-      layout: 'columns',
+      layout: 'grid',
+      gridCols: 2,
+      rows: ['colhead', 'ovsband', 'nic', 'bridge', 'ovschip', 'nkband', 'ext', 'gateway', 'nkchip', 'core', 'cniband', 'nodeswitch', 'pods', 'cnichip'],
       zones: [
-        nodeZoneBig(W1, W1_PODS),
+        nodeZoneBig(W1, W1_PODS, 1),
         {
           id: 'ovnb-core',
           bare: true,
           layout: 'stack',
           colorVar: 'k-purple',
+          spanColumns: true,
+          row: 'core',
           zones: [
             ghostZone('ovnb-core-db', 'OVN logical topology · rows in every node’s NB DB (interconnect)', [
               JOIN_BOX, ROUTER_BOX,
@@ -714,7 +746,7 @@ export const OVN_TOPOLOGY_BIG = {
             ]),
           ],
         },
-        nodeZoneBig(W2, W2_PODS),
+        nodeZoneBig(W2, W2_PODS, 2),
       ],
     },
   ],
@@ -976,19 +1008,19 @@ const gPodDetail = (name, ip, w) => ({
 // the two diagrams read as the same picture at two depths.
 // The guest twin realizes onto the guest cluster's own OVS / node agent — the
 // same depth-door pattern as the management columns, one turtle down.
-const guestNodeBoxes = (w) => ({
-  eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'virtio-net', variant: 'iface', componentId: 'ovs-guest', detail: gEthDetail(w) },
-  brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', componentId: 'ovs-guest', detail: gBrIntDetail(w) },
+const guestNodeBoxes = (w, prefix = '') => ({
+  eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'virtio-net', variant: 'iface', row: `${prefix}nic`, componentId: 'ovs-guest', detail: gEthDetail(w) },
+  brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', row: `${prefix}bridge`, componentId: 'ovs-guest', detail: gBrIntDetail(w) },
   // Same scheme as the mgmt boxes (see nodeBoxes): full OVN name in `title`
   // for the popup / search, hidden on the card face in favour of the type
   // prefix + the guest node tag (guest-1 / guest-2).
-  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, badges: [{ label: w.tag }], componentId: 'ovn-node-guest', detail: gExtDetail(w) },
+  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, badges: [{ label: w.tag }], row: `${prefix}ext`, componentId: 'ovn-node-guest', detail: gExtDetail(w) },
   gr: { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'Gateway Router', colorVar: 'k-green',
-    variant: 'ellipse', hideTitleOnCanvas: true, badges: [{ label: w.tag }], componentId: 'ovn-node-guest', detail: gGrDetail(w) },
-  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, badges: [{ label: w.tag }], componentId: 'ovn-node-guest', detail: gLsDetail(w) },
+    variant: 'ellipse', hideTitleOnCanvas: true, badges: [{ label: w.tag }], row: `${prefix}gateway`, componentId: 'ovn-node-guest', detail: gGrDetail(w) },
+  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, badges: [{ label: w.tag }], row: `${prefix}nodeswitch`, componentId: 'ovn-node-guest', detail: gLsDetail(w) },
 })
-const guestPodBox = (w, p) => ({
-  id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod',
+const guestPodBox = (w, p, prefix = '') => ({
+  id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod', row: `${prefix}pods`,
   colorVar: 'k-amber', variant: 'pod', inline: true, componentId: p.componentId,
   detail: gPodDetail(p.name, p.ip, w),
 })
@@ -1007,17 +1039,18 @@ const GUEST_ROUTER_BOX = {
 
 // One guest node column — the plain view's chain, run inside a VMI (zone label
 // says which bare-metal worker hosts it; node cards take the guest-VMI green).
-const guestNodeZone = (w, pods) => {
+const guestNodeZone = (w, pods, col) => {
   const b = guestNodeBoxes(w)
   return {
     id: `ovng-${w.id}-node`,
     label: `${w.node} · VMI on ${w.metal} · ${w.hostIp}`,
     colorVar: 'k-green',
     boundaryKind: 'machine',
-    layout: 'stack',
+    subgrid: true,
+    col,
+    rowSpan: 'all',
     boxes: [
       b.eth0, b.brint, b.ext, b.gr,
-      { id: `${w.id}-gap`, spacer: true },
       b.ls,
       ...pods.map((p) => guestPodBox(w, p)),
     ],
@@ -1110,17 +1143,21 @@ export const OVN_TOPOLOGY_GUEST = {
     {
       id: 'ovng-nodes-zone',
       bare: true,
-      layout: 'columns',
+      layout: 'grid',
+      gridCols: 2,
+      rows: ['colhead', 'nic', 'bridge', 'ext', 'gateway', 'core', 'nodeswitch', 'pods'],
       zones: [
-        guestNodeZone(G1, G1_PODS),
+        guestNodeZone(G1, G1_PODS, 1),
         {
           id: 'ovng-core',
           bare: true,
           layout: 'stack',
           colorVar: 'k-purple',
+          spanColumns: true,
+          row: 'core',
           boxes: [GUEST_JOIN_BOX, GUEST_ROUTER_BOX],
         },
-        guestNodeZone(G2, G2_PODS),
+        guestNodeZone(G2, G2_PODS, 2),
       ],
     },
   ],
@@ -1341,14 +1378,17 @@ const FULL_GROUTER_BOX = {
 
 const launcherBox = (m, g) => ({
   id: `${m.id}-launcher`, title: 'virt-launcher', caption: `${g.hostIp} · VM NIC`, typePrefix: 'Pod',
-  colorVar: 'k-amber', variant: 'pod', inline: true, componentId: 'kubevirt-launcher',
+  colorVar: 'k-amber', variant: 'pod', inline: true, row: 'm-launcher', componentId: 'kubevirt-launcher',
   detail: launcherPodDetail(m, g),
 })
 
 // The guest VMI nested inside its bare-metal host's column, wearing the same
 // grey containers as the metal: in-VM OVS, the guest ovnkube-node, in-VM CNI.
+// In the row-grid it is a subgrid spanning the guest band (vmi-head → end); its
+// own guest groups are subgrids one level deeper (the 3-deep subgrid chain:
+// worker column → VMI → group → box).
 const fullVmZone = (g, pods) => {
-  const b = guestNodeBoxes(g)
+  const b = guestNodeBoxes(g, 'g-')
   return {
     id: `ovnf-${g.id}-vm`,
     // The VMI boundary IS the VirtualMachineInstance object: its label (the
@@ -1359,26 +1399,27 @@ const fullVmZone = (g, pods) => {
     labelBadges: ['VMI'],
     colorVar: 'k-green',
     boundaryKind: 'machine',
-    layout: 'stack',
+    subgrid: true,
+    rowStart: 'vmi-head',
+    rowEnd: 'grid-end',
     zones: [
-      componentZone(`ovnf-${g.id}-ovs`, 'ovs-guest', [b.eth0, b.brint], { labelBadges: ['systemd', 'VM'] }),
-      componentZone(`ovnf-${g.id}-ovnkube`, 'ovn-node-guest', [b.ext, b.gr], { labelBadges: ['guest controller'] }),
-      { id: `ovnf-${g.id}-gap`, spacer: true },
+      componentZone(`ovnf-${g.id}-ovs`, 'ovs-guest', [b.eth0, b.brint], { labelBadges: ['systemd', 'VM'], subgrid: true, rowStart: 'g-ovsband', rowEnd: 'g-nkband' }),
+      componentZone(`ovnf-${g.id}-ovnkube`, 'ovn-node-guest', [b.ext, b.gr], { labelBadges: ['guest controller'], subgrid: true, rowStart: 'g-nkband', rowEnd: 'g-core' }),
       ghostZone(`ovnf-${g.id}-cni`, 'Pod wiring', [
         b.ls,
-        ...pods.map((p) => guestPodBox(g, p)),
+        ...pods.map((p) => guestPodBox(g, p, 'g-')),
         ghostChip(`${g.id}-cni`, 'ovn-k8s-cni-overlay', 'CNI', undefined, gCniGhostDetail(g), {
-          badges: [{ label: 'veth → br-int' }],
+          badges: [{ label: 'veth → br-int' }], row: 'g-cnichip',
         }),
-      ], { labelBadges: ['in-VM CNI'] }),
+      ], { labelBadges: ['in-VM CNI'], subgrid: true, rowStart: 'g-cniband', rowEnd: 'grid-end' }),
     ],
   }
 }
 
 // One bare-metal column: the mgmt chain in its grey containers, then the
 // nested VMI carrying the guest chain in its own.
-const fullMetalZone = (m, g, gPods) => {
-  const b = nodeBoxes(m, MGMT_NB_NOTE)
+const fullMetalZone = (m, g, gPods, col) => {
+  const b = nodeBoxes(m, MGMT_NB_NOTE, MGMT_COMP, 'm-')
   b.ls = { ...b.ls, detail: mLsDetail(m, g) }
   return {
     id: `ovnf-${m.id}-node`,
@@ -1386,17 +1427,18 @@ const fullMetalZone = (m, g, gPods) => {
     labelBadges: ['bare metal', m.hostIp],
     colorVar: 'k-blue',
     boundaryKind: 'machine',
-    layout: 'stack',
+    subgrid: true,
+    col,
+    rowSpan: 'all',
     zones: [
-      componentZone(`ovnf-${m.id}-ovs`, 'ovs-host', [b.eth0, b.brint], { labelBadges: ['systemd', 'RHCOS'] }),
-      componentZone(`ovnf-${m.id}-ovnkube`, 'ovn-node-host', [b.ext, b.gr], { labelBadges: ['ovn-controller'] }),
-      { id: `ovnf-${m.id}-gap`, spacer: true },
+      componentZone(`ovnf-${m.id}-ovs`, 'ovs-host', [b.eth0, b.brint], { labelBadges: ['systemd', 'RHCOS'], subgrid: true, rowStart: 'm-ovsband', rowEnd: 'm-nkband' }),
+      componentZone(`ovnf-${m.id}-ovnkube`, 'ovn-node-host', [b.ext, b.gr], { labelBadges: ['ovn-controller'], subgrid: true, rowStart: 'm-nkband', rowEnd: 'm-core' }),
       ghostZone(`ovnf-${m.id}-cni`, 'Pod wiring', [
         b.ls, launcherBox(m, g),
         ghostChip(`${m.id}-cni`, 'ovn-k8s-cni-overlay', 'CNI', undefined, cniGhostDetail(m), {
-          badges: [{ label: 'veth → br-int' }],
+          badges: [{ label: 'veth → br-int' }], row: 'm-cnichip',
         }),
-      ], { labelBadges: ['CNI'] }),
+      ], { labelBadges: ['CNI'], subgrid: true, rowStart: 'm-cniband', rowEnd: 'vmi-head' }),
       fullVmZone(g, gPods),
     ],
   }
@@ -1565,44 +1607,48 @@ export const OVN_TOPOLOGY_FULL = {
     {
       id: 'ovnf-nodes-zone',
       bare: true,
-      layout: 'columns',
+      layout: 'grid',
+      gridCols: 2,
+      // The full schema: the mgmt chain, then the nested-VMI guest chain, each
+      // group's label in its own band row. The two shared cores span both
+      // columns on their own `m-core` / `g-core` rows — sitting in the gap each
+      // worker column leaves empty there, never bleeding into a neighbour row.
+      rows: [
+        'colhead',
+        'm-ovsband', 'm-nic', 'm-bridge',
+        'm-nkband', 'm-ext', 'm-gateway',
+        'm-core',
+        'm-cniband', 'm-nodeswitch', 'm-launcher', 'm-cnichip',
+        'vmi-head',
+        'g-ovsband', 'g-nic', 'g-bridge',
+        'g-nkband', 'g-ext', 'g-gateway',
+        'g-core',
+        'g-cniband', 'g-nodeswitch', 'g-pods', 'g-cnichip',
+      ],
       zones: [
-        fullMetalZone(FM1, FG1, G1_PODS),
-        // The middle column stacks the two logical cores: the mgmt core up at
-        // gateway-router height, the guest core down at the VMIs' height, with
-        // a growing gap between — each inside the grey container naming the
-        // database its rows live in.
-        {
-          id: 'ovnf-core',
-          bare: true,
-          layout: 'stack',
-          colorVar: 'k-purple',
-          zones: [
-            // Top spacer drops the mgmt core toward the metal GRs' height; the
-            // mid spacer holds the guest core down at the nested VMIs' band.
-            { id: 'ovnf-core-top', spacer: true },
-            ghostZone('ovnf-core-m', 'mgmt logical topology', [
-              FULL_MJOIN_BOX, FULL_MROUTER_BOX,
-              ghostChip('ovnf-mnb', 'ovnkube-control-plane', 'Deployment', undefined, FULL_MNB_GHOST_DETAIL, {
-                badges: [{ label: 'cluster manager' }],
-              }),
-            ], {
-              className: 'ovnfull-core-zone ovnfull-core-zone--mgmt',
-              labelBadges: ['per-node NB DBs', 'openshift-ovn-kubernetes'],
-            }),
-            { id: 'ovnf-core-gap', spacer: true },
-            ghostZone('ovnf-core-g', 'guest logical topology', [
-              FULL_GJOIN_BOX, FULL_GROUTER_BOX,
-              ghostChipFor('ovnf-gnb', 'ovn-master-control', undefined, {
-                badges: [{ label: 'cluster manager' }],
-              }),
-            ], {
-              className: 'ovnfull-core-zone ovnfull-core-zone--guest',
-              labelBadges: ['per-VM NB DBs', 'HCP namespace'],
-            }),
-          ],
-        },
-        fullMetalZone(FM2, FG2, G2_PODS),
+        fullMetalZone(FM1, FG1, G1_PODS, 1),
+        fullMetalZone(FM2, FG2, G2_PODS, 2),
+        // The two shared logical cores, each spanning both columns on its row.
+        ghostZone('ovnf-core-m', 'mgmt logical topology', [
+          FULL_MJOIN_BOX, FULL_MROUTER_BOX,
+          ghostChip('ovnf-mnb', 'ovnkube-control-plane', 'Deployment', undefined, FULL_MNB_GHOST_DETAIL, {
+            badges: [{ label: 'cluster manager' }],
+          }),
+        ], {
+          className: 'ovnfull-core-zone ovnfull-core-zone--mgmt',
+          labelBadges: ['per-node NB DBs', 'openshift-ovn-kubernetes'],
+          spanColumns: true, row: 'm-core',
+        }),
+        ghostZone('ovnf-core-g', 'guest logical topology', [
+          FULL_GJOIN_BOX, FULL_GROUTER_BOX,
+          ghostChipFor('ovnf-gnb', 'ovn-master-control', undefined, {
+            badges: [{ label: 'cluster manager' }],
+          }),
+        ], {
+          className: 'ovnfull-core-zone ovnfull-core-zone--guest',
+          labelBadges: ['per-VM NB DBs', 'HCP namespace'],
+          spanColumns: true, row: 'g-core',
+        }),
       ],
     },
   ],
