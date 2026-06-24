@@ -11,7 +11,7 @@ export default function LogicalLens({
   onSelectFlowStep,
   onSelectComponent,
 }) {
-  const topic = findDeepDive(scope)
+  const topic = findDeepDive('ovn-topology-objects')
 
   return (
     <div className="logical-lens">
