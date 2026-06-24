@@ -15,7 +15,7 @@ import TopicCanvas from './TopicCanvas'
 // inside greyed OpenShift containers (big view), the guest cluster's SDN, and the
 // full HCP picture with both SDNs at once.
 const accent = (colorVar) => `var(--${colorVar || 'k-cyan'})`
-const SCOPES = DEEP_DIVES.filter((t) => t.category === 'network' && t.topicId !== 'ovn-topology-objects')
+const SCOPES = DEEP_DIVES.filter((t) => t.category === 'network')
 
 // Scope switcher — jump between the four OVN topology views. Styled as an
 // "open an object" popover (ObjectSelect), echoing the Deep Dive tab's TopicSelect.

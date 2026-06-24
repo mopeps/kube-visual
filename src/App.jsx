@@ -28,7 +28,7 @@ const REPLICAS_KEY = 'kv-replicas-open'
 const SCOPE_KEY = 'kv-node-scope'
 const ALT_KEY = 'kv-network-altitude'
 const LENS_SCOPE_KEY = 'kv-logical-scope'
-const DEFAULT_LENS_SCOPE = 'ovn-topology-full'
+const DEFAULT_LENS_SCOPE = 'ovn-topology-objects'
 const PREVIOUS_DEFAULT_LENS_SCOPE = 'ovn-topology'
 
 function Header() {

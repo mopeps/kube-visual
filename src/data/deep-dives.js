@@ -338,7 +338,7 @@ const TARGET_TREE = {
 // ── systemd · the state reconciliation loop ─────────────────────────────────
 const SYSTEMD = {
   topicId: 'systemd',
-  title: 'systemd — the state reconciliation loop',
+  title: 'Systemd State Loop',
   tagline:
     'On every RHCOS node systemd is PID 1: a state-enforcing supervisor that continuously reconciles an in-memory desired state with kernel reality. Followed here through a real host systemd unit — Open vSwitch (ovs-vswitchd.service), the daemon ovnkube-node programs. (ovnkube-node itself is a DaemonSet pod the kubelet supervises, not a systemd unit — so OVS, not it, is the honest subject here.)',
   colorVar: 'k-amber',
@@ -821,7 +821,7 @@ const SYSTEMD = {
 // ── Standard Linux boot ──────────────────────────────────────────────────────
 const LINUX_BOOT = {
   topicId: 'linux-boot',
-  title: 'The Linux boot process — firmware to PID 1',
+  title: 'Linux Boot Process',
   tagline:
     'Four handoffs get a bare machine from power-on to a mounted root filesystem, before systemd ever runs. The same chain underlies the RHCOS/HCP node boot — with cluster-specific steps grafted on.',
   colorVar: 'k-cyan',
@@ -1001,7 +1001,7 @@ const LINUX_BOOT = {
 // ── OpenShift / HCP node boot ────────────────────────────────────────────────
 const HCP_BOOT = {
   topicId: 'hcp-boot',
-  title: 'How an OpenShift / HCP worker node boots',
+  title: 'HCP Worker Node Boot',
   tagline:
     'A hosted-cluster worker is the standard Linux boot with three OpenShift graft points: its desired OS state is a MachineConfig, that state is delivered by an Ignition Server, and the “machine” is a KubeVirt VirtualMachineInstance. The end state is a node that has joined the hosted cluster.',
   colorVar: 'k-sky',
@@ -1281,7 +1281,7 @@ openshift-install agent create image --dir ./mgmt-hub
 
 const HCP_INSTALL = {
   topicId: 'hcp-install',
-  title: 'Installing an HCP cluster on the Agent platform',
+  title: 'HCP Hub Installation',
   tagline:
     'The full bare-metal story, from nothing to a hosted worker. First Day-0: install OpenShift on bare metal with the Agent-based Installer so it can *become* the management hub. Then layer on the HCP prerequisites (MCE → HyperShift → Central Infrastructure Management), and finally the live steps that carry a physical machine from booting the discovery ISO, to registering as an Agent, to joining the hosted cluster as a Ready worker.',
   colorVar: 'k-orange',
@@ -1997,7 +1997,7 @@ const HCP_INSTALL = {
 // Factual backbone: docs/tmux-window-naming.md.
 const TMUX_SUDO = {
   topicId: 'tmux-sudo',
-  title: 'tmux window naming across sudo -iu',
+  title: 'tmux Sudo Window Naming',
   tagline:
     'You run tmux as bongo, then `sudo -iu oracle` inside a pane. oracle is locked out of tmux’s control socket — yet it can still rename the window by writing an escape sequence to its own stdout, which flows into the pty tmux is already reading. The crux is control path vs. data path: a socket connect is permission-checked at connect time (denied); the pty fd was checked at open() time and merely inherited (allowed). Read it as one journey from the shell to your terminal; the two zoom-ins explain how tmux reads the byte and how oracle got the handle.',
   colorVar: 'k-teal',
@@ -2573,7 +2573,7 @@ esac`,
 
 const LINUX_FDS = {
   topicId: 'linux-fds-sockets',
-  title: 'File descriptors, sockets & how Linux talks',
+  title: 'Linux Sockets & FDs',
   tagline:
     'A file descriptor is the one handle Linux hands a process for every kind of open thing — a file, a pipe, a socket, a device — so the same read()/write() moves bytes through all of them. A socket is a special fd built for two-way, addressed communication. Together they are how processes talk. (For the permission/inheritance angle, see the tmux deep dive.)',
   colorVar: 'k-purple',
@@ -3179,7 +3179,7 @@ const LINUX_FDS = {
 // ── Inside the API server · one request's journey ───────────────────────────
 const API_REQUEST_PATH = {
   topicId: 'api-request-path',
-  title: 'Inside the API server — one request’s journey',
+  title: 'API Server Request Path',
   tagline:
     'Every `oc apply`, controller write, and kubelet status update runs the same gauntlet inside kube-apiserver: authentication → authorization → mutating admission → validation → an etcd write → watch fan-out to every interested loop. In HCP the server running this chain is itself a Pod in the management cluster’s HCP namespace, and the admission webhooks it calls are Pods next door.',
   colorVar: 'k-blue',
@@ -3412,7 +3412,7 @@ const API_REQUEST_PATH = {
 // ── etcd · Raft, quorum, and where HCP runs it ──────────────────────────────
 const ETCD_RAFT = {
   topicId: 'etcd-raft',
-  title: 'etcd — Raft, quorum, and where HCP runs it',
+  title: 'etcd Raft Consensus',
   tagline:
     'Every resourceVersion in the cluster is an etcd revision, and every write the API server makes survives only because a quorum of etcd members agreed to it. This is how that agreement works — the replicated log, fsync before ack, the commit index, leader election — and the HCP twist: the guest cluster’s etcd is an ordinary StatefulSet in the management cluster, healed by the same machinery it serves elsewhere.',
   colorVar: 'k-green',
@@ -3638,7 +3638,7 @@ const ETCD_RAFT = {
 // kubelet that joins. This topic follows that one trust chain top to bottom.
 const CLUSTER_PKI = {
   topicId: 'cluster-pki',
-  title: 'Cluster PKI — where every cert comes from',
+  title: 'Hosted Cluster PKI',
   tagline:
     'A standalone cluster bootstraps its own certificates on the install node. A hosted cluster has no install node — its control plane is just Pods in someone else’s cluster — so the management cluster mints the guest’s entire PKI: a root CA and scoped signers, stored as Secrets in the HCP namespace, mounted into the control-plane Pods, folded into each node’s Ignition, and used to sign every kubelet that joins. Every cert in the hosted cluster traces back to that mint a layer up.',
   colorVar: 'k-amber',

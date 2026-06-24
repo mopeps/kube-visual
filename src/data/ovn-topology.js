@@ -498,7 +498,7 @@ const underlayZone = (boxes = [UNDERLAY_BOX], id = 'ovn-underlay-zone') => ({
 
 export const OVN_TOPOLOGY = {
   topicId: 'ovn-topology',
-  title: 'OVN-Kubernetes — the logical network topology',
+  title: 'OVN-K8s Mgmt Topology',
   tagline:
     'How OVN-Kubernetes wires a cluster: per-node gateway routers behind localnet switches, one "join" switch gluing them to a distributed cluster router, and a logical switch per node carrying the pods. Everything here is a row in OVN’s northbound DB that you can list with ovn-nbctl — except br-int, the OVS bridge each node compiles all of it into. The same wiring runs twice in this app’s HCP topology: once on the bare-metal management cluster, once inside the guest VMs — the guest-cluster twin topic draws that second run.',
   colorVar: 'k-teal',
@@ -662,7 +662,7 @@ const nodeZoneBig = (w, pods) => {
 
 export const OVN_TOPOLOGY_BIG = {
   topicId: 'ovn-topology-big',
-  title: 'OVN-Kubernetes in OpenShift — where the topology lives',
+  title: 'OVN-K8s OpenShift View',
   tagline:
     'The exact same diagram, zoomed out one level: every box of the OVN topology, unchanged, now drawn inside the greyed OpenShift component that contains it — Open vSwitch on the metal, the ovnkube-node pod whose ovn-controller realizes the logical objects, the CNI that wires the pods, and the Northbound database the logical space is rows in — which under interconnect is node-local (one NB DB per node), not a single cluster database. Grey is machinery; colour is the topology it carries. The trace flows are the same three packets as the plain view.',
   colorVar: 'k-teal',
@@ -1071,7 +1071,7 @@ const GUEST_FLOWS = [
 
 export const OVN_TOPOLOGY_GUEST = {
   topicId: 'ovn-topology-guest',
-  title: 'OVN-Kubernetes in the guest cluster — the same wiring, one turtle down',
+  title: 'OVN-K8s Guest Topology',
   tagline:
     'The hosted cluster runs the exact same OVN topology as the plain view — gateway routers, join switch, distributed cluster router, a logical switch per node carrying the pods — with every piece one level up: each "node" is a KubeVirt VMI, the underlay is the management cluster’s pod network, the node NIC is a virt-launcher pod’s port. Like the mgmt SDN it runs interconnect, so the NB DB rows live in each guest VM’s node-local NB DB; the guest’s cluster manager in the HCP namespace only allocates the subnets. Cross-node guest traffic is Geneve wrapped in Geneve; guest egress is SNATed twice. Same constructs, same commands — different turtle.',
   colorVar: 'k-purple',
@@ -1542,7 +1542,7 @@ const FULL_NETWORK_MAP = {
 
 export const OVN_TOPOLOGY_FULL = {
   topicId: 'ovn-topology-full',
-  title: 'OVN-Kubernetes — the full HCP picture: Network map view',
+  title: 'OVN-K8s Network Map',
   tagline:
     'Topology first: the management cluster’s OVN topology on the bare-metal workers, the guest cluster’s identical topology nested inside each worker’s VMI, connected by the virt-launcher tap ↔ virtio seam. Click a box to open its OpenShift object and Linux primitives.',
   colorVar: 'k-orange',
@@ -1600,7 +1600,7 @@ export const OVN_TOPOLOGY_FULL = {
 
 export const OVN_TOPOLOGY_OBJECTS = {
   topicId: 'ovn-topology-objects',
-  title: 'OVN-Kubernetes — the full HCP picture: both SDNs in their OpenShift objects',
+  title: 'OVN-K8s Kubevirt Topology',
   tagline:
     'Everything at once: the management cluster’s OVN topology on the bare-metal workers, the guest cluster’s identical topology nested inside each worker’s VMI, and the grey OpenShift container around every group of boxes — Open vSwitch units on the metal and in each VM, the ovnkube-node pods that realize each layer, the CNIs that wire the pods, the two SDNs’ logical topologies (each interconnect — node-local NB DBs per node/VM, with only the cluster managers in openshift-ovn-kubernetes and the HCP namespace), and the virt-launcher pod where the layers meet: its tap device and the VM’s eth0 are one NIC. Grey is machinery; colour is topology. The two trace flows walk a packet down through both SDNs and back up.',
   colorVar: 'k-orange',
