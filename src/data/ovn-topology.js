@@ -333,10 +333,14 @@ const MGMT_COMP = { ovs: 'ovs-host', node: 'ovn-node-host' }
 const nodeBoxes = (w, note = NBCTL_NOTE, comp = MGMT_COMP) => ({
   eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'netdev', variant: 'iface', componentId: comp.ovs, detail: ethDetail(w) },
   brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', componentId: comp.ovs, detail: brIntDetail(w, note) },
-  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', componentId: comp.node, detail: extSwitchDetail(w, note) },
-  gr: { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'Gateway Router', colorVar: 'k-green',
+  // Titles drop the node-name suffix (ext_<node> → ext, GR_<node> → GR,
+  // LS <node> → LS): the column header already names the node and the type
+  // prefix already names the role, so the suffix was doubly redundant on the
+  // card face. The full OVN object name lives in each box's detail popup.
+  ext: { id: `${w.id}-ext`, title: 'ext', typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', componentId: comp.node, detail: extSwitchDetail(w, note) },
+  gr: { id: `${w.id}-gr`, title: 'GR', typePrefix: 'Gateway Router', colorVar: 'k-green',
     variant: 'ellipse', componentId: comp.node, detail: gatewayRouterDetail(w, note) },
-  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', componentId: comp.node, detail: nodeSwitchDetail(w, note) },
+  ls: { id: `${w.id}-ls`, title: 'LS', typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', componentId: comp.node, detail: nodeSwitchDetail(w, note) },
 })
 const podBox = (w, p) => ({
   id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod',
@@ -954,10 +958,13 @@ const gPodDetail = (name, ip, w) => ({
 const guestNodeBoxes = (w) => ({
   eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'virtio-net', variant: 'iface', componentId: 'ovs-guest', detail: gEthDetail(w) },
   brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', componentId: 'ovs-guest', detail: gBrIntDetail(w) },
-  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', componentId: 'ovn-node-guest', detail: gExtDetail(w) },
-  gr: { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'Gateway Router', colorVar: 'k-green',
+  // Same node-suffix trim as the mgmt boxes (see nodeBoxes): the VMI column
+  // header + type prefix already carry node and role; full names stay in the
+  // detail popups.
+  ext: { id: `${w.id}-ext`, title: 'ext', typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', componentId: 'ovn-node-guest', detail: gExtDetail(w) },
+  gr: { id: `${w.id}-gr`, title: 'GR', typePrefix: 'Gateway Router', colorVar: 'k-green',
     variant: 'ellipse', componentId: 'ovn-node-guest', detail: gGrDetail(w) },
-  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', componentId: 'ovn-node-guest', detail: gLsDetail(w) },
+  ls: { id: `${w.id}-ls`, title: 'LS', typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', componentId: 'ovn-node-guest', detail: gLsDetail(w) },
 })
 const guestPodBox = (w, p) => ({
   id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod',
