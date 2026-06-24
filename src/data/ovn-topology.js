@@ -1542,9 +1542,9 @@ const FULL_NETWORK_MAP = {
 
 export const OVN_TOPOLOGY_FULL = {
   topicId: 'ovn-topology-full',
-  title: 'OVN-Kubernetes — the full HCP picture: both SDNs in their OpenShift objects',
+  title: 'OVN-Kubernetes — the full HCP picture: Network map view',
   tagline:
-    'Everything at once: the management cluster’s OVN topology on the bare-metal workers, the guest cluster’s identical topology nested inside each worker’s VMI, and the grey OpenShift container around every group of boxes — Open vSwitch units on the metal and in each VM, the ovnkube-node pods that realize each layer, the CNIs that wire the pods, the two SDNs’ logical topologies (each interconnect — node-local NB DBs per node/VM, with only the cluster managers in openshift-ovn-kubernetes and the HCP namespace), and the virt-launcher pod where the layers meet: its tap device and the VM’s eth0 are one NIC. Grey is machinery; colour is topology. The two trace flows walk a packet down through both SDNs and back up.',
+    'Topology first: the management cluster’s OVN topology on the bare-metal workers, the guest cluster’s identical topology nested inside each worker’s VMI, connected by the virt-launcher tap ↔ virtio seam. Click a box to open its OpenShift object and Linux primitives.',
   colorVar: 'k-orange',
   canvasClass: 'recon-stack--ovnfull',
   topology: { edges: FULL_EDGES },
@@ -1597,3 +1597,16 @@ export const OVN_TOPOLOGY_FULL = {
     },
   ],
 }
+
+export const OVN_TOPOLOGY_OBJECTS = {
+  topicId: 'ovn-topology-objects',
+  title: 'OVN-Kubernetes — the full HCP picture: both SDNs in their OpenShift objects',
+  tagline:
+    'Everything at once: the management cluster’s OVN topology on the bare-metal workers, the guest cluster’s identical topology nested inside each worker’s VMI, and the grey OpenShift container around every group of boxes — Open vSwitch units on the metal and in each VM, the ovnkube-node pods that realize each layer, the CNIs that wire the pods, the two SDNs’ logical topologies (each interconnect — node-local NB DBs per node/VM, with only the cluster managers in openshift-ovn-kubernetes and the HCP namespace), and the virt-launcher pod where the layers meet: its tap device and the VM’s eth0 are one NIC. Grey is machinery; colour is topology. The two trace flows walk a packet down through both SDNs and back up.',
+  colorVar: 'k-orange',
+  canvasClass: 'recon-stack--ovnfull',
+  topology: { edges: FULL_EDGES },
+  flows: FULL_FLOWS,
+  zones: OVN_TOPOLOGY_FULL.zones,
+}
+

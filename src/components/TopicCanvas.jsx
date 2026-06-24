@@ -125,7 +125,7 @@ export default function TopicCanvas({
         }
       : null
 
-  const canvas = useNetworkMap && topic.networkMap ? (
+  const canvas = topic.networkMap ? (
     <NetworkTopologyCanvas
       topic={topic}
       boxIndex={boxIndex}
