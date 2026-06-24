@@ -1314,19 +1314,19 @@ const MACHINE_UNDERLAY_BOX = {
 // badge is dropped.
 const FULL_MJOIN_BOX = {
   id: 'ovnf-mjoin', title: 'join · 100.64.0.0/16', typePrefix: 'Logical Switch', colorVar: 'k-sky',
-  variant: 'switch', hideTitleOnCanvas: true, caption: 'mgmt transit', detail: FULL_MJOIN_DETAIL,
+  variant: 'switch', hideTitleOnCanvas: true, caption: 'mgmt transit', componentId: 'ovn-node-host', detail: FULL_MJOIN_DETAIL,
 }
 const FULL_MROUTER_BOX = {
   id: 'ovnf-mrouter', title: 'ovn_cluster_router', typePrefix: 'OVN Cluster Router', colorVar: 'k-green',
-  variant: 'ellipse', hideTitleOnCanvas: true, caption: 'mgmt distributed', detail: FULL_MROUTER_DETAIL,
+  variant: 'ellipse', hideTitleOnCanvas: true, caption: 'mgmt distributed', componentId: 'ovn-node-host', detail: FULL_MROUTER_DETAIL,
 }
 const FULL_GJOIN_BOX = {
   id: 'ovnf-gjoin', title: 'join · 100.64.0.0/16', typePrefix: 'Logical Switch', colorVar: 'k-sky',
-  variant: 'switch', hideTitleOnCanvas: true, caption: 'guest transit', detail: GUEST_JOIN_DETAIL,
+  variant: 'switch', hideTitleOnCanvas: true, caption: 'guest transit', componentId: 'ovn-node-guest', detail: GUEST_JOIN_DETAIL,
 }
 const FULL_GROUTER_BOX = {
   id: 'ovnf-grouter', title: 'ovn_cluster_router', typePrefix: 'OVN Cluster Router', colorVar: 'k-green',
-  variant: 'ellipse', hideTitleOnCanvas: true, caption: 'guest distributed', detail: GUEST_ROUTER_DETAIL,
+  variant: 'ellipse', hideTitleOnCanvas: true, caption: 'guest distributed', componentId: 'ovn-node-guest', detail: GUEST_ROUTER_DETAIL,
 }
 
 // The seam anchor INSIDE the virt-launcher boundary: the pod's tap device,

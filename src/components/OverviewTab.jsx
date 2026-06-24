@@ -201,6 +201,10 @@ export default function OverviewTab({
   // can mount at the app root: which OVN topology is shown + its trace flow.
   lensScope,
   onSetLensScope,
+  // Network Map variant: 'v1' (flat, popup-only) vs 'v2' (boxes expand in place
+  // to their realizing component's internals).
+  mapVariant = 'v1',
+  onSetMapVariant,
   lensActiveFlow,
   lensActiveFlowStep,
   onLensSelectFlow,
@@ -922,6 +926,24 @@ export default function OverviewTab({
       {columnsView && (
         <div className="net-bar">
           <span className="net-bar-label">{net ? 'Network' : 'Architecture'}</span>
+          {mapMode && onSetMapVariant && (
+            <div className="net-map-variant" role="group" aria-label="Network Map version">
+              {['v1', 'v2'].map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  className={`net-bar-btn net-map-variant-btn ${mapVariant === v ? 'is-active' : ''}`}
+                  onClick={() => onSetMapVariant(v)}
+                  title={v === 'v1'
+                    ? 'Logical map — boxes open their detail in a popup'
+                    : 'Logical map — boxes open in place to their realizing component and its Linux primitives'}
+                  aria-pressed={mapVariant === v}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          )}
           {net && !mapMode && (
             <button type="button" className="net-bar-btn" onClick={toggleAllNet}>
               {allNetCollapsed ? 'Expand all' : 'Collapse all'}
@@ -971,6 +993,7 @@ export default function OverviewTab({
           <LogicalLens
             scope={lensScope}
             onSetScope={onSetLensScope}
+            mapVariant={mapVariant}
             activeFlow={lensActiveFlow}
             activeFlowStep={lensActiveFlowStep}
             onSelectFlow={onLensSelectFlow}
