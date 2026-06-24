@@ -1325,6 +1325,13 @@ const launcherBox = (m, g) => ({
 // grey containers as the metal: in-VM OVS, the guest ovnkube-node, in-VM CNI.
 const fullVmZone = (g, pods) => {
   const b = guestNodeBoxes(g)
+  // The full HCP map nests this guest chain in the same bare-metal column as
+  // the mgmt chain, so both carry a GR / ext / LS box. A tiny scope badge on
+  // the three node-suffix-trimmed boxes keeps them tellable apart at a glance
+  // (the single-SDN views don't need it and stay clean).
+  b.ext = { ...b.ext, badges: [{ label: 'guest' }] }
+  b.gr = { ...b.gr, badges: [{ label: 'guest' }] }
+  b.ls = { ...b.ls, badges: [{ label: 'guest' }] }
   return {
     id: `ovnf-${g.id}-vm`,
     label: g.node,
@@ -1366,7 +1373,11 @@ const fullVmZone = (g, pods) => {
 // nested VMI carrying the guest chain in its own.
 const fullMetalZone = (m, g, gPods) => {
   const b = nodeBoxes(m, MGMT_NB_NOTE)
-  b.ls = { ...b.ls, detail: mLsDetail(m, g) }
+  // Mate of the guest badge in fullVmZone: tag the mgmt chain's trimmed boxes
+  // so the two GR / ext / LS pairs in one metal column read as mgmt vs guest.
+  b.ext = { ...b.ext, badges: [{ label: 'mgmt' }] }
+  b.gr = { ...b.gr, badges: [{ label: 'mgmt' }] }
+  b.ls = { ...b.ls, detail: mLsDetail(m, g), badges: [{ label: 'mgmt' }] }
   return {
     id: `ovnf-${m.id}-node`,
     label: m.node,
