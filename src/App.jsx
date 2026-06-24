@@ -454,6 +454,7 @@ export default function App() {
         onClearFlow={clearFlow}
         onSelectFlowStep={selectFlowStep}
         loop={reconLoop}
+        targetBoxId={deepTarget}
         onConsumeTarget={() => setDeepTarget(null)}
         onSelectComponent={selectComponent}
         isCompact={isCompact}

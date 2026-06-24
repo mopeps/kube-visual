@@ -197,11 +197,6 @@ export default function OverviewTab({
   bigView = false,
   // Network lens opens and wires each rendered node's networking internals.
   netOverlay = false,
-  // Network lens altitude: 'map' (the OVN logical topology, the default) or
-  // 'detail' (the datapath component view — today's network rendering). Only
-  // meaningful when netOverlay is on.
-  networkAltitude = 'map',
-  onSetNetworkAltitude,
   // Map-altitude (LogicalLens) state, owned by App so the bottom hop inspector
   // can mount at the app root: which OVN topology is shown + its trace flow.
   lensScope,
@@ -961,7 +956,7 @@ export default function OverviewTab({
             </button>
           )}
 
-          {!netOverlay && !primOverlay && (
+          {!net && !primOverlay && (
             <span className="net-bar-hint">
               The whole Overview, three node pairs side by side. Switch to Network to open each component and trace the real networking topology.
             </span>
