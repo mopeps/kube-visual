@@ -35,12 +35,12 @@ import { findComponent } from './components-index.js'
 // join-switch ports rtoj-: the distributed router takes 100.64.0.1, the
 // gateway routers .2/.3 — diagrams often misread those as pod addresses.)
 const W1 = {
-  id: 'w1', node: 'ovn-worker', hostIp: '172.18.0.2',
+  id: 'w1', node: 'ovn-worker', tag: 'mgmt-1', hostIp: '172.18.0.2',
   joinIp: '100.64.0.2', subnet: '10.244.0.0/24', routerPort: '10.244.0.1', mask: 24,
   cidr: '10.244.0.0/16',
 }
 const W2 = {
-  id: 'w2', node: 'ovn-worker2', hostIp: '172.18.0.4',
+  id: 'w2', node: 'ovn-worker2', tag: 'mgmt-2', hostIp: '172.18.0.4',
   joinIp: '100.64.0.3', subnet: '10.244.2.0/24', routerPort: '10.244.2.1', mask: 24,
   cidr: '10.244.0.0/16',
 }
@@ -333,14 +333,15 @@ const MGMT_COMP = { ovs: 'ovs-host', node: 'ovn-node-host' }
 const nodeBoxes = (w, note = NBCTL_NOTE, comp = MGMT_COMP) => ({
   eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'netdev', variant: 'iface', componentId: comp.ovs, detail: ethDetail(w) },
   brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', componentId: comp.ovs, detail: brIntDetail(w, note) },
-  // Titles drop the node-name suffix (ext_<node> → ext, GR_<node> → GR,
-  // LS <node> → LS): the column header already names the node and the type
-  // prefix already names the role, so the suffix was doubly redundant on the
-  // card face. The full OVN object name lives in each box's detail popup.
-  ext: { id: `${w.id}-ext`, title: 'ext', typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', componentId: comp.node, detail: extSwitchDetail(w, note) },
-  gr: { id: `${w.id}-gr`, title: 'GR', typePrefix: 'Gateway Router', colorVar: 'k-green',
-    variant: 'ellipse', componentId: comp.node, detail: gatewayRouterDetail(w, note) },
-  ls: { id: `${w.id}-ls`, title: 'LS', typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', componentId: comp.node, detail: nodeSwitchDetail(w, note) },
+  // The per-node logical objects carry their full OVN name as `title` (it heads
+  // the detail popup and feeds search / aria), but `hideTitleOnCanvas` keeps
+  // that name OFF the card face — there the type prefix names the role and a
+  // node tag (mgmt-1 / guest-2) names the column, so two chains in one full-map
+  // column stay tellable apart without the long GR_<node> string.
+  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, badges: [{ label: w.tag }], componentId: comp.node, detail: extSwitchDetail(w, note) },
+  gr: { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'Gateway Router', colorVar: 'k-green',
+    variant: 'ellipse', hideTitleOnCanvas: true, badges: [{ label: w.tag }], componentId: comp.node, detail: gatewayRouterDetail(w, note) },
+  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, badges: [{ label: w.tag }], componentId: comp.node, detail: nodeSwitchDetail(w, note) },
 })
 const podBox = (w, p) => ({
   id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod',
@@ -714,12 +715,12 @@ export const OVN_TOPOLOGY_BIG = {
 // address universe that deliberately overlaps the management cluster's ranges,
 // because the two SDNs only ever meet through encapsulation.
 const G1 = {
-  id: 'g1', node: 'guest-worker-1', hostIp: '10.128.2.15',
+  id: 'g1', node: 'guest-worker-1', tag: 'guest-1', hostIp: '10.128.2.15',
   joinIp: '100.64.0.2', subnet: '10.128.0.0/23', routerPort: '10.128.0.1', mask: 23,
   metal: 'worker-1',
 }
 const G2 = {
-  id: 'g2', node: 'guest-worker-2', hostIp: '10.128.4.21',
+  id: 'g2', node: 'guest-worker-2', tag: 'guest-2', hostIp: '10.128.4.21',
   joinIp: '100.64.0.3', subnet: '10.128.2.0/23', routerPort: '10.128.2.1', mask: 23,
   metal: 'worker-2',
 }
@@ -958,13 +959,13 @@ const gPodDetail = (name, ip, w) => ({
 const guestNodeBoxes = (w) => ({
   eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'virtio-net', variant: 'iface', componentId: 'ovs-guest', detail: gEthDetail(w) },
   brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', componentId: 'ovs-guest', detail: gBrIntDetail(w) },
-  // Same node-suffix trim as the mgmt boxes (see nodeBoxes): the VMI column
-  // header + type prefix already carry node and role; full names stay in the
-  // detail popups.
-  ext: { id: `${w.id}-ext`, title: 'ext', typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', componentId: 'ovn-node-guest', detail: gExtDetail(w) },
-  gr: { id: `${w.id}-gr`, title: 'GR', typePrefix: 'Gateway Router', colorVar: 'k-green',
-    variant: 'ellipse', componentId: 'ovn-node-guest', detail: gGrDetail(w) },
-  ls: { id: `${w.id}-ls`, title: 'LS', typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', componentId: 'ovn-node-guest', detail: gLsDetail(w) },
+  // Same scheme as the mgmt boxes (see nodeBoxes): full OVN name in `title`
+  // for the popup / search, hidden on the card face in favour of the type
+  // prefix + the guest node tag (guest-1 / guest-2).
+  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, badges: [{ label: w.tag }], componentId: 'ovn-node-guest', detail: gExtDetail(w) },
+  gr: { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'Gateway Router', colorVar: 'k-green',
+    variant: 'ellipse', hideTitleOnCanvas: true, badges: [{ label: w.tag }], componentId: 'ovn-node-guest', detail: gGrDetail(w) },
+  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, badges: [{ label: w.tag }], componentId: 'ovn-node-guest', detail: gLsDetail(w) },
 })
 const guestPodBox = (w, p) => ({
   id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod',
@@ -1117,12 +1118,12 @@ export const OVN_TOPOLOGY_GUEST = {
 // pool in manifests.js lives at the top of it). Their /23 pod subnets come
 // from the mgmt cluster's 10.128.0.0/14, matching network-topology.js.
 const FM1 = {
-  id: 'fm1', node: 'worker-1', hostIp: '192.168.1.11',
+  id: 'fm1', node: 'worker-1', tag: 'mgmt-1', hostIp: '192.168.1.11',
   joinIp: '100.64.0.2', subnet: '10.128.2.0/23', routerPort: '10.128.2.1', mask: 23,
   cidr: '10.128.0.0/14',
 }
 const FM2 = {
-  id: 'fm2', node: 'worker-2', hostIp: '192.168.1.12',
+  id: 'fm2', node: 'worker-2', tag: 'mgmt-2', hostIp: '192.168.1.12',
   joinIp: '100.64.0.3', subnet: '10.128.4.0/23', routerPort: '10.128.4.1', mask: 23,
   cidr: '10.128.0.0/14',
 }
@@ -1325,13 +1326,6 @@ const launcherBox = (m, g) => ({
 // grey containers as the metal: in-VM OVS, the guest ovnkube-node, in-VM CNI.
 const fullVmZone = (g, pods) => {
   const b = guestNodeBoxes(g)
-  // The full HCP map nests this guest chain in the same bare-metal column as
-  // the mgmt chain, so both carry a GR / ext / LS box. A tiny scope badge on
-  // the three node-suffix-trimmed boxes keeps them tellable apart at a glance
-  // (the single-SDN views don't need it and stay clean).
-  b.ext = { ...b.ext, badges: [{ label: 'guest' }] }
-  b.gr = { ...b.gr, badges: [{ label: 'guest' }] }
-  b.ls = { ...b.ls, badges: [{ label: 'guest' }] }
   return {
     id: `ovnf-${g.id}-vm`,
     label: g.node,
@@ -1373,11 +1367,7 @@ const fullVmZone = (g, pods) => {
 // nested VMI carrying the guest chain in its own.
 const fullMetalZone = (m, g, gPods) => {
   const b = nodeBoxes(m, MGMT_NB_NOTE)
-  // Mate of the guest badge in fullVmZone: tag the mgmt chain's trimmed boxes
-  // so the two GR / ext / LS pairs in one metal column read as mgmt vs guest.
-  b.ext = { ...b.ext, badges: [{ label: 'mgmt' }] }
-  b.gr = { ...b.gr, badges: [{ label: 'mgmt' }] }
-  b.ls = { ...b.ls, detail: mLsDetail(m, g), badges: [{ label: 'mgmt' }] }
+  b.ls = { ...b.ls, detail: mLsDetail(m, g) }
   return {
     id: `ovnf-${m.id}-node`,
     label: m.node,
