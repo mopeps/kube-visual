@@ -634,6 +634,22 @@ const ghostChipFor = (id, componentId, caption, opts = {}) => {
     badges: opts.badges,
   }
 }
+// A grey container that IS the OpenShift component it groups: the zone's own
+// label carries the component's name + [typePrefix] and is the clickable
+// depth-door to its real object sheet — so the component appears ONCE, with no
+// duplicate identity chip repeated inside it (mirrors the Overview, where a
+// component is a single labelled thing). `label` overrides the displayName when
+// the container should read as something more specific (e.g. the VMI's node
+// name) while still opening that component's sheet.
+const componentZone = (id, componentId, boxes, opts = {}) => {
+  const c = findComponent(componentId)
+  return {
+    id, componentId, label: opts.label ?? c.displayName,
+    ghost: true, boundaryKind: 'group', layout: 'stack', colorVar: 'k-ghost', boxes,
+    className: opts.className,
+    labelBadges: opts.labelBadges ?? [c.typePrefix],
+  }
+}
 
 // The same node column, with its boxes re-parented into the three grey
 // containers: OVS on the metal, the logical objects realized by ovn-controller,
@@ -1328,29 +1344,18 @@ const fullVmZone = (g, pods) => {
   const b = guestNodeBoxes(g)
   return {
     id: `ovnf-${g.id}-vm`,
+    // The VMI boundary IS the VirtualMachineInstance object: its label (the
+    // node name + [VMI]) is the clickable depth-door, so there is no separate
+    // VMI identity box repeated inside it.
+    componentId: 'guest-worker-node-vm',
     label: g.node,
     labelBadges: ['VMI'],
     colorVar: 'k-green',
     boundaryKind: 'machine',
     layout: 'stack',
-    // The zone's own identity chip: the VMI is itself a registered overview
-    // object — clicking opens its real sheet.
-    boxes: [ghostChipFor(`${g.id}-vmi`, 'guest-worker-node-vm', undefined, {
-      badges: [{ label: 'mgmt object' }],
-    })],
     zones: [
-      ghostZone(`ovnf-${g.id}-ovs`, 'Open vSwitch', [
-        b.eth0, b.brint,
-        ghostChipFor(`${g.id}-ovs`, 'ovs-guest', undefined, {
-          badges: [{ label: 'in-VM dataplane' }],
-        }),
-      ], { labelBadges: ['systemd', 'VM'] }),
-      ghostZone(`ovnf-${g.id}-ovnkube`, 'OVN-K8s Node', [
-        b.ext, b.gr,
-        ghostChipFor(`${g.id}-ovnkube`, 'ovn-node-guest', undefined, {
-          badges: [{ label: 'NB rows → OpenFlow' }],
-        }),
-      ], { labelBadges: ['guest controller'] }),
+      componentZone(`ovnf-${g.id}-ovs`, 'ovs-guest', [b.eth0, b.brint], { labelBadges: ['systemd', 'VM'] }),
+      componentZone(`ovnf-${g.id}-ovnkube`, 'ovn-node-guest', [b.ext, b.gr], { labelBadges: ['guest controller'] }),
       { id: `ovnf-${g.id}-gap`, spacer: true },
       ghostZone(`ovnf-${g.id}-cni`, 'Pod wiring', [
         b.ls,
@@ -1376,18 +1381,8 @@ const fullMetalZone = (m, g, gPods) => {
     boundaryKind: 'machine',
     layout: 'stack',
     zones: [
-      ghostZone(`ovnf-${m.id}-ovs`, 'Open vSwitch', [
-        b.eth0, b.brint,
-        ghostChipFor(`${m.id}-ovs`, 'ovs-host', undefined, {
-          badges: [{ label: 'host dataplane' }],
-        }),
-      ], { labelBadges: ['systemd', 'RHCOS'] }),
-      ghostZone(`ovnf-${m.id}-ovnkube`, 'OVN-K8s Node', [
-        b.ext, b.gr,
-        ghostChipFor(`${m.id}-ovnkube`, 'ovn-node-host', undefined, {
-          badges: [{ label: 'NB rows → OpenFlow' }],
-        }),
-      ], { labelBadges: ['ovn-controller'] }),
+      componentZone(`ovnf-${m.id}-ovs`, 'ovs-host', [b.eth0, b.brint], { labelBadges: ['systemd', 'RHCOS'] }),
+      componentZone(`ovnf-${m.id}-ovnkube`, 'ovn-node-host', [b.ext, b.gr], { labelBadges: ['ovn-controller'] }),
       { id: `ovnf-${m.id}-gap`, spacer: true },
       ghostZone(`ovnf-${m.id}-cni`, 'Pod wiring', [
         b.ls, launcherBox(m, g),

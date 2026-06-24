@@ -2480,8 +2480,8 @@ body::after {
   }
   .recon-stack--ovnfull .zone--columns > .zone-content > .zone-content-inner > .zone--bare > .zone-content > .zone-content-inner {
     align-items: center;
-    padding-top: 585px;
-    padding-bottom: 395px;
+    padding-top: 470px;
+    padding-bottom: 360px;
   }
   .recon-stack--ovnfull .zone--columns > .zone-content > .zone-content-inner > .zone--bare .zone--ghost {
     width: min(86vw, 310px);
@@ -2495,7 +2495,7 @@ body::after {
   /* Reserve the bands: the metal and in-VM spacers open enough vertical room
      for the core group that parks beside them. */
   .recon-stack--ovnfull .zone--columns > .zone-content > .zone-content-inner > .zone:not(.zone--bare) .dd-spacer {
-    min-height: 374px;
+    min-height: 470px;
   }
   .recon-stack--ovnfull .ovnfull-core-zone--mgmt {
     margin-top: 44px;
