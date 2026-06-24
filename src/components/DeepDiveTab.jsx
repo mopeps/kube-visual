@@ -3,6 +3,7 @@ import { DEEP_DIVES, findDeepDive } from '../data/deep-dives'
 import TopicCanvas from './TopicCanvas'
 import ObjectSelect from './ObjectSelect'
 import CategorizedIndex from './CategorizedIndex'
+import OverviewTab from './OverviewTab'
 
 const accent = (colorVar) => `var(--${colorVar || 'k-cyan'})`
 const TOPIC_CATEGORIES = [
@@ -157,6 +158,8 @@ export default function DeepDiveTab({
   targetBoxId,        // a box id to auto-open (a search result landed here)
   onConsumeTarget,    // clear that request once honored
   onSelectComponent,  // open a registered component's detail sheet (AncestryModal)
+  isCompact = false,
+  supportsAllNodes = false,
 }) {
   const topic = activeTopic ? findDeepDive(activeTopic) : null
 
@@ -184,17 +187,26 @@ export default function DeepDiveTab({
 
       <TopicAbout topic={topic} activeFlow={activeFlow} />
 
-      <TopicCanvas
-        topic={topic}
-        loop={loop}
-        activeFlow={activeFlow}
-        activeFlowStep={activeFlowStep}
-        onSelectFlowStep={onSelectFlowStep}
-        onSelectComponent={onSelectComponent}
-        targetBoxId={targetBoxId}
-        onConsumeTarget={onConsumeTarget}
-        idPrefix="dd"
-      />
+      {topic.topicId === 'network-detail' ? (
+        <OverviewTab
+          forceNetworkDetail={true}
+          bigView={supportsAllNodes}
+          onSelectComponent={onSelectComponent}
+          isCompact={isCompact}
+        />
+      ) : (
+        <TopicCanvas
+          topic={topic}
+          loop={loop}
+          activeFlow={activeFlow}
+          activeFlowStep={activeFlowStep}
+          onSelectFlowStep={onSelectFlowStep}
+          onSelectComponent={onSelectComponent}
+          targetBoxId={targetBoxId}
+          onConsumeTarget={onConsumeTarget}
+          idPrefix="dd"
+        />
+      )}
     </div>
   )
 }

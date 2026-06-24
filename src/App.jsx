@@ -26,7 +26,6 @@ const DOCK_KEY = 'kv-dock-open'
 const VIEW_KEY = 'kv-overview-mode'
 const REPLICAS_KEY = 'kv-replicas-open'
 const SCOPE_KEY = 'kv-node-scope'
-const ALT_KEY = 'kv-network-altitude'
 const LENS_SCOPE_KEY = 'kv-logical-scope'
 const DEFAULT_LENS_SCOPE = 'ovn-topology-objects'
 const PREVIOUS_DEFAULT_LENS_SCOPE = 'ovn-topology'
@@ -130,14 +129,7 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem(VIEW_KEY, overviewMode) } catch { /* ignore */ }
   }, [overviewMode])
-  // Network lens altitude: 'map' (the OVN logical topology — the default) or
-  // 'detail' (today's datapath component view). Only consulted in network mode.
-  const [networkAltitude, setNetworkAltitude] = useState(() => {
-    try { return localStorage.getItem(ALT_KEY) === 'detail' ? 'detail' : 'map' } catch { return 'map' }
-  })
-  useEffect(() => {
-    try { localStorage.setItem(ALT_KEY, networkAltitude) } catch { /* ignore */ }
-  }, [networkAltitude])
+
   // Which OVN topology the Map altitude shows (the four network deep-dive twins).
   const [lensScope, setLensScope] = useState(() => {
     try {
@@ -356,7 +348,7 @@ export default function App() {
   // viewport rather than a transformed swipe pane. Only resolved while the Map
   // altitude is actually active, so the deep-dive data stays out of the bundle
   // until the user opens Network → Map.
-  const lensActive = netOverlay && networkAltitude === 'map'
+  const lensActive = netOverlay
   const [lensTopicObj, setLensTopicObj] = useState(null)
   const [lensBoxIndex, setLensBoxIndex] = useState({})
   useEffect(() => {
@@ -426,8 +418,6 @@ export default function App() {
       onClearEvent={clearEvent}
       bigView={bigView}
       netOverlay={netOverlay}
-      networkAltitude={networkAltitude}
-      onSetNetworkAltitude={setNetworkAltitude}
       lensScope={lensScope}
       onSetLensScope={setLensScope}
       lensActiveFlow={lensActiveFlow}
@@ -464,9 +454,10 @@ export default function App() {
         onClearFlow={clearFlow}
         onSelectFlowStep={selectFlowStep}
         loop={reconLoop}
-        targetBoxId={deepTarget}
         onConsumeTarget={() => setDeepTarget(null)}
         onSelectComponent={selectComponent}
+        isCompact={isCompact}
+        supportsAllNodes={supportsAllNodes}
       />
     </Suspense>
   )

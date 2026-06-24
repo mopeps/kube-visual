@@ -68,7 +68,7 @@
 //     },
 //   }
 
-import { OVN_TOPOLOGY, OVN_TOPOLOGY_BIG, OVN_TOPOLOGY_GUEST, OVN_TOPOLOGY_FULL, OVN_TOPOLOGY_OBJECTS } from './ovn-topology.js'
+import { OVN_TOPOLOGY, OVN_TOPOLOGY_BIG, OVN_TOPOLOGY_GUEST, OVN_TOPOLOGY_FULL, OVN_TOPOLOGY_OBJECTS, NETWORK_DETAIL } from './ovn-topology.js'
 
 // Example unit for the headline service (the Open vSwitch forwarding daemon —
 // a genuine host systemd unit on RHCOS, unlike ovnkube-node which is a
@@ -3939,9 +3939,10 @@ const TOPIC_CATEGORY = {
   'ovn-topology-guest': 'network',
   'ovn-topology-full': 'network',
   'ovn-topology-objects': 'network',
+  'network-detail': 'network',
 }
 
-export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, OVN_TOPOLOGY, OVN_TOPOLOGY_BIG, OVN_TOPOLOGY_GUEST, OVN_TOPOLOGY_FULL, OVN_TOPOLOGY_OBJECTS, API_REQUEST_PATH, ETCD_RAFT, CLUSTER_PKI, TMUX_SUDO, LINUX_FDS]
+export const DEEP_DIVES = [SYSTEMD, LINUX_BOOT, HCP_BOOT, HCP_INSTALL, OVN_TOPOLOGY, OVN_TOPOLOGY_BIG, OVN_TOPOLOGY_GUEST, OVN_TOPOLOGY_FULL, OVN_TOPOLOGY_OBJECTS, NETWORK_DETAIL, API_REQUEST_PATH, ETCD_RAFT, CLUSTER_PKI, TMUX_SUDO, LINUX_FDS]
   .map((topic) => ({ ...topic, category: TOPIC_CATEGORY[topic.topicId] }))
 
 export const findDeepDive = (topicId) =>

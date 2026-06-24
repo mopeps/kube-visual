@@ -217,8 +217,10 @@ export default function OverviewTab({
   // Small screens (phones / narrow tablets). Drives the network mode's
   // start-collapsed default so the canvas isn't a tall wall of opened boxes.
   isCompact = false,
+  forceNetworkDetail = false,
 }) {
   const canvasRef = useRef(null)
+  const net = netOverlay || forceNetworkDetail
   const [expandedStoreId, setExpandedStoreId] = useState(null)
   // A clicked condensed replica node ({ id, title, zone }) — opens a small
   // explainer popup, separate from the componentId-keyed AncestryModal flow.
@@ -453,7 +455,7 @@ export default function OverviewTab({
     // ovs-guest's realized flows). Special control-plane store cards (etcd /
     // controller-manager / operator-set) keep their own card unless they happen to
     // carry a network topology of their own.
-    if (netOverlay && (INTERNAL_TOPOLOGY[canonicalId] ||
+    if (net && (INTERNAL_TOPOLOGY[canonicalId] ||
         (!node.intentObjects && !node.controllers && !node.operators))) {
       return (
         <PrimitiveBoxCard
@@ -604,7 +606,7 @@ export default function OverviewTab({
         // Network mode renders the same tree in three columns, so card ids are
         // namespaced per column to stay unique (integration edges anchor to them);
         // the normal canvas keeps the raw componentId.
-        id={netOverlay
+        id={net
           ? `nt-c${colIndex}-${canonicalId}`
           : primOverlay && bigView && colIndex > 0
             ? `pr-c${colIndex}-${node.id}`
@@ -624,7 +626,7 @@ export default function OverviewTab({
         // below them (wired by a "configures" edge). `net-control-plane` draws the
         // card dashed = not the realized datapath (no descriptive subtitle — that
         // role reads from the dashed style + the "configures" edge).
-        className={netOverlay && NETWORK_CONTROL_PLANE_IDS.has(canonicalId) ? 'net-control-plane' : undefined}
+        className={net && NETWORK_CONTROL_PLANE_IDS.has(canonicalId) ? 'net-control-plane' : undefined}
         replicaBadge={node.replicaBadge}
         // Open the canonical component's modal regardless of the (possibly
         // namespaced) DOM id — a replica mirrors its canonical component.
@@ -655,7 +657,7 @@ export default function OverviewTab({
     // otherwise pairedTargets stays empty yet the loop still forms a ServicePair,
     // pulling the target — e.g. ovs-master — into the pair AND leaving it
     // standalone, so it draws twice.)
-    const targetOf = (n) => netOverlay ? null : (n.exposes || n.programs)
+    const targetOf = (n) => net ? null : (n.exposes || n.programs)
     const pairedTargets = new Set(
       nodes.filter(n => targetOf(n) && byId.has(targetOf(n))).map(n => targetOf(n))
     )
@@ -914,37 +916,18 @@ export default function OverviewTab({
 
   // Both lenses share the column canvas. One pair renders column zero; All
   // nodes renders the three placement-aware master/worker pairs.
-  const columnsView = bigView || netOverlay || primOverlay
+  const columnsView = bigView || net || primOverlay
   const cols = bigView ? NET_PAIRS : [0]
   // Network · Map altitude: the OVN logical topology replaces the datapath column
-  // canvas. The Map/Detail toggle stays in the bar across both so you can switch.
-  const mapMode = netOverlay && networkAltitude === 'map'
+  // canvas.
+  const mapMode = netOverlay && !forceNetworkDetail
 
   return (
     <>
       {columnsView && (
         <div className="net-bar">
-          <span className="net-bar-label">{netOverlay ? 'Network' : 'Architecture'}</span>
-          {netOverlay && (
-            <div className="seg seg--altitude" role="group" aria-label="Network altitude">
-              {[
-                { id: 'map', label: 'Map', title: 'The OVN logical topology — switches, routers, the join switch, pod ports' },
-                { id: 'detail', label: 'Detail', title: 'The datapath internals — br-int flows, the NB DB, OVS daemons' },
-              ].map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  className={`seg-btn ${networkAltitude === a.id ? 'is-active' : ''}`}
-                  aria-pressed={networkAltitude === a.id}
-                  onClick={() => onSetNetworkAltitude?.(a.id)}
-                  title={a.title}
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
-          )}
-          {netOverlay && !mapMode && (
+          <span className="net-bar-label">{net ? 'Network' : 'Architecture'}</span>
+          {net && !mapMode && (
             <button type="button" className="net-bar-btn" onClick={toggleAllNet}>
               {allNetCollapsed ? 'Expand all' : 'Collapse all'}
             </button>
@@ -965,7 +948,7 @@ export default function OverviewTab({
               × Clear flow
             </button>
           )}
-          {netOverlay && !mapMode && (
+          {net && !mapMode && (
             <button
               type="button"
               className={`net-bar-btn ${netWiresOnHover ? 'is-active' : ''}`}
@@ -1009,22 +992,22 @@ export default function OverviewTab({
         // (network-internals.js).
         <div
           ref={canvasRef}
-          className={`border border-border-w rounded-lg overflow-visible overview-canvas net-bigpicture ${netOverlay ? 'net-bigpicture--net' : ''} ${columnsView && !bigView ? 'net-bigpicture--single' : ''}`}
+          className={`border border-border-w rounded-lg overflow-visible overview-canvas net-bigpicture ${net ? 'net-bigpicture--net' : ''} ${columnsView && !bigView ? 'net-bigpicture--single' : ''}`}
           style={{ background: 'rgba(0,0,0,0.2)', position: 'relative' }}
-          onMouseOver={netOverlay ? onNetHover : undefined}
-          onMouseLeave={netOverlay && !netWiresOnHover ? () => setNetHoverId(null) : undefined}
-          onClickCapture={netOverlay && netWiresOnHover ? onNetFocusTap : undefined}
+          onMouseOver={net ? onNetHover : undefined}
+          onMouseLeave={net && !netWiresOnHover ? () => setNetHoverId(null) : undefined}
+          onClickCapture={net && netWiresOnHover ? onNetFocusTap : undefined}
         >
-          {bigView ? renderAllNodesStack(netOverlay) : (
+          {bigView ? renderAllNodesStack(net) : (
             <div className="net-cols">
               {cols.map((i) => (
                 <div className="net-col" id={`net-col-${i}`} key={i}>
-                  {renderOverviewStack(netOverlay, i)}
+                  {renderOverviewStack(net, i)}
                 </div>
               ))}
             </div>
           )}
-          {netOverlay && (
+          {net && (
             <ReconLoopOverlay
               edges={shownNetEdges}
               canvasRef={canvasRef}

@@ -1610,3 +1610,13 @@ export const OVN_TOPOLOGY_OBJECTS = {
   zones: OVN_TOPOLOGY_FULL.zones,
 }
 
+export const NETWORK_DETAIL = {
+  topicId: 'network-detail',
+  title: 'Network Detail View',
+  tagline:
+    'The management and guest datapath internals: br-int, OVS daemons, MetalLB, and the realized OpenFlow/veth interfaces across workers.',
+  colorVar: 'k-orange',
+  zones: [],
+}
+
+
