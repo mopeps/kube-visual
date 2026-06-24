@@ -2478,10 +2478,15 @@ body::after {
     flex: 0 0 16px;
     margin: 0;
   }
+  /* Park each core inside its column's reserved gap. The cores are now a
+     fixed height at every width (their long titles are hidden — see
+     hideTitleOnCanvas), so these offsets give stable clearance on BOTH sides
+     instead of riding one edge; the generous gap min-height below absorbs the
+     rest. */
   .recon-stack--ovnfull .zone--columns > .zone-content > .zone-content-inner > .zone--bare > .zone-content > .zone-content-inner {
     align-items: center;
-    padding-top: 470px;
-    padding-bottom: 360px;
+    padding-top: 505px;
+    padding-bottom: 400px;
   }
   .recon-stack--ovnfull .zone--columns > .zone-content > .zone-content-inner > .zone--bare .zone--ghost {
     width: min(86vw, 310px);
