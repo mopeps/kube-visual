@@ -46,6 +46,7 @@ export default function TopicCanvas({
     const out = {}
     for (const e of topic?.reconciliation?.edges || []) out[e.id] = e
     for (const e of topic?.topology?.edges || []) out[e.id] = e
+    for (const e of topic?.networkMap?.seams || []) out[e.id] = e
     return out
   }, [topic])
 

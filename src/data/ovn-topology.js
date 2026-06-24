@@ -1487,7 +1487,7 @@ const FULL_NETWORK_MAP = {
   title: 'Full HCP network topology',
   subtitle: 'Topology first: two OVN SDNs connected by the virt-launcher tap ↔ virtio seam.',
   seams: [
-    { id: 'nt-seam-tap-virtio', label: 'tap ↔ virtio: guest NIC is a mgmt pod port', detail: seamEdgeDetail(FG1) },
+    { id: 'nt-seam-tap-virtio', label: 'tap ↔ virtio: guest NIC is a mgmt pod port', accent: 'k-amber', detail: seamEdgeDetail(FG1) },
   ],
   planes: [
     {
