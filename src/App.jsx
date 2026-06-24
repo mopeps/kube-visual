@@ -520,8 +520,8 @@ export default function App() {
         {tab === 'overview' && supportsAllNodes && (
           <div className="seg seg--scope" role="group" aria-label="Node scope">
             {[
-              { id: 'pair', label: 'One pair' },
-              { id: 'all', label: 'All nodes' },
+              { id: 'pair', label: '2 Nodes' },
+              { id: 'all', label: '6 Nodes' },
             ].map((scope) => (
               <button
                 key={scope.id}
