@@ -34,6 +34,8 @@ export default function NodeCard({
   // omit the visible title line on the card face, so the box reads as
   // [TYPE] + tag (e.g. a node's GR / ext / LS logical objects).
   hideTitle,
+  // Optional style passthrough — the OVN topology grid sets grid-row placement.
+  style,
 }) {
   const declarativeTypes = new Set(['Service', 'NWPOLICY', 'API Object', 'Custom Resource'])
   const isDeclarative = declarative ?? declarativeTypes.has(typePrefix)
@@ -54,6 +56,7 @@ export default function NodeCard({
       }}
       className={`node ${isDeclarative ? 'node--declarative' : ''} ${variant ? `node--${variant}` : ''} ${isActive ? 'is-active' : ''} ${isOnPath ? 'is-on-path' : ''} ${isDimmed ? 'is-dimmed' : ''} ${isHighlighted ? 'is-highlighted' : ''} ${className || ''}`}
       style={{
+        ...style,
         '--node-accent': color,
         background: isActive
           ? `linear-gradient(180deg, ${color}14 0%, rgba(0,0,0,0.35) 100%)`
