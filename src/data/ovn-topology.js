@@ -1482,6 +1482,64 @@ const FULL_FLOWS = [
   },
 ]
 
+const FULL_NETWORK_MAP = {
+  id: 'full-hcp',
+  title: 'Full HCP network topology',
+  subtitle: 'Topology first: two OVN SDNs connected by the virt-launcher tap ↔ virtio seam.',
+  seams: [
+    { id: 'nt-seam-tap-virtio', label: 'tap ↔ virtio: guest NIC is a mgmt pod port', detail: seamEdgeDetail(FG1) },
+  ],
+  planes: [
+    {
+      id: 'mgmt',
+      title: 'Management cluster SDN',
+      accentVar: 'k-blue',
+      badges: ['bare metal workers', 'OpenShift objects are depth'],
+      underlay: 'ovnf-underlay',
+      core: ['ovnf-mjoin', 'ovnf-mrouter'],
+      columns: [
+        {
+          id: 'worker-1',
+          title: 'worker-1',
+          badges: ['bare metal', FM1.hostIp],
+          north: ['fm1-eth0', 'fm1-brint', 'fm1-ext', 'fm1-gr'],
+          south: ['fm1-ls', 'fm1-launcher'],
+        },
+        {
+          id: 'worker-2',
+          title: 'worker-2',
+          badges: ['bare metal', FM2.hostIp],
+          north: ['fm2-eth0', 'fm2-brint', 'fm2-ext', 'fm2-gr'],
+          south: ['fm2-ls', 'fm2-launcher'],
+        },
+      ],
+    },
+    {
+      id: 'guest',
+      title: 'Guest cluster SDN inside VMIs',
+      accentVar: 'k-green',
+      badges: ['VirtualMachineInstances', 'Linux primitives are depth'],
+      core: ['ovnf-gjoin', 'ovnf-grouter'],
+      columns: [
+        {
+          id: 'guest-worker-1',
+          title: 'guest-worker-1',
+          badges: ['VMI', FG1.hostIp],
+          north: ['fg1-eth0', 'fg1-brint', 'fg1-ext', 'fg1-gr'],
+          south: ['fg1-ls', ['fg1-pod-rtr', 'fg1-pod-fe']],
+        },
+        {
+          id: 'guest-worker-2',
+          title: 'guest-worker-2',
+          badges: ['VMI', FG2.hostIp],
+          north: ['fg2-eth0', 'fg2-brint', 'fg2-ext', 'fg2-gr'],
+          south: ['fg2-ls', ['fg2-pod-be']],
+        },
+      ],
+    },
+  ],
+}
+
 export const OVN_TOPOLOGY_FULL = {
   topicId: 'ovn-topology-full',
   title: 'OVN-Kubernetes — the full HCP picture: both SDNs in their OpenShift objects',
@@ -1490,6 +1548,7 @@ export const OVN_TOPOLOGY_FULL = {
   colorVar: 'k-orange',
   canvasClass: 'recon-stack--ovnfull',
   topology: { edges: FULL_EDGES },
+  networkMap: FULL_NETWORK_MAP,
   flows: FULL_FLOWS,
   zones: [
     underlayZone([MACHINE_UNDERLAY_BOX], 'ovnf-underlay-zone'),

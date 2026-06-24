@@ -2023,6 +2023,343 @@ body::after {
   line-height: 1.2;
   letter-spacing: 0.02em;
 }
+
+/* ── Network topology-first map ───────────────────────────────────────
+   The Network lens / OVN full-HCP deep dive uses this renderer as the primary
+   surface: OVN logical objects are the foreground graph; OpenShift ownership
+   and Linux primitives are available by clicking, not drawn as default boxes. */
+.nt-shell {
+  --nt-map-w: min(100%, 1160px);
+}
+.nt-scroller {
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.nt-shell.is-fit-mobile {
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+.nt-shell.is-fit-mobile .nt-scroller {
+  flex: 0 0 auto;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+.nt-shell.is-fit-mobile .network-topology-map {
+  margin: 0;
+  transform-origin: top left;
+}
+.network-topology-map {
+  position: relative;
+  width: var(--nt-map-w);
+  min-width: 920px;
+  margin: 0 auto;
+  padding: 16px 18px 26px;
+  border: 1px solid color-mix(in srgb, var(--k-blue) 32%, transparent);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 50% 8%, color-mix(in srgb, var(--k-blue) 15%, transparent), transparent 36%),
+    linear-gradient(180deg, rgba(10, 16, 32, 0.72), rgba(5, 7, 15, 0.82));
+  isolation: isolate;
+}
+.nt-map-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+  color: var(--tx-bright);
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.nt-map-title small {
+  max-width: 520px;
+  color: var(--tx-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem;
+  line-height: 1.35;
+  letter-spacing: 0.05em;
+  text-align: right;
+  text-transform: uppercase;
+}
+.nt-plane {
+  position: relative;
+  padding: 12px 14px 16px;
+  border: 1px dashed color-mix(in srgb, var(--nt-plane-accent) 30%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--nt-plane-accent) 8%, transparent);
+}
+.nt-plane + .nt-plane {
+  margin-top: 44px;
+}
+.network-topology-map > div + div > .nt-plane {
+  margin-top: 44px;
+}
+.nt-plane-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  color: var(--nt-plane-accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.nt-plane-badge,
+.nt-column-badges span,
+.nt-node-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 0.56rem;
+  line-height: 1.25;
+  letter-spacing: 0.08em;
+  opacity: 0.72;
+  background: color-mix(in srgb, currentColor 8%, #0a0f1e);
+}
+.nt-underlay-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+.nt-underlay-row .nt-node {
+  min-width: 560px;
+}
+.nt-plane-grid {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+.nt-column {
+  min-width: 0;
+  padding: 9px 12px 12px;
+  border: 1px dashed color-mix(in srgb, var(--nt-plane-accent) 35%, transparent);
+  border-radius: 13px;
+  background: color-mix(in srgb, #0a0f1e 78%, transparent);
+}
+.nt-column-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+  margin-bottom: 10px;
+  color: var(--nt-plane-accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.nt-column-badges {
+  display: inline-flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.nt-column-chain,
+.nt-core {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.nt-column-gap {
+  height: 84px;
+}
+.nt-core {
+  justify-content: center;
+  padding-top: 102px;
+}
+.nt-node {
+  position: relative;
+  z-index: 6;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 156px;
+  max-width: 100%;
+  min-height: 54px;
+  padding: 8px 14px;
+  border: 1.5px solid var(--nt-accent);
+  border-radius: 11px;
+  color: var(--nt-accent);
+  background: color-mix(in srgb, var(--nt-accent) 13%, #0a0f1e);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--nt-accent) 12%, transparent);
+  text-align: center;
+  cursor: pointer;
+  transition: opacity 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+.nt-node:hover,
+.nt-node:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 1px var(--nt-accent), 0 0 24px color-mix(in srgb, var(--nt-accent) 30%, transparent);
+  outline: none;
+}
+.nt-node.is-dimmed { opacity: 0.34; }
+.nt-node.is-on-path {
+  opacity: 1;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--packet) 35%, transparent);
+}
+.nt-node.is-active {
+  opacity: 1;
+  border-color: var(--packet);
+  color: var(--packet);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--packet) 55%, transparent),
+    0 0 26px color-mix(in srgb, var(--packet) 35%, transparent);
+}
+.nt-node-kind {
+  color: var(--tx-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.nt-node-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.94rem;
+  font-weight: 700;
+  line-height: 1.14;
+}
+.nt-node-fact {
+  margin-top: 3px;
+  padding: 1px 6px;
+  border: 1px solid color-mix(in srgb, var(--nt-accent) 35%, transparent);
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--nt-accent) 58%, var(--tx-muted));
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.64rem;
+}
+.nt-node-badges {
+  display: inline-flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 5px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.nt-node--router {
+  min-width: 190px;
+  border-radius: 50%;
+  padding: 18px 26px 16px;
+}
+.nt-node--iface,
+.nt-node--bridge {
+  min-width: 0;
+  min-height: 0;
+  padding: 3px 12px;
+  border-radius: 4px;
+  background: #0a0f1e;
+}
+.nt-node--bridge {
+  background: color-mix(in srgb, var(--nt-accent) 32%, #0a0f1e);
+}
+.nt-node--bus {
+  border-radius: 999px;
+}
+.nt-node--pod {
+  min-width: 104px;
+  min-height: 44px;
+  border-color: var(--k-amber);
+  background: color-mix(in srgb, var(--k-amber) 14%, #0a0f1e);
+  color: var(--k-amber);
+}
+.nt-node--compact .nt-node-title {
+  font-size: 0.78rem;
+}
+.nt-pod-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.nt-seam-legend {
+  position: relative;
+  z-index: 7;
+  display: flex;
+  justify-content: center;
+  margin: -22px 0;
+}
+.nt-seam-chip {
+  border: 1px solid color-mix(in srgb, var(--k-amber) 65%, transparent);
+  border-radius: 999px;
+  padding: 5px 12px;
+  color: var(--k-amber);
+  background: #0a0f1e;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  /* On phones the topology-first map is scaled as one diagram. This is a
+     rollback of the experimental mobile-only schematic, which proved harder
+     to read than the canonical topology. */
+  .network-topology-map {
+    min-width: 760px;
+    padding: 12px 12px 20px;
+  }
+  .nt-map-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .nt-map-title small {
+    max-width: 620px;
+    text-align: left;
+  }
+  .nt-plane-grid {
+    grid-template-columns: minmax(0, 1fr) 176px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .nt-underlay-row .nt-node {
+    min-width: 420px;
+  }
+  .nt-column {
+    padding: 7px 8px 10px;
+  }
+  .nt-column-label {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.66rem;
+  }
+  .nt-core {
+    padding-top: 92px;
+  }
+  .nt-node {
+    flex: 0 1 auto;
+    min-width: 124px;
+    padding: 7px 10px;
+  }
+  .nt-node--router {
+    min-width: 156px;
+    padding: 15px 18px 13px;
+  }
+  .nt-node-title {
+    font-size: 0.82rem;
+  }
+  .nt-node-kind,
+  .nt-node-fact {
+    font-size: 0.55rem;
+  }
+}
+
 /* The full picture's middle band carries only the two NB-DB core groups. By
    default (the 640–880px band) it stays a lean reserved column beside the
    bare-metal ones — narrow enough to give the columns the width, wide enough

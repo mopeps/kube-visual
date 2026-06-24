@@ -35,15 +35,25 @@ function bezier(t, p0, p1, p2, p3) {
 // leaves the source at the *target's* x (clamped inside the source box), so a
 // full-width underlay drops a near-vertical line onto each node instead of
 // diagonals that cross the zone labels.
-function buildEdge(srcEl, tgtEl, canvasEl, bias, labelT = 0.5, axis, spread) {
+function buildEdge(srcEl, tgtEl, canvasEl, bias, labelT = 0.5, axis, spread, scale = 1) {
   const c = canvasEl.getBoundingClientRect()
   const s = srcEl.getBoundingClientRect()
   const t = tgtEl.getBoundingClientRect()
 
-  const sCx = s.left + s.width / 2 - c.left
-  const sCy = s.top + s.height / 2 - c.top
-  const tCx = t.left + t.width / 2 - c.left
-  const tCy = t.top + t.height / 2 - c.top
+  const ux = (v) => v / scale
+  const sLeft = ux(s.left - c.left)
+  const sRight = ux(s.right - c.left)
+  const sTop = ux(s.top - c.top)
+  const sBottom = ux(s.bottom - c.top)
+  const tLeft = ux(t.left - c.left)
+  const tRight = ux(t.right - c.left)
+  const tTop = ux(t.top - c.top)
+  const tBottom = ux(t.bottom - c.top)
+
+  const sCx = (sLeft + sRight) / 2
+  const sCy = (sTop + sBottom) / 2
+  const tCx = (tLeft + tRight) / 2
+  const tCy = (tTop + tBottom) / 2
 
   const vertical = axis
     ? axis === 'vertical'
@@ -51,16 +61,16 @@ function buildEdge(srcEl, tgtEl, canvasEl, bias, labelT = 0.5, axis, spread) {
   const bow = bias === 'left' ? -64 : bias === 'right' ? 64 : 0
 
   const spreadX = spread
-    ? Math.min(Math.max(tCx, s.left - c.left + 18), s.right - c.left - 18)
+    ? Math.min(Math.max(tCx, sLeft + 18), sRight - 18)
     : sCx
 
   let sx, sy, tx, ty
   if (vertical) {
-    if (tCy >= sCy) { sx = spreadX; sy = s.bottom - c.top; tx = tCx; ty = t.top - c.top }
-    else            { sx = spreadX; sy = s.top - c.top;    tx = tCx; ty = t.bottom - c.top }
+    if (tCy >= sCy) { sx = spreadX; sy = sBottom; tx = tCx; ty = tTop }
+    else            { sx = spreadX; sy = sTop;    tx = tCx; ty = tBottom }
   } else {
-    if (tCx >= sCx) { sx = s.right - c.left; sy = sCy; tx = t.left - c.left;  ty = tCy }
-    else            { sx = s.left - c.left;  sy = sCy; tx = t.right - c.left; ty = tCy }
+    if (tCx >= sCx) { sx = sRight; sy = sCy; tx = tLeft;  ty = tCy }
+    else            { sx = sLeft;  sy = sCy; tx = tRight; ty = tCy }
   }
 
   const dx = tx - sx
@@ -88,17 +98,18 @@ function buildEdge(srcEl, tgtEl, canvasEl, bias, labelT = 0.5, axis, spread) {
 // right edge, along a vertical lane near the column edge, into the target's right
 // edge. `lane` offsets parallel rails so they don't overlap. Rounded corners keep
 // it reading as cable management rather than a hard L.
-function buildRailEdge(srcEl, tgtEl, canvasEl, colEl, lane = 0) {
+function buildRailEdge(srcEl, tgtEl, canvasEl, colEl, lane = 0, scale = 1) {
   const c = canvasEl.getBoundingClientRect()
   const s = srcEl.getBoundingClientRect()
   const t = tgtEl.getBoundingClientRect()
   const col = colEl.getBoundingClientRect()
 
-  const railX = col.right - c.left - 7 - lane * 7
-  const sx = s.right - c.left
-  const sy = s.top + s.height / 2 - c.top
-  const tx = t.right - c.left
-  const ty = t.top + t.height / 2 - c.top
+  const ux = (v) => v / scale
+  const railX = ux(col.right - c.left) - 7 - lane * 7
+  const sx = ux(s.right - c.left)
+  const sy = ux(s.top + s.height / 2 - c.top)
+  const tx = ux(t.right - c.left)
+  const ty = ux(t.top + t.height / 2 - c.top)
   const down = ty >= sy
   const r = Math.min(7, Math.abs(ty - sy) / 2)
   // M → horizontal to the rail (rounded) → vertical down/up the rail (rounded) →
@@ -117,7 +128,7 @@ function buildRailEdge(srcEl, tgtEl, canvasEl, colEl, lane = 0) {
 // `idPrefix` namespaces the DOM lookups: the deep dives' boxes render as
 // dd-<boxId> (the default), while the Overview's network overlay passes '' to
 // connect raw ids — its own chips and real component cards alike.
-export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signal, onSelectEdge, idPrefix = 'dd' }) {
+export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signal, onSelectEdge, idPrefix = 'dd', fitScale = 1 }) {
   const [paths, setPaths] = useState([])
   const rafRef = useRef(0)
 
@@ -127,6 +138,7 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
 
     const next = []
     const railLanes = {}
+    const scale = Number(fitScale || canvas.dataset.fitScale || 1) || 1
     for (const edge of edges) {
       const srcEl = document.getElementById(idPrefix ? `${idPrefix}-${edge.from}` : edge.from)
       const tgtEl = document.getElementById(idPrefix ? `${idPrefix}-${edge.to}` : edge.to)
@@ -140,9 +152,9 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
         // Cycle through a fixed set of lanes so the rails always fit the gutter
         // (rails in different vertical bands can safely share a lane).
         const n = (railLanes[colEl.id] = (railLanes[colEl.id] ?? -1) + 1)
-        built = buildRailEdge(srcEl, tgtEl, canvas, colEl, n % 6)
+        built = buildRailEdge(srcEl, tgtEl, canvas, colEl, n % 6, scale)
       } else {
-        built = buildEdge(srcEl, tgtEl, canvas, edge.bias, edge.labelT, edge.axis, edge.spread)
+        built = buildEdge(srcEl, tgtEl, canvas, edge.bias, edge.labelT, edge.axis, edge.spread, scale)
       }
       next.push({
         ...edge,
@@ -169,7 +181,7 @@ export default function ReconLoopOverlay({ edges, canvasRef, activeEdgeId, signa
     scheduleMeasure()
     return () => { if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = 0 } }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edges])
+  }, [edges, fitScale])
 
   useEffect(() => {
     const canvas = canvasRef.current

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { indexTopicBoxes } from '../data/deep-dives'
 import DeepDiveCanvas from './DeepDiveCanvas'
 import DeepDiveModal from './DeepDiveModal'
+import NetworkTopologyCanvas from './NetworkTopologyCanvas'
 import { scrollIntoUpperThird } from '../lib/scroll'
 
 // The shared topic renderer: a deep-dive topic's zone/box tree drawn as an
@@ -30,6 +31,7 @@ export default function TopicCanvas({
   targetBoxId,        // a box id to auto-open (a search result landed here)
   onConsumeTarget,    // clear that request once honored
   idPrefix = 'dd',
+  useNetworkMap = false,
 }) {
   const [selectedBoxId, setSelectedBoxId] = useState(null)
   const [selectedEdgeId, setSelectedEdgeId] = useState(null)
@@ -123,20 +125,34 @@ export default function TopicCanvas({
         }
       : null
 
+  const canvas = useNetworkMap && topic.networkMap ? (
+    <NetworkTopologyCanvas
+      topic={topic}
+      boxIndex={boxIndex}
+      activeFlow={activeFlow}
+      activeFlowStep={activeFlowStep}
+      onSelectBox={selectBox}
+      onSelectEdge={selectEdge}
+      idPrefix={idPrefix}
+    />
+  ) : (
+    <DeepDiveCanvas
+      topic={topic}
+      loop={loop}
+      onSelectBox={selectBox}
+      onSelectEdge={selectEdge}
+      selectedBoxId={selectedBoxId}
+      activeFlow={activeFlow}
+      activeFlowStep={activeFlowStep}
+      onSelectFlowStep={onSelectFlowStep}
+      colorOf={colorOf}
+      idPrefix={idPrefix}
+    />
+  )
+
   return (
     <>
-      <DeepDiveCanvas
-        topic={topic}
-        loop={loop}
-        onSelectBox={selectBox}
-        onSelectEdge={selectEdge}
-        selectedBoxId={selectedBoxId}
-        activeFlow={activeFlow}
-        activeFlowStep={activeFlowStep}
-        onSelectFlowStep={onSelectFlowStep}
-        colorOf={colorOf}
-        idPrefix={idPrefix}
-      />
+      {canvas}
 
       {/* Tail spacer so the bottom box can scroll clear of the fixed hop
           inspector when a flow hop is being inspected (--hop-inset). */}

@@ -70,6 +70,7 @@ export default function LogicalLens({
         onSelectFlowStep={onSelectFlowStep}
         onSelectComponent={onSelectComponent}
         idPrefix="lg"
+        useNetworkMap
       />
     </div>
   )
