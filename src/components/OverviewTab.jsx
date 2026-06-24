@@ -977,11 +977,7 @@ export default function OverviewTab({
               {netWiresOnHover ? 'Wires: on focus' : 'Wires: all'}
             </button>
           )}
-          {mapMode && (
-            <span className="net-bar-hint">
-              The OVN logical topology. Click a box to open its OpenShift object and Linux primitives; switch to Detail for the datapath internals.
-            </span>
-          )}
+
           {!netOverlay && !primOverlay && (
             <span className="net-bar-hint">
               The whole Overview, three node pairs side by side. Switch to Network to open each component and trace the real networking topology.
