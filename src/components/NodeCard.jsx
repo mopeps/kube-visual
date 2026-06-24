@@ -36,6 +36,10 @@ export default function NodeCard({
   hideTitle,
   // Optional style passthrough — the OVN topology grid sets grid-row placement.
   style,
+  // Optional small corner button (v2 anchors use it to reach the box's own
+  // teaching popup, since the card body click is the anchor action). Stops
+  // propagation so it doesn't trigger the card's onClick.
+  cornerAction,
 }) {
   const declarativeTypes = new Set(['Service', 'NWPOLICY', 'API Object', 'Custom Resource'])
   const isDeclarative = declarative ?? declarativeTypes.has(typePrefix)
@@ -67,6 +71,17 @@ export default function NodeCard({
         <span className="node-step-badge" title={`Step ${stepNum}`}>
           {stepNum}
         </span>
+      )}
+      {cornerAction && (
+        <button
+          type="button"
+          className="node-corner-action"
+          title={cornerAction.title}
+          aria-label={cornerAction.title}
+          onClick={(e) => { e.stopPropagation(); cornerAction.onClick?.() }}
+        >
+          {cornerAction.label}
+        </button>
       )}
       {typePrefix && typePrefix !== 'Pod' && (
         <span className="node-type-prefix" style={{ color: 'var(--tx-muted)' }}>

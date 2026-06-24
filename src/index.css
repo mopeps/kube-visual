@@ -2357,8 +2357,8 @@ body::after {
   background: color-mix(in srgb, var(--zone-border, #2a3550) 13%, transparent) !important;
 }
 
-/* A box that can open carries a small ▸ drill cue; clicking it expands in place
-   instead of opening the popup. */
+/* An own-identity box (an app pod) that opens to its own primitives carries a
+   small ▸ drill cue; clicking it expands in place. */
 .recon-stack--v2 .dd-can-expand {
   cursor: zoom-in;
 }
@@ -2371,6 +2371,80 @@ body::after {
   line-height: 1;
   color: color-mix(in srgb, var(--node-accent, var(--k-cyan)) 75%, transparent);
   opacity: 0.8;
+}
+
+/* A logical leaf is an ANCHOR (many → one shared container): clicking it opens
+   its container and lights its row. A faint ⤵ cue distinguishes it from the ▸
+   "expands to its own object" cue; the ⓘ corner reaches its teaching popup. */
+.recon-stack--v2 .dd-anchor {
+  cursor: pointer;
+}
+.recon-stack--v2 .dd-anchor::after {
+  content: '⤵';
+  position: absolute;
+  bottom: 3px;
+  right: 6px;
+  font-size: 0.62rem;
+  line-height: 1;
+  color: color-mix(in srgb, var(--node-accent, var(--k-cyan)) 60%, transparent);
+  opacity: 0.75;
+}
+.node-corner-action {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  padding: 0 3px;
+  border: none;
+  background: none;
+  color: color-mix(in srgb, var(--node-accent, var(--k-cyan)) 65%, var(--tx-muted));
+  font-size: 0.66rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.node-corner-action:hover,
+.node-corner-action:focus-visible {
+  opacity: 1;
+  color: var(--node-accent, var(--k-cyan));
+  outline: none;
+}
+
+/* A container zone (ovs / ovnkube) toggles its realization strip; its label
+   carries a ▾/▸ cue and reads as interactive. */
+.recon-stack--v2 .dd-container > .zone-label {
+  cursor: pointer;
+}
+.recon-stack--v2 .dd-container > .zone-label .zone-label-title::after {
+  content: '▸';
+  margin-left: 6px;
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+.recon-stack--v2 .dd-container.is-open > .zone-label .zone-label-title::after {
+  content: '▾';
+}
+
+/* The open container's realization, docked full-width below the topology. */
+.dd-container-strip {
+  position: relative;
+  z-index: 6;
+  min-width: 0;
+  margin-top: 14px;
+  text-align: left;
+}
+.dd-container-strip .primitive-box,
+.dd-container-strip .intent-store {
+  width: 100%;
+}
+
+/* The anchored row, lit briefly when its logical box is clicked. */
+@keyframes dd-row-pulse {
+  0%, 100% { box-shadow: none; }
+  20%, 60% { box-shadow: 0 0 0 2px var(--packet), 0 0 18px color-mix(in srgb, var(--packet) 60%, transparent); }
+}
+.dd-row-pulse {
+  animation: dd-row-pulse 1.5s ease-in-out;
+  border-radius: 8px;
 }
 
 /* An opened box hands its grid slot to the shared PrimitiveBoxCard (which brings

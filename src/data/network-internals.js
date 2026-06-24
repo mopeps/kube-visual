@@ -237,6 +237,24 @@ const ovnNodeInternal = (nodeId, where) => ({
                   'Attaches to the cluster router for north-south egress.',
                 ] },
               ]) }),
+            box(`${nodeId}__gr`, 'gateway router', 'OVN Gateway Router', {
+              variant: 'ellipse', colorVar: 'k-green', caption: 'GR_<node> · N-S edge',
+              detail: detail('GATEWAY ROUTER · A ROW', 'The node’s north-south edge router: a row in this node’s nbdb, bound to this node (centralized on its chassis). SNAT for egress and the DNAT landing for ingress happen here; ovn-controller realizes it as OpenFlow on this node’s br-int / br-ex.', [
+                { heading: 'Interactions', bullets: [
+                  'Pins the node’s north-south gateway to this chassis.',
+                  'SNATs egress and terminates ingress DNAT for the node.',
+                  'Realised by ovn-controller as OpenFlow across br-int and br-ex.',
+                ] },
+              ]) }),
+            box(`${nodeId}__ext`, 'external switch', 'Logical Switch', {
+              variant: 'switch', colorVar: 'k-sky', caption: 'ext_<node> · localnet → br-ex',
+              detail: detail('EXTERNAL SWITCH · A ROW', 'A logical switch with a localnet port that maps onto br-ex, joining the gateway router to the physical L2 segment. A row in the nbdb; realized as the localnet/patch flows on this node’s br-int ↔ br-ex.', [
+                { heading: 'Interactions', bullets: [
+                  'Bridges the gateway router onto the physical network via a localnet port.',
+                  'Maps to br-ex so OVN can place logical traffic on the wire.',
+                  'Realised as the localnet/patch flows between br-int and br-ex.',
+                ] },
+              ]) }),
             box(`${nodeId}__transit`, 'transit switch', 'Logical Switch', {
               variant: 'switch', colorVar: 'k-teal', caption: 'IC · to the other zones',
               detail: detail('TRANSIT SWITCH · INTERCONNECT', 'The interconnect construct: a logical switch with a remote port for every other node’s zone, so cross-node traffic is routed zone-to-zone over Geneve without a shared central DB.', [

@@ -8,6 +8,7 @@ import DeepDiveArrowOverlay from './DeepDiveArrowOverlay'
 import { INTERNAL_TOPOLOGY } from '../data/network-internals'
 import { buildPrimitiveInternals } from '../data/primitive-internals'
 import { findComponent } from '../data/components-index'
+import { scrollIntoUpperThird } from '../lib/scroll'
 
 // v2 (Network Map "expandable" mode): resolve a box's realizing component's
 // in-place internals — SDN datapath/control components via the hand-authored
@@ -22,6 +23,12 @@ function internalsFor(componentId) {
   _internalsCache.set(componentId, internal)
   return internal
 }
+
+// v2: the shared per-node SDN containers. A node's logical objects (logical
+// switch, gateway router, external switch, br-int, eth0) are MANY → ONE of these
+// (and collapse into ONE br-int), so the container expands once and the logical
+// boxes anchor into its rows instead of each opening a redundant component copy.
+const CONTAINER_COMPONENTS = new Set(['ovs-host', 'ovs-guest', 'ovn-node-host', 'ovn-node-guest'])
 
 // Renders a deep-dive topic as an Overview-style canvas: a stack of labelled
 // zones holding clickable boxes. Reuses Zone / NodeCard (pure presentational),
@@ -184,34 +191,82 @@ export default function DeepDiveCanvas({
     return m
   }, [topic])
 
-  // v2: every box on the canvas that can open to a realizing component — drives
-  // the expand-all / collapse-all control.
-  const expandableIds = useMemo(() => {
-    if (!expandable) return []
-    const ids = []
-    const walk = (zones) => {
-      for (const z of zones || []) {
-        for (const b of z.boxes || []) {
-          if (b.componentId && internalsFor(b.componentId)) ids.push(b.id)
+  // v2: map each shared-SDN logical leaf box → the container zone (its node's
+  // ovs / ovnkube componentZone) it realizes into. Structural walk: each direct
+  // child of the grid root is a node column; within a column a leaf resolves to
+  // the container with the same componentId, so host vs guest and worker-1 vs
+  // worker-2 stay distinct (their componentIds differ / their columns differ).
+  // Also collects the container zones + their node labels for the strips.
+  const { containerOf, containerMeta, containerIds } = useMemo(() => {
+    const out = { containerOf: {}, containerMeta: {}, containerIds: [] }
+    if (!expandable) return out
+    const byColumn = {}   // columnRootId → { componentId → containerZoneId }
+    const leaves = []     // { boxId, componentId, columnRootId }
+    const walk = (zone, columnRootId, columnLabel) => {
+      if (zone.componentId && CONTAINER_COMPONENTS.has(zone.componentId)
+          && INTERNAL_TOPOLOGY[zone.componentId] && columnRootId) {
+        (byColumn[columnRootId] ||= {})[zone.componentId] = zone.id
+        out.containerMeta[zone.id] = { componentId: zone.componentId, nodeLabel: columnLabel }
+        out.containerIds.push(zone.id)
+      }
+      for (const b of zone.boxes || []) {
+        if (b.realizesRow && b.componentId && CONTAINER_COMPONENTS.has(b.componentId) && columnRootId) {
+          leaves.push({ boxId: b.id, componentId: b.componentId, columnRootId })
         }
-        if (z.zones) walk(z.zones)
+      }
+      const isGridRoot = zone.layout === 'grid'
+      for (const c of zone.zones || []) {
+        walk(c, isGridRoot ? c.id : columnRootId, isGridRoot ? c.label : columnLabel)
       }
     }
-    walk(topic.zones)
-    return ids
+    for (const z of topic.zones) walk(z, null, null)
+    for (const { boxId, componentId, columnRootId } of leaves) {
+      const cz = byColumn[columnRootId]?.[componentId]
+      if (cz) out.containerOf[boxId] = cz
+    }
+    return out
   }, [topic, expandable])
 
-  // v2: which boxes are opened to their realizing component's internals.
-  const [openIds, setOpenIds] = useState(() => new Set())
-  const toggleOpen = (id) => setOpenIds((prev) => {
+  // v2: which container zones (ovs / ovnkube) are opened to their internals.
+  const [openContainers, setOpenContainers] = useState(() => new Set())
+  const toggleContainer = (zoneId) => setOpenContainers((prev) => {
+    const next = new Set(prev)
+    next.has(zoneId) ? next.delete(zoneId) : next.add(zoneId)
+    return next
+  })
+  // v2: own-identity boxes (app pods) keep their genuine 1:1 per-box expansion.
+  const [openBoxes, setOpenBoxes] = useState(() => new Set())
+  const toggleBox = (id) => setOpenBoxes((prev) => {
     const next = new Set(prev)
     next.has(id) ? next.delete(id) : next.add(id)
     return next
   })
 
+  // v2 anchor: clicking a logical leaf opens its container and lights up the
+  // matching row inside it (scroll + a brief pulse) — the many → one made
+  // literal. Retries across a few frames because the strip may have just mounted.
+  const anchorTo = (box) => {
+    const zoneId = containerOf[box.id]
+    if (!zoneId) return
+    setOpenContainers((prev) => (prev.has(zoneId) ? prev : new Set(prev).add(zoneId)))
+    const rowDomId = `${idPrefix}-${zoneId}-${box.componentId}__${box.realizesRow}`
+    let tries = 0
+    const tryPulse = () => {
+      const el = document.getElementById(rowDomId)
+      if (el) {
+        scrollIntoUpperThird(el)
+        el.classList.add('dd-row-pulse')
+        setTimeout(() => el.classList.remove('dd-row-pulse'), 1600)
+      } else if (tries++ < 10) {
+        requestAnimationFrame(tryPulse)
+      }
+    }
+    requestAnimationFrame(tryPulse)
+  }
+
   // Switching topics (or leaving v2) drops any expanded reveal / opened cards.
   useEffect(() => { setExpanded(new Set()) }, [topic])
-  useEffect(() => { setOpenIds(new Set()) }, [topic, expandable])
+  useEffect(() => { setOpenContainers(new Set()); setOpenBoxes(new Set()) }, [topic, expandable])
 
   // Opening a sub-step's popup expands its parent so the step is on screen.
   useEffect(() => {
@@ -306,14 +361,41 @@ export default function DeepDiveCanvas({
       )
     }
 
-    // v2: a box that names a realizing component opens in place to that
-    // component's internals. Collapsed it keeps the v1 NodeCard look (same grid
-    // slot, same accent) but clicking expands instead of opening a popup; opened
-    // it hands its slot to the shared PrimitiveBoxCard. The DOM id stays did(box)
-    // either way, so the topology edges and trace arrows still anchor to it.
-    const internal = expandable && box.componentId ? internalsFor(box.componentId) : null
-    if (internal) {
-      if (openIds.has(box.id)) {
+    // v2: a shared-SDN logical leaf is an ANCHOR — it never opens its own copy of
+    // the (shared, many-to-one) container. It stays a flat box; clicking it opens
+    // its node's container and lights up the row this object becomes. A small ⓘ
+    // corner still reaches its own teaching popup. DOM id stays did(box) so the
+    // topology edges and trace arrows keep anchoring to it.
+    if (expandable && containerOf[box.id]) {
+      return (
+        <NodeCard
+          key={box.id}
+          id={did(box.id)}
+          style={gridStyleFor(box)}
+          className="dd-anchor"
+          title={box.title}
+          hideTitle={box.hideTitleOnCanvas}
+          typePrefix={box.typePrefix}
+          variant={box.variant}
+          color={accent}
+          subtitle={subtitle}
+          badges={box.badges}
+          isActive={isActive}
+          isOnPath={isOnPath}
+          isDimmed={isDimmed}
+          isHighlighted={ov?.highlight}
+          onClick={() => anchorTo(box)}
+          cornerAction={{ label: 'ⓘ', title: `${box.title} — details`, onClick: () => onSelectBox(box.id) }}
+        />
+      )
+    }
+
+    // v2: an own-identity box (an app pod) keeps per-box primitive expansion —
+    // that is a real 1:1 object, not a redundant copy of a shared container.
+    const ownInternal = expandable && box.componentId && !CONTAINER_COMPONENTS.has(box.componentId)
+      ? internalsFor(box.componentId) : null
+    if (ownInternal) {
+      if (openBoxes.has(box.id)) {
         const comp = findComponent(box.componentId)
         return (
           <div key={box.id} className="dd-open-slot" style={gridStyleFor(box)}>
@@ -323,14 +405,14 @@ export default function DeepDiveCanvas({
                 title: comp?.displayName || box.title,
                 typePrefix: comp?.typePrefix || box.typePrefix,
               }}
-              internal={internal}
+              internal={ownInternal}
               colIndex={box.id}
               idPrefix={`${idPrefix}-`}
               color={accent}
               domIdOverride={did(box.id)}
               hint={null}
               isOpen
-              onToggle={() => toggleOpen(box.id)}
+              onToggle={() => toggleBox(box.id)}
               onSelectComponent={onSelectComponent}
               onSelectBox={onSelectSubBox}
               isActive={isActive}
@@ -357,7 +439,7 @@ export default function DeepDiveCanvas({
           isOnPath={isOnPath}
           isDimmed={isDimmed}
           isHighlighted={ov?.highlight}
-          onClick={() => toggleOpen(box.id)}
+          onClick={() => toggleBox(box.id)}
         />
       )
     }
@@ -409,7 +491,45 @@ export default function DeepDiveCanvas({
     )
   }
 
-  const renderZone = (zone, depth = 0) => (
+  // v2: the open container's internals, rendered as a full-width strip at the
+  // bottom of the grid root (escaping the tight named-row subgrid). Reuses the
+  // shared PrimitiveBoxCard; its sub-rows namespace under the container zone id
+  // so the anchor pulse can find `<idPrefix>-<zoneId>-<componentId>__<row>`.
+  const renderContainerStrip = (zoneId) => {
+    const meta = containerMeta[zoneId]
+    if (!meta) return null
+    const comp = findComponent(meta.componentId)
+    const internal = internalsFor(meta.componentId)
+    if (!internal) return null
+    const title = `${meta.nodeLabel ? `${meta.nodeLabel} · ` : ''}${comp?.displayName || meta.componentId}`
+    return (
+      <div key={`strip-${zoneId}`} className="dd-container-strip" style={{ gridColumn: '1 / -1' }}>
+        <PrimitiveBoxCard
+          node={{ id: meta.componentId, title, typePrefix: comp?.typePrefix }}
+          internal={internal}
+          colIndex={zoneId}
+          idPrefix={`${idPrefix}-`}
+          color={`var(--${comp?.colorVar || 'k-teal'})`}
+          domIdOverride={`${idPrefix}-strip-${zoneId}`}
+          hint={null}
+          isOpen
+          onToggle={() => toggleContainer(zoneId)}
+          onSelectComponent={onSelectComponent}
+          onSelectBox={onSelectSubBox}
+        />
+      </div>
+    )
+  }
+
+  const renderZone = (zone, depth = 0) => {
+    // v2: a componentZone whose component has internals (ovs / ovnkube) is a
+    // CONTAINER — its label toggles its internals strip instead of opening the
+    // sheet (still reachable from the strip header). Others keep the depth-door.
+    const isContainer = expandable && zone.componentId
+      && CONTAINER_COMPONENTS.has(zone.componentId) && INTERNAL_TOPOLOGY[zone.componentId]
+    const isOpen = isContainer && openContainers.has(zone.id)
+    const isGridRoot = expandable && zone.layout === 'grid'
+    return (
     <Zone
       key={zone.id}
       label={zone.label}
@@ -421,12 +541,12 @@ export default function DeepDiveCanvas({
       layout={zone.layout}
       bare={zone.bare}
       ghost={zone.ghost}
-      className={zone.className}
+      className={`${zone.className || ''} ${isContainer ? `dd-container ${isOpen ? 'is-open' : ''}` : ''}`.trim()}
       subgrid={zone.subgrid}
       gridStyle={{ ...gridRootStyle(zone), ...gridStyleFor(zone) }}
       componentId={zone.componentId}
       domId={zone.componentId ? did(zone.id) : undefined}
-      onClick={zone.componentId ? onSelectComponent : undefined}
+      onClick={isContainer ? () => toggleContainer(zone.id) : (zone.componentId ? onSelectComponent : undefined)}
     >
       {renderZoneBoxes(zone)}
       {/* A child entry may be a spacer pseudo-zone — the flex-grow gap between
@@ -437,19 +557,23 @@ export default function DeepDiveCanvas({
           ? <div key={child.id} className="dd-spacer" aria-hidden />
           : renderZone(child, depth + 1)
       )}
+      {/* v2: open container internals dock as full-width strips at the bottom of
+          the grid root, below the topology. */}
+      {isGridRoot && [...openContainers].map(renderContainerStrip)}
     </Zone>
-  )
+    )
+  }
 
-  const allOpen = expandableIds.length > 0 && expandableIds.every((id) => openIds.has(id))
-  const toggleAllOpen = () => setOpenIds(allOpen ? new Set() : new Set(expandableIds))
+  const allOpen = containerIds.length > 0 && containerIds.every((id) => openContainers.has(id))
+  const toggleAllOpen = () => setOpenContainers(allOpen ? new Set() : new Set(containerIds))
 
   return (
     <div className="deep-dive-canvas">
-      {expandable && expandableIds.length > 0 && (
+      {expandable && containerIds.length > 0 && (
         <div className="dd-v2-bar">
-          <span className="dd-v2-hint">Click a coloured box to open its OpenShift object → Linux primitives</span>
+          <span className="dd-v2-hint">Click a container (Open vSwitch / OVN-K8s Node) to open its realization; click a logical box to light up the row it becomes inside it.</span>
           <button type="button" className="dd-v2-expand-all" onClick={toggleAllOpen}>
-            {allOpen ? 'Collapse all' : 'Expand all'}
+            {allOpen ? 'Collapse all' : 'Expand all containers'}
           </button>
         </div>
       )}
