@@ -2347,11 +2347,13 @@ body::after {
 
 /* ── Network Map v2 (DeepDiveCanvas `expandable`) ─────────────────────────────
    The same logical map, but boxes that name a realizing component open in place
-   to that component's internals. The logical containers (the grey OpenShift
-   zones) are made a little more transparent so the realization opened inside —
-   the underlying zones — reads through them. The inline zone fill is opaque, so
-   the override needs !important to win. */
-.recon-stack--v2 .zone {
+   to that component's internals. Only the *overlapping* logical zones — the
+   shared-core "logical topology" bands that span both node columns — are made a
+   little more transparent, so the connectors and columns beneath them read
+   through instead of being cut by a solid band. The per-node grey OpenShift
+   containers stay solid as the ground. The inline zone fill is opaque, so the
+   override needs !important to win. */
+.recon-stack--v2 .ovnfull-core-zone {
   background: color-mix(in srgb, var(--zone-border, #2a3550) 13%, transparent) !important;
 }
 
