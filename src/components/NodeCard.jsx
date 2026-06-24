@@ -30,6 +30,10 @@ export default function NodeCard({
   hoverProps,
   replicaBadge,
   declarative,
+  // Deep Dive (network views) only: keep `title` for the aria-label / popup but
+  // omit the visible title line on the card face, so the box reads as
+  // [TYPE] + tag (e.g. a node's GR / ext / LS logical objects).
+  hideTitle,
 }) {
   const declarativeTypes = new Set(['Service', 'NWPOLICY', 'API Object', 'Custom Resource'])
   const isDeclarative = declarative ?? declarativeTypes.has(typePrefix)
@@ -70,7 +74,7 @@ export default function NodeCard({
           [{typeAlias || typePrefix}]
         </span>
       )}
-      <div className="node-title" style={{ color }}>{title}</div>
+      {!hideTitle && <div className="node-title" style={{ color }}>{title}</div>}
       {subtitle && <div className="node-subtitle">{subtitle}</div>}
       {replicaBadge && (
         <div className="node-badges">

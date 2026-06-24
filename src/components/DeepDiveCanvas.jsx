@@ -226,6 +226,7 @@ export default function DeepDiveCanvas({
         key={box.id}
         id={did(box.id)}
         title={box.title}
+        hideTitle={box.hideTitleOnCanvas}
         typePrefix={box.typePrefix}
         variant={box.variant}
         color={accent}
