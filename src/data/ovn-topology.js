@@ -351,13 +351,17 @@ const UNDERLAY_BOX = {
   id: 'ovn-underlay', title: 'Underlay · 172.18.0.0/24', typePrefix: 'L2 segment', colorVar: 'k-blue',
   variant: 'bus', detail: UNDERLAY_DETAIL,
 }
+// The shared-core boxes get the same hidden-title treatment as the per-node
+// objects: the [TYPE] prefix already names them and the caption carries
+// scope + role (e.g. "router transit", "distributed"), so the full OVN name
+// (join · 100.64.0.0/16 / ovn_cluster_router) lives only in the detail popup.
 const JOIN_BOX = {
   id: 'ovn-join', title: 'join · 100.64.0.0/16', typePrefix: 'Logical Switch', colorVar: 'k-sky',
-  variant: 'switch', caption: 'router transit', componentId: 'ovn-node-host', detail: JOIN_SWITCH_DETAIL,
+  variant: 'switch', hideTitleOnCanvas: true, caption: 'router transit', componentId: 'ovn-node-host', detail: JOIN_SWITCH_DETAIL,
 }
 const ROUTER_BOX = {
   id: 'ovn-cluster-router', title: 'ovn_cluster_router', typePrefix: 'OVN Cluster Router', colorVar: 'k-green',
-  variant: 'ellipse', caption: 'distributed', componentId: 'ovn-node-host', detail: CLUSTER_ROUTER_DETAIL,
+  variant: 'ellipse', hideTitleOnCanvas: true, caption: 'distributed', componentId: 'ovn-node-host', detail: CLUSTER_ROUTER_DETAIL,
 }
 
 // One node column: the full per-node chain inside one dashed boundary.
@@ -994,11 +998,11 @@ const GUEST_UNDERLAY_BOX = {
 }
 const GUEST_JOIN_BOX = {
   id: 'ovng-join', title: 'join · 100.64.0.0/16', typePrefix: 'Logical Switch', colorVar: 'k-sky',
-  variant: 'switch', caption: 'guest transit', componentId: 'ovn-node-guest', detail: GUEST_JOIN_DETAIL,
+  variant: 'switch', hideTitleOnCanvas: true, caption: 'guest transit', componentId: 'ovn-node-guest', detail: GUEST_JOIN_DETAIL,
 }
 const GUEST_ROUTER_BOX = {
   id: 'ovng-cluster-router', title: 'ovn_cluster_router', typePrefix: 'OVN Cluster Router', colorVar: 'k-green',
-  variant: 'ellipse', caption: 'node-local NB rows', componentId: 'ovn-node-guest', detail: GUEST_ROUTER_DETAIL,
+  variant: 'ellipse', hideTitleOnCanvas: true, caption: 'node-local NB rows', componentId: 'ovn-node-guest', detail: GUEST_ROUTER_DETAIL,
 }
 
 // One guest node column — the plain view's chain, run inside a VMI (zone label
@@ -1315,21 +1319,24 @@ const MACHINE_UNDERLAY_BOX = {
   id: 'ovnf-underlay', title: 'Machine network · 192.168.1.0/24', typePrefix: 'L2 segment', colorVar: 'k-blue',
   variant: 'bus', caption: 'bare metal', detail: MACHINE_UNDERLAY_DETAIL,
 }
+// Full-map cores: hidden title + the caption already says scope + role
+// ("mgmt transit", "guest distributed"), so the duplicate transit/distributed
+// badge is dropped.
 const FULL_MJOIN_BOX = {
   id: 'ovnf-mjoin', title: 'join · 100.64.0.0/16', typePrefix: 'Logical Switch', colorVar: 'k-sky',
-  variant: 'switch', caption: 'mgmt transit', badges: [{ label: 'transit' }], detail: FULL_MJOIN_DETAIL,
+  variant: 'switch', hideTitleOnCanvas: true, caption: 'mgmt transit', detail: FULL_MJOIN_DETAIL,
 }
 const FULL_MROUTER_BOX = {
   id: 'ovnf-mrouter', title: 'ovn_cluster_router', typePrefix: 'OVN Cluster Router', colorVar: 'k-green',
-  variant: 'ellipse', caption: 'mgmt distributed', badges: [{ label: 'distributed' }], detail: FULL_MROUTER_DETAIL,
+  variant: 'ellipse', hideTitleOnCanvas: true, caption: 'mgmt distributed', detail: FULL_MROUTER_DETAIL,
 }
 const FULL_GJOIN_BOX = {
   id: 'ovnf-gjoin', title: 'join · 100.64.0.0/16', typePrefix: 'Logical Switch', colorVar: 'k-sky',
-  variant: 'switch', caption: 'guest transit', badges: [{ label: 'transit' }], detail: GUEST_JOIN_DETAIL,
+  variant: 'switch', hideTitleOnCanvas: true, caption: 'guest transit', detail: GUEST_JOIN_DETAIL,
 }
 const FULL_GROUTER_BOX = {
   id: 'ovnf-grouter', title: 'ovn_cluster_router', typePrefix: 'OVN Cluster Router', colorVar: 'k-green',
-  variant: 'ellipse', caption: 'guest distributed', badges: [{ label: 'distributed' }], detail: GUEST_ROUTER_DETAIL,
+  variant: 'ellipse', hideTitleOnCanvas: true, caption: 'guest distributed', detail: GUEST_ROUTER_DETAIL,
 }
 
 const launcherBox = (m, g) => ({
