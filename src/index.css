@@ -2345,6 +2345,97 @@ body::after {
   cursor: pointer;
 }
 
+/* ── Network Map v2 (DeepDiveCanvas `expandable`) ─────────────────────────────
+   The same logical map, but boxes that name a realizing component open in place
+   to that component's internals. The logical containers (the grey OpenShift
+   zones) are made a little more transparent so the realization opened inside —
+   the underlying zones — reads through them. The inline zone fill is opaque, so
+   the override needs !important to win. */
+.recon-stack--v2 .zone {
+  background: color-mix(in srgb, var(--zone-border, #2a3550) 13%, transparent) !important;
+}
+
+/* A box that can open carries a small ▸ drill cue; clicking it expands in place
+   instead of opening the popup. */
+.recon-stack--v2 .dd-can-expand {
+  cursor: zoom-in;
+}
+.recon-stack--v2 .dd-can-expand::after {
+  content: '▸';
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 0.6rem;
+  line-height: 1;
+  color: color-mix(in srgb, var(--node-accent, var(--k-cyan)) 75%, transparent);
+  opacity: 0.8;
+}
+
+/* An opened box hands its grid slot to the shared PrimitiveBoxCard (which brings
+   its own .intent-store-expanded styling). The wrapper fills the slot and lifts
+   it above the topology-edge overlay. */
+.dd-open-slot {
+  position: relative;
+  z-index: 6;
+  min-width: 0;
+  align-self: start;
+}
+.dd-open-slot .primitive-box,
+.dd-open-slot .intent-store {
+  width: 100%;
+}
+
+/* The v2 canvas toolbar: a hint + the expand-all / collapse-all control. */
+.dd-v2-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.dd-v2-hint {
+  color: var(--tx-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+}
+.dd-v2-expand-all {
+  border: 1px solid color-mix(in srgb, var(--k-cyan) 45%, transparent);
+  border-radius: 999px;
+  padding: 3px 11px;
+  color: var(--k-cyan);
+  background: color-mix(in srgb, var(--k-cyan) 8%, transparent);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.dd-v2-expand-all:hover,
+.dd-v2-expand-all:focus-visible {
+  border-color: var(--k-cyan);
+  background: color-mix(in srgb, var(--k-cyan) 16%, transparent);
+  outline: none;
+}
+
+/* The v1 / v2 segmented toggle in the Network toolbar (net-bar). */
+.net-map-variant {
+  display: inline-flex;
+  gap: 2px;
+}
+.net-map-variant-btn {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.net-map-variant-btn.is-active {
+  border-color: var(--k-cyan);
+  color: var(--k-cyan);
+  background: color-mix(in srgb, var(--k-cyan) 14%, transparent);
+}
+
 @media (max-width: 640px) {
   /* On phones the topology-first map is scaled as one diagram. This is a
      rollback of the experimental mobile-only schematic, which proved harder

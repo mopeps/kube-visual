@@ -2,8 +2,26 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Zone from './Zone'
 import NodeCard from './NodeCard'
 import DeepDiveRevealCard from './DeepDiveRevealCard'
+import PrimitiveBoxCard from './PrimitiveBoxCard'
 import ReconLoopOverlay from './ReconLoopOverlay'
 import DeepDiveArrowOverlay from './DeepDiveArrowOverlay'
+import { INTERNAL_TOPOLOGY } from '../data/network-internals'
+import { buildPrimitiveInternals } from '../data/primitive-internals'
+import { findComponent } from '../data/components-index'
+
+// v2 (Network Map "expandable" mode): resolve a box's realizing component's
+// in-place internals — SDN datapath/control components via the hand-authored
+// INTERNAL_TOPOLOGY, generic runtime wrappers (launcher pod, VMI, app pods) via
+// the Linux-primitive builder — or null if the component bottoms out in nothing
+// drillable. Cached so the per-render scan stays cheap.
+const _internalsCache = new Map()
+function internalsFor(componentId) {
+  if (!componentId) return null
+  if (_internalsCache.has(componentId)) return _internalsCache.get(componentId)
+  const internal = INTERNAL_TOPOLOGY[componentId] || buildPrimitiveInternals({ id: componentId }) || null
+  _internalsCache.set(componentId, internal)
+  return internal
+}
 
 // Renders a deep-dive topic as an Overview-style canvas: a stack of labelled
 // zones holding clickable boxes. Reuses Zone / NodeCard (pure presentational),
@@ -88,6 +106,12 @@ export default function DeepDiveCanvas({
   // Open a registered component's real object sheet — used when a grey ghost
   // zone IS a component (its label is the clickable depth-door).
   onSelectComponent,
+  // v2 only: a clicked internal primitive sub-box opens its own teaching popup.
+  onSelectSubBox,
+  // v2 (Network Map): render boxes that name a realizing `componentId` as cards
+  // that open in place to that component's internals, instead of flat popup-only
+  // boxes. Off for every other topic.
+  expandable = false,
   selectedBoxId,
   activeFlow,
   activeFlowStep,
@@ -160,8 +184,34 @@ export default function DeepDiveCanvas({
     return m
   }, [topic])
 
-  // Switching topics drops any expanded reveal cards.
+  // v2: every box on the canvas that can open to a realizing component — drives
+  // the expand-all / collapse-all control.
+  const expandableIds = useMemo(() => {
+    if (!expandable) return []
+    const ids = []
+    const walk = (zones) => {
+      for (const z of zones || []) {
+        for (const b of z.boxes || []) {
+          if (b.componentId && internalsFor(b.componentId)) ids.push(b.id)
+        }
+        if (z.zones) walk(z.zones)
+      }
+    }
+    walk(topic.zones)
+    return ids
+  }, [topic, expandable])
+
+  // v2: which boxes are opened to their realizing component's internals.
+  const [openIds, setOpenIds] = useState(() => new Set())
+  const toggleOpen = (id) => setOpenIds((prev) => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+
+  // Switching topics (or leaving v2) drops any expanded reveal / opened cards.
   useEffect(() => { setExpanded(new Set()) }, [topic])
+  useEffect(() => { setOpenIds(new Set()) }, [topic, expandable])
 
   // Opening a sub-step's popup expands its parent so the step is on screen.
   useEffect(() => {
@@ -256,6 +306,62 @@ export default function DeepDiveCanvas({
       )
     }
 
+    // v2: a box that names a realizing component opens in place to that
+    // component's internals. Collapsed it keeps the v1 NodeCard look (same grid
+    // slot, same accent) but clicking expands instead of opening a popup; opened
+    // it hands its slot to the shared PrimitiveBoxCard. The DOM id stays did(box)
+    // either way, so the topology edges and trace arrows still anchor to it.
+    const internal = expandable && box.componentId ? internalsFor(box.componentId) : null
+    if (internal) {
+      if (openIds.has(box.id)) {
+        const comp = findComponent(box.componentId)
+        return (
+          <div key={box.id} className="dd-open-slot" style={gridStyleFor(box)}>
+            <PrimitiveBoxCard
+              node={{
+                id: box.componentId,
+                title: comp?.displayName || box.title,
+                typePrefix: comp?.typePrefix || box.typePrefix,
+              }}
+              internal={internal}
+              colIndex={box.id}
+              idPrefix={`${idPrefix}-`}
+              color={accent}
+              domIdOverride={did(box.id)}
+              hint={null}
+              isOpen
+              onToggle={() => toggleOpen(box.id)}
+              onSelectComponent={onSelectComponent}
+              onSelectBox={onSelectSubBox}
+              isActive={isActive}
+              isOnPath={isOnPath}
+              isDimmed={isDimmed}
+            />
+          </div>
+        )
+      }
+      return (
+        <NodeCard
+          key={box.id}
+          id={did(box.id)}
+          style={gridStyleFor(box)}
+          className="dd-can-expand"
+          title={box.title}
+          hideTitle={box.hideTitleOnCanvas}
+          typePrefix={box.typePrefix}
+          variant={box.variant}
+          color={accent}
+          subtitle={subtitle}
+          badges={box.badges}
+          isActive={isActive}
+          isOnPath={isOnPath}
+          isDimmed={isDimmed}
+          isHighlighted={ov?.highlight}
+          onClick={() => toggleOpen(box.id)}
+        />
+      )
+    }
+
     return (
       <NodeCard
         key={box.id}
@@ -334,10 +440,21 @@ export default function DeepDiveCanvas({
     </Zone>
   )
 
+  const allOpen = expandableIds.length > 0 && expandableIds.every((id) => openIds.has(id))
+  const toggleAllOpen = () => setOpenIds(allOpen ? new Set() : new Set(expandableIds))
+
   return (
     <div className="deep-dive-canvas">
+      {expandable && expandableIds.length > 0 && (
+        <div className="dd-v2-bar">
+          <span className="dd-v2-hint">Click a coloured box to open its OpenShift object → Linux primitives</span>
+          <button type="button" className="dd-v2-expand-all" onClick={toggleAllOpen}>
+            {allOpen ? 'Collapse all' : 'Expand all'}
+          </button>
+        </div>
+      )}
       <div
-        className={`overview-canvas recon-stack ${recon?.edges ? 'recon-stack--edges' : ''} ${topic.topology?.edges ? 'recon-stack--topology' : ''} ${topic.canvasClass || ''}`}
+        className={`overview-canvas recon-stack ${recon?.edges ? 'recon-stack--edges' : ''} ${topic.topology?.edges ? 'recon-stack--topology' : ''} ${expandable ? 'recon-stack--v2' : ''} ${topic.canvasClass || ''}`}
         ref={stackRef}
       >
         {recon?.edges && (

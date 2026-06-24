@@ -6,6 +6,7 @@ import TopicCanvas from './TopicCanvas'
 // and routes box clicks through App's shared AncestryModal (onSelectComponent).
 export default function LogicalLens({
   scope,
+  mapVariant = 'v1',
   activeFlow,
   activeFlowStep,
   onSelectFlowStep,
@@ -23,6 +24,7 @@ export default function LogicalLens({
         onSelectComponent={onSelectComponent}
         idPrefix="lg"
         useNetworkMap
+        mapVariant={mapVariant}
       />
     </div>
   )

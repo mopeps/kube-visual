@@ -32,9 +32,17 @@ export default function TopicCanvas({
   onConsumeTarget,    // clear that request once honored
   idPrefix = 'dd',
   useNetworkMap = false,
+  // Network Map variant: 'v1' = today's flat canvas (boxes open detail in a
+  // popup); 'v2' = the same canvas, but boxes that name a realizing component
+  // open in place to that component's internals (DeepDiveCanvas `expandable`).
+  mapVariant = 'v1',
 }) {
   const [selectedBoxId, setSelectedBoxId] = useState(null)
   const [selectedEdgeId, setSelectedEdgeId] = useState(null)
+  // v2 only: a clicked internal primitive sub-box (br-int port, NB-DB row, a
+  // socket…). These boxes aren't in the topic index, so they carry their own
+  // popup content straight from the expanded card.
+  const [subSheet, setSubSheet] = useState(null)
 
   const boxIndex = useMemo(() => (topic ? indexTopicBoxes(topic) : {}), [topic])
   const colorOf = useCallback((boxId) => boxIndex[boxId]?.accent || 'var(--k-cyan)', [boxIndex])
@@ -51,7 +59,7 @@ export default function TopicCanvas({
   }, [topic])
 
   // Switching topics drops any open popup.
-  useEffect(() => { setSelectedBoxId(null); setSelectedEdgeId(null) }, [topic])
+  useEffect(() => { setSelectedBoxId(null); setSelectedEdgeId(null); setSubSheet(null) }, [topic])
 
   // A search result asked to open a specific box on this topic: honor it once
   // the topic (and its box index) are resolved, then clear the request so a
@@ -91,6 +99,7 @@ export default function TopicCanvas({
   // object is one object everywhere.
   const selectBox = useCallback((id) => {
     setSelectedEdgeId(null)
+    setSubSheet(null)
     const box = boxIndex[id]?.box
     if (box?.componentId && !box.detail) {
       setSelectedBoxId(null)
@@ -99,8 +108,22 @@ export default function TopicCanvas({
     }
     setSelectedBoxId(id)
   }, [boxIndex, onSelectComponent])
-  const selectEdge = useCallback((edge) => { setSelectedBoxId(null); setSelectedEdgeId(edge.id) }, [])
-  const closeBox = useCallback(() => { setSelectedBoxId(null); setSelectedEdgeId(null) }, [])
+  const selectEdge = useCallback((edge) => { setSelectedBoxId(null); setSubSheet(null); setSelectedEdgeId(edge.id) }, [])
+  // v2 expand: a primitive sub-box carries its own teaching detail (it isn't a
+  // topic box), so open the popup straight from the box object.
+  const selectSubBox = useCallback((box) => {
+    setSelectedBoxId(null)
+    setSelectedEdgeId(null)
+    setSubSheet({
+      id: box.id,
+      title: box.title,
+      typePrefix: box.typePrefix,
+      accent: `var(--${box.colorVar || 'k-amber'})`,
+      detail: box.detail,
+      componentId: box.componentId,
+    })
+  }, [])
+  const closeBox = useCallback(() => { setSelectedBoxId(null); setSelectedEdgeId(null); setSubSheet(null) }, [])
 
   const selected = selectedBoxId ? boxIndex[selectedBoxId] : null
   const selectedEdge = selectedEdgeId ? edgeIndex[selectedEdgeId] : null
@@ -124,7 +147,7 @@ export default function TopicCanvas({
           // still resizes it) instead of a short content-hugging modal.
           peekDefault: 0.34,
         }
-      : null
+      : subSheet
 
   const canvas = topic.networkMap ? (
     <NetworkTopologyCanvas
@@ -143,6 +166,10 @@ export default function TopicCanvas({
       onSelectBox={selectBox}
       onSelectEdge={selectEdge}
       onSelectComponent={onSelectComponent}
+      onSelectSubBox={selectSubBox}
+      // v2: render component-bearing boxes as cards that open in place to their
+      // realizing component's internals (else flat, popup-only boxes).
+      expandable={mapVariant === 'v2'}
       selectedBoxId={selectedBoxId}
       activeFlow={activeFlow}
       activeFlowStep={activeFlowStep}

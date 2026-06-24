@@ -29,6 +29,7 @@ const SCOPE_KEY = 'kv-node-scope'
 const LENS_SCOPE_KEY = 'kv-logical-scope'
 const DEFAULT_LENS_SCOPE = 'ovn-topology-objects'
 const PREVIOUS_DEFAULT_LENS_SCOPE = 'ovn-topology'
+const MAP_VARIANT_KEY = 'kv-net-map-variant'
 
 function Header() {
   return (
@@ -141,6 +142,18 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem(LENS_SCOPE_KEY, lensScope) } catch { /* ignore */ }
   }, [lensScope])
+
+  // Network Map version: 'v1' (flat logical map, popups) or 'v2' (boxes expand in
+  // place to their realizing component → Linux primitives). A toggle in the Map
+  // toolbar flips between them so v2 can be iterated against v1.
+  const [mapVariant, setMapVariant] = useState(() => {
+    try {
+      return localStorage.getItem(MAP_VARIANT_KEY) === 'v2' ? 'v2' : 'v1'
+    } catch { return 'v1' }
+  })
+  useEffect(() => {
+    try { localStorage.setItem(MAP_VARIANT_KEY, mapVariant) } catch { /* ignore */ }
+  }, [mapVariant])
   // Lens and physical scope are independent: Architecture opens runtime cards
   // to primitives; Network opens networking internals. All nodes materializes
   // three placement-aware node pairs at tablet/wide widths; phones force one.
@@ -420,6 +433,8 @@ export default function App() {
       netOverlay={netOverlay}
       lensScope={lensScope}
       onSetLensScope={setLensScope}
+      mapVariant={mapVariant}
+      onSetMapVariant={setMapVariant}
       lensActiveFlow={lensActiveFlow}
       lensActiveFlowStep={lensActiveFlowStep}
       onLensSelectFlow={lensSelectFlow}
