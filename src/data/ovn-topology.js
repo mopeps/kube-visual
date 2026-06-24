@@ -330,18 +330,22 @@ export const rtosEdgeDetail = (w, note) => edgeDetail(
 // chip to that component's real sheet (the depth door: L1 logical box → L2
 // OpenShift object → L3 Linux primitives).
 const MGMT_COMP = { ovs: 'ovs-host', node: 'ovn-node-host' }
+// `realizesRow` names the local row this logical object becomes inside its
+// realizing component's INTERNAL_TOPOLOGY (`<componentId>__<realizesRow>`) — the
+// v2 anchor: clicking the box opens its container once and lights up that row,
+// making the many-logical-objects → one-component relationship literal.
 const nodeBoxes = (w, note = NBCTL_NOTE, comp = MGMT_COMP, prefix = '') => ({
-  eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'netdev', variant: 'iface', row: `${prefix}nic`, componentId: comp.ovs, detail: ethDetail(w) },
-  brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', row: `${prefix}bridge`, componentId: comp.ovs, detail: brIntDetail(w, note) },
+  eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'netdev', variant: 'iface', row: `${prefix}nic`, componentId: comp.ovs, realizesRow: 'eth0', detail: ethDetail(w) },
+  brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', row: `${prefix}bridge`, componentId: comp.ovs, realizesRow: 'brint', detail: brIntDetail(w, note) },
   // The per-node logical objects carry their full OVN name as `title` (it heads
   // the detail popup and feeds search / aria), but `hideTitleOnCanvas` keeps
   // that name OFF the card face — there the type prefix names the role, and the
   // grey component container + node-column nesting say which node and which SDN
   // layer the box belongs to (no per-box node tag needed).
-  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, row: `${prefix}ext`, componentId: comp.node, detail: extSwitchDetail(w, note) },
+  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, row: `${prefix}ext`, componentId: comp.node, realizesRow: 'ext', detail: extSwitchDetail(w, note) },
   gr: { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'Gateway Router', colorVar: 'k-green',
-    variant: 'ellipse', hideTitleOnCanvas: true, row: `${prefix}gateway`, componentId: comp.node, detail: gatewayRouterDetail(w, note) },
-  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, row: `${prefix}nodeswitch`, componentId: comp.node, detail: nodeSwitchDetail(w, note) },
+    variant: 'ellipse', hideTitleOnCanvas: true, row: `${prefix}gateway`, componentId: comp.node, realizesRow: 'gr', detail: gatewayRouterDetail(w, note) },
+  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, row: `${prefix}nodeswitch`, componentId: comp.node, realizesRow: 'ls', detail: nodeSwitchDetail(w, note) },
 })
 const podBox = (w, p, prefix = '') => ({
   id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod', row: `${prefix}pods`,
@@ -995,15 +999,15 @@ const gPodDetail = (name, ip, w) => ({
 // The guest twin realizes onto the guest cluster's own OVS / node agent — the
 // same depth-door pattern as the management columns, one turtle down.
 const guestNodeBoxes = (w, prefix = '') => ({
-  eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'virtio-net', variant: 'iface', row: `${prefix}nic`, componentId: 'ovs-guest', detail: gEthDetail(w) },
-  brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', row: `${prefix}bridge`, componentId: 'ovs-guest', detail: gBrIntDetail(w) },
+  eth0: { id: `${w.id}-eth0`, title: 'eth0', typePrefix: 'virtio-net', variant: 'iface', row: `${prefix}nic`, componentId: 'ovs-guest', realizesRow: 'eth0', detail: gEthDetail(w) },
+  brint: { id: `${w.id}-brint`, title: 'br-int', typePrefix: 'OVS bridge', colorVar: 'k-amber', variant: 'bridge', row: `${prefix}bridge`, componentId: 'ovs-guest', realizesRow: 'brint', detail: gBrIntDetail(w) },
   // Same scheme as the mgmt boxes (see nodeBoxes): full OVN name in `title`
   // for the popup / search, hidden on the card face in favour of the type
   // prefix; the VMI container + node-column nesting carry the node identity.
-  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, row: `${prefix}ext`, componentId: 'ovn-node-guest', detail: gExtDetail(w) },
+  ext: { id: `${w.id}-ext`, title: `ext_${w.node}`, typePrefix: 'External Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, row: `${prefix}ext`, componentId: 'ovn-node-guest', realizesRow: 'ext', detail: gExtDetail(w) },
   gr: { id: `${w.id}-gr`, title: `GR_${w.node}`, typePrefix: 'Gateway Router', colorVar: 'k-green',
-    variant: 'ellipse', hideTitleOnCanvas: true, row: `${prefix}gateway`, componentId: 'ovn-node-guest', detail: gGrDetail(w) },
-  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, row: `${prefix}nodeswitch`, componentId: 'ovn-node-guest', detail: gLsDetail(w) },
+    variant: 'ellipse', hideTitleOnCanvas: true, row: `${prefix}gateway`, componentId: 'ovn-node-guest', realizesRow: 'gr', detail: gGrDetail(w) },
+  ls: { id: `${w.id}-ls`, title: `LS ${w.node}`, typePrefix: 'Logical Switch', colorVar: 'k-sky', variant: 'switch', hideTitleOnCanvas: true, row: `${prefix}nodeswitch`, componentId: 'ovn-node-guest', realizesRow: 'ls', detail: gLsDetail(w) },
 })
 const guestPodBox = (w, p, prefix = '') => ({
   id: `${w.id}-${p.id}`, title: p.name, caption: p.ip, typePrefix: 'Pod', row: `${prefix}pods`,
