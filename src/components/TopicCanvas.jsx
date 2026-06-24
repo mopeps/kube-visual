@@ -142,6 +142,7 @@ export default function TopicCanvas({
       loop={loop}
       onSelectBox={selectBox}
       onSelectEdge={selectEdge}
+      onSelectComponent={onSelectComponent}
       selectedBoxId={selectedBoxId}
       activeFlow={activeFlow}
       activeFlowStep={activeFlowStep}

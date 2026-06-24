@@ -25,6 +25,10 @@ export default function Zone({
   // When a zone doubles as a component (e.g. the VM), these wire its label up
   // as an arrow anchor (id), a click target, and a trace step badge.
   componentId,
+  // Optional DOM id override for the label anchor. The Overview anchors arrows
+  // on the raw componentId; the Deep Dive passes a namespaced id (dd-<zoneId>)
+  // so the same component appearing in several columns/tabs never collides.
+  domId,
   stepNum,
   isActive = false,
   isOnPath = false,
@@ -58,7 +62,7 @@ export default function Zone({
       }}
     >
       {!bare && <div
-        id={componentId}
+        id={domId || componentId}
         role={isComponent ? 'button' : undefined}
         tabIndex={isComponent ? 0 : undefined}
         aria-label={isComponent ? [label, ...labelBadges].join(' · ') : undefined}

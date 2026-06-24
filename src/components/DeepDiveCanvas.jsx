@@ -85,6 +85,9 @@ export default function DeepDiveCanvas({
   loop,
   onSelectBox,
   onSelectEdge,
+  // Open a registered component's real object sheet — used when a grey ghost
+  // zone IS a component (its label is the clickable depth-door).
+  onSelectComponent,
   selectedBoxId,
   activeFlow,
   activeFlowStep,
@@ -280,6 +283,9 @@ export default function DeepDiveCanvas({
       bare={zone.bare}
       ghost={zone.ghost}
       className={zone.className}
+      componentId={zone.componentId}
+      domId={zone.componentId ? did(zone.id) : undefined}
+      onClick={zone.componentId ? onSelectComponent : undefined}
     >
       {renderZoneBoxes(zone)}
       {/* A child entry may be a spacer pseudo-zone — the flex-grow gap between
